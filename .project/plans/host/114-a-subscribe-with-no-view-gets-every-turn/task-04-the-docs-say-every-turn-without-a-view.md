@@ -1,0 +1,43 @@
+---
+title: The docs say every turn without a view
+status: todo
+depends:
+  - task-02-a-snapshot-follows-the-subscribes-view.md
+  - task-03-claudes-chat-state-holds-every-turn.md
+layer: docs
+refs:
+  - "[code://docs/sdk/AHP.md#L81](../../../../docs/sdk/AHP.md#L81) - the `subscribe` row"
+  - "[code://docs/sdk/AHP.md#L94](../../../../docs/sdk/AHP.md#L94) - the `fetchTurns` row, which says \"Newest 50 in the snapshot\""
+  - "[code://docs/sdk/CHATS.md#L87](../../../../docs/sdk/CHATS.md#L87) - the `fetchTurns` row of the chat page"
+  - "[code://UPSTREAM.md](../../../../UPSTREAM.md) - the Pass 7 box \"A chat subscription that names no `view` gets every retained turn\""
+---
+
+## Objective
+
+The docs say that a subscribe with no view gets every turn, and that a view gets a window and a cursor.
+The Pass 7 box in `UPSTREAM.md` is ticked.
+
+## Files
+
+- `UPDATE: docs/sdk/AHP.md:81` - the `subscribe` row says what a chat snapshot holds with and without `view`.
+- `UPDATE: docs/sdk/AHP.md:94` - the `fetchTurns` row names the window of a view, and what no cursor answers.
+- `UPDATE: docs/sdk/CHATS.md:87` - the `fetchTurns` row says that older turns exist only after a subscribe with a view.
+- `UPDATE: UPSTREAM.md` - the Pass 7 box under "Large chats" is ticked, with the merge commit.
+
+## Steps
+
+1. Add one sentence to the `subscribe` row: with no `view`, a chat snapshot has every turn and no cursor.
+2. Add one sentence to the same row that names the window a `view.turns` gets.
+3. Replace "Newest 50 in the snapshot and a cursor for the rest" in the `fetchTurns` row with the new behaviour.
+4. Say in the `fetchTurns` row what a request with no cursor answers.
+5. Change the `fetchTurns` row in `CHATS.md` to match.
+6. Tick the Pass 7 box in `UPSTREAM.md`, and add the merge commit after review.
+7. Run `pnpm -s docs:build`, and set this task and its plan row to `implemented`.
+
+## Validation
+
+- `pnpm -s docs:build` passes.
+- `git grep -n "Newest 50" -- docs` finds nothing.
+
+## Resume
+

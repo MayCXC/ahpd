@@ -87,7 +87,7 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 | Decision | Task |
 | --- | --- |
 | [The host records which plugin registered each agent, and a nested host loads that plugin](../04-a-cofold-session-in-a-computer/plan.md) | 03 |
-| [One computer: provider, the runtime named for what makes the machine](../05-p11-a-vm-is-made-for-a-machine/plan.md) | 01, 02 |
+| [One computer: provider, the runtime named for what makes the machine](../05-p8-a-profile-on-another-docker/plan.md) | 01, 02 |
 | [The nested host speaks AHP over stdio, so the relay is a pipe](../../../decisions/a-nested-host-speaks-stdio.md) | 03 |
 | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 03 |
 | [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md) | 05 |
@@ -97,7 +97,7 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 
 | What | Source | Task |
 | --- | --- | --- |
-| `ssh` is a runtime value, and several runtimes serve one host | ["One computer: provider, the runtime named for what makes the machine"](../05-p11-a-vm-is-made-for-a-machine/plan.md), "A machine id records which runtime made it" | 01 |
+| `ssh` is a runtime value, and several runtimes serve one host | ["One computer: provider, the runtime named for what makes the machine"](../05-p8-a-profile-on-another-docker/plan.md), "A machine id records which runtime made it" | 01 |
 | Every runtime lives inside `@ahpd/computer` | one `computers` port per host, [`code://packages/sdk/src/plugins/plugins.ts#L393`](../../../../packages/sdk/src/plugins/plugins.ts#L393) | 01 |
 | The first test is a box set up by hand and listed as an ssh machine, before any maker code | Softov, 2026-10-02, asked "Does the first Proxmox test use a VM made by hand, listed as an ssh machine (p9 only), before any maker code?": "Yes, by hand first" | 06 |
 | The test box is dev02 | Softov, 2026-10-02, asked "Which box is the test target?": "ssh to softov@dev02.example.com worked." | 06 |
@@ -113,7 +113,7 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 | The ssh fixture (task 04) is built before tasks 02 and 03, whose tests run through it | (defaulted: the tests need it) | 02, 03, 04 |
 | For now a machine id is `<runtime>.<name>` (`ssh.dev02`, `libvirt.<name>`, `node.<name>`, `docker-<profile>.<name>` for a profile's remote Docker), and the local Docker keeps a bare name; one function spells an id and one parses it, so the spelling can change in one place | Softov, 2026-10-03, asked "how is a machine id spelled so it records its runtime?": "not a decision now.. but put runtime.name" | 01 |
 | For now an ssh machine is owned by the host (`root:<host>`), and its up time is metered: a stretch opens when a listing sees it reachable and closes when one sees it unreachable or the daemon stops | Softov, 2026-10-03, asked "who owns an ssh machine, and is its up time metered?": "host-owned, and metered" | 01, 02 |
-| For now ahpd is installed on the box by hand, at this host's version; the copy from p5's ahpd part waits for p5 and goes to p11's template or a later plan | Softov, 2026-10-03, asked "how does ahpd get onto the box?": "installed by hand for now" | 06 |
+| For now ahpd is installed on the box by hand, at this host's version; the copy from p5's ahpd part waits for p5 and goes to p8's VM template or a later plan | Softov, 2026-10-03, asked "how does ahpd get onto the box?": "installed by hand for now" | 06 |
 | For now `how` writes non-secret variables inline, a secret env need (one whose value is named from the vault) is refused for an ssh machine, and p12's per-session token is the one credential that travels | Softov, 2026-10-03, asked "how does a value reach an ssh machine without sitting in a process list?": "as proposed" | 03 |
 | A name on the local Docker runtime holds no dot, so every id parses one way and no stored bare id changes | Softov, 2026-10-10, asked "How should a local docker machine's id be spelled?": "Bare, refuse dots" | 01 |
 | Each runtime answers `state()`, `agents()` and `owner()`, and the plugin stops reading Docker's `inspect` record; Docker answers them from its record | Softov, 2026-10-10, asked "How should an ssh machine answer?" about callers that read `inspect` in Docker's shape: "Typed runtime methods" | 02 |

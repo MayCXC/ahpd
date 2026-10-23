@@ -1,6 +1,6 @@
 ---
 title: A VM starts, stops, suspends and resumes, and its up time is metered
-status: todo
+status: dropped
 depends: [task-03-libvirt-makes-a-machine.md]
 layer: "computer"
 refs:

@@ -1,7 +1,7 @@
 ---
 title: Front and Back are chats of one session
 domain: plugin
-status: draft
+status: dropped
 priority: medium
 created: 2026-10-18
 revalidated: 2026-10-18
@@ -17,6 +17,8 @@ refs:
   - "[code://packages/bot/src/chat.ts#L436](../../../../packages/bot/src/chat.ts#L436) - `botChatAgent`, the provider of the Front"
   - "[code://packages/bot/src/post.ts#L44-L80](../../../../packages/bot/src/post.ts#L44-L80) - `post_message`, the Back's reply to the Front"
 ---
+
+Dropped 2026-10-22: merged into [p14 - A bot session has a Front, Backs and wakes](../52-p14-a-bot-session-has-a-front-and-backs/plan.md).
 
 ## Goal
 

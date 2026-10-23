@@ -1,7 +1,7 @@
 ---
 title: A bot has a private session
 domain: plugin
-status: draft
+status: dropped
 priority: medium
 created: 2026-10-18
 revalidated: 2026-10-18
@@ -15,6 +15,8 @@ refs:
   - "[code://packages/bot/src/context.ts](../../../../packages/bot/src/context.ts) - `contextBlock`, the shape the wake templates keep"
   - "[code://packages/bot/src/template.ts#L91-L115](../../../../packages/bot/src/template.ts#L91-L115) - the shipped `AGENTS.md` template, the pattern the wake templates copy"
 ---
+
+Dropped 2026-10-22: merged into [p14 - A bot session has a Front, Backs and wakes](../52-p14-a-bot-session-has-a-front-and-backs/plan.md).
 
 ## Goal
 

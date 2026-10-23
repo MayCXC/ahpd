@@ -13,7 +13,7 @@ It comes from `docs/plugins/COMPUTERS.md` and the container/05 plans p1 to p12, 
 | --- | --- |
 | host | One ahpd daemon. It owns sessions, chats and turns, and the clients talk to it. |
 | computer, machine | A place where an agent can run, at `computer://<id>`. This host is the default computer. |
-| runtime | What makes and reaches a machine: `docker` and `devcontainer` today, then `ssh` (p9), a remote Docker (p8), `libvirt` and `proxmox` (p11). |
+| runtime | What makes and reaches a machine: `docker` and `devcontainer` today, then `ssh` (p9), a remote Docker (p8), `libvirt` and `proxmox` (p8). |
 | profile | A recipe for machines: image, `agents`, `needs`, `state`, `gitGuard`, `sessionTree`, `sessionFolder`. |
 | disposable | A profile offered as `disposable:<profile>`. A session makes its machine, and the machine goes after `disposableDelay`. |
 | part | The binaries of an agent, mounted at `/opt/ahpd/<part>`, so one plain image runs any agent. |
@@ -40,7 +40,7 @@ flowchart LR
   subgraph R[Off this host: always a nested ahpd]
     D[Remote Docker<br/>p8 dockerHost]
     S[ssh box<br/>p9]
-    V[VM<br/>p11 libvirt, Proxmox]
+    V[VM<br/>p8 libvirt, Proxmox]
     N[Node<br/>p10 joined ahpd]
   end
   H -.->|DOCKER_HOST docker exec -i| D
@@ -58,7 +58,7 @@ flowchart LR
 
 Each row is what the session brings. Each column is where the machine is.
 
-| The session brings | Local Docker (p4-p7) | Remote Docker (p8) | ssh box (p9) | VM (p11) | Node (p10) |
+| The session brings | Local Docker (p4-p7) | Remote Docker (p8) | ssh box (p9) | VM (p8) | Node (p10) |
 | --- | --- | --- | --- | --- | --- |
 | No folder: a bot, an automation | **built**: starts in the `workdir` of the profile; a state volume per owner, or shared with `stateScope: shared` | **not stated**: every route in p8 needs a branch to bundle or clone | **built**: starts in the `workdir` of the machine | **not stated**: reached as p9, so the `workdir` is likely | **planned**: starts in the `workdir` of the node |
 | A folder that is not a repository | **built** under `shared`: mounted at the same path; **refused** under `copy` | **refused**: a plain folder has no clone; to copy it in is an idea | **built**: ignored, because a path here is not a path there | **refused**: code arrives by clone only | **planned**: ignored, because `node/open` has no `cwd` |
@@ -113,10 +113,10 @@ flowchart LR
 | p5 | Agents run from their parts and keep their own state | built |
 | p6 | The config of an agent is in a volume per profile | built |
 | p7 | A worktree brings its repository | built |
-| p8 | A profile on another Docker | planned; 7 tasks, one question open |
+| p8 | A profile on another Docker or a VM | planned; 13 tasks, one question open |
 | p9 | An ssh machine runs a nested host | active; 01-05 done, 06 by hand |
 | p10 | A host joins a hub | planned; questions answered |
-| p11 | A VM is made for a machine | planned |
+| p11 | A VM is made for a machine | dropped, in p8 |
 | p12 | Machines off this host reach models through the proxy | planned; task 03 can be built |
 
 ## Where the plans can go away from the intent

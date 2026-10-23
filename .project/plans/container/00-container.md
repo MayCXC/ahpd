@@ -27,8 +27,8 @@ The `@ahpd/computer` plugin makes and reaches machines, the SDK carries the `com
 
 ## Runtimes
 
-A profile's `runtime` names what makes the machine: `docker`, `ssh`, `libvirt` or `proxmox`, each with its own options, per [One computer: provider, the runtime named for what makes the machine](./05-p11-a-vm-is-made-for-a-machine/plan.md).
-`docker` and `ssh` are built; container/05 p8 and p11 add the others.
+A profile's `runtime` names what makes the machine: `docker`, `ssh`, `libvirt` or `proxmox`, each with its own options, per [One computer: provider, the runtime named for what makes the machine](./05-p8-a-profile-on-another-docker/plan.md).
+`docker` and `ssh` are built; container/05 p8 adds the others.
 A machine id records which runtime made it, so several runtimes can serve one host.
 
 ## One computer, two recipes
@@ -65,4 +65,4 @@ The real CLI is checked by hand; `@devcontainers/cli` 0.89.0 and Docker 29.6.2 a
 
 - An adopted container gets none of what the override config carries - read-only needs, `containerEnv`, limits, the name and agents labels - because it was made before this host knew the folder; container/03 task 15 records the choice.
 - The relay serves `vscode/devContainers/isDockerAvailable`, `connect`, `disconnect` and `relaySend`, not `stop` and `remove`.
-- Only the `docker` and `ssh` runtimes exist; `libvirt` and `proxmox` are container/05 p11.
+- Only the `docker` and `ssh` runtimes exist; `libvirt` and `proxmox` are container/05 p8.

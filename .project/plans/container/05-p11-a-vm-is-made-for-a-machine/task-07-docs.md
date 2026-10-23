@@ -1,6 +1,6 @@
 ---
 title: The docs say how a profile makes a VM
-status: todo
+status: dropped
 depends: [task-06-proxmox-makes-a-machine.md]
 layer: "docs"
 refs:

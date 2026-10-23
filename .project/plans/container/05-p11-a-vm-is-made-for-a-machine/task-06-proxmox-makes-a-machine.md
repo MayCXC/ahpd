@@ -1,6 +1,6 @@
 ---
 title: Proxmox makes a machine the same way
-status: todo
+status: dropped
 depends: [task-04-lifecycle-and-up-time.md, task-05-a-template-from-versions-json.md]
 layer: "computer"
 refs:

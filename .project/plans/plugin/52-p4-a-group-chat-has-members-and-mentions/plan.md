@@ -1,7 +1,7 @@
 ---
 title: A group chat has members and mentions
 domain: plugin
-status: draft
+status: dropped
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-18
@@ -15,6 +15,8 @@ refs:
   - "[code://docs/sdk/SESSIONS.md](../../../../docs/sdk/SESSIONS.md) - session grants are by role, and a session has no member list"
   - "[code://packages/sdk/src/host/routing.ts#L46](../../../../packages/sdk/src/host/routing.ts#L46) - a chat session is routed like any session, so VS Code lists it"
 ---
+
+Dropped 2026-10-22: merged into [p14 - A bot session has a Front, Backs and wakes](../52-p14-a-bot-session-has-a-front-and-backs/plan.md).
 
 ## Goal
 

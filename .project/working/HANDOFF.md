@@ -29,7 +29,7 @@ Each stays `active` until he says his review is done. Then mark the tasks `done`
 
 ## Next builds
 
-- None is queued. The planned ones with tasks are container/05 p8, p10 and p11; see [plans/index.md](../plans/index.md).
+- None is queued. The planned ones with tasks are container/05 p8 and p10; see [plans/index.md](../plans/index.md).
 
 ## Open questions for Softov
 

@@ -1,7 +1,7 @@
 ---
 title: A bot wakes when a session it started finishes
 domain: plugin
-status: draft
+status: dropped
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -14,6 +14,8 @@ refs:
   - "[code://packages/sdk/src/host/sessionevents.ts#L160-L171](../../../../packages/sdk/src/host/sessionevents.ts#L160-L171) - the host emits `childFinished` on the parent session"
   - "[code://packages/sdk/src/tools/session.ts#L447](../../../../packages/sdk/src/tools/session.ts#L447) - `create_session`, whose relationship decides the parent"
 ---
+
+Dropped 2026-10-22: merged into [p14 - A bot session has a Front, Backs and wakes](../52-p14-a-bot-session-has-a-front-and-backs/plan.md).
 
 ## Goal
 

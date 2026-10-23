@@ -1,7 +1,7 @@
 ---
 title: A virtual machine is made for a computer, by libvirt and then by Proxmox
 domain: container
-status: planned
+status: dropped
 priority: medium
 created: 2026-10-02
 revalidated: 2026-10-03
@@ -24,6 +24,8 @@ refs:
   - https://libvirt.org/manpages/virsh.html - `vol-create-as --backing-vol`, `domifaddr`, `metadata`, `start`, `shutdown`, `suspend`, `resume`, `undefine --remove-all-storage`
   - https://pve.proxmox.com/pve-docs/api-viewer/ - `qemu/{vmid}/clone` with `full=0`, `config` for cloud-init, `status/*`, tags and `description`
 ---
+
+Dropped 2026-10-22: merged into [p8 - A profile's machines may live on another Docker or in a VM](../05-p8-a-profile-on-another-docker/plan.md) as tasks 08 to 13.
 
 ## Goal
 
@@ -100,13 +102,13 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - dev02 runs libvirt and qemu](task-01-dev02-runs-libvirt.md) | todo | - |
-| [02 - A machine with an address is reached by ssh, with this host's own key](task-02-an-address-is-reached-by-ssh.md) | todo | - |
-| [03 - libvirt makes a machine from a template, and destroys it](task-03-libvirt-makes-a-machine.md) | todo | 01, 02 |
-| [04 - A VM starts, stops, suspends and resumes, and its up time is metered](task-04-lifecycle-and-up-time.md) | todo | 03 |
-| [05 - A template is built from versions.json](task-05-a-template-from-versions-json.md) | todo | 03 |
-| [06 - Proxmox makes a machine the same way](task-06-proxmox-makes-a-machine.md) | todo | 04, 05 |
-| [07 - Docs](task-07-docs.md) | todo | 06 |
+| [01 - dev02 runs libvirt and qemu](task-01-dev02-runs-libvirt.md) | dropped | - |
+| [02 - A machine with an address is reached by ssh, with this host's own key](task-02-an-address-is-reached-by-ssh.md) | dropped | - |
+| [03 - libvirt makes a machine from a template, and destroys it](task-03-libvirt-makes-a-machine.md) | dropped | 01, 02 |
+| [04 - A VM starts, stops, suspends and resumes, and its up time is metered](task-04-lifecycle-and-up-time.md) | dropped | 03 |
+| [05 - A template is built from versions.json](task-05-a-template-from-versions-json.md) | dropped | 03 |
+| [06 - Proxmox makes a machine the same way](task-06-proxmox-makes-a-machine.md) | dropped | 04, 05 |
+| [07 - Docs](task-07-docs.md) | dropped | 06 |
 
 ## Risks and tradeoffs
 

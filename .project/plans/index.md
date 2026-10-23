@@ -235,15 +235,19 @@ Reference: [00-host.md](host/00-host.md)
 | [104 - A session switch on a built-in stays](host/104-a-session-switch-on-a-builtin-stays/plan.md) | medium | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [105 - A synced skill is named by its plugin](host/105-a-synced-skill-is-named-by-its-plugin/plan.md) | medium | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [106 - A slow client is bounded](host/106-a-slow-client-is-bounded/plan.md) | medium | built 2026-10-16 | - | - |
-| [107 - A chat is served by a backend of its own](host/107-a-chat-is-served-by-a-backend-of-its-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | plugin 52 p9 |
+| [107 - A chat is served by a backend of its own](host/107-a-chat-is-served-by-a-backend-of-its-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | plugin 52 p14 |
 | [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | active 2026-10-20; tasks 01 to 07 implemented; [checks by hand](../pending/host-108-token-checks.md) pending | - | - |
 | [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | active 2026-10-18; task 01 implemented; [Ember check](../pending/host-109-ember-checks.md) pending | - | - |
 | [110 - A gone folder leaves the session summary](host/110-a-gone-folder-leaves-the-session-summary/plan.md) | medium | built 2026-10-19; [implemented.md](host/110-a-gone-folder-leaves-the-session-summary/implemented.md) | - | - |
 | [111 - The sdk files sit in domain folders](host/111-the-sdk-files-sit-in-domain-folders/plan.md) | medium | implemented 2026-10-20 | - | - |
 | [112 - A listing answers the caller's own records](host/112-a-listing-answers-the-callers-own-records/plan.md) | medium | active 2026-10-21; tasks 01 to 04 implemented | - | plugin 52 |
 | [113 - A person's own token names them at the door](host/113-a-persons-token-names-them-at-the-door/plan.md) | high | active 2026-10-21; tasks 01, 02 and 03 implemented | - | - |
+| [114 - A subscribe with no view gets every turn](host/114-a-subscribe-with-no-view-gets-every-turn/plan.md) | medium | draft 2026-10-22 | - | - |
+| [115 - A background task has one shape](host/115-a-background-task-has-one-shape/plan.md) | medium | draft 2026-10-22 | host 47 p2 | - |
+| [116 - A plugin opens a canvas on a chat](host/116-a-plugin-opens-a-canvas-on-a-chat/plan.md) | medium | draft 2026-10-22 | - | - |
+| [117 - ahpd speaks AHP 1.1.0](host/117-ahpd-speaks-ahp-1-1-0/plan.md) | medium | draft 2026-10-22; not built until AHP 1.1.0 is released | AHP 1.1.0 | - |
 
-Next free number in `host`: `113`.
+Next free number in `host`: `118`.
 
 ## claude
 
@@ -367,20 +371,21 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [49 - A bot's first turn is a template](plugin/49-a-bots-first-turn-is-a-template/plan.md) | medium | built 2026-10-15 ([implemented.md](plugin/49-a-bots-first-turn-is-a-template/implemented.md)) | plugin 45 p2 | - |
 | [50 - A connector plugin runs Activepieces pieces as tools](plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md) | medium | draft 2026-10-13; tasks not written | plugin 37 | OAuth and Instagram connectors |
 | [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | built 2026-10-16 ([implemented.md](plugin/51-a-plugin-id-is-a-slug/implemented.md)) | daemon 19 | ahpw `/plugins/web/` |
-| [52 - A person talks with a bot in a chat of their own](plugin/52-a-bot-manages-and-delegates/plan.md) | medium | draft 2026-10-16; parent of p1 to p13 | plugin 49 | - |
+| [52 - A person talks with a bot in a chat of their own](plugin/52-a-bot-manages-and-delegates/plan.md) | medium | draft 2026-10-16; parent of p1 to p14 | plugin 49 | - |
 | [52 p1 - The host keeps one task list](plugin/52-p1-the-host-keeps-one-task-list/plan.md) | medium | built 2026-10-19; [implemented.md](plugin/52-p1-the-host-keeps-one-task-list/implemented.md) | 52 | 52 p12, 52 p13 |
 | [52 p2 - A bot chat is a session with no harness](plugin/52-p2-a-bot-chat-is-a-session-with-no-harness/plan.md) | medium | built 2026-10-16 | 52 | 52 p3 |
-| [52 p3 - A message wakes the bot and it replies](plugin/52-p3-a-message-wakes-the-bot-and-it-replies/plan.md) | medium | active 2026-10-17; 16 tasks, all implemented | 52 p2 | 52 p4, 52 p6, 52 p7, 52 p8 |
-| [52 p4 - A group chat has members and mentions](plugin/52-p4-a-group-chat-has-members-and-mentions/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3, 52 p11 | - |
+| [52 p3 - A message wakes the bot and it replies](plugin/52-p3-a-message-wakes-the-bot-and-it-replies/plan.md) | medium | active 2026-10-17; 16 tasks, all implemented | 52 p2 | 52 p7, 52 p8, 52 p14 |
+| [52 p4 - A group chat has members and mentions](plugin/52-p4-a-group-chat-has-members-and-mentions/plan.md) | medium | dropped 2026-10-22; merged into 52 p14 | 52 p3, 52 p11 | - |
 | [52 p5 - A bot is made with its AGENTS.md](plugin/52-p5-a-bot-is-made-with-its-agents-file/plan.md) | medium | dropped 2026-10-17; moved into 52 p3 tasks 10 and 11 | 52 p3 | - |
-| [52 p6 - A bot wakes when a session it started finishes](plugin/52-p6-a-bot-wakes-when-a-session-it-started-finishes/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3 | - |
+| [52 p6 - A bot wakes when a session it started finishes](plugin/52-p6-a-bot-wakes-when-a-session-it-started-finishes/plan.md) | medium | dropped 2026-10-22; merged into 52 p14 | 52 p3 | - |
 | [52 p7 - A manager bot edits only its own folder](plugin/52-p7-a-manager-bot-edits-only-its-own-folder/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3, host 100 p2, host 101 | - |
 | [52 p8 - AGENTS.md is the bot's one copy](plugin/52-p8-agents-md-is-the-bots-one-copy/plan.md) | medium | active 2026-10-17; 6 tasks, 01, 02, 05 and 06 implemented | 52 p3 | - |
-| [52 p9 - Front and Back are chats of one session](plugin/52-p9-front-and-back-are-chats-of-one-session/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p3, host 107 | - |
+| [52 p9 - Front and Back are chats of one session](plugin/52-p9-front-and-back-are-chats-of-one-session/plan.md) | medium | dropped 2026-10-22; merged into 52 p14 | 52 p3, host 107 | - |
 | [52 p10 - A bot changes bots with a tool](plugin/52-p10-a-bot-changes-bots-with-a-tool/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p8 | - |
-| [52 p11 - A bot has a private session](plugin/52-p11-a-bot-has-a-private-session/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p9 | 52 p4 |
+| [52 p11 - A bot has a private session](plugin/52-p11-a-bot-has-a-private-session/plan.md) | medium | dropped 2026-10-22; merged into 52 p14 | 52 p9 | - |
 | [52 p12 - Claude and ACP write the task list](plugin/52-p12-claude-and-acp-write-the-task-list/plan.md) | medium | active 2026-10-18; tasks 01 to 07 implemented; title answer recorded | 52 p1 | - |
 | [52 p13 - A client sees the task list](plugin/52-p13-a-client-sees-the-task-list/plan.md) | medium | active 2026-10-18; 5 tasks, 01, 02, 03 and 05 implemented; 04 done 2026-10-19 | 52 p1 | - |
+| [52 p14 - A bot session has a Front, Backs and wakes](plugin/52-p14-a-bot-session-has-a-front-and-backs/plan.md) | medium | draft 2026-10-22; merged from 52 p4, p6, p9, p11 and p7's permission mode; tasks not written | 52 p3, host 107 | - |
 | [52 - The computer and bot listings answer the caller's own](plugin/52-the-computer-and-bot-listings-answer-the-callers-own/plan.md) | medium | active 2026-10-21; tasks 01 and 02 implemented | host 112 | - |
 | [53 - A client sees the plugins and the connectors](plugin/53-a-client-sees-plugins-and-connectors/plan.md) | medium | active 2026-10-22; sixteen tasks, all implemented, awaiting review | plugin 44, plugin 48 | ahpw connectors and plugins pages, the UI component tree, connector actions as tools |
 | [54 - A webhook takes what real senders send](plugin/54-a-webhook-takes-what-real-senders-send/plan.md) | high | planned 2026-10-22; seven tasks, 01 to 07 implemented, awaiting review | plugin 48, plugin 53 | - |
@@ -399,7 +404,7 @@ Reference: [00-container.md](container/00-container.md)
 | [02 - VS Code offers a dev container on a folder served by ahpd](container/02-vscode-offers-our-dev-container/plan.md) | high | active 2026-10-10; task 04 done; tasks 01-03 blocked on Softov's Windows VS Code run | container 01; task 04 also container 03, plugin 16 | - |
 | [03 - A dev container is a computer, listed and reachable without the connection that made it](container/03-a-dev-container-is-a-computer/plan.md) | medium | built 2026-10-05 ([implemented.md](container/03-a-dev-container-is-a-computer/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | container 01, plugin 15 | - |
 | [04 - A cofold session in a computer runs in an ahpd started inside it](container/04-a-cofold-session-in-a-computer/plan.md) | medium | built 2026-10-06 ([implemented.md](container/04-a-cofold-session-in-a-computer/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | plugin 14, plugin 15 | - |
-| [05 - An agent in a machine is built once, started fast, and reached from anywhere](container/05-an-agent-in-a-machine/plan.md) | high | active, a parent of twelve child plans; p1-p7 built | plugin 15, plugin 16, container 04, container 03, claude 15 | the next agent and plugin plans |
+| [05 - An agent in a machine is built once, started fast, and reached from anywhere](container/05-an-agent-in-a-machine/plan.md) | high | active, a parent of twelve child plans; p1-p7 and p9 built; p11 dropped 2026-10-22, merged into p8 | plugin 15, plugin 16, container 04, container 03, claude 15 | the next agent and plugin plans |
 | [05 p1 - A secret reaches a machine in its environment, never in its argv](container/05-p1-a-secret-reaches-a-machine-by-name/plan.md) | high | built 2026-10-05 ([implemented.md](container/05-p1-a-secret-reaches-a-machine-by-name/implemented.md)); every task done, reviewed 2026-10-10 | container 05, container 03 | 05 p2 |
 | [05 p2 - An ACP preset says what its machine needs](container/05-p2-an-acp-agent-says-what-its-machine-needs/plan.md) | high | built 2026-10-05 ([implemented.md](container/05-p2-an-acp-agent-says-what-its-machine-needs/implemented.md)); tasks 01, 04, 05 done, reviewed 2026-10-10; 02, 03 dropped | container 05 p1, acp 05 | 05 p5 |
 | [05 p3 - Parts are built from one versions file, and the joined image from the same file](container/05-p3-parts-are-built-from-one-versions-file/plan.md) | high | built 2026-10-04 ([implemented.md](container/05-p3-parts-are-built-from-one-versions-file/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | container 05 | 05 p4 |
@@ -407,10 +412,10 @@ Reference: [00-container.md](container/00-container.md)
 | [05 p5 - Agents run from their parts and keep their own state, and the host's binary and home become opt-ins](container/05-p5-agents-run-from-their-parts/plan.md) | high | built 2026-10-06 ([implemented.md](container/05-p5-agents-run-from-their-parts/implemented.md)); reviewed and merged 2026-10-06 | container 05 p2, container 05 p3, container 05 p4, container 05 p6, container 04, claude 15, plugin 15, acp 05 | 05 p8, 05 p9 |
 | [05 p6 - An agent's configuration lives in a volume per profile, seeded from the host once](container/05-p6-agent-configuration-lives-in-a-volume/plan.md) | high | built 2026-10-06 ([implemented.md](container/05-p6-agent-configuration-lives-in-a-volume/implemented.md)); every task done, reviewed 2026-10-10 | container 05 | 05 p5 |
 | [05 p7 - A worktree reaches its machine with the repository it belongs to](container/05-p7-a-worktree-brings-its-repository/plan.md) | high | built 2026-10-06 ([implemented.md](container/05-p7-a-worktree-brings-its-repository/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | plugin 16, container 03 | 05 p8 |
-| [05 p8 - A profile's machines may live on another Docker](container/05-p8-a-profile-on-another-docker/plan.md) | medium | planned 2026-10-03; tasks 01-07 todo | container 05 p5, container 05 p7, container 05 p9 | - |
+| [05 p8 - A profile's machines may live on another Docker or in a VM](container/05-p8-a-profile-on-another-docker/plan.md) | medium | planned 2026-10-03; p11 merged in 2026-10-22; tasks 01-13 todo | container 05 p3, container 05 p5, container 05 p7, container 05 p9 | - |
 | [05 p9 - An ssh machine runs a nested host](container/05-p9-an-ssh-machine-runs-a-nested-host/plan.md) | medium | built 2026-10-19; pnpm test green on Linux in PR 7 CI; [implemented.md](container/05-p9-an-ssh-machine-runs-a-nested-host/implemented.md), [deferred.md](container/05-p9-an-ssh-machine-runs-a-nested-host/deferred.md) | container 04 (tasks 11, 14, 15, 17) | 05 p10 |
 | [05 p10 - A host joins another, which lists it as a computer and relays its sessions](container/05-p10-a-host-joins-a-hub/plan.md) | medium | planned 2026-10-03; tasks 01-06 todo | container 05 p9, daemon 13 | - |
-| [05 p11 - A virtual machine is made for a computer, by libvirt and then by Proxmox](container/05-p11-a-vm-is-made-for-a-machine/plan.md) | medium | planned 2026-10-03; tasks 01-07 todo | container 05 p9, container 05 p8, container 05 p3, container 05 p5 | - |
+| [05 p11 - A virtual machine is made for a computer, by libvirt and then by Proxmox](container/05-p11-a-vm-is-made-for-a-machine/plan.md) | medium | dropped 2026-10-22; merged into 05 p8 | - | - |
 | [05 p12 - A machine off this host reaches its models through this host's proxy](container/05-p12-off-host-machine-reaches-models-via-proxy/plan.md) | high | draft 2026-10-14; the proxy is an option, and a machine uses its own configuration by default; task 03 dropped; the setting's name is open | container 05 p9, proxy 01, claude 16, proxy 02 | - |
 
 Next free number in `container`: `06`.

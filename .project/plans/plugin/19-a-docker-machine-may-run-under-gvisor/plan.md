@@ -42,14 +42,14 @@ profile { ociRuntime: 'runsc' } -> manifestOf -> MachineSpec.ociRuntime -> docke
 ### Gaps
 
 - `Profile` and `MachineSpec` have no OCI runtime.
-- `Not found: any runtime but docker - searched "runtime" in packages/computer/src/plugin.ts`; `ssh`, `libvirt` and `proxmox` are container 05 p9 to p11, and the rest is an [idea](../../../ideas/more-computer-runtimes.md), not planned by Softov's choice.
+- `Not found: any runtime but docker - searched "runtime" in packages/computer/src/plugin.ts`; `ssh`, `libvirt` and `proxmox` are container 05 p9 and p8, and the rest is an [idea](../../../ideas/more-computer-runtimes.md), not planned by Softov's choice.
 
 ## Decisions locked in
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../../../docs/plugins/COMPUTERS.md) | Softov, 2026-09-26 |
-| 2 | [One computer: provider, the runtime named for what makes the machine](../../container/05-p11-a-vm-is-made-for-a-machine/plan.md) | Softov, 2026-10-02 |
+| 2 | [One computer: provider, the runtime named for what makes the machine](../../container/05-p8-a-profile-on-another-docker/plan.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |

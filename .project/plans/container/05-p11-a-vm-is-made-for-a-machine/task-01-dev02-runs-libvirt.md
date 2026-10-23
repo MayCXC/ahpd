@@ -1,6 +1,6 @@
 ---
 title: dev02 runs libvirt and qemu
-status: todo
+status: dropped
 depends: []
 layer: "dev02 (by hand)"
 refs:

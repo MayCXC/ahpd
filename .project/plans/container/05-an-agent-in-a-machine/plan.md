@@ -104,13 +104,13 @@ Child plans, each scoped to one package or two.
 | [p2 - An ACP preset says what its machine needs](../05-p2-an-acp-agent-says-what-its-machine-needs/plan.md) | agent-acp | built | p1, acp 05 (the ACP presets plan) |
 | [p3 - Parts are built from one versions file](../05-p3-parts-are-built-from-one-versions-file/plan.md) | computer (images) | built | - |
 | [p4 - A part is mounted into a machine](../05-p4-a-part-is-mounted-into-a-machine/plan.md) | sdk, computer | built | p3, plugin 15, container 03 |
-| [p5 - Agents run from their parts and keep their own state](../05-p5-agents-run-from-their-parts/plan.md) | agent-claude, agent-acp, agent-cofold, agent-pi | planned | p2, p4, p6, acp 05 (the ACP presets plan) |
-| [p6 - An agent's configuration lives in a volume per profile](../05-p6-agent-configuration-lives-in-a-volume/plan.md) | sdk, computer | planned | - |
-| [p7 - A worktree reaches its machine with its repository](../05-p7-a-worktree-brings-its-repository/plan.md) | sdk, computer | planned | plugin 16 |
-| [p8 - A profile's machines may live on another Docker](../05-p8-a-profile-on-another-docker/plan.md) | computer | planned | p5, p7, p9, p12 |
-| [p9 - An ssh machine runs a nested host](../05-p9-an-ssh-machine-runs-a-nested-host/plan.md) | computer, sdk | planned | container 04 (tasks 11, 14, 15, 17) |
-| [p10 - A host joins another, which relays its sessions](../05-p10-a-host-joins-a-hub/plan.md) | server, sdk | planned | p9, p12, daemon 13 |
-| [p11 - A virtual machine is made for a computer, by libvirt and then by Proxmox](../05-p11-a-vm-is-made-for-a-machine/plan.md) | computer | planned | p3, p5, p8, p9, p12 |
+| [p5 - Agents run from their parts and keep their own state](../05-p5-agents-run-from-their-parts/plan.md) | agent-claude, agent-acp, agent-cofold, agent-pi | built | p2, p4, p6, acp 05 (the ACP presets plan) |
+| [p6 - An agent's configuration lives in a volume per profile](../05-p6-agent-configuration-lives-in-a-volume/plan.md) | sdk, computer | built | - |
+| [p7 - A worktree reaches its machine with its repository](../05-p7-a-worktree-brings-its-repository/plan.md) | sdk, computer | built | plugin 16 |
+| [p8 - A profile's machines may live on another Docker or in a VM](../05-p8-a-profile-on-another-docker/plan.md) | computer | planned | p3, p5, p7, p9 |
+| [p9 - An ssh machine runs a nested host](../05-p9-an-ssh-machine-runs-a-nested-host/plan.md) | computer, sdk | built | container 04 (tasks 11, 14, 15, 17) |
+| [p10 - A host joins another, which relays its sessions](../05-p10-a-host-joins-a-hub/plan.md) | server, sdk | planned | p9, daemon 13 |
+| [p11 - A virtual machine is made for a computer, by libvirt and then by Proxmox](../05-p11-a-vm-is-made-for-a-machine/plan.md) | computer | dropped, in p8 | - |
 | [p12 - A machine off this host reaches its models through this host's proxy](../05-p12-off-host-machine-reaches-models-via-proxy/plan.md) | sdk, computer, server | planned | p9, claude 16, the proxy listener plan (not written yet) |
 
 ## Risks and tradeoffs
@@ -129,7 +129,7 @@ Child plans, each scoped to one package or two.
 - **Watch out for:**
   - No child cites another project.
   - Most answers recorded in the children on 2026-10-03 are current choices for fast development, not decisions: each is made in one function or option named in its row, so it can change without a new decision.
-  - A machine id is spelled and parsed only by p9 task 01's functions; p8, p10 and p11 use them.
+  - A machine id is spelled and parsed only by p9 task 01's functions; p8 and p10 use them.
   - The fake Docker in `packages/computer/test/fixtures/docker.mjs` has to learn every new flag before a test can hold it.
 
 ## Final verification checklist

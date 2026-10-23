@@ -1,6 +1,6 @@
 ---
 title: A machine with an address is reached by ssh, with this host's own key
-status: todo
+status: dropped
 depends: []
 layer: "computer"
 refs:

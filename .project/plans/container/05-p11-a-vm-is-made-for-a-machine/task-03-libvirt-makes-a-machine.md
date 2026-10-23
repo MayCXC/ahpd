@@ -1,6 +1,6 @@
 ---
 title: libvirt makes a machine from a template, and destroys it
-status: todo
+status: dropped
 depends: [task-01-dev02-runs-libvirt.md, task-02-an-address-is-reached-by-ssh.md]
 layer: "computer"
 refs:

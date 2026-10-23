@@ -1,6 +1,6 @@
 ---
 title: A VM template is built from versions.json and rebuilt when it moves
-status: todo
+status: dropped
 depends: [task-03-libvirt-makes-a-machine.md]
 layer: "computer"
 refs:

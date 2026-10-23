@@ -64,10 +64,10 @@ person -> bot-chat session (no model) -> fire bot message -> automation -> wake 
 | A direct chat needs a grant of its own, not only `bot:read` | Softov, 2026-10-16, chose "A grant of its own" for "Who may open a direct chat with Backer?" | p2 |
 | A person's turn stays open until the bot calls `post_message` | Softov, 2026-10-16, chose "Turn stays open" | p3 |
 | The bot plugin keeps its own index of bot plus person to chat, and the record holds no session | Softov, 2026-10-16, chose "Bot provider's own index" | p2 |
-| A bot has one private session, and a wake with no person behind it goes there | Softov, 2026-10-18, "each bot will have its own private session.. no one can chat on it.. only system instructions or wake automations." | p11 |
-| Only `@<slug>` wakes a bot in a group chat | Softov, 2026-10-16, chose "Only @backer" | p4 |
+| A bot has one private session, and a wake with no person behind it goes there | Softov, 2026-10-18, "each bot will have its own private session.. no one can chat on it.. only system instructions or wake automations." | p14 |
+| Only `@<slug>` wakes a bot in a group chat | Softov, 2026-10-16, chose "Only @backer" | p14 |
 | The host's bot rules go in as a system prompt where the harness takes one | Softov, 2026-10-16, chose "System prompt where possible" | p3 |
-| A group chat is a session for now, with members on it, and VS Code can chat in it | Softov, 2026-10-16, "can be a session for now, but we can control who access? so vs code could chat on it?", then chose "Members on the chat session" | p4 |
+| A group chat is a session for now, with members on it, and VS Code can chat in it | Softov, 2026-10-16, "can be a session for now, but we can control who access? so vs code could chat on it?", then chose "Members on the chat session" | p14 |
 | The chat provider has an id of its own, such as `bot-chat`, and `bot:/<slug>` stays the record | Softov, 2026-10-16, chose "A new id, such as bot-chat" | p2 |
 | The persona is `AGENTS.md` in the bot's folder, read by the harness, and `CLAUDE.md` holds `@AGENTS.md` | Softov, 2026-10-16, chose "AGENTS.md read by the harness" | p5 |
 | Every bot session works in the bot's folder | Softov, 2026-10-16, chose "The bot's folder" | p3 |
@@ -87,24 +87,25 @@ Child plans, each for one part.
 
 | Plan | Package | Status | Depends on |
 | --- | --- | --- | --- |
-| [p1 - The host keeps one task list](../52-p1-the-host-keeps-one-task-list/plan.md) | tasks (new plugin), sdk | planned | - |
-| [p2 - A bot chat is a session with no harness](../52-p2-a-bot-chat-is-a-session-with-no-harness/plan.md) | bot, sdk | draft | - |
-| [p3 - A message wakes the bot and it replies](../52-p3-a-message-wakes-the-bot-and-it-replies/plan.md) | bot, sdk | draft | p2 |
-| [p4 - A group chat has members and mentions](../52-p4-a-group-chat-has-members-and-mentions/plan.md) | bot, sdk | draft | p3 |
-| [p5 - A bot is made with its AGENTS.md](../52-p5-a-bot-is-made-with-its-agents-file/plan.md) | bot | draft | p3 |
-| [p6 - A bot wakes when a session it started finishes](../52-p6-a-bot-wakes-when-a-session-it-started-finishes/plan.md) | bot | draft | p3 |
+| [p1 - The host keeps one task list](../52-p1-the-host-keeps-one-task-list/plan.md) | tasks (new plugin), sdk | built | - |
+| [p2 - A bot chat is a session with no harness](../52-p2-a-bot-chat-is-a-session-with-no-harness/plan.md) | bot, sdk | built | - |
+| [p3 - A message wakes the bot and it replies](../52-p3-a-message-wakes-the-bot-and-it-replies/plan.md) | bot, sdk | active | p2 |
+| [p4 - A group chat has members and mentions](../52-p4-a-group-chat-has-members-and-mentions/plan.md) | bot, sdk | dropped, in p14 | p3 |
+| [p5 - A bot is made with its AGENTS.md](../52-p5-a-bot-is-made-with-its-agents-file/plan.md) | bot | dropped, in p3 | p3 |
+| [p6 - A bot wakes when a session it started finishes](../52-p6-a-bot-wakes-when-a-session-it-started-finishes/plan.md) | bot | dropped, in p14 | p3 |
 | [p7 - A manager bot edits only its own folder](../52-p7-a-manager-bot-edits-only-its-own-folder/plan.md) | bot | draft | p5, host/100 p2, host/101 |
-| [p8 - AGENTS.md is the bot's one copy](../52-p8-agents-md-is-the-bots-one-copy/plan.md) | bot | planned | p3 |
-| [p9 - Front and Back are chats of one session](../52-p9-front-and-back-are-chats-of-one-session/plan.md) | bot | draft | p3, host/107 |
+| [p8 - AGENTS.md is the bot's one copy](../52-p8-agents-md-is-the-bots-one-copy/plan.md) | bot | active | p3 |
+| [p9 - Front and Back are chats of one session](../52-p9-front-and-back-are-chats-of-one-session/plan.md) | bot | dropped, in p14 | p3, host/107 |
 | [p10 - A bot changes bots with a tool](../52-p10-a-bot-changes-bots-with-a-tool/plan.md) | bot | draft | p8 |
-| [p11 - A bot has a private session](../52-p11-a-bot-has-a-private-session/plan.md) | bot | draft | p9 |
-| [p12 - Claude and ACP write the task list](../52-p12-claude-and-acp-write-the-task-list/plan.md) | agent-claude, agent-acp, sdk, tasks | planned | p1 |
-| [p13 - A client sees the task list](../52-p13-a-client-sees-the-task-list/plan.md) | tasks, sdk | planned | p1 |
+| [p11 - A bot has a private session](../52-p11-a-bot-has-a-private-session/plan.md) | bot | dropped, in p14 | p9 |
+| [p12 - Claude and ACP write the task list](../52-p12-claude-and-acp-write-the-task-list/plan.md) | agent-claude, agent-acp, sdk, tasks | active | p1 |
+| [p13 - A client sees the task list](../52-p13-a-client-sees-the-task-list/plan.md) | tasks, sdk | active | p1 |
+| [p14 - A bot session has a Front, Backs and wakes](../52-p14-a-bot-session-has-a-front-and-backs/plan.md) | bot | draft | p3, host/107 |
 
 ## Risks and tradeoffs
 
 - A turn that waits minutes for a wake can look stuck in a client. p3 decides what the open turn shows meanwhile.
-- A message in a group is text from a person the owner may not trust. p4 names security tests for it.
+- A message in a group is text from a person the owner may not trust. p14 names security tests for it.
 - Each person's session is apart, so a bot does not remember one person's chat in another's. What they share goes through the bot's folder.
 
 ## Resume state

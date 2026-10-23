@@ -26,7 +26,7 @@ This task builds the default route, `code: "bundle"`: no credential reaches the 
 6. A session with `isolation: folder` on a remote profile has no worktree of its own to merge into; what happens then waits on the plan's open question.
 7. A bring-back that fails keeps the machine: a disposable machine is not removed while its work has not come back, and the log says which machine holds it.
 3. A folder that is not a repository is refused with a sentence.
-4. Nothing here is Docker-specific but the copy; keep the copy behind the runtime so p11 can use `scp`.
+4. Nothing here is Docker-specific but the copy; keep the copy behind the runtime so a VM (task 10) can use `scp`.
 5. A fetch back that is not a fast-forward of the session's branch stays under its own ref and is said in the log, not forced over the branch.
 
 ## Validation
