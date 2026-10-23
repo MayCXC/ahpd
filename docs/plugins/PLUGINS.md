@@ -164,6 +164,7 @@ against its contract before it is recorded.
 | `registerResourceProvider(scheme, provider)` | register, open key | One host-owned URI scheme, routed beside the `file:` store |
 | `registerChannel(scheme, channel)` | register, open key | One channel a client subscribes to, under an `x-` scheme; answers a handle to publish on |
 | `registerAdapter(adapter)` | register, open key | One adapter, whose schema a client draws the form from, and the connectors a person makes of it |
+| `registerBindings(read)` | set | One function the host asks, synchronously, for the connectors a session may use, by alias - at each tool list and each call. `@ahpd/bot` answers a bot's for the sessions it started |
 | `registerMethod(name, method)` | register, open key | One command a client sends by name, under an `x-` name |
 | `registerTerminals(store)` | set | `create` |
 | `registerChanges(source)` | set | `scopes`, `state`, `summary`, and the optional operations |
@@ -517,16 +518,28 @@ host.registerAdapter({
     },
     required: ['secret'],
   },
-  capabilities: [{
-    type: 'receive',
-    name: 'calls',
-    title: 'Receives calls',
-    description: 'Answers a POST to its URL.',
-    path: '/plugins/webhook/{id}',
-  }],
+  capabilities: [
+    {
+      type: 'receive',
+      name: 'calls',
+      title: 'Receives calls',
+      description: 'Answers a POST to its URL.',
+      path: '/plugins/webhook/{id}',
+    },
+    {
+      type: 'action',
+      name: 'send_message',
+      title: 'Send a message',
+      description: 'Sends one message to the bot this connector names.',
+      input: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
+    },
+  ],
   open(connector) {
     serve(connector.id, connector.config);
     return () => { stopServing(connector.id); };
+  },
+  run(connector, action, input) {
+    return say(connector.config['bot'] as string, input['text'] as string);
   },
 });
 ```
@@ -548,19 +561,72 @@ host.registerAdapter({
 - `schema` is checked as a whole, so a `oneOf` with an alternative for each kind
   of connector refuses a field that belongs to another kind, rather than letting
   `open` discover it.
-- `capabilities` are listed for a client and not run. The types are `receive`,
+- `capabilities` are listed for a client. The types are `receive`,
   `command` and `action`, and `ui` is reserved for a later plan; a type this
-  version does not know is shown by its title.
+  version does not know is shown by its title. An `action` is the one type the
+  host runs, as a tool a session calls - [An action offered as a
+  tool](#an-action-offered-as-a-tool).
 - A `receive` capability may carry `path`: where its connectors receive, relative to the daemon's HTTP root, with `{id}` standing for the connector id, such as `/plugins/webhook/{id}`. A client puts the root before it to build a connector's URL. A `path` on any other type, or one that does not start with `/`, is refused when the adapter registers, and `x-ahpd-adapters` sends it with the capability.
 - `open(connector)` starts answering for one connector, which carries `id`,
   `adapter`, `owner`, an optional `title`, and `config` with each secret read
   back from the vault. The answer is the function that stops it, or nothing when
   there is nothing to stop. An `open` that throws leaves the connector stored
   and shown as `invalid`.
+- `run(connector, action, input)` is optional, and runs one `action` capability
+  of an open connector. `connector` is the row `open` got, secrets read back;
+  `input` is what the model passed, without the `connector` argument when it
+  named one. It answers a promise of the result, which the host hands the model
+  as the tool's answer. An adapter with no `run` offers no action tool, and a
+  `run` that throws is what the model is told, under the alias it named.
 
 The schema can change between versions, and nothing migrates a stored
 connector: one whose config no longer fits shows as `invalid`, and one whose
 adapter no plugin registers shows as `unavailable`. Neither is opened.
+
+### An action offered as a tool
+
+An `action` capability of an adapter that has `run` is a host tool, and one
+tool serves every connector of that adapter: the adapter is the kind of thing,
+and a connector of it is which account a call uses. A tool is named
+`<adapter>_<action>`, with each character outside `[A-Za-z0-9_]` written as
+`_`, so `ap-resend` and `send_email` give `ap_resend_send_email`. Two actions
+that meet on one name keep the first, and the host reports the second. The
+capability's `description` is the tool's description, and its `input` is the
+schema the tool starts from. The tools are made once, when the daemon starts,
+and they stay when the host's own tool list is set again.
+
+A session names its connectors by alias, in the `connectors` key of its config,
+which is set when the session starts:
+
+```json
+{ "connectors": { "work": "connectors://ap-resend/account-123", "personal": "connectors://ap-resend/account-456" } }
+```
+
+An alias is a lowercase slug, and a value is `connectors://<adapter>/<id>`. A
+bot names the same map in its `connectors` field, and `@ahpd/bot` answers it for
+each session the bot started, through `registerBindings` - read live, so an
+edit to a bot reaches a session that is already running. [BOTS.md](BOTS.md)
+says what the field is.
+
+A session sees the tool only when it binds a connector of the tool's adapter,
+and the schema is that session's: with one binding there is no `connector`
+argument at all, because the session has already said whose account this is,
+and the host fills it in; with two or more, `connector` is required, with an
+`enum` of the aliases. The model names an alias and never a connector's id.
+
+Every call checks four things again, because a remove or a revoke changes them
+while the session runs:
+
+- the connector the alias names is one this host has, and it is open;
+- it is a connector of the tool's adapter;
+- the adapter has the action, and a `run` to run it;
+- the session's owner may read the connector, by the rule the connectors
+  channel applies to every call.
+
+An error names the alias the model used and the reason, and never the id or a
+secret. A call after the binding is removed, or after its owner loses
+`connector:list`, fails at the next call; a binding added while the session
+runs shows in the next tool list the host builds for it.
 
 ### A command of your own
 

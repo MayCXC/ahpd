@@ -246,10 +246,10 @@ Reference: [00-host.md](host/00-host.md)
 | [115 - A background task has one shape](host/115-a-background-task-has-one-shape/plan.md) | medium | planned 2026-10-23; 07 of seven implemented, in build | host 47 p2 | - |
 | [116 - A plugin opens a canvas on a chat](host/116-a-plugin-opens-a-canvas-on-a-chat/plan.md) | medium | draft 2026-10-22 | - | - |
 | [117 - ahpd speaks AHP 1.1.0](host/117-ahpd-speaks-ahp-1-1-0/plan.md) | medium | draft 2026-10-22; not built until AHP 1.1.0 is released | AHP 1.1.0 | - |
-| [118 - A connector action runs as a tool](host/118-a-connector-action-runs-as-a-tool/plan.md) | medium | planned 2026-10-23; five tasks | plugin 53 | plugin 50 |
+| [118 - A connector action runs as a tool](host/118-a-connector-action-runs-as-a-tool/plan.md) | medium | active 2026-10-23; all five tasks implemented; open: a bot's session is not handed the action tools at the list its backend starts with | plugin 53 | plugin 50 |
 | [119 - A row counts the work while a turn runs](host/119-a-row-counts-the-work-while-a-turn-runs/plan.md) | medium | planned 2026-10-23; two tasks | - | - |
 
-Next free number in `host`: `118`.
+Next free number in `host`: `120`.
 
 ## claude
 
