@@ -30,7 +30,7 @@ import { isRecordPath, isRecordSlug, RECORD_PATH, RECORD_SLUG } from '../resourc
 import type { Pair } from '../utils/pair.js';
 import { reason } from '../utils/values.js';
 import { readSecret } from '../access/vault.js';
-import { checkAdapter, checkAgent, checkChannel, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName } from './validate.js';
+import { checkAdapter, checkAgent, checkChannel, checkChatRequest, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName } from './validate.js';
 
 /**
  * One contributed backend, as the host keeps it: the plugin's own agent with a
@@ -1117,6 +1117,22 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
         throw new Error(miss(by, 'startSession', 'the session', 'asked for once a host is built over this plugin'));
       }
       return start(asked);
+    },
+    /*
+     * A chat inside a session this plugin already has, checked here and
+     * started there.
+     *
+     * The same boundary as `startSession`, and the same answer for a request
+     * made while `apply` runs: there is no host yet to start anything in, and a
+     * call that owes an answer is told rather than dropped.
+     */
+    startChat(session, wanted) {
+      const asked = checkChatRequest(wanted, by);
+      const start = starts.startChat;
+      if (start === undefined) {
+        throw new Error(miss(by, 'startChat', 'the chat', 'asked for once a host is built over this plugin'));
+      }
+      return start(session, asked);
     },
     /*
      * The plugin's own connection, over a pair with this host on the other end.

@@ -930,8 +930,27 @@ export interface ToolCall {
     prompt: string;
     from: Bag;
   }): Promise<{ session: string; chat: string }>;
-  /** A second chat in a running session, started with its first message. */
-  createChat(session: string, options: { title?: string; model?: string; prompt: string; from: Bag }): Promise<{ chat: string }>;
+  /**
+   * A second chat in a running session, started with its first message.
+   *
+   * `provider` names the backend that serves this chat, where it is not the
+   * session's own: a chat of another backend runs on that one, with that
+   * backend's config, while the session keeps its own provider and its own
+   * chats. The session's keys that no backend owns - its `computer` and what a
+   * plugin contributed - reach the chat from the session either way.
+   *
+   * `config` is that backend's settings for this chat, checked against its
+   * schema. Absent, the chat runs on what the session was given, less what its
+   * backend does not own.
+   */
+  createChat(session: string, options: {
+    title?: string;
+    model?: string;
+    provider?: string;
+    config?: Record<string, unknown>;
+    prompt: string;
+    from: Bag;
+  }): Promise<{ chat: string }>;
   /** A chat's title. On the default chat it is the session's title too. */
   rename(session: string, chat: string, title: string): void;
   /** A session gone, with its chats, terminals and a clean worktree. */

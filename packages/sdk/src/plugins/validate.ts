@@ -18,7 +18,7 @@
  */
 
 import type { StartSession } from '../types/automations.js';
-import type { PluginContracts, PortKey } from '../types/plugin.js';
+import type { ChatRequest, PluginContracts, PortKey } from '../types/plugin.js';
 import type { Owner } from '../types/usage.js';
 import { SUBJECTS, isGrant } from '../access/users.js';
 import { RECORD_SLUG, isRecordSlug } from '../resources/records.js';
@@ -474,6 +474,50 @@ export const checkSessionRequest = (value: unknown, by: string): StartSession =>
     ...(title === undefined ? {} : { title: title as string }),
     ...(instructions === undefined ? {} : { instructions }),
     ...(tools === undefined ? {} : { tools }),
+  };
+};
+
+/**
+ * Check one `startChat` request, and answer it in the host's own shape.
+ *
+ * Checked here rather than where the chat is started, for the same reason
+ * `checkSessionRequest` is: this is the boundary a plugin's value crosses, and
+ * the refusal has to name the plugin and the member the way every other one
+ * here does. The session is checked at the call site, which is where it is
+ * read; what this checks is the request.
+ *
+ * A request may carry no `prompt`, which asks for a chat that opens with
+ * nobody speaking. Present and blank is a mistake rather than a quiet chat,
+ * the same answer an empty session prompt gets.
+ */
+export const checkChatRequest = (value: unknown, by: string): ChatRequest => {
+  const object = asObject(value, by, 'startChat', 'a chat request');
+  const said = object.prompt;
+  if (said !== undefined && (typeof said !== 'string' || said.trim() === '')) {
+    throw new Error(miss(by, 'startChat', 'prompt', 'the first message, as a line of text, or nothing for a chat that opens silent'));
+  }
+  const provider = object.provider;
+  if (provider !== undefined && !right(provider, 'string')) {
+    throw new Error(miss(by, 'startChat', 'provider', 'a string, or nothing for the session\'s own backend'));
+  }
+  const model = object.model;
+  if (model !== undefined && !right(model, 'string')) {
+    throw new Error(miss(by, 'startChat', 'model', 'a model id, as a line of text, or nothing for the backend\'s own'));
+  }
+  const config = object.config;
+  if (config !== undefined && !right(config, 'object')) {
+    throw new Error(miss(by, 'startChat', 'config', 'an object of session config, or nothing'));
+  }
+  const title = object.title;
+  if (title !== undefined && !right(title, 'string')) {
+    throw new Error(miss(by, 'startChat', 'title', 'a string, or nothing'));
+  }
+  return {
+    ...(provider === undefined ? {} : { provider: provider as string }),
+    ...(model === undefined ? {} : { model: model as string }),
+    ...(config === undefined ? {} : { config: config as Record<string, unknown> }),
+    ...(title === undefined ? {} : { title: title as string }),
+    ...(said === undefined ? {} : { prompt: (said as string).trim() }),
   };
 };
 

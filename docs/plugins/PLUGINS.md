@@ -692,6 +692,30 @@ The owner's own `session:create` is asked first, and a refusal reads exactly as 
 
 Two reads go with it. `host.sessionKept(uri)` answers whether this host keeps the session at a URI, which is how a plugin decides whether a leftover machine is one of its own to adopt. `host.sessionOwner(uri)` answers whose that session is, or nothing where this host has none, which is how a plugin adopts a session somebody else started - a bot linking one its owner already has - without putting work into a place its writer has no business being. Both are promises read from the host's own store when they are called, because the plugin that registers that store may load after yours.
 
+### Starting a chat on a backend
+
+A plugin that already has a session and needs one more conversation inside it - a bot's Back chat answering the message that woke it - says so with `host.startChat(session, wanted)`, which answers the new chat's URI. The session is named by its URI and stays what it is: its owner, its provider, its tree and its other chats.
+
+```ts
+const chat = await host.startChat('claude:/bot', {
+  provider: 'cofold',
+  config: { voice: 'plain' },
+  prompt: 'Answer the message that woke you.',
+});
+```
+
+`provider` names the backend that serves this one chat, where that is not the session's own; a chat of another backend keeps a conversation of its own, and every start of it - a session restart, `restartChat`, a rewind, a daemon restart - goes back to that backend. Absent, the chat runs on the session's own. `config` is that backend's settings for the chat, checked against its schema before anything starts, and a value it refuses is refused with the key and the value in the sentence. The session's keys that no backend owns - its `computer` and any key a plugin contributed - reach the chat from the session whatever is named here, so the chat works in the session's machine; the session backend's own keys do not, because they mean nothing to a harness that never read them. `model` is a model id within that backend, `title` names the chat, and `prompt` is its first turn, absent for a chat that opens with nobody speaking.
+
+The session owner's own `chat:create` is asked first, and a refusal reads exactly as it does at the door - `soft may not chat:create here` - so a plugin cannot add a chat the person the session belongs to could not have added. A host with no users directory gates nothing, here as anywhere else.
+
+A host tool reaches the same road through `ToolCall.createChat`, which takes the same `provider` and `config` beside `title`, `model` and `prompt`:
+
+```ts
+const made = await at.createChat(at.session, { provider: 'cofold', config: { voice: 'plain' }, prompt, from });
+```
+
+A chat a tool opens is counted against the session tree the tool runs in, and one a plugin starts from a wake is counted against nothing, because there is no turn behind it.
+
 ### Writing a usage record
 
 `host.recordUsage(entry)` keeps one `UsageEntry` in the host's `usage` port: a model call, whose `kind` is `model`, or a stretch a computer was up, whose `kind` is `computer`. It is how a plugin says what its work cost, and the store is the host's own, so every record a daemon keeps lands in one place whichever plugin wrote it.

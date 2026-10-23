@@ -13,7 +13,7 @@ import { refusalReason } from './gate.js';
 import type { Bag } from '../types/common.js';
 import type { AutomationEntry, AutomationRun, AutomationRunState, RunEnding, StartSession } from '../types/automations.js';
 import type { ConnectorOwner } from '../types/connectors.js';
-import type { PluginStarts, TriggerTypeDefinition } from '../types/plugin.js';
+import type { PluginStarts, ChatRequest, TriggerTypeDefinition } from '../types/plugin.js';
 import type { RuleMatch } from '../automations/triggers.js';
 import type { WakeFacts } from '../automations/wakemessage.js';
 import type { AutomationWake, SessionEventKind, SessionRule } from '../types/triggers.js';
@@ -197,6 +197,14 @@ export interface Automations {
    * own entry, which is what says whether it may ask for a trusted folder.
    */
   startForPlugin(wanted: StartSession, who?: PluginStarts): Promise<string>;
+  /**
+   * A chat a plugin asked for, in a session this host is running.
+   *
+   * The same question a session request is asked, one grant over: the chat is
+   * added to a session that belongs to somebody, so it is their own
+   * `chat:create` that has to hold before anything is started.
+   */
+  startForPluginChat(session: string, wanted: ChatRequest): Promise<string>;
   /** The clock, wired to the only thing that can act on it. */
   due(event: { automation: string; origin: Bag }): void;
 }
@@ -962,6 +970,36 @@ export function createAutomations(ctx: HostContext): Automations {
     startHeld(() => beginPluginSession(wanted, who));
 
   /**
+   * A chat a plugin asked for, added to the session it named.
+   *
+   * The session is the owner's, not the plugin's, so the grant asked is that
+   * owner's `chat:create` - a plugin may not add a chat the person the session
+   * belongs to could not have added themselves. Asked first, before the chat is
+   * looked at, for the same reason `session:create` is asked first above: a
+   * refusal about the person is the answer to a question that has to be
+   * reached before any other.
+   *
+   * What the request names is checked at the plugin boundary, and the start
+   * itself is the host's own road - the one `createChat` and a client's
+   * `createChat` take - so a chat started here is one nobody could tell apart
+   * from one started at the door.
+   */
+  const beginPluginChat = async (session: string, wanted: ChatRequest): Promise<string> => {
+    const at = ctx.heldAs(session);
+    const owner = kept.owner(idOf(at));
+    if (options.users !== undefined && owner?.startsWith('user:') === true) {
+      const person = principalFor(owner);
+      if (person !== undefined && !person.can('chat:create')) {
+        throw new RpcError(-32009, refusalReason(person.id, 'chat:create'), {});
+      }
+    }
+    return (await ctx.openChat(at, wanted)).chat;
+  };
+
+  const startForPluginChat = (session: string, wanted: ChatRequest): Promise<string> =>
+    startHeld(() => beginPluginChat(session, wanted));
+
+  /**
    * Whether this host can open a session: running now, or in its catalogue.
    *
    * The same two answers a subscribe is served from, asked as one - a session
@@ -1374,6 +1412,7 @@ export function createAutomations(ctx: HostContext): Automations {
     // set on this same object by the plugin host, and a request that asks for
     // a trusted folder is answered from it.
     one.start = (wanted) => startForPlugin(wanted, one);
+    one.startChat = (session, wanted) => startForPluginChat(session, wanted);
     one.opens = (uri) => opensSession(uri);
   }
 
@@ -1398,7 +1437,7 @@ export function createAutomations(ctx: HostContext): Automations {
   };
 
   return {
-    linked, settleRun, cancelRun, gone, stop, changed, beginAutomation, startForAutomation, startForPlugin, due,
+    linked, settleRun, cancelRun, gone, stop, changed, beginAutomation, startForAutomation, startForPlugin, startForPluginChat, due,
   };
 }
 
