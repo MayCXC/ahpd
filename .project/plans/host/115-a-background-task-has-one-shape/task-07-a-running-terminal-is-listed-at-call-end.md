@@ -1,6 +1,6 @@
 ---
 title: A running terminal is listed when its call ends
-status: todo
+status: implemented
 depends: [task-01-a-backend-reports-a-task-the-host-draws.md, task-03-the-host-answers-stop-background-work.md]
 layer: agent-acp
 refs:
@@ -18,6 +18,7 @@ The row goes when the process exits or the agent releases the terminal.
 
 - `UPDATE: packages/agent-acp/src/session/context.ts` - the held terminal gains `openedAt`, `command` and `listed`.
 - `UPDATE: packages/agent-acp/src/session/handlers.ts` - record the open time and command, list at call end, remove on exit and release.
+- `UPDATE: packages/agent-acp/src/session/turn.ts` - at turn end, scan the actions `closePlan` emits and list the terminals no call named.
 - `UPDATE: packages/agent-acp/test/fixtures/acp-server.mjs` - a call that ends while its terminal runs.
 - `CREATE: packages/agent-acp/test/agent-acp-background-shell.test.ts` - the cases below.
 
@@ -46,7 +47,9 @@ The row goes when the process exits or the agent releases the terminal.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1, after tasks 01 and 03.
+- **Done so far:** built. `context.ts` defines `HeldTerminal`, which adds `openedAt`, `command` and `listed` to the handle, the limit and `exited`. `handlers.ts` records the open time and the request's command and args joined with spaces. It lists a terminal when a `chat/toolCallComplete` names it in its content and its process still runs. It lists every other running terminal at turn end. It removes the row on the process's exit and in `releaseTerminal` before the terminal is deleted. `turn.ts`'s `finish` hands its closing actions through the same scan and then the turn-end pass. The row's `id` and `terminal` are the host terminal's URI. Its label is the call's title, or the command line when no call named it. Its `startedAt` is the open time. A stop kills the process through the host and answers true once; a second stop, or one after the exit, answers false. The fixture has `linger`, `unspoken`, `brief`, `fade` and `release`, and `test/agent-acp-background-shell.test.ts` has the five cases. The whole agent-acp suite passes (286 tests).
+- **Next action:** none; the plan's final gates are the remaining work.
 - **Open questions:** none.
-- **Watch out for:** an exit and a release can both happen; remove the row once.
+- **Watch out for:** a terminal a call names but never completes is listed at turn end with the command line. The mapping keeps no content for a call that is still open.
+  The exit and a release can both come; `listed` is what makes the removal happen once.
+  `settleTerminals` is on the `Handlers` interface, so the turn's end reaches it through the context.

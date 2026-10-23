@@ -156,18 +156,6 @@ export function createSession(options: ClaudeSessionOptions): Session {
    */
   const needed = (): Bag[] => [...ctx.pending.values()].map((one) => one.entry).concat(ctx.calls.entries());
 
-  /**
-   * What this chat's agent left running, for a client that subscribes while it runs.
-   *
-   * Absent rather than empty when nothing is running. The protocol's field is
-   * optional, and a key that is always there and usually an empty list is a
-   * client guessing which of the two it is reading.
-   */
-  const running = (): Bag => {
-    const work = ctx.backgroundWork(chatUri);
-    return work === undefined ? {} : { backgroundWork: work };
-  };
-
   const self: Session = {
     ...config.methods,
     ...clientTools.methods,
@@ -260,7 +248,6 @@ export function createSession(options: ClaudeSessionOptions): Session {
       interactivity: 'full',
       ...(ctx.steering !== undefined ? { steeringMessage: ctx.steering } : {}),
       queuedMessages: ctx.queued.map((held) => ({ id: held.id, message: held.message })),
-      ...running(),
     }),
 
     /**
@@ -284,6 +271,9 @@ export function createSession(options: ClaudeSessionOptions): Session {
       ctx.taskInfo.clear();
       ctx.live.clear();
       ctx.told.clear();
+      // And the output terminals a background shell wrote into, which go with
+      // the session that made them rather than being finished without it.
+      ctx.closeOutputs();
       // A worker still waiting for a spawn that will now never be recorded, and
       // a timer that would open its chat on a session nobody is listening to.
       for (const scope of ctx.scopes.values()) {

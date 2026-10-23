@@ -262,3 +262,44 @@ export interface StartTerminals {
   /** Open one, on a channel of the host's own. */
   open(options: OpenTerminal): OpenedTerminal;
 }
+
+/**
+ * A terminal a backend writes text into.
+ *
+ * No process stands behind it: the backend has the output already and the
+ * host owns the channel, so this is the text plus the verbs a client reads it
+ * with. A background shell's output arrives this way, which is why `append`
+ * and `replace` are separate - a poll sees the growth between two reads, and a
+ * read that was truncated says to replace the whole of it.
+ */
+export interface OutputTerminal {
+  /** The channel URI the host allocated. */
+  readonly uri: string;
+  /** Add text to the end. */
+  append(text: string): void;
+  /** Throw the content away. */
+  reset(): void;
+  /** Throw the content away and put this in its place. */
+  replace(text: string): void;
+  /**
+   * Say the output has ended.
+   *
+   * The exit code is kept when there is one; a task notification has none, and
+   * a finalized terminal with no code is a finished output whose status is
+   * unknown rather than a running one.
+   */
+  finalize(exitCode?: number): void;
+  /** Take the channel down. The session's close does this to every one it held. */
+  dispose(): void;
+}
+
+/**
+ * The output terminals a backend may make, handed on `Start`.
+ *
+ * Offered whether or not the host holds a terminal store: there is no process
+ * to spawn, so nothing here needs one.
+ */
+export interface OutputTerminals {
+  /** Open one, on a channel of the host's own, held by the session's chat. */
+  create(options: { title: string; chat: string }): OutputTerminal;
+}

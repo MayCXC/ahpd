@@ -1,6 +1,6 @@
 ---
 title: A Claude shell shows its output
-status: todo
+status: implemented
 depends: [task-02-a-backend-feeds-an-output-terminal.md, task-05-claude-reports-tasks-through-the-seam.md]
 layer: agent-claude
 refs:
@@ -43,7 +43,9 @@ The backend reads the output with `getTaskOutput` once a second while the task r
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1, after tasks 02 and 05.
+- **Done so far:** built. `session/taskoutput.ts` carries `TaskOutput` (the tail, `total_bytes`, `truncated`), `TaskOutputReader`, and `pollTaskOutput`. The poll reads at once and then once a second, never with two reads in flight, and feeds the terminal the growth `total_bytes` shows. A growth larger than the tail replaces the content. A tail cut inside a UTF-8 sequence is skipped to the next lead byte rather than appended broken. `finish` takes one last read and calls `finalize()` with no code; `cancel` stops without either. A shell's row gets `terminal` at its first listing, one terminal per row id, titled with the label and held by the row's chat. The task leaving the live set finishes the poll, and `closeOutputs` stops and disposes every one the session made. `Start.outputTerminals` reaches the session through `claude()`. Seven poll cases are in `test/agent-claude-task-output.test.ts`, and the SDK guard is in `test/agent-claude-sdk-task-output.test.ts`.
+- **Next action:** task 07, an ACP terminal listed when its call ends.
 - **Open questions:** none.
-- **Watch out for:** `total_bytes` counts bytes, and a tail cut inside a UTF-8 character must not be appended as broken text.
+- **Watch out for:** the terminal stays after the row goes, until the session closes, so `outputs` keeps an ended entry.
+  A session with no `outputTerminals` lists a shell without one.
+  `conformance.test.ts`'s row now carries `terminal` too, because a real host opens the channel.

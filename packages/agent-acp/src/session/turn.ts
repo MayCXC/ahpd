@@ -124,7 +124,14 @@ export function createTurn(ctx: SessionContext): Turn {
     }
     // Nothing in the protocol says when the agent has finished writing a plan,
     // so the turn ending is what closes the call it is held in.
-    if (ctx.mapping !== undefined) for (const action of closePlan(ctx.mapping)) emit('chat', action);
+    if (ctx.mapping !== undefined) {
+      const closing = closePlan(ctx.mapping);
+      // Before the closing actions go out: what they name is background work if
+      // its terminal still runs, and every other running terminal is named by
+      // the turn's end rather than by a call.
+      ctx.settleTerminals(closing);
+      for (const action of closing) emit('chat', action);
+    }
     // Before the ending action, not after: the host reads `status()` as it
     // passes that action on, and a turn still active there reads as running.
     ctx.active = undefined;

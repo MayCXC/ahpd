@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it, vi } from 'vitest';
 import { subagentChatUri } from '@ahpd/sdk';
-import type { Bag, SubagentChat, SubagentRequest } from '@ahpd/sdk';
+import type { BackgroundTask, Bag, SubagentChat, SubagentRequest } from '@ahpd/sdk';
 
 /*
  * What each chat says it has running in its background.
@@ -11,9 +11,9 @@ import type { Bag, SubagentChat, SubagentRequest } from '@ahpd/sdk';
  * The harness reports its background tasks twice over: `background_tasks_changed`
  * is the whole set of tasks running after every change, and `task_started` says
  * what one task is, which the level never repeats. This replays the real capture
- * `claude-subagent-background.jsonl` frame by frame, so the moment each action is
- * emitted is what is checked, and then a set of frames written by hand for the
- * cases the capture does not have.
+ * `claude-subagent-background.jsonl` frame by frame, so the moment each task is
+ * reported through the host's seam is what is checked, and then a set of frames
+ * written by hand for the cases the capture does not have.
  */
 
 /**
@@ -31,8 +31,10 @@ const sdk = vi.hoisted(() => {
     hooks: undefined as undefined | Record<string, { matcher?: string; hooks: ((input: Bag, id: unknown, about: Bag) => Promise<unknown>)[] }[]>,
     /** The feed the next query reads, and the one `push` writes to. */
     feed: fresh(),
+    /** The task ids `stopTask` was asked to stop, in order. */
+    stopped: [] as string[],
     /** Start a new feed for the next session. */
-    reset() { state.feed = fresh(); },
+    reset() { state.feed = fresh(); state.stopped = []; },
     /** Queue frames for the current session to read. */
     push(...frames: Record<string, unknown>[]) {
       const feed = state.feed;
@@ -60,7 +62,7 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
         for (;;) yield await sdk.next(feed);
       },
       interrupt: async () => {},
-      stopTask: async () => {},
+      stopTask: async (id: string) => { sdk.stopped.push(id); },
       setPermissionMode: async () => {},
       setModel: async () => {},
       applyFlagSettings: async () => {},
@@ -95,6 +97,11 @@ interface Opened {
   workers: Map<string, Bag[]>;
   /** The URI the seam handed back for each worker, once it opened one. */
   handed: Map<string, string>;
+  /** What the session reported to the host's background-task seam. */
+  tasks: {
+    set: { chat: string; task: BackgroundTask }[];
+    remove: { chat: string; id: string }[];
+  };
   session: Awaited<ReturnType<typeof createSession>>;
 }
 
@@ -109,6 +116,7 @@ async function open(seam = true): Promise<Opened> {
   const main: Bag[] = [];
   const workers = new Map<string, Bag[]>();
   const handed = new Map<string, string>();
+  const tasks: Opened['tasks'] = { set: [], remove: [] };
   const session = 'ahp-session:/bg';
   const subagent = (toolCallId: string, _request: SubagentRequest): SubagentChat => {
     // The name the host really gives, so a listed entry is checked against the
@@ -130,15 +138,19 @@ async function open(seam = true): Promise<Opened> {
     cwd: mkdtempSync(join(tmpdir(), 'ahpd-bg-')),
     emit: (_channel, action) => { main.push(action as Bag); },
     ...(seam ? { subagent } : {}),
+    backgroundTasks: {
+      set: (chat, task) => { tasks.set.push({ chat, task }); },
+      remove: (chat, id) => { tasks.remove.push({ chat, id }); },
+    },
   });
   await settle();
-  return { main, workers, handed, session: running };
+  return { main, workers, handed, tasks, session: running };
 }
 
-/** Everything one chat was told about its background work, in order. */
-const told = (actions: Bag[]): Bag[] => actions.filter(
-  (one) => one.type === 'chat/backgroundWorkSet' || one.type === 'chat/backgroundWorkRemoved',
-);
+/** Everything one chat was reported as running, in order. */
+const said = (tasks: Opened['tasks'], chat: string): BackgroundTask[] => tasks.set
+  .filter((one) => one.chat === chat)
+  .map((one) => one.task);
 
 /** One background shell's call, its `task_started` and its level. */
 const shellFrames = (id: string, command: string): Record<string, unknown>[] => [
@@ -166,107 +178,130 @@ const level = (...tasks: Bag[]): Record<string, unknown> => ({
 
 it('lists the capture\'s background subagent, and takes it back when it goes', async () => {
   const lines = fixture('claude-subagent-background.jsonl');
-  const { main, session, handed } = await open();
+  const { session, handed, tasks } = await open();
   const call = 'toolu_01Riysq5EgQZGcUE9kDMp6AB';
   const chat = subagentChatUri('ahp-session:/bg', call);
 
   sdk.push(...lines.slice(0, 3));
   await settle();
-  expect(told(main)).toEqual([{
-    type: 'chat/backgroundWorkSet',
-    work: {
-      kind: 'subagent',
-      id: 'subagent:af279e8136cb23ae9',
-      label: 'List files recursively',
-      startedAt: expect.any(String),
-      chat,
-    },
+  expect(said(tasks, 'ahp-chat:/bg')).toEqual([{
+    kind: 'subagent',
+    id: 'subagent:af279e8136cb23ae9',
+    label: 'List files recursively',
+    startedAt: expect.any(String),
+    chat,
   }]);
-  expect(session.chatState().backgroundWork).toEqual([(told(main)[0]?.work as Bag)]);
+  // The backend reports; the row and the snapshot a late subscriber reads are
+  // the host's, so the session's own state says nothing about it.
+  expect(session.chatState()).not.toHaveProperty('backgroundWork');
 
   // The worker's own frames and the lead turn's result say nothing about it,
   // and the chat the entry named is the one its worker was handed when it
   // opened: listed before the chat existed, named as the chat it became.
   sdk.push(...lines.slice(3, 11));
   await settle();
-  expect(told(main)).toHaveLength(1);
+  expect(tasks.set).toHaveLength(1);
   expect(handed.get(call)).toBe(chat);
 
   // The empty level, which is the task no longer running.
   sdk.push(...lines.slice(11));
   await settle();
-  expect(told(main)).toEqual([
-    { type: 'chat/backgroundWorkSet', work: expect.anything() },
-    { type: 'chat/backgroundWorkRemoved', id: 'subagent:af279e8136cb23ae9' },
-  ]);
-  expect(session.chatState()).not.toHaveProperty('backgroundWork');
+  expect(tasks.set).toHaveLength(1);
+  expect(tasks.remove).toEqual([{ chat: 'ahp-chat:/bg', id: 'subagent:af279e8136cb23ae9' }]);
 });
 
 it('lists a background shell with the command it runs', async () => {
-  const { main, session } = await open();
+  const { tasks } = await open();
 
   sdk.push(...shellFrames('t-sleep', 'sleep 100'));
   sdk.push(level({ task_id: 't-sleep', task_type: 'local_bash', description: 'sleep 100' }));
   await settle();
 
-  expect(told(main)).toEqual([{
-    type: 'chat/backgroundWorkSet',
-    work: {
-      kind: 'shell',
-      id: 'shell:t-sleep',
-      label: 'sleep 100',
-      startedAt: expect.any(String),
-      command: 'sleep 100',
-    },
+  expect(said(tasks, 'ahp-chat:/bg')).toEqual([{
+    kind: 'shell',
+    id: 'shell:t-sleep',
+    label: 'sleep 100',
+    startedAt: expect.any(String),
+    command: 'sleep 100',
+    stop: expect.any(Function),
   }]);
-  expect(session.chatState().backgroundWork).toHaveLength(1);
 
   // The level saying the same thing again is not a change, so it is not said.
   sdk.push(level({ task_id: 't-sleep', task_type: 'local_bash', description: 'sleep 100' }));
   await settle();
-  expect(told(main)).toHaveLength(1);
+  expect(tasks.set).toHaveLength(1);
+});
+
+it('stops a live shell through the harness, and answers true', async () => {
+  const { tasks } = await open();
+
+  sdk.push(...shellFrames('t-sleep', 'sleep 100'));
+  sdk.push(level({ task_id: 't-sleep', task_type: 'local_bash', description: 'sleep 100' }));
+  await settle();
+
+  const task = said(tasks, 'ahp-chat:/bg')[0];
+  expect(task?.stop).toBeDefined();
+  expect(await task?.stop?.()).toBe(true);
+  // The harness's own stop, by the task id it named.
+  expect(sdk.stopped).toEqual(['t-sleep']);
+});
+
+it('answers false from a stop once the shell has ended', async () => {
+  const { tasks } = await open();
+
+  sdk.push(...shellFrames('t-sleep', 'sleep 100'));
+  sdk.push(level({ task_id: 't-sleep', task_type: 'local_bash', description: 'sleep 100' }));
+  await settle();
+  const task = said(tasks, 'ahp-chat:/bg')[0];
+  sdk.push(level());
+  await settle();
+
+  // The row is gone, and the stop it carried would have nothing to stop.
+  expect(tasks.remove).toHaveLength(1);
+  expect(await task?.stop?.()).toBe(false);
+  expect(sdk.stopped).toEqual([]);
 });
 
 it('never lists an ambient task', async () => {
-  const { main } = await open();
+  const { tasks } = await open();
 
   sdk.push(...shellFrames('t-house', 'sleep 1'));
   sdk.push(level({ task_id: 't-house', task_type: 'local_bash', description: 'sleep 1', ambient: true }));
   await settle();
 
-  expect(told(main)).toEqual([]);
+  expect(tasks.set).toEqual([]);
 });
 
 it('lists a task the level named before its task_started said what it is', async () => {
-  const { main } = await open();
+  const { tasks } = await open();
 
   sdk.push(...shellFrames('t-sleep', 'sleep 100').slice(0, 1));
   sdk.push(level({ task_id: 't-sleep', task_type: 'local_bash', description: 'sleep 100' }));
   await settle();
-  expect(told(main)).toEqual([]);
+  expect(tasks.set).toEqual([]);
 
   sdk.push(shellFrames('t-sleep', 'sleep 100')[1] as Record<string, unknown>);
   await settle();
-  expect(told(main)).toHaveLength(1);
+  expect(tasks.set).toHaveLength(1);
 });
 
 it('never lists a task no level names', async () => {
-  const { main } = await open();
+  const { tasks } = await open();
 
   sdk.push(...shellFrames('t-now', 'ls -la'));
   sdk.push(level());
   await settle();
 
-  expect(told(main)).toEqual([]);
+  expect(tasks.set).toEqual([]);
 });
 
 it('takes an entry back on a terminal notification alone', async () => {
-  const { main } = await open();
+  const { tasks } = await open();
 
   sdk.push(...shellFrames('t-sleep', 'sleep 100'));
   sdk.push(level({ task_id: 't-sleep', task_type: 'local_bash', description: 'sleep 100' }));
   await settle();
-  expect(told(main)).toHaveLength(1);
+  expect(tasks.set).toHaveLength(1);
 
   // No level follows: the notification is the only thing that says it ended.
   sdk.push({
@@ -277,14 +312,12 @@ it('takes an entry back on a terminal notification alone', async () => {
     status: 'completed',
   });
   await settle();
-  expect(told(main)).toEqual([
-    { type: 'chat/backgroundWorkSet', work: expect.anything() },
-    { type: 'chat/backgroundWorkRemoved', id: 'shell:t-sleep' },
-  ]);
+  expect(tasks.set).toHaveLength(1);
+  expect(tasks.remove).toEqual([{ chat: 'ahp-chat:/bg', id: 'shell:t-sleep' }]);
 });
 
 it('lists a worker\'s own background shell on the worker\'s chat', async () => {
-  const { main, workers } = await open();
+  const { tasks, handed } = await open();
 
   sdk.push({
     type: 'assistant',
@@ -313,42 +346,40 @@ it('lists a worker\'s own background shell on the worker\'s chat', async () => {
   sdk.push(level({ task_id: 't-sh', task_type: 'local_bash', description: 'sleep 5' }));
   await settle();
 
-  const worker = workers.get('toolu-spawn');
-  expect(worker).toBeDefined();
-  expect(told(worker as Bag[])).toEqual([{
-    type: 'chat/backgroundWorkSet',
-    work: {
-      kind: 'shell',
-      id: 'shell:t-sh',
-      label: 'sleep 5',
-      startedAt: expect.any(String),
-      command: 'sleep 5',
-    },
+  const chat = handed.get('toolu-spawn');
+  expect(chat).toBeDefined();
+  expect(said(tasks, chat as string)).toEqual([{
+    kind: 'shell',
+    id: 'shell:t-sh',
+    label: 'sleep 5',
+    startedAt: expect.any(String),
+    command: 'sleep 5',
+    stop: expect.any(Function),
   }]);
-  expect(told(main)).toEqual([]);
+  expect(said(tasks, 'ahp-chat:/bg')).toEqual([]);
 });
 
 it('lists nothing for a subagent when the host cannot open its chat', async () => {
   const lines = fixture('claude-subagent-background.jsonl');
-  const { main } = await open(false);
+  const { tasks } = await open(false);
 
   sdk.push(...lines);
   await settle();
 
-  expect(told(main)).toEqual([]);
+  expect(tasks.set).toEqual([]);
 });
 
 it('says nothing more when the session is closed', async () => {
-  const { main, session } = await open();
+  const { tasks, session } = await open();
 
   sdk.push(...shellFrames('t-sleep', 'sleep 100'));
   sdk.push(level({ task_id: 't-sleep', task_type: 'local_bash', description: 'sleep 100' }));
   await settle();
-  expect(told(main)).toHaveLength(1);
+  expect(tasks.set).toHaveLength(1);
 
   await session.close();
   await settle();
-  expect(told(main)).toHaveLength(1);
+  expect(tasks.set).toHaveLength(1);
 });
 
 /*

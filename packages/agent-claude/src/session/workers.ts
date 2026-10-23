@@ -1,7 +1,9 @@
 import { subagentChatUri } from '@ahpd/sdk';
-import type { Bag, SubagentChat } from '@ahpd/sdk';
+import type { BackgroundTask, Bag, OutputTerminal, SubagentChat } from '@ahpd/sdk';
 import type { ClaudeSessionOptions, Scope, SessionContext } from './context.js';
 import { bag, list, str } from './common.js';
+import { pollTaskOutput } from './taskoutput.js';
+import type { TaskOutputPoll, TaskOutputReader } from './taskoutput.js';
 import { titleOf } from '../input.js';
 
 export type { Scope } from './context.js';
@@ -76,7 +78,7 @@ export interface Workers {
   /** The tasks the last live level named, which is every task running now. */
   live: Set<string>;
   /** What each chat has been told it is running, by chat URI. */
-  told: Map<string, Bag[]>;
+  told: Map<string, BackgroundTask[]>;
   /** Record what one `task_started` said, and publish whatever that changes. */
   noteTask: (message: Bag) => void;
   /** Take one live level as the whole set of tasks running now. */
@@ -85,8 +87,13 @@ export interface Workers {
   working: () => boolean;
   /** Forget one task the harness said has ended. */
   dropTask: (taskId: string) => void;
-  /** What one chat is running, or nothing while it is running nothing. */
-  backgroundWork: (chatUri: string) => Bag[] | undefined;
+  /**
+   * End every output terminal this session made, and the polls behind them.
+   *
+   * A session closing is not a task ending: there is no last read and no
+   * finalize, because the channels go with the session.
+   */
+  closeOutputs: () => void;
   /**
    * The scope for a `parent_tool_use_id`, opening a worker's chat on first sight.
    */
@@ -172,11 +179,29 @@ export function createWorkers(ctx: SessionContext): Workers {
   /**
    * What each chat has been told it is running, by chat URI.
    *
-   * Kept so that only a difference is said: a level that changed nothing must
-   * emit nothing, and a client that subscribes afterwards reads the same list
-   * from the chat's own snapshot.
+   * Kept so that only a difference is reported: a level that changed nothing
+   * must say nothing. A client that subscribes afterwards reads the same list
+   * from the host's own records, so this is only what has already been said.
    */
-  const told = new Map<string, Bag[]>();
+  const told = new Map<string, BackgroundTask[]>();
+
+  /**
+   * The stop each shell task carries, by the harness's task id.
+   *
+   * Kept rather than made again on each listing: the host compares one report
+   * to the last by value, so a new function every time would be a row said
+   * again on every level that changed nothing.
+   */
+  const stops = new Map<string, () => Promise<boolean>>();
+
+  /**
+   * The output terminal each shell task has, by the row's own id.
+   *
+   * One per task, made when the task is first listed and ended when it stops
+   * being live. Kept past the row itself: the terminal stays a channel a
+   * transcript may point at until the session closes.
+   */
+  const outputs = new Map<string, { terminal: OutputTerminal; poll: TaskOutputPoll }>();
 
   /** The chat a frame for an ended worker is written to, which is nowhere. */
   const dropped: SubagentChat = { uri: '', turnId: '', emit: () => {}, end: () => {} };
@@ -371,32 +396,76 @@ export function createWorkers(ctx: SessionContext): Workers {
     return chat === undefined || chat === '' ? undefined : chat;
   };
 
-  /** The scope that writes to one chat, for a removal that names only the chat. */
-  const scopeOfChat = (chat: string): Scope | undefined => {
-    if (chat === ctx.options.chatUri) return mainScope;
-    for (const scope of scopes.values()) {
-      if (scope.chat !== undefined && scope.chat.uri === chat) return scope;
-    }
-    return undefined;
+  /**
+   * The stop one shell task carries, which is the harness's own `stopTask`.
+   *
+   * The answer is whether there was live work to stop: a task the harness has
+   * already ended is a button pressed a moment too late, and saying it stopped
+   * would be a client told its work was cut short when it had finished.
+   */
+  const stopOf = (id: string): (() => Promise<boolean>) => {
+    const known = stops.get(id);
+    if (known !== undefined) return known;
+    const stop = async (): Promise<boolean> => {
+      if (!live.has(id)) return false;
+      try {
+        await ctx.handle.stopTask(id);
+        return true;
+      }
+      catch {
+        return false;
+      }
+    };
+    stops.set(id, stop);
+    return stop;
   };
 
   /**
-   * One background shell, as the protocol's shell entry.
+   * The terminal one shell task's output is written into, made on first sight.
+   *
+   * Absent when the host offers no output terminals, which is a host built by
+   * hand rather than a daemon: the row is then listed without one, and a
+   * client draws the task without its output.
+   */
+  const outputOf = (taskId: string, rowId: string, chat: string, title: string): string | undefined => {
+    const held = outputs.get(rowId);
+    if (held !== undefined) return held.terminal.uri;
+    const terminals = ctx.options.outputTerminals;
+    if (terminals === undefined) return undefined;
+    const terminal = terminals.create({ title, chat });
+    outputs.set(rowId, {
+      terminal,
+      poll: pollTaskOutput({
+        taskId,
+        terminal,
+        read: (id) => (ctx.handle as unknown as TaskOutputReader).getTaskOutput(id),
+      }),
+    });
+    return terminal.uri;
+  };
+
+  /**
+   * One background shell, as a task the host draws a row from.
    *
    * The command is what the call asked the shell to run, which is the only
    * place it is written down: the harness describes a task in prose and never
    * repeats the line. A call whose input is not a command falls back to the
    * description, so the field is always a sentence a client can draw.
    */
-  const shellWork = (id: string, info: TaskInfo, scope: Scope): Bag => {
+  const shellWork = (id: string, info: TaskInfo, scope: Scope, chat: string): BackgroundTask => {
     const call = info.toolUseId === undefined ? undefined : scope.parts.get(info.toolUseId)?.toolCall;
     const command = call === undefined ? undefined : str(bag(call).toolInput);
+    const rowId = `shell:${id}`;
+    const label = info.description ?? '';
+    const terminal = outputOf(id, rowId, chat, label);
     return {
       kind: 'shell',
-      id: `shell:${id}`,
-      label: info.description ?? '',
+      id: rowId,
+      label,
       startedAt: info.startedAt,
-      command: command ?? info.description ?? '',
+      command: command ?? label,
+      ...(terminal === undefined ? {} : { terminal }),
+      stop: stopOf(id),
     };
   };
 
@@ -418,8 +487,13 @@ export function createWorkers(ctx: SessionContext): Workers {
     return ctx.options.subagent === undefined ? undefined : subagentChatUri(ctx.options.uri, toolCallId);
   };
 
-  /** One running subagent, as the protocol's subagent entry. */
-  const subagentWork = (id: string, info: TaskInfo): Bag | undefined => {
+  /**
+   * One running subagent, as a task the host draws a row from.
+   *
+   * No stop: a subagent is stopped from its own chat, which is a cancel of the
+   * turn that runs it, and the protocol's row for one carries no flag.
+   */
+  const subagentWork = (id: string, info: TaskInfo): BackgroundTask | undefined => {
     const chat = info.toolUseId === undefined ? undefined : workerChatOf(info.toolUseId);
     if (chat === undefined) return undefined;
     return {
@@ -431,25 +505,31 @@ export function createWorkers(ctx: SessionContext): Workers {
     };
   };
 
-  /** One task as a background-work entry, or nothing for a kind not listed. */
-  const workEntry = (id: string, info: TaskInfo, scope: Scope): Bag | undefined => {
-    if (info.type === 'local_bash') return shellWork(id, info, scope);
+  /** One task as a background task, or nothing for a kind not listed. */
+  const workEntry = (id: string, info: TaskInfo, scope: Scope, chat: string): BackgroundTask | undefined => {
+    if (info.type === 'local_bash') return shellWork(id, info, scope, chat);
     if (info.type === 'local_agent') return subagentWork(id, info);
     return undefined;
   };
 
   /**
-   * Publish the difference between what each chat is running and what it was told.
+   * Report the difference between what each chat is running and what it was told.
    *
    * The live level and the per-task frames arrive in no fixed order, so what a
    * chat has is a function of both rather than of whichever landed last: the
    * level says which tasks are live and `task_started` says what each one is.
-   * An entry is told once, when it appears or changes, and taken back once, when
-   * it stops being live. Removals go first, so a client applying them in order
-   * never holds a removed entry beside the one that replaced it.
+   * A task is reported once, when it appears or changes, and taken back once,
+   * when it stops being live. Removals go first, so a client applying them in
+   * order never holds a removed row beside the one that replaced it.
+   *
+   * The reports go through the host's seam, which draws the row: a session
+   * with no seam - one built by hand rather than by a host - reports nothing,
+   * because there is nowhere to report it to.
    */
   const reconcileWork = (): void => {
-    const wanted = new Map<string, { scope: Scope; entries: Bag[] }>();
+    const tasks = ctx.options.backgroundTasks;
+    if (tasks === undefined) return;
+    const wanted = new Map<string, BackgroundTask[]>();
     for (const id of live) {
       const info = taskInfo.get(id);
       const call = info?.toolUseId;
@@ -457,27 +537,24 @@ export function createWorkers(ctx: SessionContext): Workers {
       if (info === undefined || scope === undefined) continue;
       const chat = workChatOf(scope);
       if (chat === undefined) continue;
-      const entry = workEntry(id, info, scope);
+      const entry = workEntry(id, info, scope, chat);
       if (entry === undefined) continue;
-      const at = wanted.get(chat) ?? { scope, entries: [] };
-      at.entries.push(entry);
-      wanted.set(chat, at);
+      wanted.set(chat, [...(wanted.get(chat) ?? []), entry]);
     }
     for (const chat of new Set([...told.keys(), ...wanted.keys()])) {
       const before = told.get(chat) ?? [];
-      const now = wanted.get(chat);
-      const next = now?.entries ?? [];
-      const scope = now?.scope ?? scopeOfChat(chat);
-      if (scope !== undefined) {
-        for (const one of before) {
-          if (!next.some((two) => two.id === one.id)) emitOn(scope, { type: 'chat/backgroundWorkRemoved', id: one.id });
-        }
-        for (const one of next) {
-          const was = before.find((two) => two.id === one.id);
-          if (was === undefined || JSON.stringify(was) !== JSON.stringify(one)) {
-            emitOn(scope, { type: 'chat/backgroundWorkSet', work: one });
-          }
-        }
+      const next = wanted.get(chat) ?? [];
+      for (const one of before) {
+        if (next.some((two) => two.id === one.id)) continue;
+        tasks.remove(chat, one.id);
+        // The task ended: one more read, then the output is finished. The
+        // terminal itself stays, because a transcript may still point at it,
+        // and the session's close is what takes it down.
+        outputs.get(one.id)?.poll.finish();
+      }
+      for (const one of next) {
+        const was = before.find((two) => two.id === one.id);
+        if (was === undefined || JSON.stringify(was) !== JSON.stringify(one)) tasks.set(chat, one);
       }
       if (next.length === 0) told.delete(chat);
       else told.set(chat, next);
@@ -533,12 +610,6 @@ export function createWorkers(ctx: SessionContext): Workers {
     live.delete(taskId);
     taskInfo.delete(taskId);
     reconcileWork();
-  };
-
-  /** What one chat is running, or nothing while it is running nothing. */
-  const backgroundWork = (chatUri: string): Bag[] | undefined => {
-    const entries = told.get(chatUri);
-    return entries === undefined || entries.length === 0 ? undefined : entries;
   };
 
   /**
@@ -650,11 +721,20 @@ export function createWorkers(ctx: SessionContext): Workers {
     void ctx.handle.stopTask(task).catch(() => {});
   };
 
+  /** End every output terminal this session made, and the polls behind them. */
+  const closeOutputs = (): void => {
+    for (const held of outputs.values()) {
+      held.poll.cancel();
+      held.terminal.dispose();
+    }
+    outputs.clear();
+  };
+
   return {
     parts, calling, mainScope, scopes, spawning, background, tasks, byAgent, ended,
     taskInfo, live, told,
     scopeFor, releaseHeld, recordSpawn, scopeOfCall, emitOn, settleOpen, endWorker,
-    workerBlock, noteTask, noteLive, dropTask, backgroundWork, working: () => live.size > 0,
+    workerBlock, noteTask, noteLive, dropTask, closeOutputs, working: () => live.size > 0,
     methods: { stopWorker },
   };
 }

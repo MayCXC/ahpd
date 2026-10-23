@@ -321,6 +321,7 @@ export function createSnapshots(ctx: HostContext): Snapshots {
         ? (await restoredSubagents(idOf(talking.uri), owner.agent, talking.chat.allTurns() as unknown as WireTurn<Turn>[]))
           .filter((one) => one.parentToolCallId === undefined || String(one.parentToolCallId) === '')
         : [];
+      const background = ctx.background.rows(channel);
       const state: Bag = {
         ...talking.chat.chatState(),
         ...startedBy(talking.uri, channel),
@@ -328,6 +329,10 @@ export function createSnapshots(ctx: HostContext): Snapshots {
         // which is what its catalogue row says too: a chat's state and its row
         // are two answers to one question.
         status: talking.chat.status() | kept.chatFlags(idOf(talking.uri), channel),
+        // The tasks the backend reported, absent rather than empty when there
+        // are none: the protocol's absence-means-none, so a chat that never
+        // had work and one that finished all of it read the same way.
+        ...(background === undefined ? {} : { backgroundWork: background }),
         // Whether a client may offer a move for this chat, which is the
         // session's answer and not the backend's - so it is read here and left
         // off when it cannot move, as the protocol's absence-means-false has it.

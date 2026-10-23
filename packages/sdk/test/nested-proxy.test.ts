@@ -11,6 +11,7 @@ import { nestedAgent } from '../src/sessions/nested.js';
 import { fileSessions } from '../src/sessions/sessions.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent, Start } from '../src/types/agent.js';
+import type { BackgroundTask } from '../src/types/background.js';
 import type { NestedHost } from '../src/sessions/nested.js';
 import type { Handler, Peer, Wire } from '../src/types/rpc.js';
 
@@ -347,13 +348,16 @@ it('a tool call that asks for confirmation is confirmed from outside', async () 
 });
 
 it('a chat\'s background work goes out on the outer chat, and comes back off it', async () => {
-  const work = {
+  const work: BackgroundTask = {
     kind: 'shell', id: 'shell:t-sleep', label: 'sleep 100', startedAt: '2026-01-01T00:00:00.000Z', command: 'sleep 100',
   };
   let inside: Start | undefined;
   const { agent } = scriptedAgent((session) => {
     inside = session;
-    session.emit('chat', { type: 'chat/backgroundWorkSet', work });
+    // A backend reports the task; the host inside draws the row. The proxy
+    // then reports that row through the host outside, when it was handed a
+    // seam - and here it was not, so the row is relayed as it came.
+    session.backgroundTasks?.set(session.chatUri, work);
   });
   const inner = innerHost(agent);
   const { seen, emit } = recorder();
@@ -374,7 +378,7 @@ it('a chat\'s background work goes out on the outer chat, and comes back off it'
   // Between the two, a window opening outside lists what the shell is running.
   expect(session.chatState().backgroundWork).toEqual([work]);
 
-  inside?.emit('chat', { type: 'chat/backgroundWorkRemoved', id: 'shell:t-sleep' });
+  inside?.backgroundTasks?.remove(inside.chatUri, 'shell:t-sleep');
   await until(() => seen.some(({ action }) => action.type === 'chat/backgroundWorkRemoved'));
   expect(session.chatState().backgroundWork).toEqual([]);
   session.close();

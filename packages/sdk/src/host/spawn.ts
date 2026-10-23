@@ -1026,6 +1026,11 @@ export function createSpawn(ctx: HostContext): Spawn {
        */
       ...(options.resources !== undefined ? { resources: heldResources(options.resources) } : {}),
       ...(options.terminals !== undefined ? { terminals: ctx.heldTerminals(options.terminals, uri, chatUri) } : {}),
+      /*
+       * Output terminals, offered whether or not the host holds a store: there
+       * is no process here to spawn, only a channel to write text into.
+       */
+      outputTerminals: ctx.heldOutputs(uri),
       ...(options.computers !== undefined ? { computers: computersFor(options.computers, agent.provider, uri, kept.owner(idOf(uri))) } : {}),
       /*
        * The MCP servers, when there are any.
@@ -1106,6 +1111,14 @@ export function createSpawn(ctx: HostContext): Spawn {
        */
       subagent: (toolCallId: string, request: SubagentRequest) => openSubagent(uri, chatUri, toolCallId, request),
       /*
+       * The background tasks this backend reports.
+       *
+       * Always offered, because a task is a record and needs no store: the
+       * host builds the row from what the backend says, and a backend that
+       * emitted `chat/backgroundWorkSet` itself has it dropped below.
+       */
+      backgroundTasks: ctx.background.heldTasks(),
+      /*
        * A harness's own task list, raised for whoever is listening.
        *
        * The backend brings the list because it is the only thing that sees the
@@ -1132,6 +1145,20 @@ export function createSpawn(ctx: HostContext): Spawn {
        */
       ...(options.plan === undefined ? {} : { plan: true }),
       emit: (channel, action) => {
+        /*
+         * Background work is the host's to draw.
+         *
+         * A row is the protocol's shape with a `_meta` flag and a snapshot
+         * beside it, all of which the host builds from `backgroundTasks` - so
+         * an action a backend emitted itself would be a second builder, and
+         * the one a late subscriber never sees. Dropped rather than refused,
+         * because a backend mid-migration should not fail a turn over it, and
+         * logged because silence is how it goes unnoticed.
+         */
+        if (action.type === 'chat/backgroundWorkSet' || action.type === 'chat/backgroundWorkRemoved') {
+          log(`dropped ${action.type} from ${agent.provider}: the host draws background work`);
+          return;
+        }
         const where = channel === 'chat' ? chatUri : uri;
         /*
          * Who sent this turn, and a queued one finding out which turn it became.

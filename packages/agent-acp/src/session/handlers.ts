@@ -25,12 +25,12 @@ import type {
   WriteTextFileResponse,
 } from '@agentclientprotocol/sdk';
 import { hostPathOf, str } from '@ahpd/sdk';
-import type { Bag, BoundTool, OpenedTerminal, OpenTerminal, Session } from '@ahpd/sdk';
+import type { Bag, BackgroundTask, BoundTool, OpenTerminal, Session } from '@ahpd/sdk';
 import { confirmationOptions, contentOf, mapUpdate, questionsFor, typedOf } from '../mapping.js';
 import type { PermissionAnswer } from '../types.js';
 import { bag } from './common.js';
 import { HOST_TOOLS, machineIdOf } from './opening.js';
-import type { SessionContext } from './context.js';
+import type { HeldTerminal, SessionContext } from './context.js';
 
 /** Everything the server sends this session: its updates, its requests and the answers to them. */
 export interface Handlers {
@@ -55,6 +55,15 @@ export interface Handlers {
   waitForTerminalExit(request: WaitForTerminalExitRequest): Promise<WaitForTerminalExitResponse>;
   killTerminal(request: KillTerminalRequest): Promise<KillTerminalResponse>;
   releaseTerminal(request: ReleaseTerminalRequest): Promise<ReleaseTerminalResponse>;
+  /**
+   * The turn's end: the terminals its closing actions named, and every other
+   * one still running.
+   *
+   * A terminal is background work once the call that made it has ended, and a
+   * turn ending is the last moment a call can name one. What no call named is
+   * still a shell the agent left running.
+   */
+  settleTerminals(closing: Bag[]): void;
   settlePermissions(): void;
   confirm: Session['confirm'];
 }
@@ -101,6 +110,84 @@ export function createHandlers(ctx: SessionContext): Handlers {
     ...(command.description === '' ? {} : { description: command.description }),
     ...(command.input === null || command.input === undefined ? {} : { argumentHint: command.input.hint }),
   });
+
+  /*
+   * A terminal the server opened, as background work once its call has ended.
+   *
+   * ACP says nothing about a shell outliving the call that started it, so the
+   * bridge reads it off the call's result: a terminal block whose process is
+   * still alive is work in the background, while one that has exited is a call
+   * that finished with its output. The row is the host's to draw, so nothing
+   * here knows what a client sees.
+   */
+
+  /** The terminals a stop has already killed, so a second press answers false. */
+  const stopping = new Set<string>();
+
+  const stopHeld = async (held: HeldTerminal): Promise<boolean> => {
+    const uri = held.handle.uri;
+    if (held.exited === true || stopping.has(uri)) return false;
+    stopping.add(uri);
+    held.handle.kill();
+    return true;
+  };
+
+  /** One terminal's row, labelled with what a call called it or its own line. */
+  const workOf = (held: HeldTerminal, label: string): BackgroundTask => {
+    const id = held.handle.uri;
+    return {
+      id,
+      kind: 'shell',
+      label,
+      startedAt: held.openedAt,
+      command: held.command,
+      terminal: id,
+      stop: () => stopHeld(held),
+    };
+  };
+
+  /** Report one running terminal, once: a second set would be the same row. */
+  const listHeld = (held: HeldTerminal, label: string): void => {
+    const tasks = start.backgroundTasks;
+    if (tasks === undefined || held.listed !== undefined || held.exited === true) return;
+    held.listed = held.handle.uri;
+    tasks.set(start.chatUri, workOf(held, label));
+  };
+
+  /** Take a listed terminal's row down, once, whichever end comes first. */
+  const unlistHeld = (held: HeldTerminal): void => {
+    const listed = held.listed;
+    if (listed === undefined) return;
+    delete held.listed;
+    start.backgroundTasks?.remove(start.chatUri, listed);
+  };
+
+  /**
+   * The terminals a completion names, listed when their process still runs.
+   *
+   * The content is where ACP says a call was about a terminal, and the id it
+   * carries is the host's own URI because the bridge opened the shell. The
+   * call's title labels the row: it is what the agent called the work.
+   */
+  const noteCall = (action: Bag): void => {
+    if (action.type !== 'chat/toolCallComplete') return;
+    const result = bag(action.result);
+    if (!Array.isArray(result.content)) return;
+    const label = typeof result.pastTenseMessage === 'string' ? result.pastTenseMessage : '';
+    for (const block of result.content as Bag[]) {
+      if (block.type !== 'terminal') continue;
+      const held = terminals.get(String(block.resource));
+      if (held !== undefined) listHeld(held, label === '' ? held.command : label);
+    }
+  };
+
+  const settleTerminals = (closing: Bag[]): void => {
+    for (const action of closing) noteCall(bag(action));
+    // A terminal no call named is still work: the agent opened a shell and the
+    // turn is over, and the process it started is not. The command line is the
+    // only label there is, because no call carried a title for it.
+    for (const held of terminals.values()) listHeld(held, held.command);
+  };
 
   /**
    * One server notification, into the running turn and the session's own state.
@@ -193,6 +280,9 @@ export function createHandlers(ctx: SessionContext): Handlers {
      */
     for (const action of mapUpdate(current, update, at, start.planUpdate)) {
       if (action.type === 'chat/usage' && ctx.active !== undefined) ctx.active.usage = bag(action.usage);
+      // Before it goes out: a call that ends with a terminal still running is
+      // the moment the host is told the shell is background work.
+      noteCall(bag(action));
       emit('chat', action);
     }
   };
@@ -310,18 +400,24 @@ export function createHandlers(ctx: SessionContext): Handlers {
       };
     }
     const handle = shells.open(run);
-    const held: { handle: OpenedTerminal; limit?: number; exited?: boolean } = {
+    const held: HeldTerminal = {
       handle,
+      openedAt: new Date().toISOString(),
+      command: [request.command, ...(request.args ?? [])].join(' '),
       ...(typeof request.outputByteLimit === 'number' ? { limit: request.outputByteLimit } : {}),
     };
     terminals.set(handle.uri, held);
-    const gone = (): void => { held.exited = true; };
+    const gone = (): void => {
+      held.exited = true;
+      // The process a row described has ended, so the row ends with it.
+      unlistHeld(held);
+    };
     void handle.waitForExit().then(gone, gone);
     return { terminalId: handle.uri };
   };
 
   /** One by its own id, or a refusal the server reads as a failed request. */
-  const terminalOf = (id: string): { handle: OpenedTerminal; limit?: number; exited?: boolean } => {
+  const terminalOf = (id: string): HeldTerminal => {
     const held = terminals.get(id);
     if (held === undefined) throw new Error(`${provider}: no terminal ${id}`);
     return held;
@@ -352,12 +448,19 @@ export function createHandlers(ctx: SessionContext): Handlers {
   };
 
   const killTerminal = async (request: KillTerminalRequest): Promise<KillTerminalResponse> => {
-    terminalOf(request.terminalId).handle.kill();
+    // The one path a client's stop takes too, so a terminal the agent kills
+    // answers a stop that arrives after it with `false`.
+    await stopHeld(terminalOf(request.terminalId));
     return {};
   };
 
   const releaseTerminal = async (request: ReleaseTerminalRequest): Promise<ReleaseTerminalResponse> => {
-    terminalOf(request.terminalId).handle.release();
+    const held = terminalOf(request.terminalId);
+    // Before the terminal goes: the row lasts as long as the process does, and
+    // a release is the agent saying it is done with it. The exit a release
+    // causes behind this finds nothing left to remove.
+    unlistHeld(held);
+    held.handle.release();
     terminals.delete(request.terminalId);
     return {};
   };
@@ -819,6 +922,7 @@ export function createHandlers(ctx: SessionContext): Handlers {
     waitForTerminalExit,
     killTerminal,
     releaseTerminal,
+    settleTerminals,
     askElicitation,
     heardElicitationComplete,
     answerElicitation,

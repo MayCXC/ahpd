@@ -1,5 +1,5 @@
 import type { query } from '@anthropic-ai/claude-agent-sdk';
-import type { Activity, Bag, BoundTool, Session, SessionOptions, ShellEnv, Start, SubagentChat, SubagentRequest } from '@ahpd/sdk';
+import type { Activity, BackgroundTasks, Bag, BoundTool, OutputTerminals, Session, SessionOptions, ShellEnv, Start, SubagentChat, SubagentRequest } from '@ahpd/sdk';
 import type { Asked, Spawned } from '../spawn.js';
 import type { Asking } from './asking.js';
 import type { ClientTools } from './clienttools.js';
@@ -110,6 +110,22 @@ export interface ClaudeSessionOptions extends SessionOptions {
    * offer one, and then a subagent's frames stay in the turn that spawned it.
    */
   subagent?: (toolCallId: string, request: SubagentRequest) => SubagentChat;
+  /**
+   * The host's background-task seam, carried from `Start`.
+   *
+   * Present on every session a host starts, because the host always offers it.
+   * Absent only where a session is built by hand, and then the tasks the
+   * harness leaves running are not reported: there is no host to draw them.
+   */
+  backgroundTasks?: BackgroundTasks;
+  /**
+   * The host's output-terminal factory, carried from `Start`.
+   *
+   * A background shell's output is text the harness already holds, so the host
+   * owns the channel and this backend only writes into it. Absent only where a
+   * session is built by hand, and then a shell is listed without its output.
+   */
+  outputTerminals?: OutputTerminals;
 }
 
 /**

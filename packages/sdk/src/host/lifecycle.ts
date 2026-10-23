@@ -242,6 +242,9 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
    * for it once this is done.
    */
   const teardown = (held: Held, uri: string): void => {
+    // First, while the chats are still here to be recognised: a closed chat is
+    // one no map names, and a record left behind is a row nothing can reach.
+    ctx.background.forgetSession(uri);
     for (const [chatUri, chat] of held.chats) {
       // The senders of what this chat still holds, because a closed backend
       // ends no turn and runs nothing it had queued.

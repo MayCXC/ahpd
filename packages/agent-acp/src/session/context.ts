@@ -10,6 +10,33 @@ import type { Queue } from './queue.js';
 import type { Turn } from './turn.js';
 
 /**
+ * One terminal this session opened for the server.
+ *
+ * A terminal outlives the call that made it - an agent starts a server or a
+ * watch and goes on - which is what makes it background work once the call has
+ * ended. A row says when the work started and the line it runs, so both are
+ * kept beside the handle rather than read back from the host's channel.
+ */
+export interface HeldTerminal {
+  handle: OpenedTerminal;
+  /** The byte limit the request that opened it asked for. */
+  limit?: number;
+  /** Whether the process has exited. */
+  exited?: boolean;
+  /** When the host opened it, as the row's `startedAt`. */
+  openedAt: string;
+  /** The command and its arguments, as one line. */
+  command: string;
+  /**
+   * The id its row was reported under, while the row stands.
+   *
+   * Also what makes a removal happen once: an exit and a release can both come,
+   * and the second one finds nothing left to remove.
+   */
+  listed?: string;
+}
+
+/**
  * Everything an area of a session reaches for, in one object.
  *
  * Built once in `acpSession` and handed to every area's factory, the way the
@@ -159,7 +186,7 @@ export interface SessionContext extends Config, Handlers, Opening, Queue, Turn, 
    * The terminals this session opened for the server, by the server's own id,
    * and whether each one's process has exited.
    */
-  terminals: Map<string, { handle: OpenedTerminal; limit?: number; exited?: boolean }>;
+  terminals: Map<string, HeldTerminal>;
   /**
    * The questions the server is waiting on a person for, by the request id.
    *

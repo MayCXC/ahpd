@@ -60,6 +60,9 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 ### Agents
 
 - cofold: a transcript read while a rewind removes a run answers the turns that remain instead of failing. The removed run's turn carries no usage, ending or duration.
+- A background task has one shape from every backend. A backend reports it through `Start.backgroundTasks`, and the host draws the row; a `chat/backgroundWork*` action a backend sends itself is dropped.
+- Claude's background shells show their output in a terminal of their own, read once a second, and stop with `vscode/stopBackgroundWork`, which needs `chat:cancel`.
+- An ACP terminal that still runs when its call ends is listed as a background shell, and its stop kills the process. A nested host lists its inner host's tasks.
 
 ## 0.13.0 - 2026-10-20
 

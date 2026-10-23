@@ -9,7 +9,8 @@ import type { Emit, PlanUpdate, Session, SubagentChat, SubagentRequest } from '.
 import type { ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { Account, Offered } from './probe.js';
 import type { ResourceStore } from './resources.js';
-import type { StartTerminals } from './terminals.js';
+import type { StartTerminals, OutputTerminals } from './terminals.js';
+import type { BackgroundTasks } from './background.js';
 import type { MayRunTool, RunClientTool, ToolsChanged, ToolsEndpoint } from '../tools/server.js';
 import type { ComputerPort } from './computers.js';
 import type { MachineNeed } from './machine.js';
@@ -333,6 +334,17 @@ export interface Start {
    */
   terminals?: StartTerminals;
   /**
+   * The host's output terminals, for a backend that has text to show.
+   *
+   * A terminal a backend writes into rather than a process it starts: the
+   * output already exists - a background shell's poll, a program's tail - and
+   * the host owns the channel a client subscribes to. Offered whether or not
+   * the host holds a terminal store, because there is no process here to open.
+   * Left out never, unlike `terminals`: an output is text and needs nothing
+   * from the machine.
+   */
+  outputTerminals?: OutputTerminals;
+  /**
    * The host's tools, as an MCP server this session's backend may point its
    * own client at.
    *
@@ -422,6 +434,19 @@ export interface Start {
    * turn that spawned it.
    */
   subagent?(toolCallId: string, request: SubagentRequest): SubagentChat;
+  /**
+   * The tasks this backend is running in the background, as it learns them.
+   *
+   * A harness knows what it left running and the host knows what a client
+   * reads, so the backend reports and the host draws: the row's shape, the
+   * `_meta` flag a client stops work through and the snapshot a late
+   * subscriber opens are all the host's. A backend that emits
+   * `chat/backgroundWorkSet` itself has the action dropped and logged, because
+   * two places building one row is how a client ends up with two.
+   *
+   * Always offered, unlike `terminals`: a task is a record and needs no store.
+   */
+  backgroundTasks?: BackgroundTasks;
   /** A session of this backend's to continue, rather than starting a new one. */
   resume?: string;
   /** The prompt to resume *at*, so a fork leaves the turns after it behind. */

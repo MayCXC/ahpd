@@ -46,9 +46,11 @@ import { idOf } from './catalog.js';
 import { posixUriOf, uriOf } from '../resources/fileuri.js';
 import { machinePathOf } from '../machines/machine.js';
 import { subagentChatUri } from '../host/channels.js';
+import { STOP_FLAG } from '../host/background.js';
 import { ANSWER_TIMEOUT } from '../rpc.js';
 import { computerId } from '../machines/computers.js';
 import type { Agent, Start } from '../types/agent.js';
+import type { BackgroundTask } from '../types/background.js';
 import type { Bag } from '../types/common.js';
 import type { ComputerPort } from '../types/computers.js';
 import type { Chosen, MessageFrom, Session, SubagentChat } from '../types/session.js';
@@ -644,6 +646,75 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
   };
 
   /**
+   * Report an inner background row through the outer host's seam, or nothing.
+   *
+   * The host inside has already built the row and decided what a client may do
+   * with it; what this session adds is the outer names - the chat the row is
+   * on, and the worker chat a subagent row names - and a stop of its own, which
+   * is a request to the host inside rather than a function held out here.
+   *
+   * `terminal` is left off deliberately: it names a channel of the host
+   * inside, which a client out here has no way to subscribe to.
+   *
+   * Answers whether it took the action. A `Start` with no seam is not one of
+   * this host's - only a caller building one by hand - and there the row is
+   * left to `served`, which emits it as it came.
+   */
+  const reported = (action: Bag): boolean => {
+    const type = String(action.type);
+    if (type !== 'chat/backgroundWorkSet' && type !== 'chat/backgroundWorkRemoved') return false;
+    const tasks = start.backgroundTasks;
+    if (tasks === undefined) return false;
+    if (type === 'chat/backgroundWorkRemoved') {
+      tasks.remove(start.chatUri, String(action.id ?? ''));
+      return true;
+    }
+    const work = (action.work ?? {}) as Bag;
+    const meta = (work._meta ?? {}) as Bag;
+    const taskId = String(work.id ?? '');
+    const inside = innerChat;
+    /*
+     * The stop is the outer host asking the inner one, because that is where
+     * the backend that knows how to stop the task is. Its answer is the inner
+     * host's, unwrapped: `{ stopped }` there is the answer a client outside
+     * would have got had the task been reported here in the first place.
+     */
+    const stop = async (): Promise<boolean> => {
+      if (client === undefined || ended !== undefined || closed) return false;
+      try {
+        /*
+         * Through a widened `request`, because the client is typed over the
+         * protocol's own commands and `vscode/*` is exactly what this
+         * repository serves outside them. The inner host answers it the same
+         * way a client of its own would be answered.
+         */
+        const ask = client.request.bind(client) as unknown as (method: string, params: Record<string, unknown>) => Promise<unknown>;
+        const answer = await ask('vscode/stopBackgroundWork', { chat: inside, id: taskId }) as { stopped?: unknown } | undefined;
+        return answer?.stopped === true;
+      }
+      catch (error) {
+        log(`${provider} in computer://${id}: could not stop ${taskId} inside: ${reason(error)}`);
+        return false;
+      }
+    };
+    const task: BackgroundTask = {
+      id: taskId,
+      kind: work.kind === 'subagent' ? 'subagent' : 'shell',
+      label: String(work.label ?? ''),
+      startedAt: String(work.startedAt ?? ''),
+      ...(work.kind === 'subagent'
+        // The inner chat, named outside when this session serves that worker -
+        // and as it came when it does not, because the protocol requires the
+        // field and there is no other chat to name.
+        ? { chat: String(outward(work.chat ?? '') ?? '') }
+        : { command: typeof work.command === 'string' ? work.command : '' }),
+      ...(meta[STOP_FLAG] === true ? { stop } : {}),
+    };
+    tasks.set(start.chatUri, task);
+    return true;
+  };
+
+  /**
    * One inner action as the outer session says it, or nothing.
    *
    * Every chat URI in it is the outer one. A catalogue action about a chat
@@ -688,6 +759,17 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
         }
         if (event.type !== 'action') continue;
         const action = event.params.action;
+        /*
+         * A background row is reported, not relayed.
+         *
+         * The host inside built it from its backend's own task and drew it for
+         * its own clients; out here the row has to be this host's, naming this
+         * chat and this session's stop, so it goes through the seam and the
+         * host out here builds it again. It is taken before the reduce, so the
+         * mirror this session answers a late subscriber with does not carry a
+         * row the host out here keeps.
+         */
+        if (channel === 'chat' && reported(action as unknown as Bag)) continue;
         /*
          * The mirror is kept so a client that arrives late gets a snapshot.
          * A shape it cannot reduce is dropped rather than fatal: the action

@@ -913,6 +913,14 @@ packs the host's log files under `agenthost/` and the session's record as
 Node ships or as a directory left where it is; either goes after ten
 minutes, and `vscode/readAgentHostDebugLogsChunk` reads an archive back a
 megabyte at a time, and only an archive this host made.
+`vscode/stopBackgroundWork` takes `{ chat, id }` and calls the stop the
+backend that reported the task gave - the row says it may be stopped under
+`_meta['vscode.stopBackgroundWork']`, and the answer is `{ stopped }`.
+An unknown chat, an unknown id, a task with nothing to stop and a stop that
+threw are the same `false`, because a client shows the same thing after each;
+an empty id or a `chat` that is not an AHP chat URI is `-32602`. The row is
+left where it is, and the backend's own `remove` takes it down when the work
+has ended. The request needs `chat:cancel`.
 `getNetworkDiagnosticsInfo` reports the version, platform, the proxy
 variables that are set and the endpoints the backends name - the Anthropic
 API, answering 401 unauthenticated, and the GitHub API where the host was
@@ -945,6 +953,7 @@ refused `-32601`.
 | `vscode/deleteAgentHostDetachedWorktree` | The same flow, which removes a tree and its branch. [Worktrees the window manages](#worktrees-the-window-manages) |
 | `vscode/reconcileAgentHostDetachedWorktrees` | The same flow, which lets go of the trees the window has forgotten. [Worktrees the window manages](#worktrees-the-window-manages) |
 | `vscode/removeSessionArtifact` | The window takes an artifact pill off with its own request. [Sessions and the catalogue](#sessions-and-the-catalogue) |
+| `vscode/stopBackgroundWork` | The Stop button on a background task's row, which the host answers by calling the backend that reported it. [What the window asks a host about itself](#what-the-window-asks-a-host-about-itself) |
 | `vscode/getAgentHostSessionStateFile` | The backend's own record of a session, read by the window's debug view. [What the window asks a host about itself](#what-the-window-asks-a-host-about-itself) |
 | `vscode/collectAgentHostDebugLogs` | The window's own bundle of logs, for a bug report. [What the window asks a host about itself](#what-the-window-asks-a-host-about-itself) |
 | `vscode/readAgentHostDebugLogsChunk` | The same bundle, read back a megabyte at a time. [What the window asks a host about itself](#what-the-window-asks-a-host-about-itself) |

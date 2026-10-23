@@ -369,6 +369,12 @@ it('reduces a chat\'s background work, and shows it to a client arriving after',
 
   const entry = {
     kind: 'shell', id: 'shell:t-sleep', label: 'sleep 100', startedAt: expect.any(String), command: 'sleep 100',
+    // The output channel the host opened for it, which is where the shell's
+    // text is read from rather than off the chat.
+    terminal: expect.any(String),
+    // A Claude shell is stopped by the host through the harness's `stopTask`,
+    // and the row says so, which is what a client draws a Stop button from.
+    _meta: { 'vscode.stopBackgroundWork': true },
   };
   expect((held(p, opened)[chatUri] as { backgroundWork?: unknown[] }).backgroundWork).toEqual([entry]);
 

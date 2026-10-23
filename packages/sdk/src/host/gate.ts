@@ -62,6 +62,12 @@ export const NEEDS: Record<string, Grant> = {
   'vscode/deleteAgentHostDetachedWorktree': 'session:worktree',
   'vscode/reconcileAgentHostDetachedWorktrees': 'session:worktree',
   'vscode/removeSessionArtifact': 'session:artifacts',
+  /*
+   * Stopping a background task is ending work a chat is running, which is the
+   * grant `chat/turnCancelled` takes: a role that may not cancel a turn may not
+   * kill the shell a turn started either.
+   */
+  'vscode/stopBackgroundWork': 'chat:cancel',
 
   // chat
   createChat: 'chat:create',
