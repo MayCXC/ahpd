@@ -1,0 +1,142 @@
+/**
+ * The messages between the plugin and its child process.
+ *
+ * The child is a separate process because a piece turns off TLS checks for the
+ * process it runs in. The two sides trade plain JSON: what a piece is, and the
+ * result of one action.
+ *
+ * A request carries an `id`, and the answer to it carries the same one, so a
+ * call is matched to its answer even when two are in flight.
+ */
+
+/** One prop of a piece's auth, or of one of its actions, as the child describes it. */
+export interface PropDescription {
+  /** The piece's own type, such as `SHORT_TEXT` or `STATIC_DROPDOWN`. */
+  type: string;
+  /** What a client prints for the prop. */
+  displayName: string;
+  /** One line on what the prop is, when the piece says. */
+  description?: string;
+  /** Whether an action needs a value for it. */
+  required: boolean;
+  /** The values of a static dropdown, in the order the piece lists them. */
+  options?: unknown[];
+}
+
+/** One auth a piece takes, as the child describes it. */
+export interface AuthDescription {
+  /** The piece's auth type, such as `SECRET_TEXT` or `CUSTOM_AUTH`. */
+  type: string;
+  /** What a client prints for the auth. */
+  displayName: string;
+  /** One line on what the auth is, when the piece says. */
+  description?: string;
+  /** The fields of a `CUSTOM_AUTH`, each by the name the piece reads it by. */
+  props?: Record<string, PropDescription>;
+}
+
+/** One action of a piece, as the child describes it. */
+export interface ActionDescription {
+  /** The name a call refers to the action by. */
+  name: string;
+  /** What a client prints for the action. */
+  displayName: string;
+  /** One line on what the action does. */
+  description: string;
+  /** The description the piece wrote for a model, when it wrote one. */
+  aiDescription?: string;
+  /** The action's input, each prop by the name the piece reads it by. */
+  props: Record<string, PropDescription>;
+}
+
+/** One piece the child loaded, as the child describes it. */
+export interface PieceDescription {
+  /** The specifier the piece was asked for by. */
+  package: string;
+  /** What a client prints for the piece, which is its adapter's title. */
+  displayName: string;
+  /** One line on what the piece is, when the piece says. */
+  description?: string;
+  /** The auth the piece takes, one of several, or none. */
+  auth?: AuthDescription | AuthDescription[];
+  /** The actions the piece offers, in the order it declares them. */
+  actions: ActionDescription[];
+}
+
+/** Ask the child what the named pieces are. */
+export interface DescribeRequest {
+  type: 'describe';
+  /** The id this request is answered by. */
+  id: number;
+  /** One package specifier or file URL for each piece. */
+  pieces: string[];
+}
+
+/**
+ * Ask the child to run one action of one piece.
+ *
+ * The connector's id goes with it because the child keeps one `store` for each
+ * connector, and the auth value goes with it because the child holds no secret
+ * from one call to the next.
+ */
+export interface RunRequest {
+  type: 'run';
+  /** The id this request is answered by. */
+  id: number;
+  /** The connector the call is for. */
+  connector: string;
+  /** The package specifier of the piece. */
+  piece: string;
+  /** The name of the action to run. */
+  action: string;
+  /** The auth value the piece reads: a secret text, or the props of a custom auth. */
+  auth: Record<string, unknown>;
+  /** The input of the call, each prop by the name the piece reads it by. */
+  input: Record<string, unknown>;
+}
+
+/** What the child answered a `describe` with. */
+export interface DescribedAnswer {
+  type: 'described';
+  /** The id of the request this answers. */
+  id: number;
+  /** The pieces that loaded. */
+  pieces: PieceDescription[];
+  /** One line for each piece that did not load, naming it. */
+  errors: string[];
+}
+
+/** What the child answered a `run` with, when the action returned. */
+export interface RanAnswer {
+  type: 'ran';
+  /** The id of the request this answers. */
+  id: number;
+  /** The action's result, as JSON. */
+  result: unknown;
+}
+
+/** What the child answered when the request itself failed. */
+export interface FailedAnswer {
+  type: 'failed';
+  /** The id of the request this answers. */
+  id: number;
+  /** One line saying what went wrong. */
+  message: string;
+}
+
+/** One request to the child. */
+export type Request = DescribeRequest | RunRequest;
+
+/** One request before its id is given: what a caller sends. */
+export type Question = Omit<DescribeRequest, 'id'> | Omit<RunRequest, 'id'>;
+
+/** One answer from the child. */
+export type Answer = DescribedAnswer | RanAnswer | FailedAnswer;
+
+/** Whether a value came over the channel as an answer, with an id. */
+export const isAnswer = (value: unknown): value is Answer => {
+  if (typeof value !== 'object' || value === null) return false;
+  const message = value as Record<string, unknown>;
+  const known = message['type'] === 'described' || message['type'] === 'ran' || message['type'] === 'failed';
+  return known && typeof message['id'] === 'number';
+};
