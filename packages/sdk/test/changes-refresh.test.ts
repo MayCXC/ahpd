@@ -1,7 +1,7 @@
 import { WAIT_MS } from '../../../tools/wait.ts';
 import { execFileSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdtempSync, writeFileSync, type FSWatcher } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync, type FSWatcher } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,6 +9,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { changesetReducer } from '@microsoft/agent-host-protocol';
 import { gitChanges } from '../src/sessions/changes.js';
 import { gitBranches } from '../src/repo/git.js';
+import { gitWorktrees } from '../src/repo/worktrees.js';
 import { createHost } from '../src/host.js';
 import { fileResources, uriOf } from '../src/resources/resources.js';
 import { shellTerminals } from '../src/machines/terminals.js';
@@ -111,8 +112,14 @@ const channelActions = (p: ReturnType<typeof peer>, channel: string): Record<str
   .filter((n) => n.channel === channel)
   .map((n) => n.action);
 
-/** One client on one session in `dir`, watching the session and nothing else. */
-const open = async (dir: string, changes: ChangesetSource, agent: Agent = echo({ path: dir })) => {
+/**
+ * One client on one session in `dir`, watching the session and nothing else.
+ *
+ * `where` names a working folder explicitly, which is what gives the session a
+ * baseline: a session started on the host's own path has none, and no row of
+ * its own is read.
+ */
+const open = async (dir: string, changes: ChangesetSource, agent: Agent = echo({ path: dir }), where?: string) => {
   const host = createHost({ path: dir, agents: [agent], resources: fileResources(), terminals: shellTerminals(), changes });
   const p = peer();
   const client = host.accept(p);
@@ -120,7 +127,10 @@ const open = async (dir: string, changes: ChangesetSource, agent: Agent = echo({
     method: 'initialize',
     params: { clientId: 'probe', protocolVersions: ['0.9.0'], initialSubscriptions: ['ahp-root://'] },
   });
-  await client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo' } });
+  await client.handle({
+    method: 'createSession',
+    params: { channel: URI, provider: 'echo', ...(where === undefined ? {} : { workingDirectories: [uriOf(where)] }) },
+  });
   await client.handle({ method: 'subscribe', params: { channel: URI } });
   await settle(8);
   return { client, peer: p, dir };
@@ -1005,4 +1015,161 @@ it('keeps a stored session\'s git watch while its changeset is watched, and clos
 
   await client.handle({ method: 'unsubscribe', params: { channel: changeset } });
   expect(calls.stopped).toBe(1);
+});
+
+/*
+ * A row's counts move while the turn runs, and not only when it ends.
+ *
+ * A build is one turn of hours, and its row showed the counts from when the
+ * turn started. A finished tool call is where the tree can have moved, so it is
+ * where the row is read - and the read is coalesced, because a turn of many
+ * tool calls would otherwise cost a `git diff` apiece.
+ */
+
+const SESSION = 'echo:/s';
+
+/** A repository in a folder of its own, so the trees cut beside it are cleaned with it. */
+const insideAProject = (): string => {
+  const root = mkdtempSync(join(tmpdir(), 'ahpd-tree-'));
+  made.push(root);
+  const dir = join(root, 'project');
+  mkdirSync(dir);
+  execFileSync('git', ['init', '-q', '-b', 'main', dir]);
+  git(dir, 'config', 'user.email', 'test@example.com');
+  git(dir, 'config', 'user.name', 'Test');
+  writeFileSync(join(dir, 'tracked.txt'), 'one\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'first');
+  return dir;
+};
+
+/** The tree the host cut, read from git's own list. */
+const cutTree = (repository: string): string => {
+  for (const block of git(repository, 'worktree', 'list', '--porcelain').split('\n\n')) {
+    if (block.includes('refs/heads/agents/')) return block.split('\n')[0]?.replace(/^worktree /, '') ?? '';
+  }
+  throw new Error('the host cut no tree');
+};
+
+/** One client and one session in a tree the host cuts for it. */
+const openInTree = async (repository_: string, changes: ChangesetSource, agent: Agent) => {
+  const host = createHost({
+    path: repository_,
+    agents: [agent],
+    resources: fileResources(),
+    terminals: shellTerminals(),
+    changes,
+    worktrees: gitWorktrees(),
+  });
+  const p = peer();
+  const client = host.accept(p);
+  await client.handle(hello);
+  await client.handle({
+    method: 'createSession',
+    params: {
+      channel: URI,
+      provider: 'echo',
+      workingDirectories: [uriOf(repository_)],
+      config: { isolation: 'worktree', branch: 'main' },
+    },
+  });
+  await waitFor(() => git(repository_, 'worktree', 'list', '--porcelain').includes('refs/heads/agents/'));
+  return { client, peer: p, where: cutTree(repository_) };
+};
+
+/** What the last row a session was sent says its counts are. */
+const countsMoved = (p: ReturnType<typeof peer>, from: number): { files?: number; additions?: number; deletions?: number } | undefined =>
+  (rowsMoved(p, SESSION).slice(from).at(-1)?.changes as { files?: number; additions?: number; deletions?: number } | undefined);
+
+it('moves a session row at a tool call, from its baseline, before the turn ends', async () => {
+  const dir = repository();
+  const { held, agent } = endable(dir);
+  const { client, peer: p } = await open(dir, gitChanges(), agent, dir);
+  // The baseline is written and read before the row can move from it.
+  await waitFor(() => rowsMoved(p, SESSION).length > 0);
+  const from = rowsMoved(p, SESSION).length;
+
+  writeFileSync(join(dir, 'from-tool.txt'), 'made\n');
+  held.emit?.('chat', { type: 'chat/toolCallComplete', turnId: 't1', toolCallId: 'c1', result: {} });
+
+  await waitFor(() => countsMoved(p, from)?.files === 1);
+  expect(countsMoved(p, from)).toEqual({ files: 1, additions: 1, deletions: 0 });
+  // Nothing ended the turn, which is what used to be the only time a row was read.
+  expect(channelActions(p, URI).some((one) => one.type === 'chat/turnComplete')).toBe(false);
+});
+
+it('moves a worktree row at a tool call, from its branch, before the turn ends', async () => {
+  const project = insideAProject();
+  const { held, agent } = endable(project);
+  const { client, peer: p, where } = await openInTree(project, gitChanges(), agent);
+  await waitFor(() => rowsMoved(p, SESSION).length > 0);
+  const from = rowsMoved(p, SESSION).length;
+
+  writeFileSync(join(where, 'from-tool.txt'), 'made\n');
+  held.emit?.('chat', { type: 'chat/toolCallComplete', turnId: 't1', toolCallId: 'c1', result: {} });
+
+  await waitFor(() => countsMoved(p, from)?.files === 1);
+  expect(countsMoved(p, from)).toEqual({ files: 1, additions: 1, deletions: 0 });
+  expect(channelActions(p, URI).some((one) => one.type === 'chat/turnComplete')).toBe(false);
+});
+
+it('runs at most two summary reads for a burst of ten tool calls', async () => {
+  const dir = repository();
+  const { held, agent } = endable(dir);
+  const base = gitChanges();
+  const reads = { started: 0, finished: 0 };
+  const changes: ChangesetSource = {
+    ...base,
+    sessionSummary: async (at, session, running) => {
+      reads.started += 1;
+      try {
+        return await base.sessionSummary?.(at, session, running) ?? { files: 0, additions: 0, deletions: 0 };
+      }
+      finally {
+        reads.finished += 1;
+      }
+    },
+  };
+  const { client } = await open(dir, changes, agent, dir);
+  await waitFor(() => reads.finished >= 1);
+  reads.started = 0;
+  reads.finished = 0;
+
+  for (let i = 0; i < 10; i++) {
+    writeFileSync(join(dir, `t${String(i)}.txt`), 'x\n');
+    held.emit?.('chat', { type: 'chat/toolCallComplete', turnId: 't1', toolCallId: `c${String(i)}`, result: {} });
+  }
+  await waitFor(() => reads.finished >= 2 && reads.finished === reads.started);
+  // One read running and one waiting behind it, as `refreshWatched` does.
+  expect(reads.started).toBeGreaterThan(1);
+  expect(reads.started).toBeLessThanOrEqual(2);
+});
+
+it('sends no row for a tool call that changes nothing', async () => {
+  const dir = repository();
+  const { held, agent } = endable(dir);
+  const base = gitChanges();
+  const reads = { finished: 0 };
+  const changes: ChangesetSource = {
+    ...base,
+    sessionSummary: async (at, session, running) => {
+      try {
+        return await base.sessionSummary?.(at, session, running) ?? { files: 0, additions: 0, deletions: 0 };
+      }
+      finally {
+        reads.finished += 1;
+      }
+    },
+  };
+  const { client, peer: p } = await open(dir, changes, agent, dir);
+  await waitFor(() => reads.finished >= 1);
+  await settle(10);
+  const before = rowsMoved(p, SESSION).length;
+  const finishedBefore = reads.finished;
+
+  held.emit?.('chat', { type: 'chat/toolCallComplete', turnId: 't1', toolCallId: 'c1', result: {} });
+  // The read still runs; it is what it finds that says nothing new.
+  await waitFor(() => reads.finished > finishedBefore);
+  await settle(10);
+  expect(rowsMoved(p, SESSION).length).toBe(before);
 });
