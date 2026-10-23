@@ -41,7 +41,13 @@ export interface AdaptersChannel {
   refresh(): Promise<void>;
 }
 
-/** One adapter as a client is shown it: everything but the way it is opened. */
+/**
+ * One adapter as a client is shown it: everything but the way it is opened.
+ *
+ * The capabilities are sent whole, so a receive capability's `path` reaches a
+ * client beside its type, name, title and description, and a capability with
+ * no path carries no key.
+ */
 const rowOf = (adapter: ServedAdapter): Record<string, unknown> => ({
   name: adapter.name,
   title: adapter.title,

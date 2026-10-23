@@ -38,6 +38,14 @@ export interface Capability {
    * setting from.
    */
   input?: Record<string, unknown>;
+  /**
+   * Where a `receive` capability's connectors receive, on a `receive` only.
+   *
+   * A path relative to the daemon's HTTP root, with `{id}` standing for the
+   * connector's id, such as `/plugins/webhook/{id}`. A client puts the root
+   * before it to build a connector's URL.
+   */
+  path?: string;
 }
 
 /**

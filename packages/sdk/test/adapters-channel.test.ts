@@ -5,10 +5,12 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { adaptersChannel } from '../src/connectors/adapters.js';
 import { createHost } from '../src/host.js';
 import { fileUsers } from '../src/access/users.js';
+import { pluginHost } from '../src/plugins/plugins.js';
 import { fileResources } from '../src/resources/resources.js';
 import { servedRecords } from '../src/resources/recordschannel.js';
 import { echo } from '../../../examples/echo/agent.js';
-import type { ServedAdapter } from '../src/types/connectors.js';
+import type { Adapter, ServedAdapter } from '../src/types/connectors.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 import type { Users } from '../src/types/users.js';
 
 /*
@@ -29,7 +31,10 @@ const WEBHOOK: ServedAdapter = {
   description: 'A URL that talks to a bot or fires an automation.',
   by: 'webhook',
   schema: { type: 'object', properties: { secret: { type: 'string', writeOnly: true } }, required: ['secret'] },
-  capabilities: [{ type: 'receive', name: 'calls', title: 'Receives calls', description: 'Answers a POST.' }],
+  capabilities: [
+    { type: 'receive', name: 'calls', title: 'Receives calls', description: 'Answers a POST.', path: '/plugins/webhook/{id}' },
+    { type: 'command', name: 'deploy', title: 'Deploy', description: 'Runs a deploy.' },
+  ],
   open: () => {},
 };
 
@@ -63,6 +68,17 @@ beforeEach(() => {
 afterEach(() => { rmSync(home, { recursive: true, force: true }); });
 
 type Host = ReturnType<typeof createHost>;
+
+/** A plugin context for a registration the host refuses before anything loads. */
+const CONTEXT: LoaderContext = {
+  path: '/tmp/adapters',
+  paths: ['/tmp/adapters'],
+  version: '0.0.0',
+  hostName: 'host',
+  configDir: '/tmp/adapters',
+  log: () => {},
+  say: () => {},
+};
 
 /** A host serving the adapters channel over two adapters, and no connector. */
 async function served() {
@@ -120,6 +136,37 @@ it('lists every adapter by name with connector:list, before any connector exists
     plugin: 'webhook',
   });
   await close();
+});
+
+it('sends a receive capability with its path, and leaves the key out where it has none', async () => {
+  const { host, users, close } = await served();
+  const ana = await as(host, users, 'ana');
+
+  const [receive, command] = (await ana.rows())['webhook']?.['capabilities'] as Bag[];
+  expect(receive).toMatchObject({ type: 'receive', path: '/plugins/webhook/{id}' });
+  // A path is where calls arrive, and a command receives none.
+  expect(command).not.toHaveProperty('path');
+  await close();
+});
+
+it('refuses an adapter with a path on a capability that is not a receive', () => {
+  const { host } = pluginHost('webhook', CONTEXT);
+  const adapter: Adapter = {
+    ...WEBHOOK,
+    capabilities: [{ type: 'command', name: 'deploy', title: 'Deploy', description: 'Runs a deploy.', path: '/plugins/webhook/{id}' }],
+  };
+
+  expect(() => host.registerAdapter(adapter)).toThrow('path');
+});
+
+it('refuses a path that does not start with /', () => {
+  const { host } = pluginHost('webhook', CONTEXT);
+  const adapter: Adapter = {
+    ...WEBHOOK,
+    capabilities: [{ type: 'receive', name: 'calls', title: 'Receives calls', description: 'Answers a POST.', path: 'plugins/webhook/{id}' }],
+  };
+
+  expect(() => host.registerAdapter(adapter)).toThrow('path');
 });
 
 it('refuses a role without connector:list, config:read included', async () => {

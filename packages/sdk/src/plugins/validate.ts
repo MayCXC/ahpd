@@ -529,7 +529,7 @@ export const checkTriggerType = (value: unknown, by: string): void => {
  * The name is a slug and the schema an object, because those are the two the
  * host acts on: the name is what every stored connector carries, and the
  * schema is what a client draws and what a connector's own config is checked
- * against. The capabilities are read for their shape and nothing more - a
+ * against. The capabilities are read for their shape and for their path - a
  * client lists them, and this version runs none.
  */
 export const checkAdapter = (value: unknown, by: string): string => {
@@ -550,6 +550,19 @@ export const checkAdapter = (value: unknown, by: string): string => {
     for (const member of ['type', 'name', 'title', 'description']) stringy(capability, member, by, 'registerAdapter');
     if (capability.input !== undefined && !right(capability.input, 'object')) {
       throw new Error(miss(by, 'registerAdapter', 'input', 'an object, the JSON Schema a client draws the form from, or nothing'));
+    }
+    /*
+     * A path is where a client sends a call, so only a `receive` capability
+     * may carry one, and it is an absolute path on the daemon's HTTP root.
+     * Any other type with a path is a client pointed at a URL nothing answers.
+     */
+    if (capability.path !== undefined) {
+      if (capability.type !== 'receive') {
+        throw new Error(miss(by, 'registerAdapter', 'path', `a path only on a receive capability, and ${String(capability.name)} is a ${String(capability.type)}`));
+      }
+      if (typeof capability.path !== 'string' || !capability.path.startsWith('/')) {
+        throw new Error(miss(by, 'registerAdapter', 'path', 'a path that starts with /, such as /plugins/webhook/{id}'));
+      }
     }
   }
   if (typeof object.open !== 'function') {

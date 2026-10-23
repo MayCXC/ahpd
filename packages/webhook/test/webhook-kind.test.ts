@@ -79,6 +79,8 @@ it('marks the secret writeOnly, so the host keeps it in the vault and not in the
   const properties = adapter.schema['properties'] as Record<string, Record<string, unknown>>;
   expect(properties['secret']?.['writeOnly']).toBe(true);
   expect(adapter.capabilities.map((one) => [one.type, one.title])).toEqual([['receive', 'Receives calls']]);
+  // The URL a client builds from the capability, on the daemon's HTTP root.
+  expect(adapter.capabilities[0]?.path).toBe('/plugins/webhook/{id}');
 });
 
 it('answers two connectors at their own URLs, and answers 404 once one is removed', async () => {
