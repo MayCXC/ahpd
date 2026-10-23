@@ -1,6 +1,6 @@
 ---
 title: A chat keeps the backend that serves it
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:

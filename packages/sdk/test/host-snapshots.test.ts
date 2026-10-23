@@ -5,9 +5,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  resetSdk, actions, claude, createHost, emit, hello, machine, open, peer,
+  resetSdk, actions, claude, createHost, echo, emit, hello, hostTools, machine, open, peer,
  sdk, serving, sessionQueries, settle, running,
 } from './support/host.js';
+import type { Agent } from '../src/types/agent.js';
+import type { HostTool } from '../src/types/host.js';
 import type { Principal } from '../src/types/users.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
@@ -956,5 +958,104 @@ describe('a session\'s annotations', () => {
     expect(refused?.params).toMatchObject({
       rejectionReason: expect.stringContaining('does not have'),
     });
+  });
+});
+
+/*
+ * A chat that another backend serves.
+ *
+ * AHP's own `createChat` names no backend: only a plugin names one, through the
+ * `ToolCall` its tool is handed. That is the seam these cases open a chat
+ * through, because it is the only way one comes to be on a backend the session
+ * does not run on.
+ */
+describe('a chat another backend serves', () => {
+  /**
+   * A second backend, and a tool that opens a chat on the backend it names.
+   *
+   * Echo rather than the fake Claude: what is under test is which backend the
+   * chat went to, and a backend that records its own start says that without a
+   * turn having to run.
+   */
+  async function chatsOnAnother() {
+    type Answer = { content: { text: string }[]; isError?: boolean };
+    type Tool = { name: string; handler: (input: unknown) => Promise<Answer> };
+    const other: Agent = { ...echo({ path: '/home/softov', pace: 0 }), provider: 'other' };
+    const maker: HostTool = {
+      definition: {
+        name: 'make_chat',
+        title: 'Make Chat',
+        description: 'Open a chat in this session, on the backend it names.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            provider: { type: 'string', description: 'The backend that serves the chat.' },
+            prompt: { type: 'string', description: 'What to say in it first.' },
+          },
+          required: ['prompt'],
+        },
+      },
+      run: async (input, at) => {
+        const made = await at.createChat(at.session, {
+          prompt: String(input.prompt),
+          from: { origin: { kind: 'agent' } },
+          ...(typeof input.provider === 'string' ? { provider: input.provider } : {}),
+        });
+        return made.chat;
+      },
+    };
+    const host = createHost({
+      path: '/home/softov',
+      agents: [claude({ paths: ['/home/softov'] }), other],
+      ...machine(),
+      tools: [...hostTools(), maker],
+      sleepAfterMinutes: 0,
+    });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+    const session = 'ahp-session:/mine';
+    await client.handle({ method: 'createSession', params: { channel: session, provider: 'claude' } });
+    await settle(8);
+    const servers = sessionQueries().at(-1)?.options.mcpServers as Record<string, { tools: Tool[] }> | undefined;
+    const tool = servers?.ahp?.tools.find((one) => one.name === 'make_chat');
+    if (tool === undefined) throw new Error('no make_chat');
+    const made = await tool.handler({ provider: 'other', prompt: 'say hi' });
+    if (made.isError === true) throw new Error(made.content[0]?.text ?? 'make_chat failed');
+    return { client, session, chatUri: made.content[0]?.text ?? '' };
+  }
+
+  type Client = ReturnType<ReturnType<typeof createHost>['accept']>;
+
+  /** One channel's state, as a subscribing client reads it. */
+  const stateOf = async (client: Client, channel: string): Promise<Record<string, unknown>> => {
+    const answer = await client.handle({ method: 'subscribe', params: { channel } }) as {
+      snapshot: { state: Record<string, unknown> };
+    };
+    return answer.snapshot.state;
+  };
+
+  it("says the chat's backend, and leaves the session on its own", async () => {
+    const { client, session, chatUri } = await chatsOnAnother();
+    expect(chatUri).toMatch(/^ahp-chat:\/[0-9a-f-]+$/);
+
+    // The chat says which backend serves it, in `_meta` because `ChatState`
+    // declares no provider.
+    const chat = await stateOf(client,chatUri);
+    expect((chat._meta as Record<string, unknown> | undefined)?.['ahpd.provider']).toBe('other');
+
+    // And the session keeps its own: a chat on another harness does not
+    // rename the session it is a chat of.
+    const one = await stateOf(client,session);
+    expect(one.provider).toBe('claude');
+  });
+
+  it("leaves a chat of the session's own backend without the key", async () => {
+    const { client, session } = await chatsOnAnother();
+    const chatUri = (await stateOf(client,session)).defaultChat as string;
+    const chat = await stateOf(client,chatUri);
+    // The session already says `claude`; a key repeating it on every chat would
+    // be two answers to one question, and could disagree with the session.
+    expect(Object.prototype.hasOwnProperty.call((chat._meta as object | undefined) ?? {}, 'ahpd.provider'))
+      .toBe(false);
   });
 });
