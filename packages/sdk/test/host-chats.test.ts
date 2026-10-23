@@ -2,15 +2,17 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Turn } from '@microsoft/agent-host-protocol';
+import type { WireTurn } from '../src/types/wire.js';
 import {
   resetSdk, actions, claude, createHost, echo, emit, hello, machine, open, peer, sdk, serving,
   sessionQueries, settle, running,
 } from './support/host.js';
-import { fileSessions } from '../src/sessions/sessions.js';
+import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import { idOf } from '../src/sessions/catalog.js';
 import { chatUriFor, subagentChatUri } from '../src/host/channels.js';
 import { undeclaredIn } from './support/wire.js';
-import type { Agent, HostOptions, Session, Start } from '@ahpd/sdk';
+import type { Agent, Bag, HostOptions, Session, Start } from '@ahpd/sdk';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
 
@@ -1806,5 +1808,354 @@ describe('more than one chat in a session', () => {
     finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+/*
+ * A chat of a session may run on another backend than the session does.
+ *
+ * A session is one harness; a chat of it is a conversation, and which harness
+ * wrote that conversation is the chat's. What these cases check is that every
+ * road which starts a chat again - a session restart, a chat restart, a rewind
+ * and a daemon coming back - starts it on the backend it ran on, with that
+ * backend's config, and that the session's own keys do not reach it.
+ *
+ * The seam that opens a chat on another backend is another task's, so these
+ * begin where such a chat is already recorded: its row is written the way one
+ * leaves it, and the host that restores the session is what starts it there.
+ */
+describe('a chat of another backend', () => {
+  const DIR = '/home/softov';
+  const LIVE = 'ahp-session:/live';
+  // The name this host calls the session once a backend has it: the client's
+  // alias is a spelling, and the row, the logs and the refusals use this one.
+  const SESSION = 'one:/live';
+  const TWO = 'ahp-session:/two';
+  const THIRD = 'ahp-chat:/third';
+  const UUID = '0f8fad5b-d9cb-469f-a165-70867728950e';
+  const PEER = `ahp-chat:/${UUID}`;
+  const EXTRA = `${DIR}/extra`;
+
+  /** The turn the peer chat already had on the backend that wrote it. */
+  const SECOND = [
+    { uuid: 'u1', message: { role: 'user', content: 'second', text: 'second' } },
+  ] as Bag[] as WireTurn<Turn>[];
+
+  /**
+   * The example backend, under a name of its own.
+   *
+   * `voice` is declared as the session's rather than a chat's, which is what
+   * makes it a key a fan-out would push at every chat of the session. And
+   * `endPoint` names the last entry a turn left, without which this host
+   * refuses a rewind as one it has no point to cut at.
+   */
+  const backend = (provider: string, starts: Start[], told?: string[]): Agent => {
+    const base = echo({ path: DIR, pace: 0 });
+    const schema = base.schema();
+    return {
+      ...base,
+      provider,
+      multipleDirectories: true,
+      /*
+       * What this backend reads back for the peer chat.
+       *
+       * The first host runs that chat on `one`; the store says it is `two`'s,
+       * so what `two` finds under its id is the conversation it wrote - the
+       * turn the chat already had, before the one this host adds.
+       */
+      transcript: async (id: string) => (id === UUID ? SECOND : base.transcript?.(id)),
+      schema: () => {
+        const properties = { ...(schema.properties as Record<string, Record<string, unknown>>) };
+        properties.voice = { ...properties.voice, scope: 'session' };
+        return { ...schema, properties };
+      },
+      create: (start: Start): Session => {
+        starts.push(start);
+        const session = base.create(start.chatId === undefined ? start : { ...start, resume: start.chatId });
+        return {
+          ...session,
+          ...(told === undefined ? {} : {
+            setConfig: (key: string, value: unknown): true => {
+              told.push(`${provider}:${key}=${String(value)}`);
+              return true;
+            },
+          }),
+          endPoint: (turnId: string) => `${turnId}-end`,
+        };
+      },
+    };
+  };
+
+  /** A host serving these backends over one store, and a client whose window trusts. */
+  const hostAt = async (agents: Agent[], store: ReturnType<typeof memorySessions>, over: Partial<HostOptions> = {}) => {
+    const host = createHost({ path: DIR, agents, ...machine(), sessions: store, ...over });
+    const p = peer();
+    p.request = async () => ({ trusted: true });
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    return { host, client, p };
+  };
+
+  const send = async (
+    client: { handle(request: unknown): Promise<unknown> },
+    channel: string,
+    turnId: string,
+    text: string,
+  ): Promise<void> => {
+    void client.handle({
+      method: 'dispatchAction',
+      params: { channel, action: { type: 'chat/turnStarted', turnId, message: { text } } },
+    });
+    await settle(8);
+  };
+
+  interface Read {
+    state: {
+      resource: string;
+      defaultChat?: string;
+      chats?: { resource: string; movable?: boolean }[];
+      turns: { message?: { text?: string } }[];
+    };
+  }
+
+  const opened = async (client: { handle(request: unknown): Promise<unknown> }, channel: string) =>
+    (await client.handle({ method: 'subscribe', params: { channel } }) as { snapshot: Read }).snapshot;
+
+  /** What each start was told it was resuming, and what it was seeded with. */
+  const resuming = (starts: Start[]) => starts.map((one) => ({
+    chatId: one.chatId,
+    resume: one.resume,
+    first: (one.seed?.[0] as unknown as { message?: { text?: string } } | undefined)?.message?.text,
+  }));
+
+  /**
+   * A session on `one` with a peer chat the store says runs on `two`.
+   *
+   * The row is written after both chats have spoken, because a chat's backend
+   * id is recorded when it does, and a start resumes by that id. What is left
+   * is a store ready for the host that comes back: the session's own, with one
+   * chat of another.
+   */
+  const recorded = async (one: Agent, two: Agent) => {
+    const store = memorySessions();
+    const first = await hostAt([one, two], store);
+    await first.client.handle({ method: 'createSession', params: { channel: LIVE, provider: one.provider } });
+    await first.client.handle({ method: 'createChat', params: { channel: LIVE, chat: PEER } });
+    await settle();
+    await send(first.client, LIVE, 't1', 'first');
+    await send(first.client, PEER, 't2', 'second');
+    const id = idOf(LIVE);
+    store.setChats(id, store.chats(id).map((chat) => (chat.uri === PEER
+      ? { ...chat, provider: two.provider, config: { voice: 'shouty' } }
+      : chat)));
+    return store;
+  };
+
+  /** The same, and the host that came back, listed and ready to answer. */
+  const opening = async (one: Agent, two: Agent) => {
+    const store = await recorded(one, two);
+    const second = await hostAt([one, two], store);
+    await second.client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
+    return { store, second };
+  };
+
+  it('starts a chat of another backend on that backend after a daemon restart, and again when the session restarts', async () => {
+    const startsOne: Start[] = [];
+    const startsTwo: Start[] = [];
+    const { second } = await opening(backend('one', startsOne), backend('two', startsTwo));
+
+    // The turn that brings the session back, and the chat with it.
+    const beganOne = startsOne.length;
+    await send(second.client, PEER, 't3', 'third');
+    expect(resuming(startsTwo)).toEqual([{ chatId: UUID, resume: UUID, first: 'second' }]);
+    // The config the row recorded, which is the one it ran on.
+    expect(startsTwo.at(-1)?.settings).toMatchObject({ voice: 'shouty' });
+    // And the session's own chat did not come up on that backend.
+    expect(startsOne.slice(beganOne).map((start) => start.chatUri)).not.toContain(PEER);
+
+    const beganLead = startsOne.length;
+    const beganTwo = startsTwo.length;
+    // A folder added to the session, which a backend that takes its folders at
+    // startup can only answer by starting again.
+    second.client.handle({
+      method: 'dispatchAction',
+      params: { channel: LIVE, action: { type: 'session/workingDirectorySet', directory: `file://${EXTRA}` } },
+    });
+    await settle(20);
+    expect(resuming(startsTwo.slice(beganTwo))).toEqual([{ chatId: UUID, resume: UUID, first: 'second' }]);
+    expect(startsTwo.at(-1)?.settings).toMatchObject({ voice: 'shouty' });
+    expect(resuming(startsOne.slice(beganLead))).toEqual([{ chatId: undefined, resume: 'live', first: 'first' }]);
+  });
+
+  it('keeps the session on its own backend when its default chat is one of another', async () => {
+    const startsOne: Start[] = [];
+    const startsTwo: Start[] = [];
+    const one = backend('one', startsOne);
+    const two = backend('two', startsTwo);
+    const store = await recorded(one, two);
+    /*
+     * The session's own chat deleted, and its chat of `two` taking the default:
+     * a client naming no chat is then handed a conversation `two` wrote, while
+     * the session it belongs to is still the one `one` runs.
+     */
+    const id = idOf(LIVE);
+    store.setChats(id, store.chats(id)
+      .filter((chat) => chat.provider !== undefined)
+      .map((chat) => (chat.uri === PEER ? { ...chat, default: true } : chat)));
+
+    // The starts the host that wrote the store made, counted out of the rest.
+    const beganOne = startsOne.length;
+    const beganTwo = startsTwo.length;
+    const second = await hostAt([one, two], store);
+    await second.client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
+
+    // The chat comes back on the backend that wrote it, with its conversation.
+    await send(second.client, PEER, 't3', 'third');
+    expect(resuming(startsTwo.slice(beganTwo))).toEqual([{ chatId: UUID, resume: UUID, first: 'second' }]);
+    expect(startsTwo.at(-1)?.settings).toMatchObject({ voice: 'shouty' });
+
+    /*
+     * And the session is still `one`'s. Read from the catalogue row rather than
+     * from the state, because a session's state carries what its default chat
+     * says and this one's default is a chat of another backend.
+     */
+    const rows = await second.client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
+      items: { resource: string; provider: string }[];
+    };
+    expect(rows.items.find((row) => row.resource === SESSION)?.provider).toBe('one');
+    // The chat that took the default is the one a client gets by naming none.
+    const state = await opened(second.client, SESSION);
+    expect(state.state.defaultChat).toBe(PEER);
+    // And no chat of `one` was started to hold the session: the default chat is
+    // the chat of `two`, and it is a chat of the session, not the session.
+    expect(startsOne.slice(beganOne)).toEqual([]);
+  });
+
+  it('starts a chat of another backend again on that backend when only the chat restarts', async () => {
+    const startsOne: Start[] = [];
+    const startsTwo: Start[] = [];
+    const { second } = await opening(backend('one', startsOne), backend('two', startsTwo));
+    await send(second.client, PEER, 't3', 'third');
+    /*
+     * A folder the session may work in, added the way a window adds one. The
+     * restart behind it is a session restart and starts both chats again,
+     * which is also what leaves the chat's own set something to narrow.
+     */
+    second.client.handle({
+      method: 'dispatchAction',
+      params: { channel: LIVE, action: { type: 'session/workingDirectorySet', directory: `file://${EXTRA}` } },
+    });
+    await settle(20);
+
+    const beganOne = startsOne.length;
+    const beganTwo = startsTwo.length;
+    second.client.handle({
+      method: 'dispatchAction',
+      params: { channel: PEER, action: { type: 'chat/workingDirectoryRemoved', directory: `file://${EXTRA}` } },
+    });
+    await settle(8);
+    // The chat, and only the chat: one conversation's folders are its own.
+    expect(resuming(startsTwo.slice(beganTwo))).toEqual([{ chatId: UUID, resume: UUID, first: 'second' }]);
+    expect(startsOne.slice(beganOne)).toEqual([]);
+    // Narrowed to nothing, so it works in the session's folder again.
+    expect(startsTwo.at(-1)?.additional).toBeUndefined();
+  });
+
+  it('rewinds a chat of another backend on that backend', async () => {
+    const startsOne: Start[] = [];
+    const startsTwo: Start[] = [];
+    const { second } = await opening(backend('one', startsOne), backend('two', startsTwo));
+    await send(second.client, PEER, 't3', 'third');
+
+    const beganOne = startsOne.length;
+    const beganTwo = startsTwo.length;
+    second.client.handle({
+      method: 'dispatchAction',
+      params: { channel: PEER, action: { type: 'chat/truncated', turnId: 't3' } },
+    });
+    await settle(8);
+    expect(resuming(startsTwo.slice(beganTwo))).toEqual([{ chatId: UUID, resume: UUID, first: 'second' }]);
+    // The point to cut at is the backend's own, asked of the chat's backend.
+    expect(startsTwo.at(-1)?.rewindAt).toBe('t3-end');
+    expect(startsOne.slice(beganOne)).toEqual([]);
+  });
+
+  it('leaves a chat of a backend this host is not serving where it is, and starts the rest', async () => {
+    const startsOne: Start[] = [];
+    const startsTwo: Start[] = [];
+    const lines: string[] = [];
+    // One instance of each backend behind both hosts, because the transcript a
+    // resume reads is the backend's own and not the store's.
+    const one = backend('one', startsOne);
+    const store = await recorded(one, backend('two', startsTwo));
+    // A host that serves one harness and reads a store another wrote.
+    const second = await hostAt([one], store, { onEvent: (line) => lines.push(line) });
+    await second.client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
+
+    const began = startsOne.length;
+    await send(second.client, LIVE, 't3', 'third');
+    // The session came back, and it came back without the chat it cannot serve.
+    expect(resuming(startsOne.slice(began))).toEqual([{ chatId: undefined, resume: 'live', first: 'first' }]);
+    expect(startsTwo).toEqual([]);
+    // Said once, and by name, because a chat that silently did not come back
+    // is a conversation somebody will look for.
+    expect(lines.filter((line) => line.includes(`${PEER}: two is not loaded on this host`))).toHaveLength(1);
+  });
+
+  it('keeps a session key from reaching a chat of another backend', async () => {
+    const toldOne: string[] = [];
+    const toldTwo: string[] = [];
+    const { second } = await opening(
+      backend('one', [], toldOne),
+      backend('two', [], toldTwo),
+    );
+    await send(second.client, PEER, 't3', 'third');
+
+    second.client.handle({
+      method: 'dispatchAction',
+      params: { channel: LIVE, action: { type: 'session/configChanged', config: { voice: 'plain' } } },
+    });
+    await settle(8);
+    // The session's own chat took it. The other backend's chat was not asked,
+    // because a key this session's schema calls the session's is not a key
+    // another backend has agreed to hear.
+    expect(toldOne).toEqual(['one:voice=plain']);
+    expect(toldTwo).toEqual([]);
+
+    // And sent to that chat itself it is refused, in a sentence that says
+    // whose config it is rather than applying it to the wrong harness.
+    second.client.handle({
+      method: 'dispatchAction',
+      params: { channel: PEER, action: { type: 'session/configChanged', config: { voice: 'plain' } } },
+    });
+    await settle(8);
+    const refused = actions(second.p).filter((e) => e.rejectionReason !== undefined).at(-1);
+    expect(refused?.rejectionReason).toContain(`its config is not ${SESSION}'s`);
+    expect(toldTwo).toEqual([]);
+  });
+
+  it('refuses to move a chat of another backend, and does not offer it as movable', async () => {
+    const { second } = await opening(backend('one', []), backend('two', []));
+    await send(second.client, PEER, 't3', 'third');
+    // A chat of the session's own, which says what a movable chat reads like:
+    // the answer this chat does not get is a real one, not one never given.
+    second.client.handle({ method: 'createChat', params: { channel: LIVE, chat: THIRD } });
+    second.client.handle({ method: 'createSession', params: { channel: TWO, provider: 'one' } });
+    await settle(8);
+
+    const here = await opened(second.client, LIVE);
+    expect(here.state.chats?.find((chat) => chat.resource === THIRD)?.movable).toBe(true);
+    expect(here.state.chats?.find((chat) => chat.resource === PEER)?.movable).toBeUndefined();
+
+    await expect(second.client.handle({
+      method: 'moveChat',
+      params: { channel: PEER, destination: { kind: 'session', session: TWO } },
+    })).rejects.toThrow(/another backend cannot move/);
+    // And nothing moved: it is still a chat of its session, answering on the
+    // backend it runs on.
+    const after = await opened(second.client, LIVE);
+    expect(after.state.chats?.map((chat) => chat.resource)).toContain(PEER);
+    expect((await opened(second.client, PEER)).state.turns.map((turn) => turn.message?.text))
+      .toEqual(['second', 'third']);
   });
 });

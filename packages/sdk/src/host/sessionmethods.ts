@@ -42,7 +42,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
   const { connection } = conn;
   const {
     about, activeSessionsMoved, admitted, agents, answeredAs, backendsOwn, beginOrRun, beside, byChat,
-    charged, chatIdOf, chatOf,
+    charged, chatAgent, chatConfig, chatIdOf, chatOf,
     chatSummary, chatsReordered, claimable, claims, dir, dispatch, drafts, dropChat, first, flushDeltas,
     forWhom, forgetSendersIn, heldAs,
     isolating, isolated, keepChat, keepProvider, kept, leadOf, allRows, log, madeFrom, meantBy, messageFrom,
@@ -1086,6 +1086,12 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
         : undefined) as { kind?: unknown; chat?: unknown; turnId?: unknown } | undefined;
       let made: { resume?: string; seed?: Bag[]; forkAt?: string; context?: string } | undefined;
       let origin: Bag | undefined;
+      /*
+       * The backend a chat cut out of another runs on, which is the source
+       * chat's: the conversation being copied is in that backend's format and
+       * its own disk, so the copy is that backend's to make and to continue.
+       */
+      let fromChat: string | undefined;
       if (source !== undefined) {
         const kind = String(source.kind ?? '');
         // The kind first, because it decides whether the rest of the
@@ -1097,14 +1103,22 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
         const from = byChat.get(chatOf(String(source.chat ?? '')));
         if (!from || from.uri !== uri)
           throw new RpcError(INVALID_PARAMS, `${String(source.chat ?? '')} is not a chat in ${uri}`);
+        fromChat = from.chat.chatUri;
         const turnId = String(source.turnId ?? '');
         const all = from.chat.allTurns();
         const at = all.findIndex((one) => String((one as Bag).id ?? '') === turnId);
         if (at < 0)
           throw new RpcError(INVALID_PARAMS, `${turnId} is not a turn in ${String(source.chat ?? '')}`);
+        /*
+         * The backend that serves the chat this one is cut from, which is the
+         * one that has to be able to cut it: a chat of another backend is a
+         * conversation in that backend's own format, and the session's
+         * backend has never seen it.
+         */
+        const sourceAgent = chatAgent(held, from.chat.chatUri);
         if (kind === 'fork') {
-          if (held.agent.chats?.fork !== true)
-            throw new RpcError(INVALID_PARAMS, `${held.agent.provider} cannot fork a chat from a turn`);
+          if (sourceAgent.chats?.fork !== true)
+            throw new RpcError(INVALID_PARAMS, `${sourceAgent.provider} cannot fork a chat from a turn`);
           // The backend's own name for where that turn ended, which is
           // the only one it can be asked to continue from.
           const point = from.chat.forkPoint?.(turnId);
@@ -1114,8 +1128,8 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
           made = { resume: started, forkAt: point, seed: all.slice(0, at + 1) as Bag[] };
         }
         else {
-          if (held.agent.chats?.sideChat !== true)
-            throw new RpcError(INVALID_PARAMS, `${held.agent.provider} cannot start a side chat from a turn`);
+          if (sourceAgent.chats?.sideChat !== true)
+            throw new RpcError(INVALID_PARAMS, `${sourceAgent.provider} cannot start a side chat from a turn`);
           const message = (all[at] as Bag | undefined)?.message;
           const said = typeof message === 'object' && message !== null
             ? (message as { text?: unknown }).text
@@ -1188,7 +1202,9 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * it on the next write.
        */
       if (origin !== undefined) madeFrom.set(chatUri, origin);
-      const chat = spawn(held.agent, uri, chatUri, chatIdFor(uri, chatUri), backendsOwn(held.config), made, held.workingDirectory, undefined, peers, connection);
+      const agent = fromChat === undefined ? held.agent : chatAgent(held, fromChat);
+      const config = fromChat === undefined ? held.config : chatConfig(held, fromChat);
+      const chat = spawn(agent, uri, chatUri, chatIdFor(uri, chatUri), backendsOwn(config), made, held.workingDirectory, undefined, peers, connection);
       log(`opened ${chatUri} in ${uri}`);
       startsRead(ctx, uri, chatUri);
       // `summary`, not `chat`: the reducer reads `action.summary.resource`,
@@ -1236,6 +1252,19 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       const held = sessions.get(found.uri);
       if (!held)
         throw new RpcError(-32001, `No agent for session ${found.uri}`);
+      /*
+       * A chat of another backend stays where it is.
+       *
+       * A move starts the chat again in the session it lands in, on that
+       * session's backend - which for a chat of another backend is a harness
+       * that has never seen its transcript. Refused by saying whose the chat
+       * is, before anything has been touched - and said here rather than only
+       * by `movable`, which answers the client's move control with no room for
+       * a reason.
+       */
+      const serving = chatAgent(held, chatUri);
+      if (serving !== held.agent)
+        throw new RpcError(INVALID_PARAMS, `${chatUri} runs on ${serving.provider}, and a chat of another backend cannot move`);
       /*
        * The chat's own answer, which the client was handed before it asked:
        * `movable` is what a move control is drawn from, and a chat that
@@ -1362,7 +1391,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * told its request failed.
        */
       if (ctx.closedChats === 'delete' && held !== undefined && own !== undefined && own !== '') {
-        await ctx.deletedChat(own, held.agent, ctx.dirOf(found.uri));
+        await ctx.deletedChat(own, chatAgent(held, chatUri), ctx.dirOf(found.uri));
       }
       if (held && held.defaultChat === chatUri) {
         held.defaultChat = [...held.chats.keys()][0] as string;

@@ -161,7 +161,8 @@ export function chatAction(
   const { connection } = conn;
   const { refuse, echoTo } = ctx;
   const {
-    admitted, beginOrRun, beginTurn, beside, byChat, charge, charged, connections, contributedDefaults, decided,
+    admitted, beginOrRun, beginTurn, beside, byChat, charge, charged, chatAgent, chatConfig, connections,
+    contributedDefaults, decided,
     described, dispatch, drafts, fire, first, kept, known, leadOf, lifeOf, lives, log, messageAttachments,
     messageFrom, modelIn, names, ownerFor, owners, past, pluginsMoved, principalFor, propertyOf, putIn, renameChat,
     restart, restartChat, restarting, rootConfig, served, sessionFor, sessionMachines, sessions, spawn, starting,
@@ -535,7 +536,7 @@ export function chatAction(
        */
       let live = session;
       if (owner !== undefined && (statusOf(session.uri) & Status.InProgress) === 0 && pluginsMoved(session.uri, session.chatUri)) {
-        restartChat(session.uri, session.chatUri, conn.tokensFor(owner.agent.provider), connection);
+        restartChat(session.uri, session.chatUri, conn.tokensFor(chatAgent(owner, session.chatUri).provider), connection);
         // The chat that was running is closed and this is the one that took its
         // place, so the turn below goes to the agent listening now.
         live = owner.chats.get(session.chatUri) ?? session;
@@ -668,7 +669,7 @@ export function chatAction(
           }
           owner.additional = after;
           if (entering !== undefined && type === 'session/workingDirectoryReplaced') owner.workingDirectory = entering;
-          await restart(uri, conn.tokensFor(owner.agent.provider), { additional: after }, connection);
+          await restart(uri, conn.tokensFor(owner.agent.provider), { additional: after }, connection, undefined, conn.tokensFor);
           dispatch(uri, action, origin);
         }
         catch (error) {
@@ -684,6 +685,19 @@ export function chatAction(
       // Config belongs to the session, so it is remembered there: a
       // chat opened after this one is answered starts on it too.
       const owning = holding ?? (byChat.get(channel) ? sessions.get(byChat.get(channel)?.uri ?? '') : undefined);
+      /*
+       * A chat of another backend's config is not the session's.
+       *
+       * The schema is that backend's, the row it is kept on is the chat's, and
+       * the value would be spawned into every chat the session has - one of
+       * them a backend that has never heard of the key. Refused in a sentence
+       * that says whose config it is rather than applied to the wrong harness.
+       */
+      const foreign = owning === undefined ? undefined : owning.backends.get(session.chatUri);
+      if (foreign !== undefined) {
+        no(`${session.chatUri} runs on ${foreign.agent.provider}, and its config is not ${session.uri}'s`);
+        break;
+      }
       /*
        * A source the session already made a machine from is that machine.
        *
@@ -918,7 +932,7 @@ export function chatAction(
                 no(wrong);
                 return false;
               }
-              await restart(uri, conn.tokensFor(owning.agent.provider), undefined, connection);
+              await restart(uri, conn.tokensFor(owning.agent.provider), undefined, connection, undefined, conn.tokensFor);
               return true;
             })();
             // The promise a close waits on, which is not the work's own: a refusal is
@@ -1000,10 +1014,15 @@ export function chatAction(
          * chats are peers on one config, and a voice set on one of them
          * is a session where two conversations answer differently. A
          * model is the chat's. Neither is a fact about this host.
+         *
+         * A chat of another backend is not one of the peers here: a key
+         * this session's backend takes is a key another may not, so it is
+         * left to the chat's own config rather than pushed at it.
          */
         const everywhere = property?.scope === 'chat'
           ? []
-          : (owning ? [...owning.chats.values()] : []).filter((chat) => chat !== session);
+          : (owning ? [...owning.chats].filter(([uri]) => !owning.backends.has(uri)).map(([, chat]) => chat) : [])
+            .filter((chat) => chat !== session);
         for (const chat of everywhere) void Promise.resolve(chat.setConfig?.(key, value));
         void Promise.resolve(session.setConfig(key, value)).then((answer) => {
           // The backend's own words when it refused, because only it
@@ -1073,7 +1092,7 @@ export function chatAction(
         next = had.filter((other) => other !== one);
       }
       beside.set(channel, next);
-      restartChat(owner.uri, channel, conn.tokensFor(held.agent.provider), connection);
+      restartChat(owner.uri, channel, conn.tokensFor(chatAgent(held, channel).provider), connection);
       dispatch(channel, action, origin);
       break;
     }
@@ -1511,11 +1530,11 @@ export function chatAction(
       // rather than compared against what the old one last said.
       ctx.described.delete(session.chatUri);
       spawn(
-        owner.agent,
+        chatAgent(owner, session.chatUri),
         session.uri,
         session.chatUri,
         chatIdFor(session.uri, session.chatUri),
-        owner.config,
+        chatConfig(owner, session.chatUri),
         { resume: started, rewindAt: point, seed: all.slice(0, at + 1) as Bag[] },
         owner.workingDirectory,
         undefined,

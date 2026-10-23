@@ -3,8 +3,10 @@ import { localPath } from '../resources/fileuri.js';
 import { chatIdFor, chatUriFor } from './channels.js';
 import { CLOSING } from './common.js';
 import type { Bag } from '../types/common.js';
+import type { Agent } from '../types/agent.js';
 import type { Connection } from '../types/host.js';
 import type { Session } from '../types/session.js';
+import type { StoredChat } from '../types/sessions.js';
 import type { HostContext } from './context.js';
 
 /**
@@ -291,40 +293,74 @@ export function createSleep(ctx: HostContext): Sleep {
      * it is the inner host's.
      */
     const recorded = kept.nested?.(id) === undefined ? recordedChats(id) : [];
-    const lead = recorded.find((one) => one.default === true);
+    /*
+     * The backend that serves each recorded chat, read from the record.
+     *
+     * A chat opened on a backend of its own is started on that one, with that
+     * one's transcript and the config it was opened with; every other chat is
+     * the session's, and runs on the session's backend and its config. A
+     * backend this host is not serving is one line and a chat left where it
+     * is: its conversation belongs to the harness that wrote it, and the
+     * session's other chats come back without it rather than around it.
+     */
+    const served = recorded.flatMap((one): { one: StoredChat; agent: Agent }[] => {
+      const agent = one.provider === undefined ? owner : ctx.agents.get(one.provider);
+      if (agent !== undefined) return [{ one, agent }];
+      log(`${one.uri}: ${one.provider} is not loaded on this host, so the chat is left where it is`);
+      return [];
+    });
+    const lead = served.find(({ one }) => one.default === true);
     // The chat it starts again as: the store's default where that is not the
     // session's own chat, which is a first chat closed under `hidden`.
-    const other = lead === undefined || lead.uri === chatUriFor(named) ? undefined : lead;
-    const back = other === undefined ? undefined : await owner.transcript?.(other.backendId, at);
+    const other = lead === undefined || lead.one.uri === chatUriFor(named) ? undefined : lead;
+    const back = other === undefined ? undefined : await other.agent.transcript?.(other.one.backendId, at);
     // A host that closed while this resume read its record starts no agent.
     if (ctx.closed) throw new Error(CLOSING);
+    /*
+     * The session is the owner's, whatever chat it comes back as.
+     *
+     * A recorded default that is one of another backend - its own chat was
+     * deleted and this one took the default - is a chat of the session and not
+     * the session, so the `Held` this first start creates is the owner's, and
+     * the chat lands on `Held.backends` like every other chat of another
+     * backend. Left to the chat, the session would come back as that one's and
+     * the provider a client reads would move with it.
+     */
     const session = spawn(
-      owner,
+      other?.agent ?? owner,
       named,
-      lead?.uri ?? chatUriFor(named),
-      other?.backendId ?? chatIdFor(named, chatUriFor(named)),
-      restored,
+      lead?.one.uri ?? chatUriFor(named),
+      other?.one.backendId ?? chatIdFor(named, chatUriFor(named)),
+      other?.one.config ?? restored,
       other === undefined
-        ? { resume: lead?.backendId ?? id, seed }
-        : { resume: other.backendId, seed: (back ?? []) as unknown as Bag[] },
+        ? { resume: lead?.one.backendId ?? id, seed }
+        : { resume: other.one.backendId, seed: (back ?? []) as unknown as Bag[] },
       ran,
       undefined,
       undefined,
       sender,
+      undefined,
+      { agent: owner, config: restored },
     );
-    keepProvider(named, owner, session);
+    /*
+     * Which harness the session is, recorded under the session's own name and
+     * the id of the chat it started as. A lead chat on another backend says
+     * nothing about the session: its transcript is that backend's, and the
+     * session's provider is not written under it.
+     */
+    if (other === undefined || other.agent === owner) keepProvider(named, owner, session);
     // And every other chat the store recorded for it, each a conversation of
     // its own, resumed the way a chat restarted on its own is.
-    for (const one of recorded) {
+    for (const { one, agent } of served) {
       if (one.default === true) continue;
-      const own = await owner.transcript?.(one.backendId, at);
+      const own = await agent.transcript?.(one.backendId, at);
       if (ctx.closed) throw new Error(CLOSING);
       spawn(
-        owner,
+        agent,
         named,
         one.uri,
         one.backendId,
-        restored,
+        one.config ?? restored,
         { resume: one.backendId, seed: (own ?? []) as unknown as Bag[] },
         ran,
         undefined,
