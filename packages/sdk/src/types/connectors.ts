@@ -19,11 +19,12 @@ import type { Icon } from '@microsoft/agent-host-protocol';
  * What a capability is, as a client files it.
  *
  * `receive` is a connector that answers calls, `command` is a `/` command it
- * adds, `action` is something a client offers to run, and `ui` is reserved for
- * a component tree a later plan adds. A type this version does not know is
- * kept and shown by its title rather than refused.
+ * adds, `action` is something a client offers to run, `models` is a connector
+ * the model proxy may call, and `ui` is reserved for a component tree a later
+ * plan adds. A type this version does not know is kept and shown by its title
+ * rather than refused.
  */
-export type CapabilityType = 'receive' | 'command' | 'action' | 'ui' | (string & {});
+export type CapabilityType = 'receive' | 'command' | 'action' | 'models' | 'ui' | (string & {});
 
 /** One thing a connector of an adapter does. */
 export interface Capability {
@@ -60,6 +61,40 @@ export interface Capability {
  * scope in the vault.
  */
 export type ConnectorOwner = 'host' | `team:${string}` | `user:${string}`;
+
+/** The APIs a model provider is called in, as the proxy writes them. */
+export const MODEL_DIALECTS = ['anthropic-messages', 'openai-chat'] as const;
+
+/** One of those APIs. */
+export type ModelDialect = (typeof MODEL_DIALECTS)[number];
+
+/**
+ * How the proxy calls one provider connector.
+ *
+ * An adapter that serves models answers this from the connector's config, with
+ * each secret already read back from the vault, so the key here is the value a
+ * call goes out with rather than the reference a record keeps.
+ */
+export interface ModelProvider {
+  /** Where the provider's API answers, such as `https://api.anthropic.com`. */
+  endpoint: string;
+  /** The APIs the provider is called in. A call passes through in one of them. */
+  accepts: ModelDialect[];
+  /** The key a call goes out with; absent when the provider takes none. */
+  key?: string;
+}
+
+/** One open connector that serves models, as the proxy reads it. */
+export interface ProviderConnector {
+  /** The connector's id: a slug, and the name its record is kept under. */
+  id: string;
+  /** The adapter it is one of. */
+  adapter: string;
+  /** Whose connector it is, which decides whose calls it may answer. */
+  owner: ConnectorOwner;
+  /** Where, how and with what key the proxy calls it. */
+  provider: ModelProvider;
+}
 
 /**
  * One stored connector as a save that may name it reads it.
@@ -159,6 +194,14 @@ export interface Adapter {
    * is.
    */
   icons?: Icon[];
+  /**
+   * How the proxy calls one connector of this adapter, when it serves models.
+   *
+   * It reads the connector's resolved config, so a field the schema marks
+   * `writeOnly` is the value the vault holds rather than the reference a record
+   * keeps. Absent, a connector of this adapter serves no model.
+   */
+  provider?(connector: Connector): ModelProvider;
   /**
    * Start answering for one connector.
    *

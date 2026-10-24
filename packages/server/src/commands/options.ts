@@ -657,7 +657,7 @@ export const serverFields = {
   modelProxy: {
     ...proxySchema,
     title: 'Model proxy',
-    description: 'The providers this proxy calls and the model names that point at them: providers are keyed by the id a model entry names, and a model name is written <maker>/<name> with the entries serving it. An entry under a built-in id replaces it whole. A key is named by the environment variable holding it, never written here. sessionCalls is record (the default) or skip: whether a call made with a session\'s own token is policy-checked and recorded by the proxy. Set in the configuration file only.',
+    description: 'The model names this proxy serves: each is written <maker>/<name> and lists the entries that serve it, by connector id or adapter name. A provider is a connector, so its endpoint and key are the connectors store\'s, never this file\'s. sessionCalls is record (the default) or skip: whether a call made with a session\'s own token is policy-checked and recorded by the proxy. Set in the configuration file only.',
   },
   mcpServers: {
     // The entries are not described here, for the same reason `proxy`'s are
@@ -904,10 +904,10 @@ export const servedPluginWriteFields = {
  * `<file>: <key> must be ...`, naming the file `source` says set it. A key it
  * does not name answers one line, and the caller carries on without it.
  *
- * `modelProxy` is checked further than the schema reaches, because whether a
- * model name's provider exists is only known once the file's providers are
- * over the built-ins. That is a bad value rather than an unknown key, so it
- * stops the start the same way one does. `shellEnv` is checked the same way for
+ * `modelProxy` is checked further than the schema reaches, because a model name
+ * is `<maker>/<name>` and the entries under it are held one by one; a file that
+ * still writes `providers` is refused too. That is a bad value rather than an
+ * unknown key, so it stops the start the same way one does. `shellEnv` is checked the same way for
  * the same reason: its names and values are held on their own, because the
  * schema cannot say that an object is a map.
  */

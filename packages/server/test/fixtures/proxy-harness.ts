@@ -3,15 +3,18 @@
  * plain HTTP client that may send any `Host`, a usage store in memory and a
  * small users file.
  *
- * The proxy is served through `plainRequests`, which is what the daemon's own
- * listener goes through on Node, so a hang-up and a streamed body behave as
- * they do in the daemon.
+ * A provider is a connector, so each test says which open connectors the proxy
+ * sees and what each one's adapter answered. The proxy is served through
+ * `plainRequests`, which is what the daemon's own listener goes through on
+ * Node, so a hang-up and a streamed body behave as they do in the daemon.
  */
 
 import { createServer, request as httpRequest, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
-import { fileUsers, type UsageEntry, type Usage, type Users } from '@ahpd/sdk';
+import {
+  fileUsers, type ConnectorOwner, type ModelDialect, type ProviderConnector, type UsageEntry, type Usage, type Users,
+} from '@ahpd/sdk';
 import { plainRequests, type ApiOrigins } from '../../src/http.js';
 import { proxyHandler, type ProxyOptions } from '../../src/proxy/listener.js';
 import { proxyConfiguration, type ProxySetting } from '../../src/proxy/providers.js';
@@ -130,41 +133,89 @@ export const people = async (folder: string): Promise<People> => {
   return { users, ...tokens };
 };
 
+/** One connector the proxy sees, as a test writes it before the channel opens it. */
+export interface ProviderFixture {
+  /** The connector's id. */
+  id: string;
+  /** Its adapter; the id when absent. */
+  adapter?: string;
+  /** Whose it is: the host's when absent. */
+  owner?: ConnectorOwner;
+  /** Where it answers. */
+  endpoint: string;
+  /** The dialects its provider accepts; `openai-chat` when absent. */
+  accepts?: ModelDialect[];
+  /** The key the call is made with: the marker when absent, and none when `null`. */
+  key?: string | null;
+}
+
+/** One connector as the connectors channel lists it: the fixture through the adapter's answer. */
+export const providerConnector = (fixture: ProviderFixture): ProviderConnector => ({
+  id: fixture.id,
+  adapter: fixture.adapter ?? fixture.id,
+  owner: fixture.owner ?? 'host',
+  provider: {
+    endpoint: fixture.endpoint,
+    accepts: fixture.accepts ?? ['openai-chat'],
+    ...(fixture.key === null ? {} : { key: fixture.key ?? MARKER }),
+  },
+});
+
+/** One outcome the proxy reported for one connector. */
+export interface Noted {
+  id: string;
+  outcome: { ok: boolean; status?: number; error?: string };
+}
+
 /** The proxy on a socket of its own, and what it said to the log. */
 export interface Served {
   port: number;
   /** Every line the proxy handed `onProblem`. */
   log: string[];
+  /** Every call outcome the proxy reported to a connector, in order. */
+  notes: Noted[];
   close(): Promise<void>;
 }
 
 /** What the tests may set on the proxy: everything, with a `proxy` setting in place of the table. */
-export type ServeOptions = Partial<Omit<ProxyOptions, 'proxy'>> & { proxy?: ProxySetting };
+export type ServeOptions = Partial<Omit<ProxyOptions, 'proxy' | 'providers' | 'note'>> & {
+  proxy?: ProxySetting;
+  /** The open provider connectors, as fixtures or as the channel lists them. */
+  providers?: readonly ProviderFixture[] | readonly ProviderConnector[];
+  /** A note collector of the test's own; the served proxy always keeps them too. */
+  note?(id: string, outcome: { ok: boolean; status?: number; error?: string }): void;
+};
 
 /** The proxy served on `127.0.0.1:0`, answering `/api` and everything else with a plain 418. */
 export const serveProxy = async (given: ServeOptions = {}): Promise<Served> => {
   const log: string[] = [];
+  const notes: Noted[] = [];
   let port = 0;
-  const { proxy: setting, ...rest } = given;
+  const { proxy: setting, providers: givenProviders = [], note: givenNote, ...rest } = given;
   const table = proxyConfiguration(setting);
+  const open = givenProviders.map((one) => ('provider' in one ? one : providerConnector(one)));
   const origins = (): ApiOrigins => ({
     authorities: ['127.0.0.1', 'localhost', '[::1]'].map((name) => `${name}:${String(port)}`),
     origins: ['127.0.0.1', 'localhost', '[::1]'].map((name) => `http://${name}:${String(port)}`),
   });
   const handler = proxyHandler({
     proxy: () => table,
+    providers: () => open,
+    note: (id, outcome) => {
+      notes.push({ id, outcome });
+      givenNote?.(id, outcome);
+    },
     token: ROOT_TOKEN,
     hostName: 'testbox',
     origins,
     otherwise: async () => new Response('below', { status: 418 }),
     onProblem: (line) => { log.push(line); },
-    env: {},
     ...rest,
   });
   const server = createServer(plainRequests(handler).nodeRequest);
   await new Promise<void>((done) => { server.listen(0, '127.0.0.1', done); });
   port = (server.address() as AddressInfo).port;
-  return { port, log, close: () => closing(server) };
+  return { port, log, notes, close: () => closing(server) };
 };
 
 /** One answer, read whole. */

@@ -983,3 +983,103 @@ it('drops a connector\'s health when it is removed, and checks it again when it 
   expect(health).not.toHaveProperty('lastFailure');
   await close();
 });
+
+/** A channel over one adapter that serves models, one that does not, and a provider that can refuse to answer. */
+async function providersServed() {
+  const collection: RecordCollection = await memoryRecords().collection('connectors', { format: 'json' });
+  const problems: string[] = [];
+  const vault = made();
+  let broken = false;
+  const adapters: Record<string, ServedAdapter> = {
+    openrouter: {
+      name: 'openrouter',
+      title: 'OpenRouter',
+      description: 'A provider the proxy calls.',
+      by: 'host',
+      schema: {
+        type: 'object',
+        properties: {
+          endpoint: { type: 'string' },
+          key: { type: 'string', writeOnly: true },
+        },
+        required: ['endpoint', 'key'],
+      },
+      capabilities: [{ type: 'models', name: 'models', title: 'Serves models', description: 'Serves models through the proxy.' }],
+      open: () => undefined,
+      provider: (connector: Connector) => {
+        if (broken) throw new Error('the endpoint is missing');
+        return {
+          endpoint: String(connector.config['endpoint']),
+          accepts: ['openai-chat'],
+          key: String(connector.config['key']),
+        };
+      },
+    },
+    webhook: {
+      name: 'webhook',
+      title: 'Webhook',
+      description: 'Receives calls at a URL.',
+      by: 'webhook',
+      schema: SCHEMA,
+      capabilities: [{ type: 'receive', name: 'call', title: 'Receives calls', description: 'Receives calls at a URL.' }],
+      open: () => undefined,
+    },
+  };
+  const connectors = connectorsChannel({
+    collection,
+    adapters: () => adapters,
+    vault: () => vault,
+    check,
+    onProblem: (line) => { problems.push(line); },
+  });
+  return { collection, connectors, problems, vault, breakProvider: (on: boolean) => { broken = on; } };
+}
+
+it('lists each open connector whose adapter serves models, with its resolved key', async () => {
+  const { collection, connectors, vault } = await providersServed();
+  await vault.set('host:connector/work/key', 'sk-hosts-own');
+  await collection.put({
+    id: 'work',
+    adapter: 'openrouter',
+    owner: 'host',
+    config: { endpoint: 'https://openrouter.ai/api/v1', key: { $secret: 'host:connector/work/key' } },
+  });
+  await collection.put({ id: 'hooks', adapter: 'webhook', owner: 'host', config: { target: 'a' } });
+  await connectors.openAll();
+
+  expect(connectors.providers()).toEqual([{
+    id: 'work',
+    adapter: 'openrouter',
+    owner: 'host',
+    provider: { endpoint: 'https://openrouter.ai/api/v1', accepts: ['openai-chat'], key: 'sk-hosts-own' },
+  }]);
+});
+
+it('leaves out a provider connector that is not open', async () => {
+  const { collection, connectors, vault } = await providersServed();
+  await vault.set('host:connector/work/key', 'sk-hosts-own');
+  await collection.put({
+    id: 'work',
+    adapter: 'openrouter',
+    owner: 'host',
+    config: { endpoint: 'https://openrouter.ai/api/v1', key: { $secret: 'host:connector/work/key' } },
+  });
+
+  expect(connectors.providers()).toEqual([]);
+});
+
+it('skips a provider that throws, and says the problem once', async () => {
+  const { collection, connectors, problems, breakProvider } = await providersServed();
+  await collection.put({
+    id: 'work',
+    adapter: 'openrouter',
+    owner: 'host',
+    config: { endpoint: 'https://openrouter.ai/api/v1', key: 'sk-hosts-own' },
+  });
+  await connectors.openAll();
+
+  breakProvider(true);
+  expect(connectors.providers()).toEqual([]);
+  expect(connectors.providers()).toEqual([]);
+  expect(problems).toEqual(['x-ahpd-connectors: work serves no model: the endpoint is missing']);
+});

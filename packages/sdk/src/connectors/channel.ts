@@ -46,7 +46,7 @@ import { isRecordSlug } from '../resources/records.js';
 import { recordsChannel, type RecordsChannel } from '../resources/recordschannel.js';
 import { membership } from '../usage/scopes.js';
 import { bag, isRecord, reason } from '../utils/values.js';
-import type { CallOutcome, CheckResult, Connector, ConnectorHealth, ConnectorOwner, ConnectorRef, ServedAdapter } from '../types/connectors.js';
+import type { CallOutcome, CheckResult, Connector, ConnectorHealth, ConnectorOwner, ConnectorRef, ProviderConnector, ServedAdapter } from '../types/connectors.js';
 import type { PluginMethod } from '../types/plugin.js';
 import type { RecordCollection, StoredRecord } from '../types/records.js';
 import type { Grant, Principal } from '../types/users.js';
@@ -143,6 +143,16 @@ export interface ConnectorsChannel {
    * second.
    */
   note(id: string, outcome: { ok: boolean; status?: number; error?: string }): void;
+  /**
+   * Every open connector whose adapter serves models, and how to call it.
+   *
+   * The answer is what the model proxy routes over: each open connector of an
+   * adapter with a `provider`, with its id, adapter, owner and the
+   * `ModelProvider` the adapter answers from the resolved config. A provider
+   * that throws leaves its connector out, and the problem is said once.
+   * Nothing sends this answer: it is for the host, and a key can be in it.
+   */
+  providers(): ProviderConnector[];
   /** Send every reader what the connectors are now. */
   refresh(): Promise<void>;
   /**
@@ -167,6 +177,8 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   const open = new Map<string, Opened>();
   /** What the host knows of each open connector's health, by id, in memory only. */
   const healths = new Map<string, ConnectorHealth>();
+  /** The provider problems already said, so a route on every call says each one once. */
+  const providerProblems = new Set<string>();
 
   const problem = (message: string): void => { options.onProblem?.(`${SCHEME}: ${message}`); };
 
@@ -792,6 +804,23 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     methods,
     run,
     note,
+    providers: () => {
+      const adapters = options.adapters();
+      const listed: ProviderConnector[] = [];
+      for (const [id, entry] of open) {
+        const adapter = adapters[entry.connector.adapter];
+        if (adapter === undefined || typeof adapter.provider !== 'function') continue;
+        try {
+          listed.push({ id, adapter: adapter.name, owner: entry.connector.owner, provider: adapter.provider(entry.connector) });
+        } catch (error) {
+          const line = `${id} serves no model: ${reason(error)}`;
+          if (providerProblems.has(line)) continue;
+          providerProblems.add(line);
+          problem(line);
+        }
+      }
+      return listed.sort((one, two) => one.id.localeCompare(two.id));
+    },
     refresh: () => channel.refresh(),
     refs: () => [...known.values()],
     /*

@@ -1,6 +1,6 @@
 ---
 title: The host ships four provider adapters
-status: todo
+status: implemented
 depends: [task-01-an-adapter-can-serve-models.md]
 layer: "server"
 refs:
@@ -11,7 +11,7 @@ refs:
   - "[code://packages/server/src/icons.ts](../../../../packages/server/src/icons.ts) - `resolveIcons`, which reads an icon file into a `data:` URI"
   - "[code://packages/webhook/src/adapter.ts](../../../../packages/webhook/src/adapter.ts) - an adapter with a schema and a secret field, the pattern to follow"
   - https://simpleicons.org/ - the OpenRouter, Anthropic and OpenAI marks, with their colours
-  - https://lucide.dev/icons/server - the icon for an OpenAI-compatible endpoint
+  - https://unpkg.com/@lobehub/icons-static-svg@1.98.0/icons/openai.svg - the OpenAI mark, which Simple Icons no longer has
 ---
 
 ## Objective
@@ -26,11 +26,10 @@ A plugin's adapter of the same name does not replace one of these.
 - `CREATE: packages/server/icons/openrouter.svg` - the OpenRouter mark.
 - `CREATE: packages/server/icons/anthropic.svg` - the Anthropic mark.
 - `CREATE: packages/server/icons/openai.svg` - the OpenAI mark.
-- `CREATE: packages/server/icons/openai-compatible.svg` - a coloured Lucide `server` icon.
+- `CREATE: packages/server/icons/openai-compatible.svg` - the OpenAI mark, in yellow.
 - `UPDATE: packages/server/package.json` - add `icons` to `files`.
 - `UPDATE: packages/server/src/commands/run.ts:725-758` - put the host's adapters into the adapters map on each load, over the plugins' adapters.
 - `CREATE: packages/server/test/proxy-adapters.test.ts` - each adapter's schema, `provider`, check and icon.
-- `CREATE: .project/pending/proxy-04-icon-curation.md` - one row per icon with its source and licence, for Softov.
 
 ## Steps
 
@@ -60,3 +59,8 @@ A plugin's adapter of the same name does not replace one of these.
 - By hand: the connectors screen offers the four adapters with their icons after a restart.
 
 ## Resume
+
+- **Done so far:** `packages/server/src/proxy/adapters.ts` answers the four adapters. Each has a schema, a `models` capability, an `open` that starts nothing, a `provider` and a check. The vendor adapters require a `writeOnly` key and default the endpoint; `openai-compatible` requires the endpoint and takes an optional key and `accepts`. Each check is one `GET` with an 8-second abort. `packages/server/icons/` holds the four SVGs, and `package.json` lists `icons` in `files`. `run.ts` puts the host's adapters over the plugins' on both loads. It says once in the log when a plugin registers one of the names. `proxy-adapters.test.ts` covers the forms, `provider`, the checks and the icons, 13 cases.
+- **Next action:** none for this task.
+- **Open questions:** none. Softov curated the four icons in `4ec2f101`.
+- **Watch out for:** a plugin adapter with one of the four names is dropped, so a connector of it is checked against the host's schema.

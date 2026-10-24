@@ -12,7 +12,7 @@ import { gzipSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   answerJson, fakeProvider, isAnthropicError, isOpenAiError, MARKER, pause, ROOT_TOKEN, send, serveProxy,
-  type FakeAnswer, type FakeProvider, type Served, type ServeOptions,
+  type FakeAnswer, type FakeProvider, type ProviderFixture, type Served, type ServeOptions,
 } from './fixtures/proxy-harness.js';
 
 const open: Served[] = [];
@@ -37,18 +37,24 @@ const proxy = async (options: ServeOptions): Promise<Served> => {
 
 type Dialect = 'openai-chat' | 'anthropic-messages';
 
-/** A table of one name, `m/x`, served by each endpoint in turn, every provider keyed by the marker. */
+/**
+ * A table of one name, `m/x`, served by each endpoint in turn.
+ *
+ * Each endpoint is one host connector, named `p0`, `p1` and so on, of an
+ * adapter of the same name, keyed by the marker: one entry per connector, so a
+ * fallback is the next entry in the file.
+ */
 const table = (dialect: Dialect, ...endpoints: string[]) => ({
-  providers: Object.fromEntries(endpoints.map((endpoint, index) => [
-    `p${String(index)}`,
-    { endpoint, accepts: [dialect], key: { env: `P${String(index)}_KEY` } },
-  ])),
-  models: { 'm/x': endpoints.map((_endpoint, index) => ({ provider: `p${String(index)}`, id: `id-${String(index)}` })) },
+  proxy: {
+    models: { 'm/x': endpoints.map((_endpoint, index) => ({ provider: `p${String(index)}`, id: `id-${String(index)}` })) },
+  },
+  providers: endpoints.map((endpoint, index): ProviderFixture => ({
+    id: `p${String(index)}`,
+    adapter: `p${String(index)}`,
+    endpoint,
+    accepts: [dialect],
+  })),
 });
-
-/** Every provider's key set to the marker. */
-const keys = (count: number): Record<string, string> =>
-  Object.fromEntries(Array.from({ length: count }, (_value, index) => [`P${String(index)}_KEY`, MARKER]));
 
 const CHAT = '/v1/chat/completions';
 const MESSAGES = '/v1/messages';
@@ -107,7 +113,7 @@ const streaming = (port: number, path: string, headers: Record<string, string>, 
 describe('the call goes out with the provider\'s key and streams back unchanged', () => {
   it('sends the entry\'s id and the key in OpenAI\'s header, and nothing of the caller\'s credential', async () => {
     const provider = await fake(answerJson(200, { id: 'chatcmpl-1', object: 'chat.completion', choices: [] }));
-    const served = await proxy({ proxy: table('openai-chat', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('openai-chat', provider.endpoint) });
     const body = { model: 'm/x', stream: false, temperature: 0.2, messages: [{ role: 'user', content: 'hi' }], tools: [{ type: 'function' }] };
     const got = await send(served.port, CHAT, {
       headers: {
@@ -133,7 +139,7 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
 
   it('sends the key as x-api-key in Anthropic\'s dialect, and passes anthropic-version and -beta', async () => {
     const provider = await fake(answerJson(200, { type: 'message', content: [] }));
-    const served = await proxy({ proxy: table('anthropic-messages', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('anthropic-messages', provider.endpoint) });
     const got = await send(served.port, MESSAGES, {
       headers: { 'x-api-key': ROOT_TOKEN, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'tools-2024', accept: 'application/json' },
       body: { model: 'm/x', max_tokens: 8, messages: [] },
@@ -152,7 +158,8 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
   it('sends no key to a provider that has none, and still not the caller\'s', async () => {
     const provider = await fake(answerJson(200, {}));
     const served = await proxy({
-      proxy: { providers: { local: { endpoint: provider.endpoint, accepts: ['openai-chat'] } }, models: { 'local/default': [{ provider: 'local', id: 'local-model' }] } },
+      proxy: { models: { 'local/default': [{ provider: 'local', id: 'local-model' }] } },
+      providers: [{ id: 'local', adapter: 'openai-compatible', endpoint: provider.endpoint, key: null }],
     });
     expect((await send(served.port, CHAT, { headers: asRoot, body: { model: 'local/default' } })).status).toBe(200);
     expect(provider.received[0]?.headers['authorization']).toBeUndefined();
@@ -179,7 +186,7 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
       }
       response.end();
     });
-    const served = await proxy({ proxy: table('anthropic-messages', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('anthropic-messages', provider.endpoint) });
     const answer = await streaming(served.port, MESSAGES, { 'x-api-key': ROOT_TOKEN }, { model: 'm/x', stream: true });
     expect(answer.response.statusCode).toBe(200);
     expect(answer.response.headers['content-type']).toBe('text/event-stream');
@@ -193,17 +200,18 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
   it('passes a provider\'s error through as it came', async () => {
     const said = { error: { message: 'slow down', type: 'rate_limit_error' } };
     const provider = await fake(answerJson(429, said, { 'retry-after': '7' }));
-    const served = await proxy({ proxy: table('openai-chat', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('openai-chat', provider.endpoint) });
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.status).toBe(429);
     expect(got.json).toEqual(said);
     expect(got.headers['retry-after']).toBe('7');
     expect(served.log.join('\n')).toContain('proxy: root m/x: p0 answered 429');
+    expect(served.notes).toEqual([{ id: 'p0', outcome: { ok: false, status: 429 } }]);
   });
 
   it('answers a provider that cannot be reached with 502 in the dialect\'s body, naming the provider', async () => {
     const gone = await fake(answerJson(200, {}));
-    const served = await proxy({ proxy: table('anthropic-messages', gone.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('anthropic-messages', gone.endpoint) });
     await gone.close();
     fakes.splice(fakes.indexOf(gone), 1);
     const got = await send(served.port, MESSAGES, { headers: { 'x-api-key': ROOT_TOKEN }, body: { model: 'm/x' } });
@@ -211,6 +219,7 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
     expect(isAnthropicError(got.json)).toBe(true);
     expect(got.json).toMatchObject({ error: { type: 'api_error', message: 'model m/x on p0 could not be reached' } });
     expect(served.log.join('\n')).toMatch(/proxy: root m\/x: p0 unreachable/u);
+    expect(served.notes).toEqual([{ id: 'p0', outcome: { ok: false, error: 'unreachable (ECONNREFUSED)' } }]);
   });
 
   it('drops the encoding, the length and a cookie from the answer, whose body fetch has decoded', async () => {
@@ -219,7 +228,7 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
       response.writeHead(200, { 'content-type': 'application/json', 'content-encoding': 'gzip', 'set-cookie': 'provider=1' });
       response.end(gzipSync(plain));
     });
-    const served = await proxy({ proxy: table('openai-chat', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('openai-chat', provider.endpoint) });
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.status).toBe(200);
     expect(got.text).toBe(plain);
@@ -233,7 +242,7 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
       response.writeHead(307, { location: `${elsewhere.endpoint}/chat/completions` });
       response.end();
     });
-    const served = await proxy({ proxy: table('openai-chat', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('openai-chat', provider.endpoint) });
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.status).toBe(502);
     expect(elsewhere.received).toEqual([]);
@@ -246,7 +255,7 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
       'anthropic-ratelimit-tokens-remaining': '5000', 'anthropic-ratelimit-requests-reset': '2026-10-06T00:00:00Z',
       'retry-after': '3', 'retry-after-ms': '3000', 'x-request-id': 'req-9',
     }));
-    const served = await proxy({ proxy: table('openai-chat', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('openai-chat', provider.endpoint) });
     const got = await send(served.port, CHAT, {
       headers: { ...asRoot, 'openai-organization': 'org-caller', 'openai-project': 'proj-caller', 'anthropic-organization-id': 'org-caller' },
       body: { model: 'm/x' },
@@ -266,7 +275,7 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
 
   it('does not send a header the caller\'s Connection header names', async () => {
     const provider = await fake(answerJson(200, {}));
-    const served = await proxy({ proxy: table('openai-chat', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('openai-chat', provider.endpoint) });
     const got = await send(served.port, CHAT, {
       headers: { ...asRoot, connection: 'keep-alive, x-hop', 'x-hop': 'this-connection-only', 'x-custom': 'kept' },
       body: { model: 'm/x' },
@@ -278,7 +287,7 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
 
   it('keeps the marker key out of every log line, refusal and answer', async () => {
     const provider = await fake(answerJson(500, { error: { message: 'boom' } }));
-    const served = await proxy({ proxy: table('openai-chat', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('openai-chat', provider.endpoint) });
     const texts = [
       (await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } })).text,
       (await send(served.port, CHAT, { headers: asRoot, body: { model: 'nobody/nothing' } })).text,
@@ -297,7 +306,7 @@ describe('a call ends when either side does, and on a timeout', () => {
       response.write(event('message_start', { type: 'message_start' }));
       // And never another.
     });
-    const served = await proxy({ proxy: table('anthropic-messages', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('anthropic-messages', provider.endpoint) });
     const answer = await streaming(served.port, MESSAGES, { 'x-api-key': ROOT_TOKEN }, { model: 'm/x', stream: true });
     expect(await answer.next()).toContain('message_start');
     answer.request.destroy();
@@ -308,7 +317,7 @@ describe('a call ends when either side does, and on a timeout', () => {
 
   it('answers 504 in the dialect\'s body when the provider sends no headers in time', async () => {
     const provider = await fake(() => { /* never answers */ });
-    const served = await proxy({ proxy: table('openai-chat', provider.endpoint), env: keys(1), headersTimeoutMs: 200 });
+    const served = await proxy({ ...table('openai-chat', provider.endpoint), headersTimeoutMs: 200 });
     const started = Date.now();
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
     expect(Date.now() - started).toBeLessThan(5000);
@@ -323,7 +332,7 @@ describe('a call ends when either side does, and on a timeout', () => {
       response.writeHead(200, { 'content-type': 'text/event-stream' });
       response.write(first);
     });
-    const served = await proxy({ proxy: table('anthropic-messages', provider.endpoint), env: keys(1), idleTimeoutMs: 200 });
+    const served = await proxy({ ...table('anthropic-messages', provider.endpoint), idleTimeoutMs: 200 });
     const answer = await streaming(served.port, MESSAGES, { 'x-api-key': ROOT_TOKEN }, { model: 'm/x', stream: true });
     const all = `${await answer.next() ?? ''}${await answer.rest()}`;
     expect(all).toBe(first);
@@ -336,22 +345,23 @@ describe('a call ends when either side does, and on a timeout', () => {
   it('falls back to the next entry on a 503, and the caller gets the answer of the last one tried', async () => {
     const down = await fake(answerJson(503, { error: { message: 'overloaded' } }));
     const up = await fake(answerJson(200, { from: 'up' }));
-    const served = await proxy({ proxy: table('openai-chat', down.endpoint, up.endpoint), env: keys(2) });
+    const served = await proxy({ ...table('openai-chat', down.endpoint, up.endpoint) });
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.status).toBe(200);
     expect(got.json).toEqual({ from: 'up' });
     expect(JSON.parse(up.received[0]?.body ?? '').model).toBe('id-1');
     expect(served.log.join('\n')).toContain('proxy: root m/x: p0 503; p1 answered 200');
+    expect(served.notes).toEqual([
+      { id: 'p0', outcome: { ok: false, status: 503 } },
+      { id: 'p1', outcome: { ok: true, status: 200 } },
+    ]);
   });
 
   it('falls back on a 429 and a refused connection', async () => {
     const limited = await fake(answerJson(429, {}));
     const gone = await fake(answerJson(200, {}));
     const up = await fake(answerJson(200, { from: 'up' }));
-    const served = await proxy({
-      proxy: table('anthropic-messages', limited.endpoint, gone.endpoint, up.endpoint),
-      env: keys(3),
-    });
+    const served = await proxy({ ...table('anthropic-messages', limited.endpoint, gone.endpoint, up.endpoint) });
     await gone.close();
     fakes.splice(fakes.indexOf(gone), 1);
     const got = await send(served.port, MESSAGES, { headers: asRoot, body: { model: 'm/x' } });
@@ -368,7 +378,7 @@ describe('a call ends when either side does, and on a timeout', () => {
      */
     const dropped = await fake((_request, response) => { response.socket?.destroy(); });
     const spare = await fake(answerJson(200, { from: 'spare' }));
-    const served = await proxy({ proxy: table('openai-chat', dropped.endpoint, spare.endpoint), env: keys(2) });
+    const served = await proxy({ ...table('openai-chat', dropped.endpoint, spare.endpoint) });
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.status).toBe(502);
     expect(dropped.received).toHaveLength(1);
@@ -383,7 +393,7 @@ describe('a call ends when either side does, and on a timeout', () => {
     // candidate gets it and the caller gets that one's answer.
     const gone = await fake(answerJson(200, {}));
     const up = await fake(answerJson(200, { from: 'up' }));
-    const served = await proxy({ proxy: table('openai-chat', gone.endpoint, up.endpoint), env: keys(2) });
+    const served = await proxy({ ...table('openai-chat', gone.endpoint, up.endpoint) });
     await gone.close();
     fakes.splice(fakes.indexOf(gone), 1);
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
@@ -401,7 +411,7 @@ describe('a call ends when either side does, and on a timeout', () => {
      */
     for (const status of [401, 403]) {
       const provider = await fake(answerJson(status, { error: { message: `key sk-account-1234 for org-acme is ${String(status)}`, type: 'authentication_error' } }));
-      const served = await proxy({ proxy: table('anthropic-messages', provider.endpoint), env: keys(1) });
+      const served = await proxy({ ...table('anthropic-messages', provider.endpoint) });
       const got = await send(served.port, MESSAGES, { headers: { 'x-api-key': ROOT_TOKEN }, body: { model: 'm/x' } });
 
       expect(got.status).toBe(502);
@@ -421,7 +431,7 @@ describe('a call ends when either side does, and on a timeout', () => {
 
     // The same in the other dialect, whose error body is a different shape.
     const openai = await fake(answerJson(401, { error: { message: 'Incorrect API key provided', code: 'invalid_api_key' } }));
-    const served = await proxy({ proxy: table('openai-chat', openai.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('openai-chat', openai.endpoint) });
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.status).toBe(502);
     expect(isOpenAiError(got.json)).toBe(true);
@@ -440,7 +450,7 @@ describe('a call ends when either side does, and on a timeout', () => {
      */
     const message = 'key sk-account-1234 for org-acme; api_key: 9f2c8b1a4e7d6c5b3a2019f8e7d6c5b4; authorization: Bearer tok-live-9f2c8b1a4e7d6c5b; the key this call used is ' + MARKER + '.';
     const provider = await fake(answerJson(401, { error: { message } }));
-    const served = await proxy({ proxy: table('anthropic-messages', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('anthropic-messages', provider.endpoint) });
     const got = await send(served.port, MESSAGES, { headers: { 'x-api-key': ROOT_TOKEN }, body: { model: 'm/x' } });
     expect(got.status).toBe(502);
 
@@ -459,7 +469,7 @@ describe('a call ends when either side does, and on a timeout', () => {
   it('does not fall back after a header timeout: the caller gets 504 and the next entry is never called', async () => {
     const silent = await fake(() => { /* never answers */ });
     const spare = await fake(answerJson(200, { from: 'spare' }));
-    const served = await proxy({ proxy: table('anthropic-messages', silent.endpoint, spare.endpoint), env: keys(2), headersTimeoutMs: 200 });
+    const served = await proxy({ ...table('anthropic-messages', silent.endpoint, spare.endpoint), headersTimeoutMs: 200 });
     const got = await send(served.port, MESSAGES, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.status).toBe(504);
     expect(isAnthropicError(got.json)).toBe(true);
@@ -483,7 +493,7 @@ describe('a call ends when either side does, and on a timeout', () => {
       }
       return new Response(JSON.stringify({ error: { message: 'overloaded' } }), { status: 503, headers: { 'content-type': 'application/json' } });
     };
-    const served = await proxy({ proxy: table('openai-chat', 'http://127.0.0.1:1/v1', 'http://127.0.0.1:2/v1'), env: keys(2), fetch: upstream });
+    const served = await proxy({ ...table('openai-chat', 'http://127.0.0.1:1/v1', 'http://127.0.0.1:2/v1'), fetch: upstream });
     const request = httpRequest({
       host: '127.0.0.1', port: served.port, path: CHAT, method: 'POST',
       headers: { host: `127.0.0.1:${String(served.port)}`, 'content-type': 'application/json', ...asRoot },
@@ -495,12 +505,14 @@ describe('a call ends when either side does, and on a timeout', () => {
     while (!served.log.join('\n').includes('caller hung up') && Date.now() < until) await pause(20);
     expect(calls).toBe(1);
     expect(served.log.join('\n')).toContain('p0 503, p1 not tried, the caller hung up');
+    // A call that never went out is not the connector's failure to report.
+    expect(served.notes.map((one) => one.id)).toEqual(['p0']);
   });
 
   it('answers the last failure when every entry fails', async () => {
     const one = await fake(answerJson(503, { error: { message: 'first' } }));
     const two = await fake(answerJson(502, { error: { message: 'second' } }));
-    const served = await proxy({ proxy: table('openai-chat', one.endpoint, two.endpoint), env: keys(2) });
+    const served = await proxy({ ...table('openai-chat', one.endpoint, two.endpoint) });
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.status).toBe(502);
     expect(got.json).toEqual({ error: { message: 'second' } });
@@ -509,7 +521,7 @@ describe('a call ends when either side does, and on a timeout', () => {
   it('does not retry a 400, nor a provider that failed after its first event', async () => {
     const bad = await fake(answerJson(400, { error: { message: 'bad request' } }));
     const spare = await fake(answerJson(200, {}));
-    const served = await proxy({ proxy: table('openai-chat', bad.endpoint, spare.endpoint), env: keys(2) });
+    const served = await proxy({ ...table('openai-chat', bad.endpoint, spare.endpoint) });
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.status).toBe(400);
     expect(spare.received).toEqual([]);
@@ -520,7 +532,7 @@ describe('a call ends when either side does, and on a timeout', () => {
       response.write(first, () => { setTimeout(() => { response.destroy(); }, 20); });
     });
     const second = await fake(answerJson(200, {}));
-    const again = await proxy({ proxy: table('openai-chat', broken.endpoint, second.endpoint), env: keys(2) });
+    const again = await proxy({ ...table('openai-chat', broken.endpoint, second.endpoint) });
     const answer = await streaming(again.port, CHAT, asRoot, { model: 'm/x', stream: true });
     const all = `${await answer.next() ?? ''}${await answer.rest()}`;
     expect(all).toBe(first);
@@ -533,7 +545,7 @@ describe('a call ends when either side does, and on a timeout', () => {
       response.writeHead(200, { 'content-type': 'application/json', 'content-length': '100' });
       response.write('{"partial":', () => { setTimeout(() => { response.socket?.destroy(); }, 20); });
     });
-    const served = await proxy({ proxy: table('openai-chat', provider.endpoint), env: keys(1) });
+    const served = await proxy({ ...table('openai-chat', provider.endpoint) });
     const outcome = await new Promise<{ ended: boolean; error?: string; text: string }>((resolve) => {
       const request = httpRequest({
         host: '127.0.0.1', port: served.port, path: CHAT, method: 'POST',

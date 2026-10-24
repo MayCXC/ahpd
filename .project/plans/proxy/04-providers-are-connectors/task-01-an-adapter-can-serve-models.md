@@ -1,6 +1,6 @@
 ---
 title: An adapter can serve models
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -42,3 +42,8 @@ The connectors channel lists its open provider connectors for host code.
 - `providers()` is a method of the returned object, and no channel or command sends its answer.
 
 ## Resume
+
+- **Done so far:** `packages/sdk/src/types/connectors.ts` has `MODEL_DIALECTS` and `ModelDialect`, `ModelProvider`, `ProviderConnector`, `'models'` in `CapabilityType`, and `Adapter.provider`. `ConnectorsChannel.providers()` answers each open connector whose adapter has `provider`, sorted by id, with its `id`, `adapter`, `owner` and resolved `ModelProvider`. A `provider` that throws leaves the connector out and says its problem once per connector. The sdk and its type index export the new names. The server's `DIALECTS` and `Dialect` are now names for the sdk's.
+- **Next action:** none for this task.
+- **Open questions:** none.
+- **Watch out for:** a listed `ModelProvider.key` is the resolved secret, so only host code reads the list, and no channel or command sends it.

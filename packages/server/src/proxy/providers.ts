@@ -1,42 +1,24 @@
 /**
- * The providers this proxy calls, and the model names that point at them.
+ * The model names this proxy serves, and the entries that serve each.
  *
- * A provider is an endpoint and the APIs it answers in. A model name is
- * `<maker>/<name>` and lists the providers that serve it, each under that
- * provider's own model id. Three are built in
- * and are there without any configuration, and the file may add one or replace
- * one, because an endpoint that moves upstream is a default rather than a fact.
+ * A model name is `<maker>/<name>` and lists the connectors that serve it, each
+ * under that connector's own model id. A provider is a connector, so this file
+ * holds no endpoint and no key: a connector is opened from the connectors
+ * store, and the proxy finds it by the entry's `provider`.
  *
- * A key is named by the environment variable holding it and is never written in
- * the file, so the file can be read, printed and committed. A dialect is the API
- * a provider speaks: a call goes out in the dialect the caller used and nothing
- * is translated yet.
+ * The file holds three things: the names, whether a session's own call is
+ * checked and recorded, and nothing else. A file that still writes `providers`
+ * is refused, because a provider is a connector now.
  */
 
 import { check, type JsonSchema } from '@cofold/commands';
-import { isRecord } from '@ahpd/sdk';
+import { isRecord, MODEL_DIALECTS, type ModelDialect } from '@ahpd/sdk';
 
-/** The APIs a provider can be called in, as the name the file writes. */
-export const DIALECTS = ['anthropic-messages', 'openai-chat'] as const;
+/** The APIs a provider can be called in, as the name the connector writes. */
+export const DIALECTS = MODEL_DIALECTS;
 
 /** One of those APIs. */
-export type Dialect = (typeof DIALECTS)[number];
-
-/** Where a provider's key is read from. The key itself is never in the file. */
-export interface ProviderKey {
-  /** The name of the environment variable that holds it. */
-  env: string;
-}
-
-/** One provider, as the configuration holds it. */
-export interface ProxyProvider {
-  /** Where its API answers, such as `https://api.anthropic.com`. */
-  endpoint: string;
-  /** The APIs it is called in. A call passes through in one of them. */
-  accepts: Dialect[];
-  /** The key it is called with, named by the variable that holds it. */
-  key?: ProviderKey;
-}
+export type Dialect = ModelDialect;
 
 /** What a model costs on one provider. */
 export interface ModelPrice {
@@ -48,7 +30,7 @@ export interface ModelPrice {
 
 /** One provider's serving of a model name. */
 export interface ModelEntry {
-  /** The provider that serves it, as `providers` names that one. */
+  /** The connector that serves it: an adapter's name, or one connector's id. */
   provider: string;
   /** The model id on that provider, which is that provider's own spelling. */
   id: string;
@@ -58,8 +40,6 @@ export interface ModelEntry {
 
 /** What the `proxy` key holds. */
 export interface ProxySetting {
-  /** The providers, by the id a model entry names. Over the built-in ones. */
-  providers?: Record<string, ProxyProvider>;
   /** The model names, by `<maker>/<name>`, and the entries that serve each. */
   models?: Record<string, ModelEntry[]>;
   /**
@@ -76,10 +56,8 @@ export const SESSION_CALLS = ['record', 'skip'] as const;
 /** One of those. */
 export type SessionCalls = (typeof SESSION_CALLS)[number];
 
-/** What `modelProxy` reads as once the file is over the built-ins. */
+/** What `modelProxy` reads as. */
 export interface ProxyConfiguration {
-  /** Every provider, the built-ins with the file's over them. */
-  providers: Record<string, ProxyProvider>;
   /** Every model name, and the entries that serve it. */
   models: Record<string, ModelEntry[]>;
   /** Whether a session's own call is checked and recorded; `record` when the file says nothing. */
@@ -87,58 +65,15 @@ export interface ProxyConfiguration {
 }
 
 /**
- * The providers that are there without any configuration.
+ * What `proxy` reads as: every model name, and how a session's call is treated.
  *
- * The endpoints are what those makers answer on today, and the keys are the
- * variables each of them documents. They are defaults in every sense: a file
- * entry of the same id replaces one whole rather than patching it, so pointing
- * a provider at a gateway is one entry rather than a merge rule.
- */
-export const BUILT_IN_PROVIDERS: Readonly<Record<string, ProxyProvider>> = {
-  openrouter: {
-    endpoint: 'https://openrouter.ai/api/v1',
-    accepts: ['openai-chat'],
-    key: { env: 'OPENROUTER_API_KEY' },
-  },
-  anthropic: {
-    endpoint: 'https://api.anthropic.com',
-    accepts: ['anthropic-messages'],
-    key: { env: 'ANTHROPIC_API_KEY' },
-  },
-  openai: {
-    endpoint: 'https://api.openai.com/v1',
-    accepts: ['openai-chat'],
-    key: { env: 'OPENAI_API_KEY' },
-  },
-};
-
-/**
- * What `proxy` reads as: every provider, and every model name.
- *
- * The file's providers are over the built-in ones, entry by entry, and a model
- * name is kept as it was written. Absent is the three built-ins and no names,
- * which is a proxy with nothing to route rather than a failure.
+ * Absent is no names, which is a proxy with nothing to route rather than a
+ * failure.
  */
 export const proxyConfiguration = (setting?: ProxySetting): ProxyConfiguration => ({
-  providers: { ...BUILT_IN_PROVIDERS, ...setting?.providers },
   models: { ...setting?.models },
   sessionCalls: setting?.sessionCalls ?? 'record',
 });
-
-/** One provider as the file writes it. */
-export const providerSchema: JsonSchema = {
-  type: 'object',
-  properties: {
-    endpoint: { type: 'string', minLength: 1 },
-    accepts: { type: 'array', items: { type: 'string', enum: DIALECTS }, minItems: 1 },
-    key: {
-      type: 'object',
-      properties: { env: { type: 'string', minLength: 1 } },
-      required: ['env'],
-    },
-  },
-  required: ['endpoint', 'accepts'],
-};
 
 /** One entry of a model name, as the file writes it. */
 export const modelEntrySchema: JsonSchema = {
@@ -157,18 +92,20 @@ export const modelEntrySchema: JsonSchema = {
 /**
  * What `proxy` holds.
  *
- * The entries under `providers` and `models` are not described here, because
- * the JSON Schema this family checks has no way of saying that an object is a
- * map: every key would have to be written out. `proxyProblems` checks them.
+ * The entries under `models` are not described here, because the JSON Schema
+ * this family checks has no way of saying that an object is a map: every key
+ * would have to be written out. `proxyProblems` checks them.
  */
 export const proxySchema: JsonSchema = {
   type: 'object',
   properties: {
-    providers: { type: 'object' },
     models: { type: 'object' },
     sessionCalls: { type: 'string', enum: SESSION_CALLS },
   },
 };
+
+/** What a file that still writes `providers` is told. */
+export const PROVIDERS_GONE = 'modelProxy.providers is no longer read: add each provider as a connector, see docs/server/PROXY.md';
 
 /** A model name as one rule: a maker and a name, each holding no slash. */
 const MODEL_NAME = /^[^/\s]+\/[^/\s]+$/u;
@@ -182,24 +119,21 @@ const held = (value: unknown, schema: JsonSchema, label: string, into: string[])
 /**
  * What is wrong with `proxy`, as the sentences a person is shown.
  *
- * Two rules are not the schema's: a model name is `<maker>/<name>`, and the
- * provider an entry names is one that exists once the file's providers are over
- * the built-ins. The rest is checked against the schema, so a bad value here is
- * named the way one on any other key is.
+ * Three rules are not the schema's: `providers` is refused whole, a model name
+ * is `<maker>/<name>`, and each entry names a provider. The rest is checked
+ * against the schema, so a bad value here is named the way one on any other key
+ * is.
  *
  * Every problem is collected rather than the first, because somebody who
- * mistyped two providers should be told about both.
+ * mistyped two entries should be told about both.
  */
 export const proxyProblems = (setting: unknown): string[] => {
   const problems: string[] = [];
   if (setting === undefined) return problems;
+  if (isRecord(setting) && Object.hasOwn(setting, 'providers')) problems.push(PROVIDERS_GONE);
   held(setting, proxySchema, 'modelProxy', problems);
 
-  const given = isRecord(setting) && isRecord(setting['providers']) ? setting['providers'] : {};
   const named = isRecord(setting) && isRecord(setting['models']) ? setting['models'] : {};
-  for (const [id, provider] of Object.entries(given)) {
-    held(provider, providerSchema, `modelProxy.providers.${id}`, problems);
-  }
   const served = new Map<string, ModelEntry[]>();
   for (const [name, entries] of Object.entries(named)) {
     held(entries, { type: 'array' }, `modelProxy.models.${name}`, problems);
@@ -212,14 +146,8 @@ export const proxyProblems = (setting: unknown): string[] => {
   // reads it would report on a value that is already wrong in another way.
   if (problems.length > 0) return problems;
 
-  const known = { ...BUILT_IN_PROVIDERS, ...given };
-  for (const [name, entries] of served) {
+  for (const name of served.keys()) {
     if (!MODEL_NAME.test(name)) problems.push(`modelProxy.models.${name} is not a model name: write it as <maker>/<name>`);
-    for (const entry of entries) {
-      if (!Object.hasOwn(known, entry.provider)) {
-        problems.push(`modelProxy.models.${name} names ${entry.provider}, which is not a provider`);
-      }
-    }
   }
   return problems;
 };

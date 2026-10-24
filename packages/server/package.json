@@ -33,6 +33,7 @@
   },
   "files": [
     "dist",
+    "icons",
     "README.md"
   ],
   "engines": {

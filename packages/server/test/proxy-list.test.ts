@@ -2,12 +2,13 @@
  * `ahpd proxy list`, run in this process.
  *
  * The configuration is a temporary directory, so every case writes the file it
- * reads and no case sees the configuration of whoever runs the suite. What is
- * pinned here is the promise the listing makes about a key: the providers and
- * the model names are there, and the key is only ever said to be set or not.
+ * reads and no case sees the configuration of whoever runs the suite. A
+ * provider is a connector now, so what is pinned here is the split the listing
+ * makes: the model names and the entries that serve each are the file's, and a
+ * connector's endpoint and key are the connectors store's, never this listing's.
  */
 
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -19,8 +20,6 @@ import { servedRegistry, type ServedFacts } from '../src/commands/served.js';
 import { apiHandler } from '../src/http.js';
 
 const AUTHORITY = '127.0.0.1:9351';
-/** The variables the built-in providers read, which whoever runs the suite may well have set. */
-const BUILT_IN_KEYS = ['OPENROUTER_API_KEY', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY'];
 
 let home: string;
 let config: string;
@@ -32,6 +31,13 @@ afterEach(() => { rmSync(home, { recursive: true, force: true }); });
 
 const put = (held: unknown): void => { writeFileSync(config, `${JSON.stringify(held, null, 2)}\n`); };
 
+/** One connector kept where the daemon reads them, so a case can show the listing does not read it. */
+const putConnector = (held: unknown): void => {
+  const dir = join(home, 'ahpd', 'connectors');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `${String((held as { id: string }).id)}.json`), `${JSON.stringify(held, null, 2)}\n`);
+};
+
 /** What the terminal command answered. */
 const run = async (): Promise<Output> => {
   const registry = cliRegistry();
@@ -42,39 +48,17 @@ const run = async (): Promise<Output> => {
   return output;
 };
 
-/** The listing with these variables unset, whatever the machine holds. */
-const without = async (names: readonly string[]): Promise<Output> => {
-  const had = names.map((name) => [name, process.env[name]] as const);
-  names.forEach((name) => { delete process.env[name]; });
-  try { return await run(); }
-  finally { for (const [name, value] of had) { if (value === undefined) delete process.env[name]; else process.env[name] = value; } }
-};
-
 describe('proxy list at the terminal', () => {
-  it('lists the built-in providers with no configuration at all', async () => {
+  it('lists no model name with no configuration at all', async () => {
     put({});
-    const said = await without(BUILT_IN_KEYS);
-    expect(said.data).toEqual({
-      providers: [
-        { id: 'openrouter', endpoint: 'https://openrouter.ai/api/v1', accepts: ['openai-chat'], key: { env: 'OPENROUTER_API_KEY' }, keySet: false },
-        { id: 'anthropic', endpoint: 'https://api.anthropic.com', accepts: ['anthropic-messages'], key: { env: 'ANTHROPIC_API_KEY' }, keySet: false },
-        { id: 'openai', endpoint: 'https://api.openai.com/v1', accepts: ['openai-chat'], key: { env: 'OPENAI_API_KEY' }, keySet: false },
-      ],
-      models: [],
-    });
-    expect(said.plain).toContain('providers:\n');
+    const said = await run();
+    expect(said.data).toEqual({ models: [] });
     expect(said.plain).toContain('models:\n  (none named)\n');
   });
 
-  it('says key set: false for a variable that is not set, and which variable it would read', async () => {
-    put({});
-    expect((await without(BUILT_IN_KEYS)).plain).toContain('key set: false (ANTHROPIC_API_KEY)');
-  });
-
-  it('adds a provider the configuration names, with its model names', async () => {
+  it('lists each model name with the providers its entries name', async () => {
     put({
       modelProxy: {
-        providers: { 'local-vllm': { endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'] } },
         models: {
           'anthropic/fable-5': [
             { provider: 'anthropic', id: 'fable-5', price: { input: 3, output: 15 } },
@@ -84,35 +68,35 @@ describe('proxy list at the terminal', () => {
       },
     });
     const said = await run();
-    expect(said.data).toMatchObject({
-      providers: [
-        { id: 'openrouter', key: { env: 'OPENROUTER_API_KEY' } },
-        { id: 'anthropic', key: { env: 'ANTHROPIC_API_KEY' } },
-        { id: 'openai', key: { env: 'OPENAI_API_KEY' } },
-        { id: 'local-vllm', endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'] },
-      ],
+    expect(said.data).toEqual({
       models: [{ name: 'anthropic/fable-5', providers: [
         { provider: 'anthropic', id: 'fable-5', price: { input: 3, output: 15 } },
         { provider: 'local-vllm', id: 'Fable-5-4B' },
       ] }],
     });
-    // A provider with no key says so, rather than a `key set: false` naming nothing.
-    expect(said.plain).toContain('local-vllm  http://localhost:8000/v1  [openai-chat]  no key\n');
     expect(said.plain).toContain('  anthropic/fable-5\n    anthropic: fable-5 ($3 in, $15 out per Mtok)\n    local-vllm: Fable-5-4B\n');
   });
 
-  it('never prints a key, only that the variable is set', async () => {
-    const had = process.env['LOCAL_VLLM_KEY'];
-    process.env['LOCAL_VLLM_KEY'] = 'sk-should-never-appear';
+  it('says nothing about a connector: no endpoint and no key', async () => {
+    put({ modelProxy: { models: { 'anthropic/fable-5': [{ provider: 'anthropic', id: 'fable-5' }] } } });
+    putConnector({
+      id: 'anthropic', adapter: 'anthropic', owner: 'host',
+      config: { endpoint: 'https://gateway.test', key: { fromEnv: 'ANTHROPIC_API_KEY' } },
+    });
+    const had = process.env['ANTHROPIC_API_KEY'];
+    process.env['ANTHROPIC_API_KEY'] = 'sk-should-never-appear';
     try {
-      put({ modelProxy: { providers: { 'local-vllm': { endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'], key: { env: 'LOCAL_VLLM_KEY' } } } } });
       const said = await run();
-      expect(said.plain).toContain('key set: true (LOCAL_VLLM_KEY)');
-      expect(said.plain).not.toContain('sk-should-never-appear');
-      expect(JSON.stringify(said.data)).not.toContain('sk-should-never-appear');
+      expect(said.data).toEqual({
+        models: [{ name: 'anthropic/fable-5', providers: [{ provider: 'anthropic', id: 'fable-5' }] }],
+      });
+      for (const word of ['gateway.test', 'sk-should-never-appear', 'ANTHROPIC_API_KEY']) {
+        expect(said.plain).not.toContain(word);
+        expect(JSON.stringify(said.data)).not.toContain(word);
+      }
     }
     finally {
-      if (had === undefined) delete process.env['LOCAL_VLLM_KEY']; else process.env['LOCAL_VLLM_KEY'] = had;
+      if (had === undefined) delete process.env['ANTHROPIC_API_KEY']; else process.env['ANTHROPIC_API_KEY'] = had;
     }
   });
 });
@@ -138,17 +122,15 @@ describe('proxy list, served', () => {
     }));
   };
 
-  it('answers the daemon\'s own providers and model names', async () => {
+  it('answers the daemon\'s own model names', async () => {
     put({
       modelProxy: {
-        providers: { 'local-vllm': { endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'] } },
         models: { 'deepseek/deepseek-v4.1-flash': [{ provider: 'local-vllm', id: 'deepseek-v4.1-flash' }] },
       },
     });
     const answered = await get('/proxy/list');
     expect(answered.status).toBe(200);
-    const body = await answered.json() as { providers: { id: string }[]; models: { name: string }[] };
-    expect(body.providers.map((row) => row.id)).toEqual(['openrouter', 'anthropic', 'openai', 'local-vllm']);
+    const body = await answered.json() as { models: { name: string }[] };
     expect(body.models).toEqual([{ name: 'deepseek/deepseek-v4.1-flash', providers: [
       { provider: 'local-vllm', id: 'deepseek-v4.1-flash' },
     ] }]);
