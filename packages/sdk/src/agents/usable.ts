@@ -97,16 +97,20 @@ export interface Acting {
  * grant, and the host asks the owner's own grants on the road beside this one.
  *
  * A person this process has met supplies who they are and the teams they
- * belong to, so a member's work reaches the team's agent. A `project:` or
- * `plugin:` owner is nobody's person and no team's, so it reaches the host's
- * agents alone - the same reading `sameOwnerOrHost` gives an automation's
- * connectors, one step fuller because an agent may be a team's.
+ * belong to, so a member's work reaches the team's agent - but only where the
+ * person met is the one the owner names. The principal can be whoever asked
+ * now rather than the owner, and another person's teams are not the owner's,
+ * so a principal whose id is not the owner's lends nothing here. A `project:`
+ * or `plugin:` owner is nobody's person and no team's, so it reaches the
+ * host's agents alone - the same reading `sameOwnerOrHost` gives an
+ * automation's connectors, one step fuller because an agent may be a team's.
  */
 const actingAs = (owner: Owner, met: Principal | undefined): Principal => {
   const sessionWrite = (grant: string): boolean => grant === 'session:write';
   if (owner.startsWith('user:')) {
-    const person = met ?? { id: '', roles: [] as const, can: sessionWrite };
-    return { ...person, id: owner.slice('user:'.length), can: sessionWrite };
+    const id = owner.slice('user:'.length);
+    const person = met !== undefined && met.id === id ? met : { id, roles: [] as const };
+    return { ...person, id, can: sessionWrite };
   }
   if (owner.startsWith('team:')) {
     return { id: '', roles: [], can: sessionWrite, memberships: [owner.slice('team:'.length)] };
@@ -120,7 +124,7 @@ const actingAs = (owner: Owner, met: Principal | undefined): Principal => {
  *
  * Host work - nobody's owner, or a `root:` one - keeps every agent the daemon
  * has, as the root connection does. Otherwise this is `mayUseAgent` for the
- * owner, with the person this process met where it met one.
+ * owner, with the person this process met where that person is the owner.
  */
 export const mayUseAgentFor = (
   acting: Acting | undefined,

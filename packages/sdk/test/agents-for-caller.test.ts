@@ -3,11 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { createHost, ROOT } from '../src/host.js';
+import { mayUseAgentFor } from '../src/agents/usable.js';
 import { fileUsers } from '../src/access/users.js';
 import { fileResources } from '../src/resources/resources.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';
 import type { AgentOwner } from '../src/types/agents.js';
+import type { Principal } from '../src/types/users.js';
 import type { HostOptions, Users } from '../src/types/index.js';
 
 /*
@@ -169,6 +171,22 @@ it('refuses an agent a record holds with no owner, to every caller', async () =>
   expect(await ana.call('createSession', { channel: 'ahp-session:/base', provider: 'base' }))
     .toHaveProperty('result');
   await host.close();
+});
+
+it("does not lend an owner's work another person's teams", () => {
+  const person = (id: string, team: string): Principal => ({ id, roles: [], can: () => false, memberships: [team] });
+  const theirs = { recorded: true, owner: 'team:backend' } as const;
+
+  /*
+   * The work is `ana`'s and the principal this host met is `cy`, of the team
+   * that holds the agent. `forWhom` may hand over whoever asked now, and
+   * another person's memberships are not the owner's, so they lend nothing.
+   */
+  expect(mayUseAgentFor({ owner: 'user:ana', principal: person('cy', 'backend') }, theirs, { hasDirectory: true }))
+    .toBe(false);
+  // The person the owner names keeps the teams they hold.
+  expect(mayUseAgentFor({ owner: 'user:ana', principal: person('ana', 'backend') }, theirs, { hasDirectory: true }))
+    .toBe(true);
 });
 
 it('sends the list again when a membership change alters what a caller may use', async () => {
