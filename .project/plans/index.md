@@ -400,6 +400,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | proxy 04 |
 | [61 - A plugin icon has a dark variant](plugin/61-a-plugin-icon-has-a-dark-variant/plan.md) | medium | built 2026-10-24 ([implemented.md](plugin/61-a-plugin-icon-has-a-dark-variant/implemented.md)); merged in #86 | plugin 58 | - |
 | [62 - A working connector is ready, not open](plugin/62-a-working-connector-is-ready/plan.md) | medium | active 2026-10-24; one task, implemented | - | - |
+| [63 - agent-cofold lists models under their provider id](plugin/63-cofold-lists-models-by-provider/plan.md) | high | planned 2026-10-24; three tasks | - | - |
 
 Next free number in `plugin`: `63`.
 
