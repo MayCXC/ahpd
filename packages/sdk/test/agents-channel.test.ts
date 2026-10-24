@@ -98,6 +98,9 @@ beforeEach(() => {
       all: ['agent:list', 'agent:put', 'agent:remove', 'agent:host', 'session:create'],
       'all-agents': ['agent:all'],
       'config-writer': ['config:write'],
+      // What it takes to start on a host agent, which is what a removal must
+      // not hand to somebody the record never named.
+      starter: ['session:write', 'session:create'],
     },
     users: [
       { id: 'ana', roles: ['lister'] },
@@ -109,6 +112,7 @@ beforeEach(() => {
       { id: 'gi', roles: ['all'] },
       { id: 'ja', roles: ['all-agents'] },
       { id: 'ha', roles: ['config-writer'] },
+      { id: 'ka', roles: ['starter'] },
     ],
   }));
 });
@@ -171,8 +175,13 @@ const misnamed = (opened: Opened[]): ServedAgentKind => {
   };
 };
 
-/** A host serving the agents channel over one kind, the `checker` one. */
-async function served(options: { register?: boolean } = {}) {
+/**
+ * A host serving the agents channel over one kind, the `checker` one.
+ *
+ * `fold` is called with each agent list before the host takes it, so a case
+ * can ask something of the host while a fold is in flight.
+ */
+async function served(options: { register?: boolean; fold?: (agents: Agent[]) => Promise<void> } = {}) {
   const register = options.register ?? true;
   const collection: RecordCollection = await memoryRecords().collection('agents', { format: 'json' });
   const opened: Opened[] = [];
@@ -214,6 +223,7 @@ async function served(options: { register?: boolean } = {}) {
     check,
     refold: async (agents) => {
       if (host === undefined) throw new Error('the channel folded before there was a host');
+      await options.fold?.(agents);
       const refused = host.replace(hostOptions(agents));
       if (refused !== undefined) throw new Error(refused);
       return new Set(agents.map((one) => one.provider));
@@ -544,6 +554,48 @@ it('ends the sessions of a removed agent', async () => {
   await until(() => removed().length > 0);
   expect(ended).toContain('mine');
   expect(JSON.stringify(removed())).toContain('on-mine');
+  await close();
+});
+
+it('refuses a start on an agent while it is being removed', async () => {
+  // Ask while the removal's fold is in flight: the record is out of the store
+  // and the host still serves the agent, which is the moment the id is neither
+  // the owner's nor anybody else's.
+  let armed = false;
+  let during: { owner: Bag; other: Bag } | undefined;
+  const { host, users, close } = await served({
+    fold: async (agents) => {
+      if (!armed || agents.some((one) => one.provider === 'mine')) return;
+      during = {
+        owner: await ownerAgain.call('createSession', { channel: 'ahp-session:/owner-again', provider: 'mine' }),
+        other: await ka.call('createSession', { channel: 'ahp-session:/other', provider: 'mine' }),
+      };
+    },
+  });
+  const cy = await as(host, users, 'cy');
+  // The same person on a second connection: the removal has the first one busy.
+  const ownerAgain = await as(host, users, 'cy');
+  // Holds `session:write`, which is what a host agent takes and a person's own
+  // agent does not.
+  const ka = await as(host, users, 'ka');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+
+  // Before the removal: `cy` starts on its own, and `ka` does not.
+  expect(await ownerAgain.call('createSession', { channel: 'ahp-session:/before', provider: 'mine' }))
+    .toHaveProperty('result');
+  expect(await ka.call('createSession', { channel: 'ahp-session:/elsewhere', provider: 'mine' }))
+    .toEqual({ code: -32002, message: 'No provider called mine' });
+
+  armed = true;
+  expect(await cy.call('x-ahpd/agents/remove', { id: 'mine' })).toMatchObject({ result: {} });
+  // During the removal: refused to the owner, because the agent is going out,
+  // and to `ka`, who would otherwise take an unowned id for a host agent.
+  expect(during).toEqual({
+    owner: { code: -32002, message: 'No provider called mine' },
+    other: { code: -32002, message: 'No provider called mine' },
+  });
   await close();
 });
 

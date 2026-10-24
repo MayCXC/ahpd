@@ -170,6 +170,32 @@ export interface AgentsChannel {
 export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   /** The owner of each stored agent, as the last read of the collection found it. */
   const owners = new Map<string, AgentOwner | undefined>();
+  /**
+   * The ids a removal is taking out right now.
+   *
+   * A record is taken out of the store before the fold that drops it, and the
+   * owner entry is kept until that fold is taken, so a caller that reads the
+   * map between the two sees an id the store no longer holds. The marker is
+   * what keeps it closed in that window: `ownersFor` answers it as a record
+   * whose owner nobody can read, which every caller, its owner included, is
+   * refused. It is cleared once the fold is taken, and stays when the fold
+   * fails.
+   */
+  const removing = new Set<string>();
+  /**
+   * The owners map as the host reads it, with the removals in flight closed.
+   *
+   * An id being removed is answered with an entry that names no owner, so
+   * `ownershipOf` reads it as a record nobody may use rather than as an id no
+   * record holds - which is a host agent, and open to anyone who may start a
+   * session at all.
+   */
+  const ownersFor = (): ReadonlyMap<string, AgentOwner | undefined> => {
+    if (removing.size === 0) return owners;
+    const shown = new Map(owners);
+    for (const id of removing) shown.set(id, undefined);
+    return shown;
+  };
   /** The open agents, by id. An id in the map has a backend a session can hold. */
   const open = new Map<string, Opened>();
   /** What the host knows of each agent's health, by id, in memory only. */
@@ -611,6 +637,12 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       await channel.refresh();
       throw new RpcError(INTERNAL_ERROR, `${id} is stored, but the host did not take it: ${reason(error)}`);
     }
+    /*
+     * A record written again under an id a failed removal left refused is a
+     * new record, and one the store holds: the marker that closed the old one
+     * goes out with it.
+     */
+    removing.delete(id);
     await channel.refresh();
     return row(record);
   };
@@ -641,14 +673,26 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
         refuseOwner('agent', 'remove', owner, reader, 'remove');
       }
       /*
-       * The sessions go first: `host.replace` keeps a backend that still has a
-       * session open, and a record removed beside a live session would come
-       * back the moment the fold was taken.
+       * The id is refused to everyone from here on, its owner included: it is
+       * not an agent to start on while it is going out. A removal that stops
+       * before the record is taken out puts the agent back as it was; one whose
+       * record is out stays refused even if the fold fails, because the host
+       * still holds the backend and the store no longer says whose it was.
        */
-      await options.endSessionsOf(id);
-      await forgetRecordSecrets(configOf(before), owner, id, AGENT_SECRETS, options.vault(), problem);
-      await options.collection.remove(id);
-      owners.delete(id);
+      removing.add(id);
+      try {
+        /*
+         * The sessions go first: `host.replace` keeps a backend that still has
+         * a session open, and a record removed beside a live session would come
+         * back the moment the fold was taken.
+         */
+        await options.endSessionsOf(id);
+        await forgetRecordSecrets(configOf(before), owner, id, AGENT_SECRETS, options.vault(), problem);
+        await options.collection.remove(id);
+      } catch (error) {
+        removing.delete(id);
+        throw error;
+      }
       open.delete(id);
       healths.delete(id);
       try {
@@ -657,6 +701,13 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
         await channel.refresh();
         throw new RpcError(INTERNAL_ERROR, `${id} is removed, but the host did not take the new list: ${reason(error)}`);
       }
+      /*
+       * The owner entry is dropped only once the fold has dropped the record:
+       * taken away sooner, a caller reading the map in between finds the id
+       * without an owner and takes it for a host agent.
+       */
+      owners.delete(id);
+      removing.delete(id);
       await channel.refresh();
       return {};
     }),
@@ -738,6 +789,6 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       await channel.refresh();
     }),
     refresh: () => channel.refresh(),
-    owners: () => owners,
+    owners: ownersFor,
   };
 }
