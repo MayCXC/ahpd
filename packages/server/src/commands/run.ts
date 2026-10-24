@@ -904,11 +904,13 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       pluginTypes: () => pluginTypes,
       connectors: () => connectorLists.refs(),
       agents: () => agentLists.owners(),
+      hasUsers: () => users !== undefined,
     })
     : daemonAutomations((message) => process.stdout.write(`${message}\n`), {
       pluginTypes: () => pluginTypes,
       connectors: () => connectorLists.refs(),
       agents: () => agentLists.owners(),
+      hasUsers: () => users !== undefined,
     });
   automationsStore = automations;
 

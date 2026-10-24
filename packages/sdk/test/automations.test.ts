@@ -1644,7 +1644,7 @@ it('refuses an automation naming an agent its owner may not use, when written an
     ['mine', 'user:ana'],
     ['hosted', 'host'],
   ]);
-  const store = memoryAutomations({ agents: () => owners });
+  const store = memoryAutomations({ agents: () => owners, hasUsers: () => true });
   const provider = (id: string): Record<string, unknown> => ({ session: { provider: id } });
 
   // Another person's agent, refused with the id and the owner it belongs to.
@@ -1693,4 +1693,42 @@ it('refuses a run of an automation whose agent has become somebody else\'s', asy
   const state = await runState(client, run.resource);
   expect(state.lifecycle).toMatchObject({ status: 'failed', error: { message: 'No provider called echo' } });
   expect(state.sessions).toEqual([]);
+});
+
+it("refuses a signed-in client's patch that names another person's agent, on an automation nobody owns", async () => {
+  /*
+   * A record written by hand has no owner, and the client that may edit it is
+   * whoever can see it. Whose directory the host is serving is what says
+   * whether that is nobody's work or the daemon's: on a host with users, an
+   * automation nobody owns is nobody's, and a person's agent is not for it.
+   */
+  const owners = new Map<string, AgentOwner>([['echo', 'user:cy']]);
+  const store = memoryAutomations({ agents: () => owners, hasUsers: () => true });
+  const host = createHost({
+    path: DIR,
+    agents: [echo({ path: DIR, pace: 0 })],
+    automations: store,
+    users: people(),
+    agentOwners: () => owners,
+  });
+  const p = peer();
+  const client = host.accept(p, ana);
+  await client.handle({
+    method: 'initialize',
+    params: { clientId: 'a', protocolVersions: ['0.9.0'], initialSubscriptions: ['ahp-root://'] },
+  });
+  await client.handle({ method: 'subscribe', params: { channel: AUTOMATIONS } });
+  store.create(PLAIN, { ...DEFINITION, session: { workingDirectories: [`file://${DIR}`] } });
+
+  // The write is refused, so the client is answered with the sentence rather
+  // than with a catalogue that dropped the change.
+  await expect(client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: AUTOMATIONS,
+      action: { type: 'automation/updateRequested', resource: PLAIN, changes: { session: { provider: 'echo' } } },
+    },
+  })).rejects.toThrow('session.provider names echo, which belongs to user:cy, so this automation cannot run on it');
+  // And the record keeps the template it had.
+  expect(store.get(PLAIN)?.definition.session).not.toMatchObject({ provider: 'echo' });
 });

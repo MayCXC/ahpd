@@ -122,9 +122,12 @@ const actingAs = (owner: Owner, met: Principal | undefined): Principal => {
  * Whether the owner a start acts for may use an agent, when no connection sent
  * it.
  *
- * Host work - nobody's owner, or a `root:` one - keeps every agent the daemon
- * has, as the root connection does. Otherwise this is `mayUseAgent` for the
- * owner, with the person this process met where that person is the owner.
+ * A `root:` owner is the daemon and keeps every agent it has, as the root
+ * connection does. No owner is nobody's work rather than the daemon's: on a
+ * host with a users directory it reaches that host's own agents and not one a
+ * person or a team holds, which is what an automation written by hand gets.
+ * Anything else is `mayUseAgent` for the owner, with the person this process
+ * met where that person is the owner.
  */
 export const mayUseAgentFor = (
   acting: Acting | undefined,
@@ -132,8 +135,9 @@ export const mayUseAgentFor = (
   where: { hasDirectory: boolean },
 ): boolean => {
   const owner = acting?.owner;
-  if (owner === undefined || owner.startsWith('root:')) {
+  if (owner !== undefined && owner.startsWith('root:')) {
     return mayUseAgent(acting?.principal, agent, { root: true, hasDirectory: where.hasDirectory });
   }
-  return mayUseAgent(actingAs(owner, acting?.principal), agent, { root: false, hasDirectory: where.hasDirectory });
+  const principal = owner === undefined ? acting?.principal : actingAs(owner, acting?.principal);
+  return mayUseAgent(principal, agent, { root: false, hasDirectory: where.hasDirectory });
 };
