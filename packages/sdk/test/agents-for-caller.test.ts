@@ -63,10 +63,17 @@ const backend = (id: string): Agent => {
   return base;
 };
 
-/** A host over the four agents beside a real users file. */
-const serving = (users: Users = fileUsers({ path: usersFile })) => {
-  const agents = ['base', 'crew', 'mine', 'theirs'].map(backend);
-  const owners = new Map(OWNERS);
+/**
+ * A host over the agents a real users file and an owners map describe.
+ *
+ * `base` is the daemon's own, with no entry in the map; every id the map names
+ * is a stored record, whose owner is the one it names.
+ */
+const serving = (
+  users: Users = fileUsers({ path: usersFile }),
+  owners: ReadonlyMap<string, AgentOwner | undefined> = new Map(OWNERS),
+) => {
+  const agents = ['base', ...owners.keys()].map(backend);
   const options: HostOptions = {
     path: root,
     agents,
@@ -143,6 +150,24 @@ it('answers a start on another person\'s agent as it does an agent it does not s
   expect(await ana.call('createSession', { channel: 'ahp-session:/four', provider: 'mine' })).toHaveProperty('result');
   // And neither of them started the refused ones.
   expect(await cy.call('createSession', { channel: 'ahp-session:/five', provider: 'base' })).toHaveProperty('result');
+  await host.close();
+});
+
+it('refuses an agent a record holds with no owner, to every caller', async () => {
+  const users = fileUsers({ path: usersFile });
+  // The map says a record holds `nameless` and no owner comes with it: an
+  // agent that is nobody's, which is not the host's own.
+  const owners = new Map<string, AgentOwner | undefined>([...OWNERS, ['nameless', undefined]]);
+  const host = serving(users, owners);
+  const ana = await as(host, users, 'ana');
+
+  // `session:write` is what a host agent takes, and it is not enough here.
+  expect((await ana.agents()).sort()).toEqual(['base', 'mine']);
+  expect(await ana.call('createSession', { channel: 'ahp-session:/nameless', provider: 'nameless' }))
+    .toEqual({ code: -32002, message: 'No provider called nameless' });
+  // An id no record holds is still the host's, and `ana` starts on it.
+  expect(await ana.call('createSession', { channel: 'ahp-session:/base', provider: 'base' }))
+    .toHaveProperty('result');
   await host.close();
 });
 

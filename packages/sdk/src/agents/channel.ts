@@ -168,8 +168,15 @@ export interface AgentsChannel {
 }
 
 export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
-  /** The owner of each stored agent, as the last read of the collection found it. */
-  const owners = new Map<string, AgentOwner | undefined>();
+  /**
+   * The owner of each stored agent, as the last read of the collection found
+   * it.
+   *
+   * A read builds the next map and swaps it in rather than clearing this one:
+   * a caller holding the map it was given keeps what it read, instead of
+   * watching an id no record holds yet fall through to the host's rule.
+   */
+  let owners = new Map<string, AgentOwner | undefined>();
   /**
    * The ids a removal is taking out right now.
    *
@@ -299,8 +306,14 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   /** The agent records the store holds, and the owner each names. */
   const stored = async (): Promise<StoredRecord[]> => {
     const records = await options.collection.list();
-    owners.clear();
-    for (const one of records) owners.set(one.id, asOwner(one.owner));
+    /*
+     * A record is in the map even where its owner cannot be read: the entry
+     * with `undefined` is what tells an id a record holds, which nobody may
+     * use, from an id no record holds, which is the host's own agent.
+     */
+    const read = new Map<string, AgentOwner | undefined>();
+    for (const one of records) read.set(one.id, asOwner(one.owner));
+    owners = read;
     return records;
   };
 
