@@ -109,6 +109,8 @@ export { actionTools, actionToolName } from './connectors/actions.js';
 export type { ActionHost } from './connectors/actions.js';
 export { adaptersChannel } from './connectors/adapters.js';
 export type { AdaptersChannel, AdaptersChannelOptions } from './connectors/adapters.js';
+export { agentKindsChannel } from './agents/kinds.js';
+export type { AgentKindsChannel, AgentKindsChannelOptions } from './agents/kinds.js';
 export { checkIcons } from './plugins/validate.js';
 export type { Icon } from '@microsoft/agent-host-protocol';
 export { covers, mayRead, membership, namesOf, poolsFor, scopeFor } from './usage/scopes.js';

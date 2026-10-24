@@ -16,6 +16,7 @@ import type { Command, JsonSchema, Registry } from '@cofold/commands';
 import type { Agent, AutomationStore, AutomationsOptions, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, ServedAgentKind, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   adaptersChannel,
+  agentKindsChannel,
   agentsChannel,
   clientPluginsIn,
   connectorsChannel,
@@ -781,6 +782,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   let agentKinds: Record<string, ServedAgentKind> = {};
   /** The agents of the records, as the last fold took them. */
   let recordAgents: Agent[] = [];
+  /*
+   * The kinds channel, beside the adapters one: both are built before the load
+   * and answer from the fold as it stands when a listing arrives.
+   */
+  const kindLists = agentKindsChannel({ kinds: () => agentKinds, onProblem: listProblem });
   /**
    * What serves an agent id the records do not hold.
    *
@@ -853,7 +859,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   };
   const lists = servedRecords(
     'ahpd',
-    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel, adapterLists.channel, connectorLists.channel, agentLists.channel],
+    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel, adapterLists.channel, kindLists.channel, connectorLists.channel, agentLists.channel],
     { ...peopleLists?.methods, ...policyLists.methods, ...pluginLists.methods, ...connectorLists.methods, ...agentLists.methods },
   );
 
@@ -1365,6 +1371,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     for (const line of answer.problems) stamp(line);
     await pluginLists.refresh();
     await adapterLists.refresh();
+    await kindLists.refresh();
     await connectorLists.refresh();
     /*
      * The records again, against the kinds this fold holds: one of a kind a
