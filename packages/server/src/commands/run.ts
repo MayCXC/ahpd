@@ -780,6 +780,23 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   let agentKinds: Record<string, ServedAgentKind> = {};
   /** The agents of the records, as the last fold took them. */
   let recordAgents: Agent[] = [];
+  /**
+   * What serves an agent id the records do not hold.
+   *
+   * A put of a new record asks this before writing: an id is unique across
+   * every agent, so a record under an id the daemon or a plugin already serves
+   * would be folded away while its row stayed in the list. Read from the
+   * loaded plugins and the daemon's own fold rather than the host, because a
+   * name is what the answer needs and the host keeps only the backends.
+   */
+  const agentHolder = (id: string): string | undefined => {
+    for (const one of pluginHoldings.loaded()) {
+      const held = pluginHoldings.held(one.name);
+      if (held?.contribution.agents.some((agent) => agent.provider === id) === true) return `plugin ${one.name}`;
+    }
+    if (recordAgents.some((agent) => agent.provider === id)) return 'an agent record';
+    return folded.agents.some((agent) => agent.provider === id) ? 'the daemon' : undefined;
+  };
   /*
    * The agents made from records, beside the connectors.
    *
@@ -795,6 +812,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     check: (value, schema, label) => { check(value, schema as JsonSchema, label); },
     refold: (agents) => refoldAgents(agents),
     endSessionsOf: (id) => host.endSessionsOf(id),
+    holderOf: agentHolder,
     onProblem: listProblem,
   });
   /*

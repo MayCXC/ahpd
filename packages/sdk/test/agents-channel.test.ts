@@ -156,6 +156,19 @@ const kindOf = (name: string, opened: Opened[], probing: boolean): AgentKind => 
   },
 });
 
+/**
+ * A kind whose backend serves another id: a record may not be one of these,
+ * because a client names a record by its id and the fold keys on the backend's.
+ */
+const misnamed = (opened: Opened[]): ServedAgentKind => {
+  const kind = kindOf('misnamed', opened, false);
+  return {
+    ...kind,
+    by: 'test',
+    open: (record: AgentView) => ({ ...kind.open(record), provider: 'not-the-id' }),
+  };
+};
+
 /** A host serving the agents channel over one kind, the `checker` one. */
 async function served(options: { register?: boolean } = {}) {
   const register = options.register ?? true;
@@ -168,8 +181,12 @@ async function served(options: { register?: boolean } = {}) {
     ? {
         checker: { ...kindOf('checker', opened, false), by: 'test' },
         prober: { ...kindOf('prober', opened, true), by: 'test' },
+        misnamed: misnamed(opened),
       }
     : {};
+  // What serves an id the records do not hold: the daemon's own backend, and
+  // one a plugin would have brought.
+  const holders = new Map([['base', 'the daemon'], ['preset', 'plugin agent-claude']]);
   const users = fileUsers({ path: usersFile });
   // One store for every fold: a port the host was built over cannot move.
   const resources = fileResources();
@@ -200,6 +217,7 @@ async function served(options: { register?: boolean } = {}) {
       ended.push(id);
       await host?.endSessionsOf(id);
     },
+    holderOf: (id) => holders.get(id),
     onProblem: (line) => { problems.push(line); },
   });
   wire = servedRecords('ahpd', [lists.channel], lists.methods);
@@ -553,5 +571,105 @@ it('answers a row with the config the kind describes, and refuses one it does no
   expect(await cy.call('x-ahpd/agents/put', {
     id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: {},
   })).toMatchObject({ code: -32602, message: 'agent mine.target is required' });
+  await close();
+});
+
+it('refuses an agent whose backend serves another id, and does not serve it', async () => {
+  const { host, users, collection, lists, problems, close } = await served();
+  const cy = await as(host, users, 'cy');
+
+  // A put says why, and nothing is written: the id is still free.
+  const answer = await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'misnamed', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  expect(answer).toMatchObject({ code: -32603, message: expect.stringContaining('not-the-id') });
+  expect(await collection.get('mine')).toBeUndefined();
+  expect(problems.some((line) => line.includes('mine') && line.includes('not-the-id'))).toBe(true);
+
+  // A record written by hand is said and left out of the list, and its row says why.
+  await collection.put({ id: 'odd', kind: 'misnamed', owner: 'user:cy', name: 'Odd', config: { target: 'a' } });
+  await lists.openAll();
+  expect(problems.some((line) => line.includes('odd') && line.includes('not-the-id'))).toBe(true);
+  expect(await cy.agents()).not.toContain('odd');
+  expect((await cy.rows())['odd']).toMatchObject({ state: 'invalid' });
+  await close();
+});
+
+it('opens a record again when the plugin that registered its kind is reloaded', async () => {
+  const { host, users, lists, kinds, opened, ended, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  expect(opened.filter((one) => one.kind === 'checker')).toHaveLength(1);
+
+  // A reload imports the module again: the same name, a new kind object.
+  kinds['checker'] = { ...kindOf('checker', opened, false), by: 'test' };
+  await lists.openAll();
+  expect(opened.filter((one) => one.kind === 'checker')).toHaveLength(2);
+  // The backend the old module built goes, and its sessions with it.
+  expect(ended).toContain('mine');
+  expect((await cy.rows())['mine']).toMatchObject({ state: 'ready' });
+  await close();
+});
+
+it('refuses an id the daemon or a plugin already serves, before writing the record', async () => {
+  const { host, users, collection, close } = await served();
+  const cy = await as(host, users, 'cy');
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'base', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  })).toMatchObject({ code: -32009, message: 'base is served by the daemon, and an agent id is unique' });
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'preset', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  })).toMatchObject({ code: -32009, message: 'preset is served by plugin agent-claude, and an agent id is unique' });
+  expect(await collection.get('base')).toBeUndefined();
+  expect(await collection.get('preset')).toBeUndefined();
+  await close();
+});
+
+it('keeps an open record and its agent when its secret cannot be read', async () => {
+  const { host, users, lists, opened, ended, problems, vault, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: 'sk-agent-1' },
+  });
+  const openedBefore = opened.length;
+
+  const reading = vault.get;
+  vault.get = async () => { throw new Error('the vault is unreachable'); };
+  try {
+    await lists.openAll();
+  } finally {
+    vault.get = reading;
+  }
+
+  expect(problems.some((line) => line.includes('mine') && line.includes('the vault is unreachable'))).toBe(true);
+  // A vault hiccup is not the record going: the backend and its sessions stay.
+  expect(ended).not.toContain('mine');
+  expect(opened).toHaveLength(openedBefore);
+  expect(await cy.agents()).toContain('mine');
+  expect((await cy.rows())['mine']).toMatchObject({ state: 'ready' });
+  await close();
+});
+
+it('runs the commands one at a time, so two owners cannot both take an id', async () => {
+  const { host, users, collection, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const di = await as(host, users, 'di');
+
+  const answers = await Promise.all([
+    cy.call('x-ahpd/agents/put', {
+      id: 'shared', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    }),
+    di.call('x-ahpd/agents/put', {
+      id: 'shared', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
+    }),
+  ]);
+
+  // One put made the record, and the other arrived to find it taken.
+  expect(answers.filter((one) => 'result' in one)).toHaveLength(1);
+  expect(answers.filter((one) => 'code' in one && one.code === -32009)).toHaveLength(1);
+  // The record the last answer left is the one owner's, not both.
+  expect(['user:cy', 'team:backend']).toContain((await collection.get('shared'))?.owner);
   await close();
 });

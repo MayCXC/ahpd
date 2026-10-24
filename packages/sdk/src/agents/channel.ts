@@ -28,9 +28,12 @@
  *
  * An edit keeps the agent and its sessions: the view `open` was handed is
  * updated in place, so a running session reads the new record at its next
- * turn. A record's id is unique across every owner, so a put never takes one
- * another owner holds. A record of a kind no plugin registers stays on disk
- * and is served as `unavailable`: a disabled plugin keeps its agents.
+ * turn. A record's id is unique across every owner, and it is also the agent's
+ * `provider`: a kind that opens a backend under another id is refused rather
+ * than served under a name no row has, and a put never takes an id the daemon
+ * or a plugin already serves. A record of a kind no plugin registers stays on
+ * disk and is served as `unavailable`: a disabled plugin keeps its agents. The
+ * commands run one at a time, so two puts of one id cannot both find it free.
  */
 
 import { INVALID_PARAMS, INTERNAL_ERROR, RpcError } from '../rpc.js';
@@ -98,6 +101,14 @@ export interface AgentsChannelOptions {
   refold(agents: Agent[]): Promise<ReadonlySet<string>>;
   /** End every session running on one agent, before its record is removed. */
   endSessionsOf(id: string): Promise<void>;
+  /**
+   * What already serves an agent id this store does not hold, if anything.
+   *
+   * Answers the daemon, or the plugin that brought the agent, so a put can
+   * refuse an id before writing a record the fold would then drop. Read only
+   * for a record the store does not already hold.
+   */
+  holderOf?(id: string): string | undefined;
   /** Where a record that could not be opened is said. */
   onProblem?(message: string): void;
 }
@@ -116,8 +127,12 @@ interface OpenView {
 
 /** One open agent: what built it, and the view a running session reads. */
 interface Opened {
-  /** The kind it was built by, so a record whose kind changed opens again. */
-  kind: string;
+  /**
+   * The kind object that built it, kept rather than its name: a plugin reload
+   * brings a new object for the same name, and a record left on the old one
+   * would keep a backend the unloaded module built.
+   */
+  kind: ServedAgentKind;
   /** The values `open` was handed, updated in place on an edit. */
   view: OpenView;
   /** The backend, which a session holds and reads at its next turn. */
@@ -230,12 +245,22 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     view.config = config;
   };
 
-  /** Build one record's backend, with each secret read back from the vault. */
+  /**
+   * Build one record's backend, with each secret read back from the vault.
+   *
+   * The agent is named by its record: the fold and the served set key on
+   * `provider`, while a client names a record by its id, so a backend under
+   * another id is refused here rather than served under an id no row has.
+   */
   const opened = async (record: StoredRecord, owner: AgentOwner, kind: ServedAgentKind): Promise<Opened> => {
     const config = await resolvedRecord(configOf(record), owner, options.vault(), AGENT_SECRETS);
     const view = blankView(record, owner);
     fill(view, record, owner, config);
-    return { kind: kind.name, view, agent: kind.open(view) };
+    const agent = kind.open(view);
+    if (agent.provider !== record.id) {
+      throw new Error(`${kind.name} opened ${record.id} as ${agent.provider}, and an agent is served by the id of its record`);
+    }
+    return { kind, view, agent };
   };
 
   /** The agent records the store holds, and the owner each names. */
@@ -273,13 +298,19 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
         continue;
       }
       const entry = open.get(record.id);
-      if (entry !== undefined && entry.kind === kind.name) {
+      // The kind object, not its name: a reload brings a new object, and the
+      // backend the old module built would otherwise serve on.
+      if (entry !== undefined && entry.kind === kind) {
         try {
           fill(entry.view, record, owner, await resolvedRecord(configOf(record), owner, options.vault(), AGENT_SECRETS));
         } catch (error) {
-          problem(`${record.id} could not be read: ${reason(error)}`);
-          open.delete(record.id);
-          continue;
+          /*
+           * The vault was unreadable, which says nothing about the record: the
+           * last good view and the backend a session holds are kept, and the
+           * record stays served. Ending its sessions over a vault hiccup would
+           * take a working agent away for a failure that may pass.
+           */
+          problem(`${record.id} could not be read, and its last good record is still served: ${reason(error)}`);
         }
         agents.push(entry.agent);
         live.add(record.id);
@@ -438,100 +469,140 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     }
   };
 
+  /**
+   * The commands run one at a time, in the order they arrived.
+   *
+   * A put reads whether an id is free before it writes, so two of them run
+   * together would both find it free and the second would take the first
+   * owner's record. A remove, a check and `openAll` rewrite or read the same
+   * open list, so they queue behind a put rather than beside it.
+   */
+  let queue: Promise<unknown> = Promise.resolve();
+  const inTurn = <T>(work: () => Promise<T>): Promise<T> => {
+    const next = queue.then(work, work);
+    // The chain moves even when this turn failed, or one refusal would stop
+    // every command after it.
+    queue = next.then(() => undefined, () => undefined);
+    return next;
+  };
+
   const put: PluginMethod = {
     grant: 'agent:put' as Grant,
     describe: () => ({ title: 'Make an agent', description: 'Makes or changes one agent record, and serves it.' }),
     authorize: async (params, reader) => ownerAllows('agent', asOwner(params.owner), reader, 'put'),
-    handle: async (params, reader) => {
-      const id = idParam(PUT, params);
-      const kindName = params.kind;
-      if (typeof kindName !== 'string' || kindName === '') {
-        throw new RpcError(INVALID_PARAMS, `${PUT} needs kind, the name of an agent kind`);
+    handle: (params, reader) => inTurn(() => putOne(params, reader)),
+  };
+
+  /**
+   * Make or change one record, once its turn comes.
+   *
+   * A new record is opened before it is written: a kind that cannot make a
+   * backend of it, or makes one under another id, leaves the store and the
+   * vault as they were and the answer says why. An edit is left to `sync`,
+   * which updates the view `open` was already handed and keeps the backend its
+   * sessions hold.
+   */
+  const putOne = async (params: Record<string, unknown>, reader: Principal | undefined): Promise<unknown> => {
+    const id = idParam(PUT, params);
+    const kindName = params.kind;
+    if (typeof kindName !== 'string' || kindName === '') {
+      throw new RpcError(INVALID_PARAMS, `${PUT} needs kind, the name of an agent kind`);
+    }
+    const kind = options.kinds()[kindName];
+    if (kind === undefined) {
+      throw new RpcError(INVALID_PARAMS, `${kindName} is not an agent kind this host serves`);
+    }
+    const owner = asOwner(params.owner);
+    if (owner === undefined) {
+      throw new RpcError(INVALID_PARAMS, `${PUT} needs owner, one of host, team:<team> or user:<id>`);
+    }
+    refuseOwner('agent', 'make', owner, reader, 'put');
+    const config = params.config ?? {};
+    if (!isRecord(config)) {
+      throw new RpcError(INVALID_PARAMS, "An agent's config is a JSON object, and that is not one");
+    }
+    const name = nameParam(params, PUT);
+    const description = optionalString(params, 'description', PUT);
+    const model = optionalString(params, 'model', PUT);
+    const icon = iconParam(params, PUT);
+    const before = await options.collection.get(id);
+    const was = before === undefined ? undefined : asOwner(before.owner);
+    /*
+     * An id is unique across every agent, not only across the records: the
+     * daemon's own backends and the plugins' keep theirs, and a record under
+     * one of those ids would be folded away while its row stayed here. A new
+     * record is refused before anything is written.
+     */
+    if (before === undefined) {
+      const holder = options.holderOf?.(id);
+      if (holder !== undefined) {
+        throw new RpcError(DENIED, `${id} is served by ${holder}, and an agent id is unique`);
       }
-      const kind = options.kinds()[kindName];
-      if (kind === undefined) {
-        throw new RpcError(INVALID_PARAMS, `${kindName} is not an agent kind this host serves`);
-      }
-      const owner = asOwner(params.owner);
-      if (owner === undefined) {
-        throw new RpcError(INVALID_PARAMS, `${PUT} needs owner, one of host, team:<team> or user:<id>`);
-      }
-      refuseOwner('agent', 'make', owner, reader, 'put');
-      const config = params.config ?? {};
-      if (!isRecord(config)) {
-        throw new RpcError(INVALID_PARAMS, "An agent's config is a JSON object, and that is not one");
-      }
-      const name = nameParam(params, PUT);
-      const description = optionalString(params, 'description', PUT);
-      const model = optionalString(params, 'model', PUT);
-      const icon = iconParam(params, PUT);
-      const before = await options.collection.get(id);
-      const was = before === undefined ? undefined : asOwner(before.owner);
-      /*
-       * An id is unique across every owner, because a client names an agent by
-       * it alone: a put never takes one another record holds, and a record
-       * written by hand is no exception. Removing that owner's record is the
-       * only way to use the id.
-       */
-      if (before !== undefined && was !== owner) {
-        const held = was === undefined ? 'a record written by hand' : `${was}'s`;
-        throw new RpcError(DENIED, `${id} is ${held}, and an agent id is unique`);
-      }
-      refuseHostOnly(config, owner, kind);
-      refuseEnv(config, owner, kind);
-      // Nothing of another owner's is kept; only the same record's own secrets are.
-      const kept = before !== undefined && was === owner ? configOf(before) : {};
-      const fields = secretFields(kind);
+    }
+    /*
+     * An id is unique across every owner, because a client names an agent by
+     * it alone: a put never takes one another record holds, and a record
+     * written by hand is no exception. Removing that owner's record is the
+     * only way to use the id.
+     */
+    if (before !== undefined && was !== owner) {
+      const held = was === undefined ? 'a record written by hand' : `${was}'s`;
+      throw new RpcError(DENIED, `${id} is ${held}, and an agent id is unique`);
+    }
+    refuseHostOnly(config, owner, kind);
+    refuseEnv(config, owner, kind);
+    // Nothing of another owner's is kept; only the same record's own secrets are.
+    const kept = before !== undefined && was === owner ? configOf(before) : {};
+    const fields = secretFields(kind);
+    try {
+      options.check(checkedConfig(config, AGENT_SECRETS, fields, kept), kind.schema, `agent ${id}`);
+    } catch (error) {
+      throw new RpcError(INVALID_PARAMS, reason(error));
+    }
+    const moved = await moveRecordSecrets({
+      rules: AGENT_SECRETS,
+      fields,
+      config,
+      held: kept,
+      owner,
+      id,
+      vault: options.vault(),
+      problem,
+    });
+    const record: StoredRecord = {
+      id,
+      kind: kindName,
+      owner,
+      name,
+      ...(description === undefined ? {} : { description }),
+      ...(icon === undefined ? {} : { icon }),
+      ...(model === undefined ? {} : { model }),
+      config: moved,
+    };
+    let built: Opened | undefined;
+    if (before === undefined) {
       try {
-        options.check(checkedConfig(config, AGENT_SECRETS, fields, kept), kind.schema, `agent ${id}`);
+        built = await opened(record, owner, kind);
       } catch (error) {
-        throw new RpcError(INVALID_PARAMS, reason(error));
+        // The record was not written, so the secrets moved for it go back out:
+        // a vault entry no record names would outlive the refusal.
+        await forgetRecordSecrets(moved, owner, id, AGENT_SECRETS, options.vault(), problem);
+        const why = reason(error);
+        problem(`${id} was not stored: ${why}`);
+        throw new RpcError(INTERNAL_ERROR, `${id} was not stored: ${why}`);
       }
-      const moved = await moveRecordSecrets({
-        rules: AGENT_SECRETS,
-        fields,
-        config,
-        held: kept,
-        owner,
-        id,
-        vault: options.vault(),
-        problem,
-      });
-      const record: StoredRecord = {
-        id,
-        kind: kindName,
-        owner,
-        name,
-        ...(description === undefined ? {} : { description }),
-        ...(icon === undefined ? {} : { icon }),
-        ...(model === undefined ? {} : { model }),
-        config: moved,
-      };
-      await options.collection.put(record);
-      owners.set(id, owner);
-      /*
-       * A record made now is opened before the fold takes it, so a put answers
-       * whether the kind could make a backend of it. An edit is left to `sync`,
-       * which updates the view `open` was already handed and keeps the backend
-       * its sessions hold.
-       */
-      if (before === undefined) {
-        try {
-          open.set(id, await opened(record, owner, kind));
-        } catch (error) {
-          await channel.refresh();
-          throw new RpcError(INTERNAL_ERROR, `${id} is stored, but ${kindName} could not open it: ${reason(error)}`);
-        }
-      }
-      try {
-        await take(await sync());
-      } catch (error) {
-        await channel.refresh();
-        throw new RpcError(INTERNAL_ERROR, `${id} is stored, but the host did not take it: ${reason(error)}`);
-      }
+    }
+    await options.collection.put(record);
+    owners.set(id, owner);
+    if (built !== undefined) open.set(id, built);
+    try {
+      await take(await sync());
+    } catch (error) {
       await channel.refresh();
-      return row(record);
-    },
+      throw new RpcError(INTERNAL_ERROR, `${id} is stored, but the host did not take it: ${reason(error)}`);
+    }
+    await channel.refresh();
+    return row(record);
   };
 
   const remove: PluginMethod = {
@@ -543,7 +614,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       const before = await options.collection.get(id);
       return before !== undefined && ownerAllows('agent', asOwner(before.owner), reader, 'remove');
     },
-    handle: async (params, reader) => {
+    handle: (params, reader) => inTurn(async () => {
       const id = idParam(REMOVE, params);
       const before = await options.collection.get(id);
       if (before === undefined) throw new RpcError(INVALID_PARAMS, `${SCHEME} holds no ${id}`);
@@ -573,7 +644,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       }
       await channel.refresh();
       return {};
-    },
+    }),
   };
 
   /** One probe, or `unreachable` when it takes more than the limit to answer. */
@@ -604,7 +675,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       const before = await options.collection.get(id);
       return before !== undefined && ownerAllows('agent', asOwner(before.owner), reader, 'put');
     },
-    handle: async (params, reader) => {
+    handle: (params, reader) => inTurn(async () => {
       const id = idParam(CHECK, params);
       const before = await options.collection.get(id);
       if (before === undefined) throw new RpcError(INVALID_PARAMS, `${SCHEME} holds no ${id}`);
@@ -630,7 +701,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       healths.set(id, health);
       await channel.refresh();
       return row(before);
-    },
+    }),
   };
 
   const methods: Record<string, PluginMethod> = { [PUT]: put, [REMOVE]: remove, [CHECK]: check };
@@ -638,8 +709,8 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   return {
     channel,
     methods,
-    agents: () => sync(),
-    openAll: async () => {
+    agents: () => inTurn(() => sync()),
+    openAll: () => inTurn(async () => {
       /*
        * A start does not wait for a record it cannot serve: the host serves
        * what opened, and the record stays on disk with the failure said.
@@ -650,7 +721,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
         problem(`the agent records could not be served: ${reason(error)}`);
       }
       await channel.refresh();
-    },
+    }),
     refresh: () => channel.refresh(),
   };
 }
