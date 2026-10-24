@@ -1,6 +1,6 @@
 ---
 title: A plugin starts a chat on a backend
-status: implemented
+status: done
 depends:
   - task-01-a-chat-keeps-the-backend-that-serves-it.md
   - task-02-every-start-uses-the-chats-own-backend.md

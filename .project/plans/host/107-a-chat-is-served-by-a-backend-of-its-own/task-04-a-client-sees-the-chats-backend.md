@@ -1,6 +1,6 @@
 ---
 title: A client sees the chat's backend
-status: implemented
+status: done
 depends:
   - task-03-a-plugin-starts-a-chat-on-a-backend.md
 layer: "sdk"

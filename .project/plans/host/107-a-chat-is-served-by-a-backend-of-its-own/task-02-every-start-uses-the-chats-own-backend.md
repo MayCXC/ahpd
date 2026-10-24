@@ -1,6 +1,6 @@
 ---
 title: Every start uses the chat's own backend
-status: implemented
+status: done
 depends:
   - task-01-a-chat-keeps-the-backend-that-serves-it.md
 layer: "sdk"

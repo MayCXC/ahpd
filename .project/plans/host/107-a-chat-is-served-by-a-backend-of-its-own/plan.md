@@ -1,7 +1,7 @@
 ---
 title: A chat is served by a backend of its own
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-18
 revalidated: 2026-10-23
@@ -99,10 +99,10 @@ client -> ChatState._meta['ahpd.provider']; the session keeps its own provider
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A chat keeps the backend that serves it](task-01-a-chat-keeps-the-backend-that-serves-it.md) | implemented | - |
-| [02 - Every start uses the chat's own backend](task-02-every-start-uses-the-chats-own-backend.md) | implemented | 01 |
-| [03 - A plugin starts a chat on a backend](task-03-a-plugin-starts-a-chat-on-a-backend.md) | implemented | 01, 02 |
-| [04 - A client sees the chat's backend](task-04-a-client-sees-the-chats-backend.md) | implemented | 03 |
+| [01 - A chat keeps the backend that serves it](task-01-a-chat-keeps-the-backend-that-serves-it.md) | done | - |
+| [02 - Every start uses the chat's own backend](task-02-every-start-uses-the-chats-own-backend.md) | done | 01 |
+| [03 - A plugin starts a chat on a backend](task-03-a-plugin-starts-a-chat-on-a-backend.md) | done | 01, 02 |
+| [04 - A client sees the chat's backend](task-04-a-client-sees-the-chats-backend.md) | done | 03 |
 
 ## Risks and tradeoffs
 
@@ -112,8 +112,8 @@ client -> ChatState._meta['ahpd.provider']; the session keeps its own provider
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-18; tasks written 2026-10-23 from a code map of every spawn site.
-- **Next action:** task 01.
+- **Done so far:** built and merged in #71 on 2026-10-23; closed 2026-10-24.
+- **Next action:** none. The plan is built.
 - **Open questions:** none.
 - **Watch out for:** `keepChat` builds the row field by field, so a new field is lost unless it is copied from the old row.
   `deletedChat` and `tokensFor` take the session's agent today.
