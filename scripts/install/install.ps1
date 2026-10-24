@@ -86,7 +86,7 @@ function Get-NodeVersion {
   return ("$text" -replace '^v', '').Trim()
 }
 
-# Node 22.1 is the floor of `engines.node` in packages/server/package.json.
+# Node 22.18 is the floor of `engines.node` in packages/server/package.json.
 function Test-NodeFits([string]$Value) {
   if (-not $Value) { return $false }
   $parts = $Value.Split('.')
@@ -94,7 +94,7 @@ function Test-NodeFits([string]$Value) {
   $minor = 0
   if (-not [int]::TryParse($parts[0], [ref]$major)) { return $false }
   if ($parts.Length -gt 1) { [void][int]::TryParse($parts[1], [ref]$minor) }
-  return ($major -gt 22) -or (($major -eq 22) -and ($minor -ge 1))
+  return ($major -gt 22) -or (($major -eq 22) -and ($minor -ge 18))
 }
 
 # One runtime line, in the words `ahpd configure` uses: what is there, the
@@ -122,7 +122,7 @@ function Write-RuntimeLine([string]$Name, [string]$Program) {
     if (Test-NodeFits ($line -replace '^v', '')) {
       Write-Host "Node $line (runs ahpd)"
     } else {
-      Write-Host "Node $line (ahpd does not run on it; it needs Node 22.1 or newer)"
+      Write-Host "Node $line (ahpd does not run on it; it needs Node 22.18 or newer)"
     }
   } elseif ($Program -eq 'deno') {
     Write-Host "Deno $line (runs ahpd; each plugin it loads needs an npm: spec)"
@@ -193,16 +193,16 @@ function Install-Node {
 function Resolve-Node {
   $value = Get-NodeVersion
   if (Test-NodeFits $value) { return }
-  $hint = 'Node 22.1 or later is required. Install it with: winget install OpenJS.NodeJS.LTS'
+  $hint = 'Node 22.18 or later is required. Install it with: winget install OpenJS.NodeJS.LTS'
   if (-not (Test-Interactive)) { throw $hint }
-  if (-not (Confirm-Action 'Node 22.1 or later is needed. Install it with winget now?')) {
+  if (-not (Confirm-Action 'Node 22.18 or later is needed. Install it with winget now?')) {
     throw $hint
   }
   Write-Say 'Installing Node with winget.'
   Install-Node
   $value = Get-NodeVersion
   if (-not (Test-NodeFits $value)) {
-    throw 'Node 22.1 or later is still not on the PATH. Open a new window and run this again.'
+    throw 'Node 22.18 or later is still not on the PATH. Open a new window and run this again.'
   }
 }
 
@@ -412,7 +412,7 @@ function Invoke-AhpdUninstall {
     $folder = Resolve-Bun
   } else {
     if (-not (Get-NpmVersion)) {
-      throw 'npm was not found. Install Node 22.1 or later, then run this again.'
+      throw 'npm was not found. Install Node 22.18 or later, then run this again.'
     }
     $folder = Get-NpmBin
   }

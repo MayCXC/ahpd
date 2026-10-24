@@ -9,14 +9,16 @@
  *
  * A change writes the same file the command line writes, through the same writer
  * and the same one-at-a-time turn, so a person at a terminal and a client are
- * never two writers reading the file and then writing it back. A daemon loads a
- * change at its next start, so every answer says `restart`.
+ * never two writers reading the file and then writing it back. A change that
+ * writes also applies: the daemon loads, unloads or reapplies what the file now
+ * says, and only a plugin with a port or a URI scheme answers `restart`.
  */
 
 import { check } from '@cofold/commands';
 import type { JsonSchema } from '@cofold/commands';
 import { recordsChannel, RpcError, scopeOf, secretRef } from '@ahpd/sdk';
 import type { Grant, Loaded, PluginMethod, PluginSpec, RecordsChannel, RecordsSource } from '@ahpd/sdk';
+import type { Applied } from './applyplugins.js';
 import { maskOption, SET, withoutSpecSecrets, withoutUserinfoIn } from './commands/config.js';
 import { oneAtATime, setPluginEnabled, setPluginOption, specsIn } from './install.js';
 import { describePlugin, nameOf, optionsSchemaLoaded, optionsSchemaOf, pluginIdOf, schemaOf } from './plugins.js';
@@ -93,6 +95,23 @@ export interface PluginsChannelOptions {
    */
   failures(): Record<string, string>;
   /**
+   * Load, unload or reconfigure what the file now says, in the daemon behind
+   * this channel.
+   *
+   * Called after a command writes and inside the same turn, so what it applies
+   * is exactly what the file now holds and no second writer can get between
+   * the two. It answers whether the change needed a restart, and it sends the
+   * rows, adapters and connectors it changed itself.
+   *
+   * Absent when a channel is built with no daemon behind it: a write then
+   * refreshes the rows and answers `restart: true`, as every write did before
+   * a change could apply while the daemon ran.
+   *
+   * A reload names the plugins to import again. Their entries did not change,
+   * so the apply reads them here instead of finding them by comparing specs.
+   */
+  apply?(reload?: string[]): Promise<Applied>;
+  /**
    * Mark that the running host is behind the file a command just wrote.
    *
    * Called after a command writes, and never when it is refused: a refusal
@@ -103,11 +122,11 @@ export interface PluginsChannelOptions {
   onProblem?(message: string): void;
 }
 
-/** The plugin channel and its three commands, as the daemon hands them to `servedRecords`. */
+/** The plugin channel and its five commands, as the daemon hands them to `servedRecords`. */
 export interface PluginsChannel {
   /** `x-ahpd-plugins`. */
   channel: RecordsChannel;
-  /** `x-ahpd/plugins/enable`, `disable` and `options`, by name. */
+  /** `x-ahpd/plugins/enable`, `disable`, `options`, `apply` and `reload`, by name. */
   methods: Record<string, PluginMethod>;
   /** Refresh the channel. */
   refresh(): Promise<void>;
@@ -234,19 +253,34 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     return id;
   };
 
-  /** One turn at the configuration file, which every command here shares with the command line. */
-  const changed = async (work: () => Promise<Record<string, unknown>>): Promise<Record<string, unknown>> => oneAtATime(async () => {
+  /**
+   * One turn at the configuration file and the daemon that serves it.
+   *
+   * The write and the load are one turn, so a second command cannot write
+   * between them and a plugin is never applied over a file that moved under
+   * it. With no daemon behind this channel, the write refreshes the rows here
+   * and answers the restart every write used to mean.
+   *
+   * `reload` names the plugins the apply must import again, and is passed on
+   * as given; every other change finds what moved by comparing the file.
+   */
+  const changed = async (work: () => Promise<Record<string, unknown>>, reload?: string[]): Promise<Record<string, unknown>> => oneAtATime(async () => {
     const answer = await work();
-    // Every row this wrote is sent to every reader that holds one.
-    await channel.refresh();
-    return answer;
+    if (options.apply === undefined) {
+      await channel.refresh();
+      options.restartNeeded();
+      return { ...answer, restart: true };
+    }
+    const applied = await options.apply(reload);
+    if (applied.restart) options.restartNeeded();
+    return { ...answer, restart: applied.restart };
   });
 
   const toggle = (enabled: boolean): PluginMethod => ({
     grant: `plugin:${enabled ? 'enable' : 'disable'}` as Grant,
     describe: () => ({
       title: `${enabled ? 'Enable' : 'Disable'} a plugin`,
-      description: `Turns a configured plugin ${enabled ? 'on' : 'off'}, keeping its entry and its options. The daemon loads the change at its next start.`,
+      description: `Turns a configured plugin ${enabled ? 'on' : 'off'}, keeping its entry and its options. The daemon loads or unloads it at once, unless it holds a port or a URI scheme.`,
     }),
     handle: (params) => changed(async () => {
       const id = idParam(`${DOMAIN}/${enabled ? 'enable' : 'disable'}`, params);
@@ -256,12 +290,10 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
       catch (error) {
         throw new RpcError(INVALID_PARAMS, reason(error));
       }
-      // The file moved and the daemon that serves this channel did not.
-      options.restartNeeded();
       /*
-       * A change is loaded by the next start, and this channel is only served
-       * by a daemon that is running now, so the command line's served answer
-       * and this one say the same thing.
+       * The daemon loads or unloads it before this answers, and `changed` fills
+       * in whether that needed a restart, so a plugin with a port is the only
+       * one a client is told to restart for.
        */
       return { id, enabled, restart: true };
     }),
@@ -271,7 +303,7 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     grant: 'plugin:options' as Grant,
     describe: () => ({
       title: "Write one of a plugin's options",
-      description: 'Takes `id`, `key` and a `value` checked against the plugin\'s own schema, and writes it as `ahpd plugin config set` does. A `value` left out takes the option out, as `unset` does.',
+      description: 'Takes `id`, `key` and a `value` checked against the plugin\'s own schema, and writes it as `ahpd plugin config set` does. The daemon applies it at once, unless the plugin holds a port or a URI scheme. A `value` left out takes the option out, as `unset` does.',
     }),
     handle: (params) => changed(async () => {
       const name = `${DOMAIN}/options`;
@@ -317,8 +349,8 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
       catch (error) {
         throw new RpcError(INVALID_PARAMS, reason(error));
       }
-      // Nothing written is nothing a restart would apply.
-      if (written) options.restartNeeded();
+      // Nothing written is nothing for the daemon to apply; `changed` sends the
+      // rows either way and answers what the apply said.
       /*
        * `<set>` for a value the schema marks, as every answer about an option
        * says: a write is not the place a secret is handed back.
@@ -333,12 +365,54 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     }),
   };
 
+  /**
+   * Load what the file now names, without writing anything to it.
+   *
+   * This is the method the command line asks for after it writes the file
+   * itself - `plugin install`, `remove` and `update` run npm or a filesystem
+   * change and write the entry, then ask the daemon that serves this channel to
+   * load what it wrote. A client that edits the file over root config or over
+   * `enable` and `disable` does not need it: those apply as they write.
+   */
+  const applyMethod: PluginMethod = {
+    grant: 'plugin:apply' as Grant,
+    describe: () => ({
+      title: 'Load what the configuration file now names',
+      description: 'Loads, unloads or reconfigures the plugins to match the file, and answers `restart: true` only when a plugin with a port or a URI scheme is in the way.',
+    }),
+    handle: () => changed(async () => ({})),
+  };
+
+  /**
+   * Import a plugin again, because the code it points at moved.
+   *
+   * Nothing in the file says so: the entry and its options are as they were,
+   * and only the module behind them changed. The apply does the unload and the
+   * load; this method is the way to say which plugin, since comparing specs
+   * would find nothing to do. A plugin with a port or a URI scheme cannot be
+   * swapped, and answers `restart: true` as the other changes do.
+   */
+  const reloadMethod: PluginMethod = {
+    grant: 'plugin:reload' as Grant,
+    describe: () => ({
+      title: 'Import a plugin again',
+      description: 'Takes `id`, the plugin whose code changed, and loads it from its module as it is now. Its closers run first, so what it opened is closed before the new code applies. A plugin with a port or a URI scheme answers `restart: true`.',
+    }),
+    handle: (params) => {
+      const name = `${DOMAIN}/reload`;
+      const id = idParam(name, params);
+      return changed(async () => ({ id }), [id]);
+    },
+  };
+
   return {
     channel,
     methods: {
       [`${DOMAIN}/enable`]: toggle(true),
       [`${DOMAIN}/disable`]: toggle(false),
       [`${DOMAIN}/options`]: optionsMethod,
+      [`${DOMAIN}/apply`]: applyMethod,
+      [`${DOMAIN}/reload`]: reloadMethod,
     },
     refresh: channel.refresh,
   };

@@ -78,6 +78,20 @@ export interface ServedFacts {
    */
   automations?(): AutomationStore | undefined;
   /**
+   * Load, unload or reconfigure the plugins the configuration file now names,
+   * and answer whether this daemon must restart for the change to take.
+   *
+   * Called by a command that wrote the file itself - an install, a remove, an
+   * update, a plugin option, an enable or a disable - inside the turn that
+   * wrote it, so what is applied is exactly what the file now holds. A daemon
+   * that has not loaded its plugins yet, or one built without a live apply,
+   * has none, and its commands answer `restart: true` as they always did.
+   *
+   * `reload` names the plugins to import again, for a change the file cannot
+   * show: the code a plugin points at moved and its entry did not.
+   */
+  apply?(reload?: string[]): Promise<{ restart: boolean; changed: boolean }>;
+  /**
    * Read that line over the configuration as it is now, then stop this daemon
    * once the answer has gone and start it again with it. Throws, or rejects,
    * with why the line cannot run or, unless forced, which turns are running,

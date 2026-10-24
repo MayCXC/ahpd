@@ -828,11 +828,15 @@ describe('a request signs in', () => {
 
   // On Windows the daemon runs the npm beside its own Node, never one off the
   // `PATH`, so the stand-in npm this case puts there is not the one that runs.
-  it.skipIf(!posix)('tells a served install to restart the daemon that answered', async () => {
+  it.skipIf(!posix)('applies a served install at once, with no restart', async () => {
     const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret'], fakeNpm());
     const answered = await post(`http://127.0.0.1:${String(one.port)}/api/plugin/install`, 'root-secret', { name: ['left-pad'] });
     expect(answered.status).toBe(200);
-    expect((await answered.json() as { restart?: boolean }).restart).toBe(true);
+    // The daemon loaded what the file now names before it answered, so the
+    // change is not one a restart would make.
+    expect((await answered.json() as { restart?: boolean }).restart).toBeUndefined();
+    const plugins = (JSON.parse(readFileSync(config, 'utf8')) as { plugins: unknown[] }).plugins;
+    expect(plugins).toContain('left-pad');
   }, 30000);
 
   it('hides the connection token from a served config', async () => {

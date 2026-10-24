@@ -153,6 +153,21 @@ function heldPrincipal(who: Principal): Principal {
   return Object.freeze(who);
 }
 
+/**
+ * The options a plugin sets as a port, which a live fold may not move.
+ *
+ * `PortKey` in `types/plugin.ts` is the contract and the fold's own runtime
+ * list is private to it, so the same names are written here for `replace` to
+ * read. A store is one the host was built over and every area reads and writes
+ * through; a fold that brings a different one is a host rebuilt at its next
+ * start.
+ */
+const PORTS = [
+  'resources', 'terminals', 'changes', 'directories', 'worktrees',
+  'github', 'automations', 'sessions', 'diagnostics', 'computers', 'containers', 'usage', 'policies', 'vault', 'records',
+  'commandParser',
+] as const satisfies readonly (keyof HostOptions)[];
+
 export function createHost(options: HostOptions): Host {
   const dir = options.path;
   /**
@@ -169,20 +184,36 @@ export function createHost(options: HostOptions): Host {
    */
   const claims = new Map<string, Claimed>();
   /**
+   * Why a list of agents cannot be served, or nothing.
+   *
+   * The two rules `createHost` throws on, in the form `replace` answers with:
+   * a name that belongs to the host's own plumbing, and two agents answering
+   * to one id. Asked of a whole list rather than one agent at a time, because
+   * a clash is between two entries.
+   */
+  const agentsProblem = (list: readonly Agent[]): string | undefined => {
+    const seen = new Set<string>();
+    for (const agent of list) {
+      const reserved = reservedName(agent.provider);
+      if (reserved !== undefined) return `An agent may not call itself ${agent.provider}: ${reserved}`;
+      if (seen.has(agent.provider)) return `Two agents both call themselves ${agent.provider}`;
+      seen.add(agent.provider);
+    }
+    return undefined;
+  };
+  /**
    * The backends this host serves, by the id clients name.
    *
    * A host with two answers `createSession` for either and lists both
    * catalogues as one. Nothing below here knows what any of them are.
+   *
+   * Changed in place rather than replaced, because `createRoot` holds this map
+   * and an agent list rebuilt as a new map would leave it listing the old one.
    */
   const agents = new Map<string, Agent>();
-  for (const agent of options.agents) {
-    const reserved = reservedName(agent.provider);
-    if (reserved !== undefined) throw new Error(`An agent may not call itself ${agent.provider}: ${reserved}`);
-    if (agents.has(agent.provider)) {
-      throw new Error(`Two agents both call themselves ${agent.provider}`);
-    }
-    agents.set(agent.provider, agent);
-  }
+  const problem = agentsProblem(options.agents);
+  if (problem !== undefined) throw new Error(problem);
+  for (const agent of options.agents) agents.set(agent.provider, agent);
   /**
    * Every directory any backend catalogues, plus the host's own.
    *
@@ -1154,9 +1185,16 @@ export function createHost(options: HostOptions): Host {
 
   options.automations?.onChanged?.(changed);
 
-  for (const agent of agents.values()) {
+  /**
+   * Ask one backend what it offers, and tell the root when the answer lands.
+   *
+   * Fire and forget, at the start and again for a backend a live fold brought:
+   * nothing waits for it, and until it answers the models are empty - which is
+   * the same real answer this host gives for a harness nobody has signed into.
+   */
+  const probeAgent = (agent: Agent): void => {
     if (!agent.probe)
-      continue;
+      return;
     void agent.probe().then((offered) => {
       const held = about(agent.provider);
       held.commands = offered.commands;
@@ -1181,7 +1219,9 @@ export function createHost(options: HostOptions): Host {
       log(`${agent.provider}: ${held.models.length} model(s), ${held.commands.length} command(s), ${held.seeds.length} customization(s)`);
       dispatch(ROOT, { type: 'root/agentsChanged', agents: descriptors() });
     }).catch(() => { });
-  }
+  };
+
+  for (const agent of agents.values()) probeAgent(agent);
   /**
    * Start one chat, and the session holding it if there is not one yet.
    *
@@ -1207,30 +1247,93 @@ export function createHost(options: HostOptions): Host {
    * A publish is emitted rather than dispatched: it is the plugin's own
    * state, so it is no delta to merge and carries no client's origin, even
    * when the plugin publishes from inside a client's command.
+   *
+   * Called again by `replace`, because a channel a live fold brings is an
+   * entry nobody has set these on yet, and the plugin's handle is handed out
+   * with them already there.
    */
-  for (const served of Object.values(options.channels ?? {})) {
-    served.publish = (uri, action, audience) => {
-      emit(uri, structuredClone(action), undefined, audience.visible === undefined && audience.to === undefined ? undefined : audience);
-    };
-    served.subscribers = (uri) => {
-      // One entry per client id and person: people sharing a client id are each listed.
-      const seen = new Map<string, ChannelSubscriber>();
-      for (const connection of connections) {
-        if (!connection.watching.has(uri)) continue;
-        const key = JSON.stringify([connection.clientId, connection.principal === undefined ? '' : ownerOfPrincipal(connection.principal)]);
-        if (!seen.has(key)) seen.set(key, { client: connection.clientId, reader: connection.principal });
-      }
-      return [...seen.values()];
-    };
-  }
+  const wireChannels = (): void => {
+    for (const served of Object.values(options.channels ?? {})) {
+      served.publish = (uri, action, audience) => {
+        emit(uri, structuredClone(action), undefined, audience.visible === undefined && audience.to === undefined ? undefined : audience);
+      };
+      served.subscribers = (uri) => {
+        // One entry per client id and person: people sharing a client id are each listed.
+        const seen = new Map<string, ChannelSubscriber>();
+        for (const connection of connections) {
+          if (!connection.watching.has(uri)) continue;
+          const key = JSON.stringify([connection.clientId, connection.principal === undefined ? '' : ownerOfPrincipal(connection.principal)]);
+          if (!seen.has(key)) seen.set(key, { client: connection.clientId, reader: connection.principal });
+        }
+        return [...seen.values()];
+      };
+    }
+  };
+  wireChannels();
+
+  /*
+   * Every other function this host sets on a plugin's own entry: a trigger's
+   * `deliver` and `run`, a start's `start`, `startChat` and `opens`, a session
+   * key's `changed`, and a plan's `changed`.
+   *
+   * Each of those was set once, as the entry was built, which is enough for a
+   * host that never changed. A live fold brings entries nobody has set them on,
+   * and a plugin enabled while the daemon runs fires, starts and announces
+   * through them from the moment its `apply` returns - so they are set here,
+   * beside `wireChannels`, and again by `replace`.
+   */
+  const wirePlugins = (): void => {
+    ctx.wireTriggerTypes();
+    ctx.wirePluginStarts();
+    ctx.wireSessionMeta();
+    ctx.wirePlan();
+  };
+  wirePlugins();
 
   /*
    * The users directory, watched only while a plugin listens for its change:
    * a host nobody asks keeps no watch on the folder open.
+   *
+   * Whether a plugin listens for it is what a live fold can change, so the
+   * condition is asked again by `replace` rather than read once here.
    */
-  const usersWatch = (options.events?.users_changed?.length ?? 0) > 0
+  const listeningForUsers = (): boolean => (options.events?.users_changed?.length ?? 0) > 0;
+  const openUsersWatch = (): { close(): void } | undefined => listeningForUsers()
     ? options.users?.watch?.(() => { void fire({ type: 'users_changed' }); })
     : undefined;
+  let usersWatch = openUsersWatch();
+
+  /** Whether a session still runs on one backend, by the id it was served under. */
+  const runningOn = (provider: string): boolean => {
+    for (const held of sessions.values()) {
+      if (held.agent.provider === provider) return true;
+      for (const backend of held.backends.values()) if (backend.agent.provider === provider) return true;
+    }
+    return false;
+  };
+
+  /**
+   * Why a fold cannot be taken live, or nothing.
+   *
+   * A store the host was built over is one every area reads and writes
+   * through, and a scheme names URIs a client has already been handed, so a
+   * fold that brings or moves either is a host rebuilt at its next start
+   * rather than swapped under the sessions using it.
+   */
+  const portMoved = (folded: HostOptions): string | undefined => {
+    const before = options as unknown as Record<string, unknown>;
+    const after = folded as unknown as Record<string, unknown>;
+    for (const key of PORTS) {
+      if (before[key] !== after[key]) return `${key} is a port the host was built over; restart the daemon to load the change.`;
+    }
+    const was = options.resourceProviders ?? {};
+    const is = folded.resourceProviders ?? {};
+    const schemes = [...new Set([...Object.keys(was), ...Object.keys(is)])]
+      .filter((scheme) => (was as Record<string, unknown>)[scheme] !== (is as Record<string, unknown>)[scheme]);
+    if (schemes.length > 0)
+      return `The change moves the resource scheme ${schemes.join(', ')}; restart the daemon to load it.`;
+    return undefined;
+  };
 
   return {
     clients,
@@ -1250,6 +1353,85 @@ export function createHost(options: HostOptions): Host {
       ctx.contributing = permitted([...ctx.contributed, ...ctx.actionTools]);
       for (const uri of sessions.keys())
         dispatch(uri, { type: 'session/serverToolsChanged', tools: toolDefinitions(uri) });
+    },
+    replace: (folded) => {
+      /*
+       * A port or a scheme the host was built over is not swapable while
+       * sessions use it: a store is one the host reads and writes through, and
+       * a scheme names URIs a client has already been handed. A fold that moves
+       * either is refused whole, and the host keeps the options it has.
+       */
+      const moved = portMoved(folded);
+      if (moved !== undefined) return moved;
+      if (folded.agents.length === 0) return 'A host with no agents can serve nothing. Pass at least one.';
+      const clash = agentsProblem(folded.agents);
+      if (clash !== undefined) return clash;
+      /*
+       * The map is changed in place, because `createRoot` holds this one and an
+       * agent list rebuilt as a new map would leave it listing the old one.
+       *
+       * An agent the fold dropped but that still has an open session is kept:
+       * a session running on nothing can neither turn nor be disposed of. It is
+       * the caller's to end those first - `endSessionsOf` is what does it - and
+       * a fold that comes back once they have ends with the agent gone.
+       */
+      const next = new Map<string, Agent>();
+      for (const agent of folded.agents) next.set(agent.provider, agent);
+      for (const [provider, agent] of agents) {
+        if (!next.has(provider) && runningOn(provider)) next.set(provider, agent);
+      }
+      const fresh = [...next.keys()].filter((provider) => !agents.has(provider));
+      agents.clear();
+      for (const [provider, agent] of next) agents.set(provider, agent);
+      /*
+       * Every other field is the new fold's, taken on the object the host was
+       * built over rather than beside it: an area that destructured `options`
+       * once still reads the same object, and its getters stay getters. A key
+       * the fold no longer has is removed, or a plugin's answer would outlive
+       * it.
+       */
+      const held = options as unknown as Record<string, unknown>;
+      const taking = folded as unknown as Record<string, unknown>;
+      for (const key of Object.keys(held)) if (!Object.hasOwn(taking, key)) delete held[key];
+      Object.defineProperties(held, Object.getOwnPropertyDescriptors(taking));
+      ctx.first = options.agents[0] ?? (next.values().next().value as Agent);
+      ctx.contributed = options.tools ?? [];
+      ctx.contributing = permitted([...ctx.contributed, ...ctx.actionTools]);
+      wireChannels();
+      wirePlugins();
+      if (listeningForUsers() && usersWatch === undefined) usersWatch = openUsersWatch();
+      else if (!listeningForUsers() && usersWatch !== undefined) { usersWatch.close(); usersWatch = undefined; }
+      for (const provider of fresh) {
+        const agent = agents.get(provider);
+        if (agent !== undefined) probeAgent(agent);
+      }
+      /*
+       * Every open session told and retooled: the action is what its clients
+       * read as the set it has, and the retool is what its chat is handed, so a
+       * tool the fold added or removed is in place for the next turn.
+       */
+      for (const uri of sessions.keys()) {
+        dispatch(uri, { type: 'session/serverToolsChanged', tools: toolDefinitions(uri) });
+        retool(uri);
+      }
+      // One event, so a client reading the root lists the agents it holds now.
+      dispatch(ROOT, { type: 'root/agentsChanged', agents: descriptors() });
+      return undefined;
+    },
+    endSessionsOf: async (agent) => {
+      const provider = typeof agent === 'string' ? agent : agent.provider;
+      for (const uri of [...sessions.keys()]) {
+        const held = sessions.get(uri);
+        if (held === undefined) continue;
+        const onIt = held.agent.provider === provider
+          || [...held.backends.values()].some((backend) => backend.agent.provider === provider);
+        if (!onIt) continue;
+        // Removed the way a disposal removes one, and one that could not be is
+        // logged: the plugin is going either way, and a session left behind is
+        // worse said than silently kept.
+        try { await removeSession(uri); }
+        catch (error) { log(`ending ${uri} for ${provider} failed: ${reason(error)}`); }
+      }
     },
     connections: () => connections.size,
     close: () => {

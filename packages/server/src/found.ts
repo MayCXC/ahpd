@@ -109,7 +109,7 @@ export const nodeRuns = (version: string | undefined): boolean => {
   if (read === null) return false;
   const major = Number(read[1]);
   const minor = Number(read[2]);
-  return major > 22 || (major === 22 && minor >= 1);
+  return major > 22 || (major === 22 && minor >= 18);
 };
 
 /** The runtime lines a setup prints, in the order `findRuntimes` answers them. */
@@ -120,7 +120,7 @@ export const runtimeLines = (runtimes: readonly RuntimeFound[]): string[] => run
   if (runtime.name === 'node') {
     return nodeRuns(runtime.version)
       ? `${name} ${runtime.version} (runs ahpd)`
-      : `${name} ${runtime.version} (ahpd does not run on it; it needs Node 22.1 or newer)`;
+      : `${name} ${runtime.version} (ahpd does not run on it; it needs Node 22.18 or newer)`;
   }
   if (runtime.name === 'deno') return `${name} ${runtime.version} (runs ahpd; each plugin it loads needs an npm: spec)`;
   return `${name} ${runtime.version} (runs ahpd)`;

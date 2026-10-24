@@ -234,7 +234,7 @@ describe('plugin', () => {
     for (const args of [['plugin'], ['plugin', 'toy', '--config-file', config]]) {
       const said = await cli(args);
       expect(said.code).toBe(2);
-      expect(said.stderr).toBe('ahpd: plugin takes list, update, config, install, remove, enable or disable.\n');
+      expect(said.stderr).toBe('ahpd: plugin takes list, update, apply, reload, config, install, remove, enable or disable.\n');
       expect(said.stdout).toBe('');
     }
   });
@@ -244,7 +244,7 @@ describe('plugin', () => {
     expect(said.code).toBe(2);
     expect(said.stdout).toBe('');
     expect(JSON.parse(said.stderr)).toEqual({
-      message: 'plugin takes list, update, config, install, remove, enable or disable.',
+      message: 'plugin takes list, update, apply, reload, config, install, remove, enable or disable.',
       kind: 'argument',
       exitCode: 2,
     });

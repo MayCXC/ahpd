@@ -256,6 +256,19 @@ export interface FoldedOptions {
 }
 
 /**
+ * The host's own trigger entry for each contribution, kept across folds.
+ *
+ * The host writes `deliver` and `run` on that entry, and the plugin's own
+ * `fireTrigger` reads it back through the contribution for as long as the
+ * plugin is loaded. An entry built again at the next fold would be one nothing
+ * has set those on, so a fire would reach nothing - and a fold is made more
+ * than once: a live change folds, and the daemon reads the fold again to report
+ * what it holds. Keyed by the contribution, so a plugin loaded again starts
+ * with an entry of its own.
+ */
+const triggerEntries = new WeakMap<Contribution, PluginTriggers>();
+
+/**
  * Fold contributions into a base `HostOptions`.
  *
  * The rules, made literal:
@@ -644,9 +657,23 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
    * still fire, and it is the one place `deliver` is written. The contribution
    * is pointed at it, which is what the plugin's own `fireTrigger` reads, so a
    * plugin that adds a name to the record it registered in fires something the
-   * host never arbitrated and nothing the host holds moves.
+   * host never arbitrated and nothing the host holds moves. It is the same
+   * object at every fold, because the host writes on it once.
    */
   const typeHolders = new Map<string, string>();
+  /**
+   * This contribution's entry, with the types this fold arbitrated.
+   *
+   * The object is the one an earlier fold made, so `deliver` and `run` set on
+   * it by the host survive a second fold. Only the types move, which is what a
+   * contribution loaded or unloaded changes.
+   */
+  const keptEntry = (contribution: Contribution, types: Record<string, TriggerTypeDefinition>): PluginTriggers => {
+    const entry = triggerEntries.get(contribution) ?? { by: contribution.by, types };
+    entry.types = types;
+    triggerEntries.set(contribution, entry);
+    return entry;
+  };
   const pluginTriggers: PluginTriggers[] = [];
   for (const contribution of contributions) {
     if (Object.keys(contribution.triggers.types).length === 0) continue;
@@ -672,12 +699,11 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
        * Empty entries are not offered: `pluginTriggers` is the host's list of
        * the types it will arbitrate, and this plugin arbitrates none.
        */
-      contribution.triggers = { by: contribution.by, types: Object.freeze({}) };
+      contribution.triggers = keptEntry(contribution, Object.freeze({}));
       continue;
     }
-    const entry: PluginTriggers = { by: contribution.by, types: Object.freeze(kept) };
-    contribution.triggers = entry;
-    pluginTriggers.push(entry);
+    contribution.triggers = keptEntry(contribution, Object.freeze(kept));
+    pluginTriggers.push(contribution.triggers);
   }
   if (pluginTriggers.length > 0) options.pluginTriggers = pluginTriggers;
 

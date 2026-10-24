@@ -1282,6 +1282,28 @@ missing ./gone -> - (not resolved): Plugin ./gone is not there: tried /work/gone
 
 A plugin whose `apply` would throw still lists as `ready`, because a listing never calls `apply`. A module that throws on import lists under the id its manifest gives, and the rest of its row comes from the manifest, which is why the `ahpd` key exists.
 
+## A change while the daemon runs
+
+The daemon reads the plugin list at each start and, after that, at every write that changes it. A command that changes the file applies at once, with no restart. That covers install, remove, update, enable, disable, an option, and a `plugins.` key written through root config. `ahpd plugin apply` applies the file as it is, without writing it.
+
+A change loads, unloads or applies again each plugin the file describes, and the host takes a new fold of every contribution. An open session is told that its tools changed, and a route or an adapter a plugin adds is served before the command answers. A plugin that failed earlier is tried again at the next change.
+
+A plugin enabled while the daemon runs is wired in as one loaded at start is. Its trigger types fire, its session start answers, and its session keys and plan reach a client. An automation saved for one of those types is watched from that change on.
+
+A plugin that holds a port or a URI scheme is the one exception. The host was built over them, and a fold that moves one is refused. Enabling, disabling or reconfiguring such a plugin answers `restart: true` and changes nothing. A plugin that is loaded and then found to hold a port or a scheme goes out again. The answer is `restart: true`, with nothing loaded.
+
+What a plugin opens while it runs, it closes in a closer registered with `host.registerClose`. An unload runs every closer the plugin registered, then drops its contribution: its tools, its agents, its routes, its adapters and its channels. A reload with new options runs them before `apply` is called again. Two applications of one plugin never hold the same socket or the same table.
+
+An unload of a plugin that registered an agent ends every session running on that agent, before the closers run. The agent is gone from the root state afterwards, so disabling an agent plugin stops the work it served.
+
+The code a plugin points at can move while its entry stays as it was, which no change to the file can show. `ahpd plugin reload <name>` closes the plugin and imports its module again from a URL of its own, so the code on disk now runs. `ahpd plugin update` reloads each plugin it moved. An AHP client asks with `x-ahpd/plugins/reload`, which takes `{ id }`, and needs `plugin:reload`. A plugin with a port or a URI scheme cannot be swapped, so it answers `restart: true` as it does for new options.
+
+A name the file does not hold is a package a plugin uses. Its code has no entry to import again, so the daemon asks for a restart.
+
+A reload costs memory. The runtime keeps the module it replaced for as long as the daemon runs, and each reload adds one more copy beside it. A restart is the only way to let them go, which is why a development loop that reloads often ends with one.
+
+A plugin's entry is imported by URL. A `.ts` entry therefore needs Node 22.18 or newer, which strips the types as it loads, unless Bun or Deno imports it.
+
 ## A worked example: `@ahpd/agent-cofold`
 
 The repository ships a real backend as a plugin. `@ahpd/agent-cofold` wraps the

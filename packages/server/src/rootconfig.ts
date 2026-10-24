@@ -240,6 +240,15 @@ export function daemonRootConfig(
   typed: Readonly<Record<string, unknown>> = {},
   openWire: (at: string | undefined) => void = () => {},
   holdMcpServers: (servers: unknown) => void = () => {},
+  /**
+   * What loads, unloads or reconfigures the plugins whose keys were written,
+   * answering whether the daemon must restart for the change to take.
+   *
+   * Called after the file is written and inside the same `oneAtATime` turn, so
+   * what it applies is exactly what the file now says. Absent, a plugin key is
+   * a restart as it always was.
+   */
+  applyPlugins: () => Promise<boolean> = async () => true,
 ): RootConfigPort {
   const file = options.configFile ?? configPath();
 
@@ -347,6 +356,7 @@ export function daemonRootConfig(
     write: (values) => oneAtATime(async () => {
       const held = readEntry(file);
       let restartNeeded = false;
+      let pluginKeysWritten = false;
       for (const [key, value] of Object.entries(values)) {
         if (!key.startsWith('plugins.')) {
           restartNeeded = restartNeeded || !LIVE.has(key);
@@ -378,9 +388,10 @@ export function daemonRootConfig(
           if (was !== undefined) delete held[was];
           continue;
         }
-        // A plugin's contributions are folded in when the host is built, so
-        // there is no key of this one that applies while the daemon runs.
-        restartNeeded = true;
+        // A key of a plugin's is one the plugin is configured with, so the
+        // plugins are loaded again once the file holds it. Whether that can
+        // happen while the daemon runs is `applyPlugins`' answer, below.
+        pluginKeysWritten = true;
         const list = Array.isArray(held.plugins) ? [...held.plugins] : [];
         const found = entries(held).find((one) => one.key === key);
         if (found === undefined) throw new Error(`${key} is not in plugins in ${file}.`);
@@ -434,6 +445,7 @@ export function daemonRootConfig(
       }
       checkConfig(held, () => file);
       writeEntry(file, held);
+      if (pluginKeysWritten) restartNeeded = await applyPlugins();
       // The capture follows the file, and only once the file is what it says.
       if ('wire' in values) openWire(typeof values['wire'] === 'string' ? values['wire'] : undefined);
       /*
