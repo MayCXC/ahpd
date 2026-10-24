@@ -160,7 +160,6 @@ Reference: [00-host.md](host/00-host.md)
 | [57 - pi, cofold and ACP find a session by id, and the listing throttle goes](host/57-pi-cofold-and-acp-find-a-session-by-id/plan.md) | high | built 2026-10-06 ([implemented.md](host/57-pi-cofold-and-acp-find-a-session-by-id/implemented.md)) | host 56 | - |
 | [58 - Policy and automation files are private, a cursor the host did not issue is refused, and a file URI is decoded](host/58-private-files-foreign-cursors-decoded-uris/plan.md) | high | built 2026-10-06 ([implemented.md](host/58-private-files-foreign-cursors-decoded-uris/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | - | host 59, host 60 |
 | [59 - People and policy are served by one record-store provider, and the value readers are one sdk module](host/59-one-record-store-and-shared-value-readers/plan.md) | medium | built 2026-10-10 ([implemented.md](host/59-one-record-store-and-shared-value-readers/implemented.md)) | host 58 | host 61, host 60 task 04 |
-| [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | planned 2026-10-23; four tasks, todo | - | the model proxy's providers as connectors |
 | [60 - JSON files are read and written through one helper, and the session store keeps one row per session](host/60-one-json-file-helper-and-one-session-row/plan.md) | medium | built 2026-10-09 | host 58 | - |
 | [61 - The agents share their status, activity, title and preset reading, and the host checks tool inputs and request params one way](host/61-agents-share-session-kit-and-input-checks/plan.md) | medium | built 2026-10-10 ([implemented.md](host/61-agents-share-session-kit-and-input-checks/implemented.md)) | host 59 | - |
 | [62 - Every backend calls a client's tool, acp, cofold, pi and claude, the way the protocol asks](host/62-every-backend-calls-a-clients-tool/plan.md) | high | built 2026-10-06 ([implemented.md](host/62-every-backend-calls-a-clients-tool/implemented.md)); every child reviewed and merged 2026-10-06 | acp 11 | - |
@@ -398,6 +397,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [57 - A cofold transcript skips a run that a rewind dropped while it reads](plugin/57-a-transcript-skips-a-run-a-rewind-dropped/plan.md) | medium | planned 2026-10-23; one task, implemented | - | - |
 | [58 - Plugins and adapters carry icons](plugin/58-plugins-and-adapters-carry-icons/plan.md) | medium | active 2026-10-23; tasks 01-03 merged in #80; reopened with 04 (fetch https icons) and 05 (our plugins ship an icon), todo | - | - |
 | [59 - A plugin loads, unloads and reloads while the daemon runs](plugin/59-a-plugin-loads-and-unloads-live/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | - |
+| [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | planned 2026-10-23; four tasks, todo | - | the model proxy's providers as connectors |
 
 Next free number in `plugin`: `60`.
 
