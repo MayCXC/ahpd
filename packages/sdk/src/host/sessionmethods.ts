@@ -7,7 +7,7 @@ import { localPath, uriOf } from '../resources/fileuri.js';
 import { bag, ownerFilter } from '../utils/values.js';
 import { configOf } from '../sessions/remotesession.js';
 import { CLOSING } from './common.js';
-import { mayUseAgent } from '../agents/usable.js';
+import { mayUseAgent, ownershipOf } from '../agents/usable.js';
 import { chatIdFor, named, ROOT } from './channels.js';
 import { preambleOf, withPreamble } from './preamble.js';
 import { startsRead } from './chatactions.js';
@@ -921,7 +921,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * serve, before anything is claimed or made: an id it is refused is an
        * id it is not told exists.
        */
-      if (!mayUseAgent(connection.principal, options.agentOwners?.().get(provider), {
+      if (!mayUseAgent(connection.principal, ownershipOf(options.agentOwners?.(), provider), {
         root: connection.root === true,
         hasDirectory: options.users !== undefined,
       }))

@@ -7,7 +7,7 @@ import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { worktreeFor, worktreesOf } from '../repo/worktrees.js';
 import { ROOT, chatIdFor, chatUriFor, named } from './channels.js';
-import { mayUseAgent } from '../agents/usable.js';
+import { mayUseAgent, mayUseAgentFor, ownershipOf } from '../agents/usable.js';
 import { keepChatAttachment, resolveChatAttachment } from './chatattachment.js';
 import { openLink } from '../tools/session.js';
 import { readCreatedBy, readOrigin } from '../sessions/remotesession.js';
@@ -1699,15 +1699,16 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     /*
      * And an agent the caller may not use answers the same way, so a start it
      * is refused names no agent it was not told about. A run nobody's window
-     * sent - an automation's, a tool's - carries no sender and is not asked:
-     * there is no caller to refuse, and the owner it acts for was checked when
-     * the work was set up.
+     * sent - an automation's, a bot's, a tool's - carries no sender, so it is
+     * asked of the owner it acts for: a start must not reach an agent that
+     * owner could not have started itself.
      */
-    if (by?.sender !== undefined && !mayUseAgent(by.principal, ctx.options.agentOwners?.().get(provider), {
-      root: by.sender.root === true,
-      hasDirectory: ctx.options.users !== undefined,
-    }))
-      throw new RpcError(-32002, `No provider called ${provider}`);
+    const owned = ownershipOf(ctx.options.agentOwners?.(), provider);
+    const checked = { hasDirectory: ctx.options.users !== undefined };
+    const allowed = by?.sender !== undefined
+      ? mayUseAgent(by.principal, owned, { ...checked, root: by.sender.root === true })
+      : mayUseAgentFor(by, owned, checked);
+    if (!allowed) throw new RpcError(-32002, `No provider called ${provider}`);
     /*
      * A binding names a connector, so a start that carries one is checked
      * here, before anything is written down: the connector has to be one this

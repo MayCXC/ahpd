@@ -900,10 +900,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * is held to is what is known when the save arrives.
    */
   const automations = memory
-    ? memoryAutomations({ pluginTypes: () => pluginTypes, connectors: () => connectorLists.refs() })
+    ? memoryAutomations({
+      pluginTypes: () => pluginTypes,
+      connectors: () => connectorLists.refs(),
+      agents: () => agentLists.owners(),
+    })
     : daemonAutomations((message) => process.stdout.write(`${message}\n`), {
       pluginTypes: () => pluginTypes,
       connectors: () => connectorLists.refs(),
+      agents: () => agentLists.owners(),
     });
   automationsStore = automations;
 

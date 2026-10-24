@@ -1,5 +1,5 @@
 import { ROOT } from './channels.js';
-import { mayUseAgent } from '../agents/usable.js';
+import { hostAgent, mayUseAgent, ownershipOf } from '../agents/usable.js';
 import type { Agent } from '../types/agent.js';
 import type { Connection } from '../types/host.js';
 import type { Bag } from '../types/common.js';
@@ -110,8 +110,8 @@ export function createAuth(ctx: HostContext): Auth {
        * hold is the daemon's own or a plugin's, and takes the host rule.
        */
       const provider = held.provider;
-      const owner = typeof provider === 'string' ? owners?.().get(provider) : undefined;
-      if (!mayUseAgent(connection.principal, owner, { root: connection.root === true, hasDirectory: true })) return [];
+      const owned = typeof provider === 'string' ? ownershipOf(owners?.(), provider) : hostAgent;
+      if (!mayUseAgent(connection.principal, owned, { root: connection.root === true, hasDirectory: true })) return [];
       if (!somebody || !Array.isArray(held.protectedResources)) return [agent];
       const mine = held.protectedResources.some((one) => typeof one === 'object' && one !== null && (one as Bag).resource === id);
       if (!mine) return [agent];

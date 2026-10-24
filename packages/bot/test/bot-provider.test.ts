@@ -17,6 +17,7 @@ import { apply } from '../src/plugin.js';
 import { BOT_BODIES, BOT_COLORS } from '../src/record.js';
 import { botStore } from '../src/store.js';
 import type { Agent } from '../../sdk/src/types/agent.js';
+import type { AgentOwner } from '../../sdk/src/types/agents.js';
 import type { Bag } from '../../sdk/src/types/common.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { LoaderContext } from '../../sdk/src/types/plugin.js';
@@ -124,6 +125,7 @@ function made(
     version: sdkVersion(),
     hostName: 'test',
     configDir,
+    ...(people ? { hasUsers: true } : {}),
     log: () => {},
     say: () => {},
     // The host's YAML, which a bot's `AGENTS.md` is read and written with: the
@@ -146,6 +148,9 @@ function made(
   const { host: plugin, contribution } = pluginHost('bot', context, {
     sessions: () => sessions,
     records: () => records,
+    // The loader hands a plugin the host's own map; this is the same wire, so a
+    // case can say who the agents are.
+    ...(over.agentOwners === undefined ? {} : { agentOwners: over.agentOwners }),
     problem: (line) => { reported.push(line); },
     // The grant a wake's start of a back session asks for, which the daemon's
     // entry for this plugin holds: a bot's work runs in the bot's own folder,
@@ -596,6 +601,34 @@ it('leaves a team bot out of the listing asked for me', async () => {
   expect(await listing(rob, 'bot://')).toEqual(['team']);
   // ...and not rob's own, so the filtered listing has it not.
   expect(await listing(rob, 'bot://?owner=me')).toEqual([]);
+});
+
+/*
+ * The agent a bot's record names.
+ *
+ * A bot's `preset` or `harness` is an agent of this host, and the host asks its
+ * own rule of whoever starts a session on one. A bot is its owner's work, so a
+ * write asks the same rule of the owner rather than of the person writing: one
+ * person cannot point a bot at another person's agent.
+ */
+it('refuses a bot naming an agent its owner may not use, on a make and on an edit', async () => {
+  const owners = (): ReadonlyMap<string, AgentOwner | undefined> => new Map([
+    ['base', 'host'],
+    ['theirs', 'user:cy'],
+  ]);
+  const { host } = made({ soft: ['bot:*', 'session:create'] }, {}, { agentOwners: owners });
+  const soft = await as(host, 'soft');
+
+  // The host's own agent is everybody's, and taken.
+  expect(await write(soft, 'bot://mine', { name: 'Mine', preset: 'base' }, { createOnly: true })).toEqual({ result: {} });
+  // Another person's is refused, with the id and the owner the record is for.
+  const refused = await write(soft, 'bot://theirs', { name: 'Theirs', preset: 'theirs' }, { createOnly: true });
+  expect(refused).toMatchObject({ code: -32009 });
+  expect('code' in refused ? refused.message : '').toContain('theirs is not an agent user:soft may use');
+  // And an edit is checked the same way: a record that exists is not a licence.
+  const edited = await write(soft, 'bot://mine', { name: 'Mine', preset: 'theirs' });
+  expect(edited).toMatchObject({ code: -32009 });
+  expect((await record(soft, 'bot://mine'))['preset']).toBe('base');
 });
 
 /*

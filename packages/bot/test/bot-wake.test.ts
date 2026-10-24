@@ -107,6 +107,7 @@ const turn = (): Recorded => {
 async function sitting(
   record: BotRecord = bot(),
   seeded: { name: string; session: string; chat: string }[] = [],
+  mayUse?: (owner: Owner, provider: string | undefined) => boolean,
 ) {
   const records = memoryRecords();
   const store = botStore(
@@ -188,6 +189,7 @@ async function sitting(
       sent.push({ channel, action });
       return sendRefusal;
     },
+    ...(mayUse === undefined ? {} : { mayUse }),
     problem: (line) => { problems.push(line); },
   });
 
@@ -241,6 +243,25 @@ it('asks the host for post_message when it starts a back session', async () => {
   // offered it, and is never told its instruction either.
   expect(one.starts[0]?.tools).toEqual(['post_message']);
   expect(one.starts[0]?.instructions).toBeUndefined();
+});
+
+it('refuses a wake whose record names an agent the bot\'s owner may not use', async () => {
+  // The owner asked about is the bot's, `user:soft`, and not the `user:ana` who
+  // is talking: a session the host starts for the person would otherwise reach
+  // an agent only the bot's owner can be refused.
+  const asked: Owner[] = [];
+  const one = await sitting(bot({ harness: 'theirs' }), [], (owner, provider) => {
+    asked.push(owner);
+    return provider !== 'theirs';
+  });
+  const said = turn();
+
+  await one.wake.woken(message('t1', 'hello'), said.handle);
+
+  expect(asked).toEqual(['user:soft']);
+  expect(one.starts).toEqual([]);
+  expect(one.sent).toEqual([]);
+  expect(said.notices).toEqual(['Backer was not woken: No provider called theirs']);
 });
 
 it('starts a back session on the first message, and says the second in it', async () => {

@@ -93,6 +93,15 @@ export interface WakeSeams {
   look(session: string): Promise<Looked>;
   /** Send one action on a chat, and give the host's reason where it refused it, or `undefined` where it took it. */
   send(chat: string, action: Bag): Promise<string | undefined>;
+  /**
+   * Whether a bot's owner may start a session on the agent its record names.
+   *
+   * Asked at each wake, and against the bot's owner rather than the person
+   * talking: the record is a file a person may edit by hand, so the check a
+   * write made is not the last word on what it says. Absent on a host that
+   * checks nothing.
+   */
+  mayUse?(owner: Owner, provider: string | undefined): boolean;
   /** Say what went wrong, for the operator to read. */
   problem(line: string): void;
 }
@@ -312,6 +321,17 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
    * the provider keeps over the main chats.
    */
   const sessionNamed = async (bot: BotRecord, owner: Owner, user: string, name: string): Promise<string> => {
+    /*
+     * The agent before the row: a record that now names an agent its owner may
+     * not use is refused even where a session of an earlier record is still
+     * held, so a hand edit cannot keep a session alive on somebody else's
+     * agent. The refusal is the host's own sentence for an agent it does not
+     * serve this caller.
+     */
+    const provider = bot.preset ?? bot.harness;
+    if (provider !== undefined && seams.mayUse !== undefined && !seams.mayUse(bot.owner, provider)) {
+      throw new Error(`No provider called ${provider}`);
+    }
     const held = await seams.backs.get(bot.id, user, name);
     if (held !== undefined && await seams.sessions.owner(held) !== undefined) return held;
     const key = `${bot.id}\n${user}\n${name}`;

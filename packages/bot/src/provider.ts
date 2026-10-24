@@ -147,6 +147,17 @@ export interface BotOptions {
    * edit writes, which would lose the sections a template adds.
    */
   agents(bot: BotRecord): Promise<string>;
+  /**
+   * Whether an owner may start a session on the agent a bot names, read at each
+   * write.
+   *
+   * A bot's `preset` or `harness` is an agent of this host, and the host asks
+   * its own rule of whoever starts a session on one. A write names it for the
+   * bot's owner rather than for the person making the change, so the same rule
+   * is asked here: one person cannot point their bot at another person's agent.
+   * Absent on a host that checks nothing, where every agent is the daemon's.
+   */
+  mayUse?(owner: Owner, provider: string | undefined): boolean;
 }
 
 /**
@@ -757,6 +768,15 @@ export function botProvider(options: BotOptions): BotProvider {
       const said = parsed(uri, content);
       const draft = checkRecord(slug, said, existing);
       const whose = ownerFor(draft.owner, owner, reader, existing);
+      /*
+       * The agent the record names, checked against the bot's owner rather than
+       * the person writing: a bot is the owner's work, and the host would ask
+       * its own rule of whoever starts a session on it.
+       */
+      const provider = draft.preset ?? draft.harness;
+      if (provider !== undefined && options.mayUse !== undefined && !options.mayUse(whose, provider)) {
+        throw new RpcError(-32009, `${provider} is not an agent ${whose} may use`);
+      }
       // A make reads its template. An edit reads it only where the body names
       // one, so a bot whose template was removed can still be edited; a template
       // that is named and missing is refused either way.

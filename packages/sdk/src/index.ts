@@ -99,6 +99,8 @@ export { recordsChannel, recordsDomain, recordsMethods, servedRecords } from './
 export type { RecordEntry, RecordsChannel, RecordsChannelOptions, RecordsDomain, RecordsSource, ServedRecords } from './resources/recordschannel.js';
 export { agentsChannel } from './agents/channel.js';
 export type { AgentsChannel, AgentsChannelOptions } from './agents/channel.js';
+export { hostAgent, mayUseAgent, mayUseAgentFor, ownershipOf } from './agents/usable.js';
+export type { Acting, Ownership } from './agents/usable.js';
 export { connectorsChannel } from './connectors/channel.js';
 export type { ConnectorsChannel, ConnectorsChannelOptions, ConnectorState } from './connectors/channel.js';
 export { BINDINGS_KEY, BINDINGS_SCHEME, bindingTarget, bindingsOf, checkBindings } from './connectors/bindings.js';

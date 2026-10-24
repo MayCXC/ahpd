@@ -15,7 +15,7 @@
 import type { AutomationTriggerDefinition, ChatOrigin, ChatSummary, Icon } from '@microsoft/agent-host-protocol';
 
 import type { Agent } from './agent.js';
-import type { AgentKind, ServedAgentKind } from './agents.js';
+import type { AgentKind, AgentOwner, ServedAgentKind } from './agents.js';
 import type { StartSession } from './automations.js';
 import type { SessionConfigAnswerer } from './completions.js';
 import type { Adapter, ConnectorOwner, ServedAdapter } from './connectors.js';
@@ -760,6 +760,18 @@ export interface PluginHost extends PluginContext {
    * empty record, which is a machine with nothing added to it.
    */
   machineNeeds(provider: string): Record<string, MachineNeed> | undefined;
+  /**
+   * Whose each stored agent is, read when called rather than at load.
+   *
+   * The agents channel's map: an id a record holds answers its owner, and an id
+   * no record holds is absent - the daemon's own agent or one a plugin
+   * registered. Read live for the reason `machineNeeds` is: the records are
+   * folded while the daemon runs, and a plugin that keeps a record naming an
+   * agent - a bot's `preset` - has to ask at each use rather than once.
+   *
+   * Empty on a host with no agents channel, where every agent is the daemon's.
+   */
+  agentOwners(): ReadonlyMap<string, AgentOwner | undefined>;
   /**
    * Keep one usage record, in the host's `usage` port.
    *

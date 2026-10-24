@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { expandHome, reason, Status } from '@ahpd/sdk';
+import { expandHome, mayUseAgentFor, ownershipOf, reason, Status } from '@ahpd/sdk';
 import { botAsk } from './ask.js';
 import { botCatalogue, CATALOGUE_SCHEME } from './catalogue.js';
 import { botChatAgent } from './chat.js';
@@ -15,7 +15,7 @@ import { botWake, isMainTurnAbsence } from './wake.js';
 import type { Yaml } from './agents.js';
 import type { BotRecord } from './record.js';
 import type { MainTurnAbsence } from './wake.js';
-import type { Bag, Plugin, PluginPeer, RecordCollection } from '@ahpd/sdk';
+import type { Bag, Owner, Plugin, PluginPeer, RecordCollection } from '@ahpd/sdk';
 import type { BotSessions } from './provider.js';
 
 /**
@@ -476,6 +476,17 @@ export const apply: Plugin['apply'] = (host, options) => {
   const catalogue = botCatalogue(store);
   catalogue.bind(host.registerChannel(CATALOGUE_SCHEME, catalogue.channel));
   host.on('users_changed', () => { catalogue.recompute(); });
+  /*
+   * Whether a bot's owner may start a session on the agent its record names.
+   *
+   * The host asks this of a caller, and neither place this plugin uses a
+   * record is that ask: a write comes from a client that may already be
+   * somebody else, and a wake starts a session for the person chatting rather
+   * than for the bot's owner - so a hand-edited record naming another person's
+   * agent would reach it through them. Asked at both, against the bot's owner.
+   */
+  const mayUse = (owner: Owner, provider: string | undefined): boolean => provider === undefined
+    || mayUseAgentFor({ owner }, ownershipOf(host.agentOwners(), provider), { hasDirectory: host.hasUsers === true });
   host.registerResourceProvider('bot', botProvider({
     root,
     botsDir: join(host.configDir, BOTS_DIR),
@@ -488,6 +499,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     chats,
     backSessions: backs,
     sessions,
+    mayUse,
   }));
   /*
    * The wake: every turn one of those chats begins, and every message steered
@@ -524,6 +536,7 @@ export const apply: Plugin['apply'] = (host, options) => {
       return { chat, working: (status & Status.InProgress) !== 0 };
     },
     send,
+    mayUse,
     problem: (line) => { host.problem(`${name}: ${line}`); },
   }, absent);
   /*

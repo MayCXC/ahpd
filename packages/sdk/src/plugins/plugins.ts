@@ -12,7 +12,7 @@
  */
 
 import type { Agent } from '../types/agent.js';
-import type { ServedAgentKind } from '../types/agents.js';
+import type { AgentOwner, ServedAgentKind } from '../types/agents.js';
 import type { SessionConfigAnswerer } from '../types/completions.js';
 import type { ServedAdapter } from '../types/connectors.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from '../types/events.js';
@@ -841,6 +841,14 @@ export interface HostRecordingOptions {
    */
   agents?: () => Agent[];
   /**
+   * Whose each stored agent is, read when `agentOwners` is called.
+   *
+   * A function for the same reason `agents` is: the records are folded while
+   * the daemon runs, and a plugin keeping a record that names an agent asks at
+   * each use rather than once at load.
+   */
+  agentOwners?: () => ReadonlyMap<string, AgentOwner | undefined>;
+  /**
    * Where a plugin's usage records go, read when `recordUsage` is called.
    *
    * A function, and `undefined` for the store, for the same reason `agents` is
@@ -1097,6 +1105,9 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       const agent = options.agents?.().find((one) => one.provider === provider);
       return agent === undefined ? undefined : agent.machine?.() ?? {};
     },
+    // Empty rather than absent on a host with no agents channel: every agent
+    // there is the daemon's own, which is what a map with no entry says.
+    agentOwners: () => options.agentOwners?.() ?? new Map(),
     /*
      * Read from the live port rather than a snapshot, and dropped rather than
      * thrown when there is none: a host nobody asked to keep usage on is not a

@@ -30,7 +30,7 @@ import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { checkIcons, foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
-import type { Agent, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, AgentOwner, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { fetchIcons, resolveIcons } from './icons.js';
 import { satisfies } from './compat.js';
 
@@ -522,6 +522,13 @@ export interface LoadOneOptions {
    * and a machine is made long after both have applied.
    */
   agents?: () => Agent[];
+  /**
+   * Whose each stored agent is, read when a plugin asks.
+   *
+   * Handed through from the host's options, because a plugin that keeps a
+   * record naming an agent - a bot's `preset` - asks who may use it.
+   */
+  agentOwners?: () => ReadonlyMap<string, AgentOwner | undefined>;
   /**
    * What this host is called, for the work a plugin charges to `root:<host>`.
    *
@@ -1085,6 +1092,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
 
   const { host, contribution, seal } = pluginHost(name, context, {
     ...(options.agents === undefined ? {} : { agents: options.agents }),
+    ...(options.agentOwners === undefined ? {} : { agentOwners: options.agentOwners }),
     ...(options.usage === undefined ? {} : { usage: options.usage }),
     ...(options.vault === undefined ? {} : { vault: options.vault }),
     problem: (line) => { if (answered) options.log(line); else told.push(line); },
@@ -1464,6 +1472,7 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
       log: options.log,
       ...(options.say === undefined ? {} : { say: options.say }),
       agents: () => known,
+      ...(options.base.agentOwners === undefined ? {} : { agentOwners: options.base.agentOwners }),
       ...(options.base.hostName === undefined ? {} : { hostName: options.base.hostName }),
       ...(options.hostId === undefined ? {} : { hostId: options.hostId }),
       ...(options.base.users === undefined ? {} : { users: true }),
