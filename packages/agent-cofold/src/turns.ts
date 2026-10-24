@@ -359,6 +359,17 @@ export const createTurns = (
         failTurn(turnId, text, model, from, queuedMessageId, attachments, ctx.refused);
         return;
       }
+      /*
+       * The record first, so this turn runs on what it says now.
+       *
+       * A record that can no longer be used ends this turn with the sentence,
+       * rather than running on the options of the turn before.
+       */
+      const why = ctx.refreshOptions();
+      if (why !== undefined) {
+        failTurn(turnId, text, model, from, queuedMessageId, attachments, new Error(why));
+        return;
+      }
       startTurn(turnId, text, model, from, queuedMessageId, attachments);
     };
     if (ctx.refused !== undefined) {

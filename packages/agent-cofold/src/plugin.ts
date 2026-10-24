@@ -7,18 +7,23 @@
  * guessing which export is the plugin, and a silent guess is worse than a
  * refusal.
  *
+ * The plugin registers the kind `cofold`, and each record of it is one agent
+ * with its own endpoint, key and model. The plugin's own options are the
+ * defaults every record starts from; nothing is registered as an agent here.
+ *
  * The model adapter is not a configuration option in practice. A configuration
  * file is JSON and cannot carry a function or an object with methods, so the
  * only caller that puts one in `options` is an embedder or a test; the real
- * path is the OpenAI-compatible endpoint the session config selects, and the
- * API key for it belongs in the daemon's environment rather than in a setting
- * a client sends.
+ * path is the OpenAI-compatible endpoint a record selects, and the API key for
+ * it belongs in the daemon's environment or in a record's write-only field
+ * rather than in a setting a client reads back.
  */
 
 import { check } from '@cofold/commands';
 import { TOOLS_SCHEMA } from '@cofold/tools';
-import type { PluginHost } from '@ahpd/sdk';
-import { cofoldAgent } from './agent.js';
+import { join } from 'node:path';
+import type { AgentKind, AgentView, PluginHost } from '@ahpd/sdk';
+import { cofoldAgent, defaultStoreRoot } from './agent.js';
 import type { CofoldOptions } from './agent.js';
 
 /** The plugin's id, unique among the plugins one daemon loads. */
@@ -46,25 +51,28 @@ const keyed = { type: 'object', properties: { apiKey: { type: 'string', writeOnl
  * The options `apply` receives, as a JSON Schema the daemon checks them against
  * before `apply` runs.
  *
- * `apiKey`, `adapter` and `policy` are also what an embedder calling `apply`
- * passes: a key function and a model adapter are things JSON cannot carry, so
- * the schema describes the configuration file's spelling of them.
+ * These are the defaults for every record of the kind: a record that names one
+ * of them wins, and a record that names none runs on what is here. `apiKey`,
+ * `adapter` and `policy` are also what an embedder calling `apply` passes: a
+ * key function and a model adapter are things JSON cannot carry, so the schema
+ * describes the configuration file's spelling of them.
+ *
+ * `provider`, `displayName` and `description` are deliberately not here: an
+ * agent is named by its record's id, name and description, and a plugin that
+ * could still set them would be describing one agent while serving many.
  */
 export const optionsSchema = {
   type: 'object',
   properties: {
-    provider: { type: 'string', description: 'The id a client names in createSession. cofold by default.' },
-    displayName: { type: 'string', description: 'What a person reads instead of the id. Cofold by default.' },
-    description: { type: 'string', description: 'One line about this backend.' },
-    model: { type: 'string', description: 'The model id a session that names none runs on.' },
-    baseUrl: { type: 'string', description: 'The OpenAI-compatible endpoint a session that names none uses.' },
-    instructions: { type: 'string', description: 'The system prompt the agent is created with.' },
+    model: { type: 'string', description: 'The model id a record that names none runs on.' },
+    baseUrl: { type: 'string', description: 'The OpenAI-compatible endpoint a record that names none uses.' },
+    instructions: { type: 'string', description: 'The system prompt a record that names none is created with.' },
     computerConfigDir: {
       anyOf: [{ type: 'string' }, { const: false }],
       description: 'The configuration directory the harness reads inside a machine. /ahpd/cofold by default; false leaves the image\'s own.',
     },
-    store: { type: 'string', description: 'Where the cofold file store lives.' },
-    memory: { type: 'boolean', description: 'true to hold the store in memory, for a test.' },
+    store: { type: 'string', description: 'The folder each record\'s cofold file store lives under, one folder per record. The tool\'s own data directory by default.' },
+    memory: { type: 'boolean', description: 'true to hold each record\'s store in memory, for a test.' },
     tools: {
       type: 'object',
       properties: {
@@ -90,7 +98,7 @@ export const optionsSchema = {
       type: 'boolean',
       description: 'false holds the tools option to the loose check, so a key the harness does not know is dropped rather than refused.',
     },
-    apiKey: { type: 'string', writeOnly: true, description: "The daemon's own key." },
+    apiKey: { type: 'string', writeOnly: true, description: "The daemon's own key, for a record that names none." },
     resource: { type: 'string', description: 'The protected resource a client authenticates against.' },
     adapter: { type: 'object', description: 'A cofold ModelAdapter used instead of the HTTP one.' },
     autoCompactTokens: {
@@ -121,12 +129,164 @@ const optionsOf = (values: Record<string, unknown>): CofoldOptions => {
 };
 
 /**
- * Register provider `cofold` from the plugin's own options.
+ * The fields a record does not carry, and the two only an embedder can set.
  *
- * The provider is per registration rather than per package, so two specs with
- * two providers and two stores are two backends that do not collide, which is
- * how one package serves several endpoints at once.
+ * The channel owns an agent's id, name, description and model, so a record
+ * does not name them again; `provider` is the record's id and `displayName`
+ * its name. `adapter` is an object with methods and `strictTools` is how the
+ * plugin forgives a configuration written for a later cofold: both are the
+ * plugin's own, not something a JSON record can carry or usefully say.
  */
-export function apply(host: PluginHost, options: Record<string, unknown>): void {
-  host.registerAgent(cofoldAgent(optionsOf(options)));
+const NOT_A_RECORD = new Set(['provider', 'displayName', 'description', 'model', 'adapter', 'strictTools']);
+
+/**
+ * The `tools` a record may name.
+ *
+ * A search provider's `apiKey` is a credential, and the channel vaults a
+ * record's top-level `writeOnly` fields only: a key nested under
+ * `tools.web.search` would be kept in the record itself. So a record chooses
+ * the capabilities and DuckDuckGo, and a keyed provider stays a plugin option,
+ * which is a configuration file the daemon's own owner writes.
+ */
+const TOOLS_OF_RECORD = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    files: {
+      anyOf: [
+        { type: 'boolean' },
+        { type: 'object', properties: { requireRead: { type: 'boolean' } }, additionalProperties: false },
+      ],
+    },
+    shell: { type: 'boolean' },
+    web: {
+      anyOf: [
+        { type: 'boolean' },
+        {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            search: {
+              type: 'object',
+              additionalProperties: false,
+              properties: { duckduckgo: { type: 'boolean' } },
+            },
+          },
+        },
+      ],
+    },
+    memory: { type: 'boolean' },
+  },
+};
+
+/**
+ * The kind's form: what a record may set, and nothing a second kind spells.
+ *
+ * Everything is closed with `additionalProperties: false`, so a field the kind
+ * does not have is refused where it is written rather than kept and ignored.
+ */
+const kindSchema = (): Record<string, unknown> => ({
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    ...Object.fromEntries(Object.entries(optionsSchema.properties).filter(([key]) => !NOT_A_RECORD.has(key))),
+    tools: TOOLS_OF_RECORD,
+  },
+});
+
+/** The fields of a record that become an option a turn runs on. */
+const RECORD_FIELDS = [
+  'baseUrl',
+  'instructions',
+  'computerConfigDir',
+  'store',
+  'memory',
+  'tools',
+  'apiKey',
+  'resource',
+  'autoCompactTokens',
+  'policy',
+] as const;
+
+/** A non-blank string, or nothing for a blank or missing one. */
+const text = (value: unknown): string | undefined =>
+  (typeof value === 'string' && value.trim() !== '' ? value : undefined);
+
+/**
+ * One record's options: what the record names, over the plugin's defaults.
+ *
+ * Every record gets a store of its own under the plugin's folder, named by its
+ * id. Two records sharing one store would list each other's sessions - a
+ * backend answers `list()` from its store, not from its own sessions - so a
+ * person's cofold agent would read another's transcripts. A record's model is
+ * the channel's `model`, and it wins over the plugin's default the same way
+ * every other field does.
+ *
+ * A record that cannot be built is refused with a sentence naming the field,
+ * never with the value: `check` says `tools is not a field`, and the rest of
+ * this says nothing about what the record holds.
+ */
+const optionsOfRecord = (defaults: CofoldOptions, record: AgentView): CofoldOptions => {
+  const config = record.config;
+  const named = Object.fromEntries(
+    RECORD_FIELDS.filter((field) => config[field] !== undefined).map((field) => [field, config[field]]),
+  );
+  const merged: CofoldOptions = {
+    ...defaults,
+    ...named,
+    provider: record.id,
+    displayName: record.name,
+    ...(record.description === undefined ? {} : { description: record.description }),
+    ...(record.model === undefined ? {} : { model: record.model }),
+    store: text(config.store) ?? join(defaults.store ?? defaultStoreRoot(), record.id),
+  } as CofoldOptions;
+  if (merged.tools !== undefined) check(merged.tools, TOOLS_SCHEMA, 'tools');
+  return merged;
+};
+
+/**
+ * The `cofold` kind: one record per endpoint and key, each its own agent.
+ *
+ * `open` builds the backend once and hands it a reader for the record, which
+ * the session calls at the start of each turn. The record the reader sees is
+ * the channel's own live view: an edit replaces what `config` answers, and the
+ * next turn runs on it, while the turn already running ends on what it started
+ * with.
+ */
+const kindOf = (defaults: CofoldOptions): AgentKind => ({
+  name: 'cofold',
+  title: 'Cofold',
+  description: 'Cofold over an OpenAI-compatible endpoint, one record per agent with its own endpoint, key and model.',
+  schema: kindSchema(),
+  templates: [{
+    name: 'Cofold',
+    description: 'Cofold on the harness configuration at ~/.config/cofold/config.json, with nothing set here.',
+    config: {},
+  }],
+  hostOnly: ['computerConfigDir', 'store', 'memory'],
+  open: (record) => cofoldAgent({
+    ...optionsOfRecord(defaults, record),
+    recordOf: () => optionsOfRecord(defaults, record),
+  }),
+});
+
+/**
+ * Register the kind `cofold`, whose records are the agents.
+ *
+ * `provider`, `displayName` and `description` are refused rather than ignored:
+ * a configuration that still names one is asking for the single backend this
+ * plugin used to register, and a person who wrote one should be told that an
+ * agent is a record now rather than run a daemon whose agents ignore half of
+ * what the file says.
+ */
+export function apply(host: PluginHost, values: Record<string, unknown>): void {
+  const perRecord: Record<string, string> = {
+    provider: "the record's id",
+    displayName: "the record's name",
+    description: "the record's description",
+  };
+  for (const [key, where] of Object.entries(perRecord)) {
+    if (values[key] !== undefined) throw new Error(`options.${key} is written per record now, as ${where}`);
+  }
+  host.registerAgentKind(kindOf(optionsOf(values)));
 }

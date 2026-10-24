@@ -93,6 +93,15 @@ export interface CofoldOptions {
    * inventing a second default beside it.
    */
   policy?: Partial<Policy>;
+  /**
+   * What the agent's record says now, for a backend opened from one.
+   *
+   * A session calls this at the start of each turn and puts what changed on
+   * the options it runs on, so an edit to a record lands on the next turn
+   * rather than on a backend nobody rebuilds. Absent for a backend an embedder
+   * built from its own options.
+   */
+  recordOf?: () => CofoldOptions;
 }
 
 /**

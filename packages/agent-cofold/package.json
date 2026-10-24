@@ -82,7 +82,7 @@
       { "src": "./icon-dark.svg", "theme": "dark" }
     ],
     "contracts": {
-      "agents": ["*"]
+      "agentKinds": ["cofold"]
     }
   }
 }

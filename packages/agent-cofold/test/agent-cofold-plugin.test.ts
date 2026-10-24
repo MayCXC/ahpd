@@ -9,6 +9,7 @@ import { createHost } from '../../sdk/src/host.js';
 import { describePlugin, loadPlugins } from '../../server/src/plugins.js';
 import { sdkVersion } from '../../sdk/src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
+import type { AgentKind, AgentView, Bag } from '@ahpd/sdk';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { HostTool } from '../../sdk/src/types/host.js';
 import type { PluginSpec } from '../../sdk/src/types/plugin.js';
@@ -20,9 +21,13 @@ import type { Peer } from '../../sdk/src/types/rpc.js';
  * Every case here goes through the real loader and the real host. The model is
  * a script and the store is in memory or under a temporary directory, because
  * a test calls no endpoint; what is under test is that the manifest resolves
- * the module, that `apply` contributes provider `cofold` from its own options,
- * that a turn is served exactly as a literal backend's is, and that a resumed
- * paused run reaches a subscribing client once.
+ * the module, that `apply` registers the kind `cofold`, that a record of it
+ * serves a turn exactly as a literal backend's is, and that a resumed paused
+ * run reaches a subscribing client once.
+ *
+ * An agent is a record now, so a case that wants a backend opens one through
+ * the kind and hands it to the host: this package registers no agent of its
+ * own.
  *
  * The source file is named rather than the package directory on purpose:
  * `pnpm test` does not build, and the loader applies a manifest's `ahpd.entry`
@@ -112,6 +117,36 @@ const initialize = async (client: ReturnType<ReturnType<typeof createHost>['acce
   params: { clientId: 'probe', protocolVersions: ['0.9.0'], initialSubscriptions: ['ahp-root://'] },
 }) as { snapshots: { state: { agents: { provider: string }[] } }[] };
 
+/** The `cofold` kind one load registered. */
+const kindOf = (options: HostOptions): AgentKind => {
+  const kind = options.agentKinds?.['cofold'];
+  if (kind === undefined) throw new Error('no cofold kind was registered');
+  return kind;
+};
+
+/**
+ * One record, as a kind is handed it: every field read at each call.
+ *
+ * `config` is the reader the channel installs, so a case changes what a record
+ * says by changing what this answers.
+ */
+const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
+  id,
+  kind: 'cofold',
+  owner: 'host',
+  name,
+  description: undefined,
+  icon: undefined,
+  model: undefined,
+  get config() { return held(); },
+});
+
+/** A host that serves the daemon's own agents beside one record of the kind. */
+const withRecord = (options: HostOptions, id: string, held: () => Bag, name = id) => createHost({
+  ...options,
+  agents: [...options.agents, kindOf(options).open(viewOf(id, held, name))],
+});
+
 /** Open one session on a provider and watch both of its channels. */
 async function open(client: ReturnType<ReturnType<typeof createHost>['accept']>, provider: string, name: string) {
   const uri = `ahp-session:/${name}`;
@@ -149,7 +184,12 @@ it('loads the package from its source file and serves a turn through the stub mo
   // The module exports no title, so this is the manifest's `ahpd.title`.
   expect(loaded[0]?.title).toBe('Agent Cofold');
 
-  const host = createHost(options);
+  // An agent is a record now, so the load registers a kind and adds no agent:
+  // the one served here is a record this case opened through it.
+  expect(kindOf(options).name).toBe('cofold');
+  expect(options.agents.map((one) => one.provider)).toEqual(['base']);
+
+  const host = withRecord(options, 'cofold', () => ({}), 'Cofold');
   const said = peer();
   const client = host.accept(said);
   const ready = await initialize(client);
@@ -198,35 +238,24 @@ it('lists a manifest, and its title, with the package name as its id', async () 
   expect(row.path).toBe(join(dir, 'entry.js'));
 });
 
-it('contributes one backend, and refuses a second spec of the same name', async () => {
+it('is loaded once, and refuses a second spec of the same name', async () => {
   const a = createFakeModel({ script: [{ text: 'answered by a' }], stream: true });
   const b = createFakeModel({ script: [{ text: 'answered by b' }], stream: true });
   const { options, loaded, problems } = await load([
-    { name: SOURCE, options: { provider: 'cofold-a', displayName: 'Cofold A', adapter: a, memory: true } },
-    { name: SOURCE, options: { provider: 'cofold-b', displayName: 'Cofold B', adapter: b, memory: true } },
+    { name: SOURCE, options: { adapter: a, memory: true } },
+    { name: SOURCE, options: { adapter: b, memory: true } },
   ]);
 
-  // A plugin is loaded once and its options are what make its variants, which
-  // this package takes in a later plan. Until then a second spec of one name is
-  // refused.
+  // A plugin is loaded once: what makes two backends of this package is two
+  // records of its kind, not two specs of it.
   expect(problems).toEqual([`plugin agent-cofold is named 2 times, by ${SOURCE} and ${SOURCE}; write it once and use its options for variants`]);
   expect(loaded).toHaveLength(1);
   expect(loaded.map((one) => one.name)).toEqual(['agent-cofold']);
 
-  const host = createHost(options);
-  const p = peer();
-  const client = host.accept(p);
-  const ready = await initialize(client);
-  expect(ready.snapshots[0]?.state.agents.map((one) => one.provider)).toEqual(['base', 'cofold-a']);
-
-  const first = await open(client, 'cofold-a', 'a');
-  begin(client, first.chatUri, 't1', 'say a');
-  await until(() => ended(p, first.chatUri));
-
-  const opened = await client.handle({ method: 'subscribe', params: { channel: first.chatUri } }) as {
-    snapshot: { state: { turns: { responseParts: { content: string }[] }[] } };
-  };
-  expect(opened.snapshot.state.turns[0]?.responseParts[0]?.content).toBe('answered by a');
+  // The one load that survived registered the kind, and serves no agent of its
+  // own: the daemon's own agent is the only one in the list.
+  expect(kindOf(options).name).toBe('cofold');
+  expect(options.agents.map((one) => one.provider)).toEqual(['base']);
 });
 
 it('refuses an autoCompactTokens the loader\'s options check rejects', async () => {
@@ -336,12 +365,13 @@ it('resumes a paused run and shows the open turn once to a client that subscribe
   const first = await load([{ name: SOURCE, options: {
     adapter: createFakeModel({ script, stream: true }), store: root, policy: asks,
   } }], { path: where, tools: [writer] });
-  const before = createHost(first.options);
+  const before = withRecord(first.options, 'cofold', () => ({}), 'Cofold');
   const clientA = before.accept(peer());
   await initialize(clientA);
   const opened = await open(clientA, 'cofold', 'one');
   begin(clientA, opened.chatUri, 't1', 'hi');
-  await pausedRun(root, 'one');
+  // A record keeps its store under the plugin's folder, in a folder of its own.
+  await pausedRun(join(root, 'cofold'), 'one');
   /*
    * The first host is abandoned rather than closed: `close()` denies the open
    * request, and the point is a process that went away leaving the run
@@ -354,7 +384,16 @@ it('resumes a paused run and shows the open turn once to a client that subscribe
   const second = await again.load([{ name: SOURCE, options: {
     adapter: createFakeModel({ script: [{ text: 'done' }], stream: true }), store: root, policy: asks,
   } }], { path: where, tools: [writer] });
-  const after = again.host(second.options);
+  /*
+   * The kind and the host come from the fresh copies, so the second process is
+   * the same code as the first and shares nothing with it but the store.
+   */
+  const freshKind = second.options.agentKinds?.['cofold'];
+  if (freshKind === undefined) throw new Error('no cofold kind was registered');
+  const after = again.host({
+    ...second.options,
+    agents: [...second.options.agents, freshKind.open(viewOf('cofold', () => ({}), 'Cofold'))],
+  });
   const p = peer();
   const client = after.accept(p);
   await initialize(client);

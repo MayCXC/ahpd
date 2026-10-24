@@ -6,7 +6,7 @@
 ![node >=22](https://img.shields.io/badge/node-%3E%3D22-5fa04e)
 ![Agent Host Protocol 0.9.0](https://img.shields.io/badge/AHP-0.9.0-0b7285)
 
-The cofold agent runtime as a backend for [`@ahpd/sdk`](https://www.npmjs.com/package/@ahpd/sdk), and a plugin for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon. It registers the provider `cofold`, and every model an OpenAI-compatible endpoint serves is a model inside it.
+The cofold agent runtime as a backend for [`@ahpd/sdk`](https://www.npmjs.com/package/@ahpd/sdk), and a plugin for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon. It registers the agent kind `cofold`: each record of that kind is one agent, and every model an OpenAI-compatible endpoint serves is a model inside it.
 
 A session uses the models and keys cofold already knows about, and runs cofold's file, shell, web and memory tools in the daemon's process.
 
@@ -23,7 +23,7 @@ Update, remove and one-run flags such as `--plugin` are in [Plugins](https://git
 
 ## Options
 
-In the configuration file, with the backend's own options as defaults for every session it serves:
+In the configuration file, with the plugin's own options as the defaults every record of the kind starts from:
 
 ```json
 {
@@ -44,22 +44,19 @@ In the configuration file, with the backend's own options as defaults for every 
 
 With no model named anywhere, the providers, keys and model come from cofold's own configuration file, `$COFOLD_CONFIG` or `$XDG_CONFIG_HOME/cofold/config.json` or `~/.config/cofold/config.json`. Inside a machine the first of those is what finds it.
 
-Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs.
+Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. An agent of the kind is a record on the agents channel: it sets any of these except `adapter`, `strictTools` and the keyed search providers, and wins over the plugin for the ones it sets. A record's id, name and description are the record's own, so this plugin has no option for them.
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `provider` | `cofold` | The id a client names in `createSession` |
-| `displayName` | `Cofold` | What a person reads instead of the id |
-| `description` | none | One line about this backend |
-| `model` | the cofold file's | The model id a session that names none runs on |
-| `baseUrl` | the cofold file's | The OpenAI-compatible endpoint a session that names none uses |
-| `instructions` | the cofold file's, else `You are a helpful assistant.` | The system prompt the agent is created with |
+| `model` | the cofold file's | The model id a record that names none runs on |
+| `baseUrl` | the cofold file's | The OpenAI-compatible endpoint a record that names none uses |
+| `instructions` | the cofold file's, else `You are a helpful assistant.` | The system prompt a record that names none is created with |
 | `computerConfigDir` | `/ahpd/cofold` | The configuration directory the harness reads *inside a machine*: a state volume seeded with its `config.json`, or that file mounted read-only in a profile with `state: "host"`. `false` leaves the image's own |
-| `store` | `$XDG_DATA_HOME/ahpd/cofold` | Where the cofold file store lives |
-| `memory` | `false` | `true` to hold the store in memory, for a test |
+| `store` | `$XDG_DATA_HOME/ahpd/cofold` | The folder each record's cofold file store lives under, one folder per record, so two agents do not list each other's sessions |
+| `memory` | `false` | `true` to hold each record's store in memory, for a test |
 | `tools` | all four on | Which capabilities a session runs, and where `web_search` gets its providers |
 | `strictTools` | `true` | `false` holds `tools` to the loose check, so a key cofold does not know is dropped rather than refused |
-| `apiKey` | the cofold file's | The daemon's own key. `{ "$secret": "host:<name>" }` reads it from the vault; an embedder may pass a function asked once per request |
+| `apiKey` | the cofold file's | The daemon's own key, for a record that names none. `{ "$secret": "host:<name>" }` reads it from the vault; an embedder may pass a function asked once per request |
 | `resource` | the endpoint's origin when it is `https` | The protected resource a client authenticates against |
 | `adapter` | the HTTP one | A cofold `ModelAdapter` used instead of the HTTP one, for an embedder or a test |
 | `autoCompactTokens` | 80% of the model's listed context, or of 32000 | The estimated history size at which a session compacts, never above that 80% |
@@ -80,7 +77,7 @@ An absent key is on, and `false` turns that capability off.
 
 ### `tools.web.search`
 
-The providers `web_search` asks, in the order they are written. A failing one is skipped.
+The providers `web_search` asks, in the order they are written. A failing one is skipped. A record may name `duckduckgo` alone: the channel vaults a record's top-level key fields only, so a key nested here would be kept in the record rather than in the vault.
 
 | Option | Default | What it does |
 | --- | --- | --- |

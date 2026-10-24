@@ -49,9 +49,6 @@ it('declares every option its README lists, and no other', () => {
 });
 
 it.each<[string, unknown]>([
-  ['provider', 5],
-  ['displayName', 5],
-  ['description', 5],
   ['model', 5],
   ['baseUrl', 5],
   ['instructions', 5],
@@ -106,4 +103,23 @@ it('takes computerConfigDir as a directory and as false', async () => {
     expect(problems).toEqual([]);
     expect(loaded).toHaveLength(1);
   }
+});
+
+/*
+ * An agent is a record, so the three fields a record carries are refused here.
+ *
+ * The schema cannot refuse them - they are not in it - so the loader says it
+ * does not know the key and lets it through, and `apply` refuses it with a
+ * sentence that says where the field is written now.
+ */
+it.each<[string, string]>([
+  ['provider', "the record's id"],
+  ['displayName', "the record's name"],
+  ['description', "the record's description"],
+])('refuses %s, which a record carries now', async (key, where) => {
+  const { loaded, problems } = await load({ [key]: 'x' });
+  expect(loaded).toEqual([]);
+  expect(problems).toHaveLength(2);
+  expect(problems[0]).toContain(`plugins.${NAME}.options.${key} is not an option`);
+  expect(problems[1]).toContain(`options.${key} is written per record now, as ${where}`);
 });

@@ -95,7 +95,7 @@ edit -> live record updated -> the session reads it at its next turn
 | [02 - A caller sees only the agents it may use](task-02-a-caller-sees-its-agents.md) | implemented | 01 |
 | [03 - agent-claude registers a kind](task-03-agent-claude-registers-a-kind.md) | implemented | 01 |
 | [04 - agent-acp registers a kind](task-04-agent-acp-registers-a-kind.md) | implemented | 01 |
-| [05 - agent-cofold registers a kind](task-05-agent-cofold-registers-a-kind.md) | todo | 01 |
+| [05 - agent-cofold registers a kind](task-05-agent-cofold-registers-a-kind.md) | implemented | 01 |
 | [06 - agent-pi registers a kind](task-06-agent-pi-registers-a-kind.md) | todo | 01 |
 | [07 - Presets become records at the first start](task-07-presets-become-records.md) | todo | 03, 04, 05, 06 |
 | [08 - The docs describe agent records](task-08-docs-describe-agent-records.md) | todo | 07 |
@@ -108,8 +108,8 @@ edit -> live record updated -> the session reads it at its next turn
 
 ## Resume state
 
-- **Done so far:** task 01, the agents channel, with its tests; the connectors channel and its tests are unchanged. Task 02, the caller's own agent list, with its tests. Task 03, the `claude` kind in agent-claude, with an edit applying at the next turn, while the preset agents still register until task 07. Task 04, the `acp` kind in agent-acp, with the shipped rows as templates, an edit applying at the next turn by another server on the same conversation, and the preset agents still registered until task 07.
-- **Next action:** task 05, agent-cofold registers a kind.
+- **Done so far:** task 01, the agents channel, with its tests; the connectors channel and its tests are unchanged. Task 02, the caller's own agent list, with its tests. Task 03, the `claude` kind in agent-claude, with an edit applying at the next turn, while the preset agents still register until task 07. Task 04, the `acp` kind in agent-acp, with the shipped rows as templates, an edit applying at the next turn by another server on the same conversation, and the preset agents still registered until task 07. Task 05, the `cofold` kind in agent-cofold, with one store folder per record, a record's keyed search providers refused because the channel vaults top-level fields only, and the plugin's own agent gone until task 07 migrates its options into a record.
+- **Next action:** task 06, agent-pi registers a kind.
 - **Open questions:** none.
 - **Watch out for:** Softov's build sessions run on the agent `claude-deepseek-build`. A daemon with this plan must still offer it after the first start, with the same id.
 
