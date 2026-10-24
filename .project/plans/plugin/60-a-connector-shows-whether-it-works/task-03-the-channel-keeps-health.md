@@ -1,6 +1,6 @@
 ---
 title: The channel keeps each connector's health
-status: todo
+status: implemented
 depends: [task-01-the-types-carry-a-check-and-health.md]
 layer: "sdk"
 refs:
@@ -49,3 +49,10 @@ A client can run the check again with `x-ahpd/connectors/check`.
 - `pnpm -s typecheck && pnpm -s build && pnpm -s boundary && pnpm -s test` passes.
 
 ## Resume
+
+- **Done so far:** the channel keeps a `Map<string, ConnectorHealth>` beside `open` and drops an entry when its connector closes or is removed. `checkOne` asks the adapter of an open connector and keeps `{ ...result, at }` under `check`. A connector that is not open, or whose adapter has no `check`, gets `undefined`. `within` races the check against ten seconds and answers `unreachable`, and a check that throws is `failed` with its message. A put awaits `checkOne` after `openOne`, so its answer carries the result, and `openAll` starts one without waiting and refreshes when it ends. `note(id, outcome)` sets `lastCall` and, when the call failed, `lastFailure`, with an error cut to 500 characters. `run` notes each action, `ok` on an answer and the thrown message before it rethrows. A refresh from `note` waits for the end of the second and sends one row set per second. `connectorRow` adds `health` only when the map holds the id. `x-ahpd/connectors/check` takes `{ id }` and takes `connector:put` with the owner's rule. It answers `INVALID_PARAMS` for a connector that is not open, or one whose adapter has no check. Otherwise it runs the check and answers the row.
+- **Next action:** [task-04-the-docs-say-how-health-shows.md](task-04-the-docs-say-how-health-shows.md).
+- **Files:** `packages/sdk/src/connectors/channel.ts`, `packages/sdk/test/connectors-channel.test.ts`, this task file, the plan and the index. The session cannot commit, so they are left in the worktree.
+- **Open questions:** none.
+- **Departures:** none. The refresh throttle is a trailing timer of one second from the last send. The first call after a quiet second sends at once, and the calls inside the second share one send.
+- **Watch out for:** a throwing check becomes a `failed` result, so a put never fails for a service that answers badly. Only an open that throws still throws. The fake-clock cases advance 1000 ms after the work, because the refresh is trailing.

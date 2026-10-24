@@ -7,20 +7,30 @@
  * `unavailable` when no plugin registers its adapter any more. The adapters
  * themselves are listed on `x-ahpd-adapters`.
  *
+ * A row also carries a `health`, when the host knows one: the last check the
+ * adapter gave, the last call the connector made or answered, and the last
+ * call that failed. Health is in memory only, so a restart clears it and the
+ * checks at start fill the first part again.
+ *
  * Where an adapter's schema marks a field `writeOnly`, the value is a secret. A
  * put moves it to the vault under `connector/<id>/<field>` in the owner's
  * scope and keeps a `{ "$secret": "<name>" }` in the record instead, so a
  * listing, a snapshot, an answer and the log never carry it. A field sent
  * empty keeps the secret the record already had, because a client is never
- * given one to send back.
+ * given one to send back. A host connector's field may hold
+ * `{ "fromEnv": "<NAME>" }` instead, which the host reads from its own
+ * environment when it opens the connector; a team's or a person's connector
+ * that names one is refused.
  *
- * Two commands change a connector. `x-ahpd/connectors/put` takes
+ * Three commands serve a connector. `x-ahpd/connectors/put` takes
  * `{ id, adapter, owner, title?, config }`, checks `config` against the
- * adapter's schema, closes the connector with that id, writes the record, and
- * calls the adapter's `open` with each secret read back.
+ * adapter's schema, closes the connector with that id, writes the record, calls
+ * the adapter's `open` with each secret read back, and waits for its `check`.
  * `x-ahpd/connectors/remove` takes `{ id }`, closes it, takes its secrets out
  * of the vault and takes the record out. Both answer the row a client now
- * holds.
+ * holds. `x-ahpd/connectors/check` takes `{ id }`, runs the adapter's `check`
+ * again and answers the row, so a person who fixed the service side sees the
+ * connector work without saving it again.
  *
  * `connector:list` reads the caller's own connectors, their teams' and the
  * host's; `connector:all` reads every connector. A caller with neither reads
@@ -31,12 +41,12 @@
 
 import { INVALID_PARAMS, INTERNAL_ERROR, RpcError } from '../rpc.js';
 import { sameOwnerOrHost } from '../automations/automations.js';
-import { scopeOf, secretRef } from '../access/vault.js';
+import { fromEnvRef, scopeOf, secretRef } from '../access/vault.js';
 import { isRecordSlug } from '../resources/records.js';
 import { recordsChannel, type RecordsChannel } from '../resources/recordschannel.js';
 import { membership } from '../usage/scopes.js';
 import { bag, isRecord, reason } from '../utils/values.js';
-import type { Connector, ConnectorOwner, ConnectorRef, ServedAdapter } from '../types/connectors.js';
+import type { CallOutcome, CheckResult, Connector, ConnectorHealth, ConnectorOwner, ConnectorRef, ServedAdapter } from '../types/connectors.js';
 import type { PluginMethod } from '../types/plugin.js';
 import type { RecordCollection, StoredRecord } from '../types/records.js';
 import type { Grant, Principal } from '../types/users.js';
@@ -48,9 +58,19 @@ const SCHEME = 'x-ahpd-connectors';
 const DOMAIN = 'x-ahpd/connectors';
 const PUT = `${DOMAIN}/put`;
 const REMOVE = `${DOMAIN}/remove`;
+const CHECK = `${DOMAIN}/check`;
 
 /** What a client is shown in place of a secret, which is also what the schema is held against. */
 const HELD = '<set>';
+
+/** How long a check may take before its connector is called `unreachable`. */
+const CHECK_LIMIT_MS = 10_000;
+
+/** The most of an error message a health entry keeps. */
+const HEALTH_MESSAGE_LIMIT = 500;
+
+/** The least time between two refreshes that a call outcome sends. */
+const NOTE_REFRESH_MS = 1000;
 
 /** The gate's code for a grant a caller does not hold. */
 const DENIED = -32009;
@@ -114,6 +134,15 @@ export interface ConnectorsChannel {
    * as it is for a read. The answer is the adapter's own, passed on unchanged.
    */
   run(id: string, reader: Principal | undefined, action: string, input: Record<string, unknown>): Promise<unknown>;
+  /**
+   * Record the outcome of one call for one connector, as `run` and a host part
+   * do.
+   *
+   * It sets `lastCall`, and `lastFailure` too when the call failed. An error
+   * is cut to 500 characters. The rows that carry it go out at most once a
+   * second.
+   */
+  note(id: string, outcome: { ok: boolean; status?: number; error?: string }): void;
   /** Send every reader what the connectors are now. */
   refresh(): Promise<void>;
   /**
@@ -136,6 +165,8 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   const known = new Map<string, ConnectorRef>();
   /** What stops each open connector, by id; an id in the map was opened. */
   const open = new Map<string, Opened>();
+  /** What the host knows of each open connector's health, by id, in memory only. */
+  const healths = new Map<string, ConnectorHealth>();
 
   const problem = (message: string): void => { options.onProblem?.(`${SCHEME}: ${message}`); };
 
@@ -203,7 +234,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   const heldAgainst = (config: Record<string, unknown>): Record<string, unknown> => {
     const out: Record<string, unknown> = { ...config };
     for (const [field, value] of Object.entries(out)) {
-      if (secretRef(value) !== undefined) out[field] = HELD;
+      if (secretRef(value) !== undefined || fromEnvRef(value) !== undefined) out[field] = HELD;
     }
     return out;
   };
@@ -226,8 +257,14 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     return open.has(record.id) ? 'open' : 'invalid';
   };
 
-  /** One stored connector as a client is shown it: its record, and the state it is in. */
-  const connectorRow = (record: StoredRecord): Record<string, unknown> => ({ ...record, state: stateOf(record) });
+  /**
+   * One stored connector as a client is shown it: its record, its state, and
+   * its health where the host knows any.
+   */
+  const connectorRow = (record: StoredRecord): Record<string, unknown> => {
+    const health = healths.get(record.id);
+    return { ...record, state: stateOf(record), ...(health === undefined ? {} : { health }) };
+  };
 
   /** The connector records the store holds, and the owner each names. */
   const stored = async (): Promise<StoredRecord[]> => {
@@ -326,23 +363,124 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     onProblem: problem,
   });
 
-  /** The config an adapter is opened with: each reference read back from the vault. */
-  const resolved = async (config: Record<string, unknown>): Promise<Record<string, unknown>> => {
+  /**
+   * The config an adapter is opened with: each reference read back.
+   *
+   * A `$secret` is read from the vault, and a `fromEnv` from the daemon's own
+   * environment. A variable that is not set, or is set empty, is refused the
+   * way a vault that holds no name is. A `fromEnv` in a connector that is not
+   * the host's is refused before the variable is read, as a put refuses it:
+   * a record written straight into the collection never reaches the check.
+   */
+  const resolved = async (config: Record<string, unknown>, owner: ConnectorOwner): Promise<Record<string, unknown>> => {
     const out: Record<string, unknown> = {};
     for (const [field, value] of Object.entries(config)) {
       const name = secretRef(value);
-      if (name === undefined) { out[field] = value; continue; }
-      const held = await options.vault()?.get(name);
-      if (held === undefined) throw new Error(`the vault holds no ${name}`);
-      out[field] = held;
+      if (name !== undefined) {
+        const held = await options.vault()?.get(name);
+        if (held === undefined) throw new Error(`the vault holds no ${name}`);
+        out[field] = held;
+        continue;
+      }
+      const variable = fromEnvRef(value);
+      if (variable !== undefined) {
+        if (owner !== 'host') {
+          throw new Error(`A connector's ${field} may read the daemon's environment only for a host connector`);
+        }
+        const held = process.env[variable];
+        if (held === undefined || held === '') throw new Error(`the environment holds no ${variable}`);
+        out[field] = held;
+        continue;
+      }
+      out[field] = value;
     }
     return out;
+  };
+
+  /** One check, or `unreachable` when it takes more than the limit to answer. */
+  const within = async (check: Promise<CheckResult>): Promise<CheckResult> => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<CheckResult>((done) => {
+      timer = setTimeout(() => { done({ result: 'unreachable' }); }, CHECK_LIMIT_MS);
+      timer.unref?.();
+    });
+    try {
+      return await Promise.race([check, late]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  };
+
+  /**
+   * Ask one open connector's adapter whether it works, and keep the answer.
+   *
+   * A connector that is not open, or whose adapter has no check, is asked
+   * nothing and answers `undefined`. A check that throws is `failed` with its
+   * message, and one that has not answered in ten seconds is `unreachable`.
+   */
+  const checkOne = async (id: string): Promise<CheckResult | undefined> => {
+    const entry = open.get(id);
+    if (entry === undefined) return undefined;
+    const adapter = options.adapters()[entry.connector.adapter];
+    if (adapter === undefined || typeof adapter.check !== 'function') return undefined;
+    const check = adapter.check.bind(adapter);
+    let result: CheckResult;
+    try {
+      result = await within(check(entry.connector));
+    } catch (error) {
+      const message = reason(error);
+      result = { result: 'failed', ...(message === '' ? {} : { message }) };
+    }
+    const health = healths.get(id) ?? {};
+    health.check = { ...result, at: new Date().toISOString() };
+    healths.set(id, health);
+    return result;
+  };
+
+  /** A refresh queued from `note`, and when the last one went out. */
+  let notedAt = 0;
+  let noting: ReturnType<typeof setTimeout> | undefined;
+
+  /** Send the rows `note` changed, at most once a second. */
+  const scheduleNoteRefresh = (): void => {
+    if (noting !== undefined) return;
+    const wait = Math.max(0, notedAt + NOTE_REFRESH_MS - Date.now());
+    noting = setTimeout(() => {
+      noting = undefined;
+      notedAt = Date.now();
+      void channel.refresh().catch(() => {});
+    }, wait);
+    noting.unref?.();
+  };
+
+  /**
+   * Keep one call's outcome, and queue the rows that carry it.
+   *
+   * `run` records each action with it, and a host part records each call it
+   * makes for a connector. The last call is kept, and the last one that failed
+   * is kept beside it. The time is the host's, and an error is cut to 500
+   * characters so a row stays small.
+   */
+  const note = (id: string, outcome: { ok: boolean; status?: number; error?: string }): void => {
+    const health = healths.get(id) ?? {};
+    const error = outcome.error === undefined ? undefined : outcome.error.slice(0, HEALTH_MESSAGE_LIMIT);
+    const call: CallOutcome = {
+      at: new Date().toISOString(),
+      ok: outcome.ok,
+      ...(outcome.status === undefined ? {} : { status: outcome.status }),
+      ...(error === undefined ? {} : { error }),
+    };
+    health.lastCall = call;
+    if (!outcome.ok) health.lastFailure = call;
+    healths.set(id, health);
+    scheduleNoteRefresh();
   };
 
   /** Stop one open connector, if it is open. A close that fails is said and not thrown. */
   const close = async (id: string): Promise<void> => {
     const entry = open.get(id);
     open.delete(id);
+    healths.delete(id);
     const stop = entry?.stop;
     if (stop === undefined) return;
     try {
@@ -361,7 +499,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       adapter: adapter.name,
       owner,
       ...(typeof record.title === 'string' ? { title: record.title } : {}),
-      config: await resolved(config),
+      config: await resolved(config, owner),
     };
     await close(record.id);
     const stop = adapter.open(connector);
@@ -375,7 +513,8 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
    * open, the adapter has to declare the action and be able to run it, and the
    * reader has to pass `mayRead`. A message names the reason and never a
    * secret, because the adapter's answer and its config are the only things
-   * that hold one.
+   * that hold one. `note` keeps the outcome of each call, and a call that
+   * throws is kept and thrown on.
    */
   const run = async (
     id: string,
@@ -394,7 +533,14 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     if (reader !== undefined && !mayRead(id, reader)) {
       throw new Error(`${id} is not ${reader.id}'s to use`);
     }
-    return adapter.run(entry.connector, action, input);
+    try {
+      const answer = await adapter.run(entry.connector, action, input);
+      note(id, { ok: true });
+      return answer;
+    } catch (error) {
+      note(id, { ok: false, error: reason(error) });
+      throw error;
+    }
   };
 
   /**
@@ -426,6 +572,20 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       }
       if (secretRef(value) !== undefined) {
         throw new RpcError(INVALID_PARAMS, `A connector's ${field} is a secret: send its value, not a reference to it`);
+      }
+      const variable = fromEnvRef(value);
+      if (variable !== undefined) {
+        /*
+         * Only a host connector may name one: the daemon's environment is
+         * nobody's own, and a person's connector that read it could send any
+         * variable of the daemon to an endpoint they choose.
+         */
+        if (owner !== 'host') {
+          throw new RpcError(INVALID_PARAMS, `A connector's ${field} may read the daemon's environment only for a host connector`);
+        }
+        if (mine) await forget(vault, was, id);
+        out[field] = { fromEnv: variable };
+        continue;
       }
       if (value === '') {
         if (!mine) { delete out[field]; continue; }
@@ -528,6 +688,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       const checked: Record<string, unknown> = { ...config };
       for (const field of writeOnly(adapter.schema)) {
         if (checked[field] === '' && secretRef(kept[field]) !== undefined) checked[field] = HELD;
+        if (fromEnvRef(checked[field]) !== undefined) checked[field] = HELD;
       }
       try {
         options.check(checked, adapter.schema, `connector ${id}`);
@@ -551,6 +712,8 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       if (moving && was !== undefined) await forgetAll(before, was, id);
       try {
         await openOne(adapter, record, owner);
+        // A put is where a person learns the key is wrong, so it waits for the check.
+        await checkOne(id);
       } catch (error) {
         await channel.refresh();
         throw new RpcError(INTERNAL_ERROR, `${id} is stored, but ${adapterName} could not open it: ${reason(error)}`);
@@ -590,12 +753,45 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     },
   };
 
-  const methods: Record<string, PluginMethod> = { [PUT]: put, [REMOVE]: remove };
+  /*
+   * The check command takes what a put takes: who may change a connector may
+   * test it. The owner's rule is asked here, as a put asks it, because a grant
+   * that reads the channel says nothing about another person's connector.
+   */
+  const check: PluginMethod = {
+    grant: 'connector:put' as Grant,
+    describe: () => ({ title: 'Check a connector', description: 'Runs one open connector\'s own check, and answers the row.' }),
+    authorize: async (params, reader) => {
+      const id = params.id;
+      if (typeof id !== 'string') return false;
+      const before = await options.collection.get(id);
+      return before !== undefined && ownerAllows(asOwner(before.owner), reader, 'put');
+    },
+    handle: async (params, reader) => {
+      const id = idParam(CHECK, params);
+      const before = await options.collection.get(id);
+      if (before === undefined) throw new RpcError(INVALID_PARAMS, `${SCHEME} holds no ${id}`);
+      const owner = asOwner(before.owner);
+      if (owner !== undefined) refuseOwner('check', owner, reader, 'put');
+      const entry = open.get(id);
+      if (entry === undefined) throw new RpcError(INVALID_PARAMS, `${id} is not an open connector`);
+      const adapter = options.adapters()[entry.connector.adapter];
+      if (adapter === undefined || typeof adapter.check !== 'function') {
+        throw new RpcError(INVALID_PARAMS, `${entry.connector.adapter} has no check`);
+      }
+      await checkOne(id);
+      await channel.refresh();
+      return connectorRow(before);
+    },
+  };
+
+  const methods: Record<string, PluginMethod> = { [PUT]: put, [REMOVE]: remove, [CHECK]: check };
 
   return {
     channel,
     methods,
     run,
+    note,
     refresh: () => channel.refresh(),
     refs: () => [...known.values()],
     /*
@@ -617,7 +813,10 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
           await openOne(adapter, record, owner);
         } catch (error) {
           problem(`${record.id} could not be opened: ${reason(error)}`);
+          continue;
         }
+        // A start does not wait for a check: a slow service must not hold it.
+        void checkOne(record.id).then(() => channel.refresh()).catch(() => {});
       }
       await channel.refresh();
     },

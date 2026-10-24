@@ -397,7 +397,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [57 - A cofold transcript skips a run that a rewind dropped while it reads](plugin/57-a-transcript-skips-a-run-a-rewind-dropped/plan.md) | medium | planned 2026-10-23; one task, implemented | - | - |
 | [58 - Plugins and adapters carry icons](plugin/58-plugins-and-adapters-carry-icons/plan.md) | medium | active 2026-10-23; tasks 01-03 merged in #80; 04 and 05 implemented, and 05 waits for icon curation | - | - |
 | [59 - A plugin loads, unloads and reloads while the daemon runs](plugin/59-a-plugin-loads-and-unloads-live/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | - |
-| [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | planned 2026-10-23; four tasks, todo | - | the model proxy's providers as connectors |
+| [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | the model proxy's providers as connectors |
 
 Next free number in `plugin`: `60`.
 

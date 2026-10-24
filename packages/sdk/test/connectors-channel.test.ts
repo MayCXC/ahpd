@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { connectorsChannel } from '../src/connectors/channel.js';
 import { createHost } from '../src/host.js';
 import { fileUsers } from '../src/access/users.js';
@@ -9,7 +9,7 @@ import { fileResources } from '../src/resources/resources.js';
 import { memoryRecords } from '../src/resources/records.js';
 import { servedRecords } from '../src/resources/recordschannel.js';
 import { echo } from '../../../examples/echo/agent.js';
-import type { Connector, ServedAdapter } from '../src/types/connectors.js';
+import type { CheckResult, Connector, ServedAdapter } from '../src/types/connectors.js';
 import type { RecordCollection } from '../src/types/records.js';
 import type { Principal, Users } from '../src/types/users.js';
 import type { Vault } from '../src/types/vault.js';
@@ -105,7 +105,10 @@ beforeEach(() => {
     ],
   }));
 });
-afterEach(() => { rmSync(home, { recursive: true, force: true }); });
+afterEach(() => {
+  rmSync(home, { recursive: true, force: true });
+  delete process.env['AHPD_TEST_CONNECTOR_KEY'];
+});
 
 type Host = ReturnType<typeof createHost>;
 
@@ -133,6 +136,11 @@ async function served(register = true) {
   const ran: Ran[] = [];
   const problems: string[] = [];
   const vault = made();
+  /** What the adapter's check answers, and the connectors it was asked about. */
+  const probe = {
+    asked: [] as string[],
+    answer: async (): Promise<CheckResult> => ({ result: 'ok' }),
+  };
   const adapters: Record<string, ServedAdapter> = register
     ? {
         webhook: {
@@ -154,6 +162,10 @@ async function served(register = true) {
           open: (connector: Connector) => {
             opened.push({ id: connector.id, adapter: connector.adapter, owner: connector.owner, config: connector.config });
             return () => { closed.push(connector.id); };
+          },
+          check: async (connector: Connector) => {
+            probe.asked.push(connector.id);
+            return probe.answer();
           },
           run: async (connector: Connector, action: string, input: Record<string, unknown>) => {
             ran.push({ id: connector.id, action, input, config: connector.config });
@@ -179,7 +191,7 @@ async function served(register = true) {
     methods: wire.methods,
     users,
   });
-  return { host, users, collection, connectors, adapters, opened, closed, ran, problems, vault, close: async () => { await host.close(); } };
+  return { host, users, collection, connectors, adapters, opened, closed, ran, problems, vault, probe, close: async () => { await host.close(); } };
 }
 
 /** A client signed in as `id`, whose channel actions are kept. */
@@ -205,7 +217,7 @@ const as = async (host: Host, users: Users, id: string) => {
     const records = (answer['result'] as Bag)['snapshot'].state.records as { id: string; record: Bag }[];
     return Object.fromEntries(records.map((one) => [one.id, one.record]));
   };
-  return { call, rows, ready, close: () => { client.close(); } };
+  return { call, rows, ready, seen, close: () => { client.close(); } };
 };
 
 /** The person behind an id, as a call through the channel is handed one. */
@@ -296,6 +308,102 @@ it('keeps the stored secret when a put sends the writeOnly field empty', async (
   // Closed for the rewrite and opened again with the secret read back.
   expect(opened).toHaveLength(2);
   expect(opened[1]?.config).toEqual({ target: 'bot://other', secret: 'sk-live-1' });
+  await close();
+});
+
+it('opens a host connector with a variable from the daemon\'s environment, and keeps only its name', async () => {
+  process.env['AHPD_TEST_CONNECTOR_KEY'] = 'env-value';
+  const { host, users, collection, opened, vault, close } = await served();
+  const ha = await as(host, users, 'ha');
+  const iv = await as(host, users, 'iv');
+
+  expect(await ha.call('x-ahpd/connectors/put', {
+    id: 'shared',
+    adapter: 'webhook',
+    owner: 'host',
+    config: { target: 'bot://motion', secret: { fromEnv: 'AHPD_TEST_CONNECTOR_KEY' } },
+  })).toMatchObject({
+    result: { id: 'shared', state: 'open', config: { secret: { fromEnv: 'AHPD_TEST_CONNECTOR_KEY' } } },
+  });
+
+  // The adapter is given the value, and the daemon keeps nothing in the vault.
+  expect(opened[0]?.config['secret']).toBe('env-value');
+  expect([...vault.held.keys()]).toEqual([]);
+  // The record and every row carry the name, which is not a secret.
+  expect((await collection.get('shared'))?.['config'])
+    .toEqual({ target: 'bot://motion', secret: { fromEnv: 'AHPD_TEST_CONNECTOR_KEY' } });
+  expect(JSON.stringify(await iv.rows())).not.toContain('env-value');
+  await close();
+});
+
+it('takes the old vault secret out when a host field changes to an environment reference', async () => {
+  process.env['AHPD_TEST_CONNECTOR_KEY'] = 'env-value';
+  const { host, users, vault, close } = await served();
+  const ha = await as(host, users, 'ha');
+
+  await ha.call('x-ahpd/connectors/put', {
+    id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a', secret: 'sk-live-1' },
+  });
+  expect([...vault.held.keys()]).toEqual(['host:connector/shared/secret']);
+
+  await ha.call('x-ahpd/connectors/put', {
+    id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a', secret: { fromEnv: 'AHPD_TEST_CONNECTOR_KEY' } },
+  });
+  expect([...vault.held.keys()]).toEqual([]);
+  await close();
+});
+
+it('shows a host connector whose variable is not set as invalid', async () => {
+  const { host, users, connectors, opened, close } = await served();
+  const ha = await as(host, users, 'ha');
+  const iv = await as(host, users, 'iv');
+
+  // The put is refused because the connector cannot open, and it stays stored.
+  expect(await ha.call('x-ahpd/connectors/put', {
+    id: 'shared',
+    adapter: 'webhook',
+    owner: 'host',
+    config: { target: 'a', secret: { fromEnv: 'AHPD_TEST_CONNECTOR_KEY' } },
+  })).toMatchObject({ code: -32603, message: expect.stringContaining('the environment holds no AHPD_TEST_CONNECTOR_KEY') });
+  expect(opened).toEqual([]);
+  expect((await iv.rows())['shared']).toMatchObject({ state: 'invalid' });
+  // A start does not throw for it either, and leaves it invalid.
+  await connectors.openAll();
+  expect((await iv.rows())['shared']).toMatchObject({ state: 'invalid' });
+  await close();
+});
+
+it('refuses an environment reference on a team\'s connector or a person\'s', async () => {
+  const { host, users, collection, opened, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const di = await as(host, users, 'di');
+
+  // The daemon's environment is nobody's own, so only a host connector names one.
+  expect(await cy.call('x-ahpd/connectors/put', {
+    id: 'mine', adapter: 'webhook', owner: 'user:cy', config: { target: 'a', secret: { fromEnv: 'AHPD_TEST_CONNECTOR_KEY' } },
+  })).toMatchObject({ code: -32602, message: expect.stringContaining('only for a host connector') });
+  expect(await di.call('x-ahpd/connectors/put', {
+    id: 'team', adapter: 'webhook', owner: 'team:backend', config: { target: 'a', secret: { fromEnv: 'AHPD_TEST_CONNECTOR_KEY' } },
+  })).toMatchObject({ code: -32602, message: expect.stringContaining('only for a host connector') });
+  expect(await collection.list()).toEqual([]);
+  expect(opened).toEqual([]);
+  await close();
+});
+
+it('leaves a person\'s record that names a variable invalid at open, without reading the variable', async () => {
+  const { host, users, collection, opened, connectors, problems, close } = await served();
+  // Written straight into the collection, so no put asked the owner's rule.
+  await collection.put({
+    id: 'mine', adapter: 'webhook', owner: 'user:cy', config: { target: 'a', secret: { fromEnv: 'AHPD_TEST_CONNECTOR_KEY' } },
+  });
+  expect(process.env['AHPD_TEST_CONNECTOR_KEY']).toBeUndefined();
+  await connectors.openAll();
+  const cy = await as(host, users, 'cy');
+
+  // A read would answer `the environment holds no ...`; the owner's rule runs first.
+  expect(problems).toEqual([expect.stringContaining('may read the daemon\'s environment only for a host connector')]);
+  expect(opened).toEqual([]);
+  expect((await cy.rows())['mine']).toMatchObject({ state: 'invalid' });
   await close();
 });
 
@@ -667,5 +775,211 @@ it('refuses an action the adapter does not declare, and an adapter that runs non
   };
   await expect(connectors.run('ci', reader, 'send', { text: 'x' })).rejects.toThrow('webhook runs no action');
   expect(ran).toEqual([]);
+  await close();
+});
+
+/*
+ * Health: the check an adapter gives, and the calls the host keeps.
+ *
+ * A refresh a call outcome changes waits, so each of these lets a second pass
+ * on a fake clock rather than sleeping.
+ */
+
+/** Run `work`, then let the coalesced refresh go out, on a fake clock. */
+const onFakeClock = async <T>(work: () => Promise<T>): Promise<T> => {
+  vi.useFakeTimers();
+  try {
+    const answer = await work();
+    await vi.advanceTimersByTimeAsync(1000);
+    return answer;
+  } finally {
+    vi.useRealTimers();
+  }
+};
+
+it('answers a put with the check its adapter ran', async () => {
+  const { host, users, probe, close } = await served();
+  const cy = await as(host, users, 'cy');
+
+  expect(await cy.call('x-ahpd/connectors/put', {
+    id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' },
+  })).toMatchObject({
+    result: { state: 'open', health: { check: { result: 'ok', at: expect.any(String) } } },
+  });
+  expect(probe.asked).toEqual(['ci']);
+  await close();
+});
+
+it('keeps a check that throws as failed, with the message the adapter gave', async () => {
+  const { host, users, probe, close } = await served();
+  probe.answer = async () => { throw new Error('the service said no'); };
+  const cy = await as(host, users, 'cy');
+
+  expect(await cy.call('x-ahpd/connectors/put', {
+    id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' },
+  })).toMatchObject({ result: { health: { check: { result: 'failed', message: 'the service said no' } } } });
+  await close();
+});
+
+it('answers a check that hangs for ten seconds as unreachable', async () => {
+  const { host, users, connectors, probe, close } = await served();
+  const ha = await as(host, users, 'ha');
+  await ha.call('x-ahpd/connectors/put', { id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a' } });
+  // A service that never answers.
+  probe.answer = () => new Promise<CheckResult>(() => {});
+
+  vi.useFakeTimers();
+  try {
+    const answer = ha.call('x-ahpd/connectors/check', { id: 'shared' });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(await answer).toMatchObject({ result: { health: { check: { result: 'unreachable' } } } });
+  } finally {
+    vi.useRealTimers();
+  }
+  // The connector is still open, and the check is the only thing that changed.
+  expect((await connectors.run('shared', undefined, 'send', { text: 'x' }))).toEqual({ ran: 'send', on: 'shared' });
+  await close();
+});
+
+it('keeps a failed run as the last call and the last failure', async () => {
+  const { host, users, connectors, adapters, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/connectors/put', { id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+  const webhook = adapters['webhook']!;
+  adapters['webhook'] = { ...webhook, run: async () => { throw new Error('no route'); } };
+  const reader = await readerOf(users, 'cy');
+
+  await onFakeClock(async () => {
+    await expect(connectors.run('ci', reader, 'send', { text: 'x' })).rejects.toThrow('no route');
+  });
+
+  const iv = await as(host, users, 'iv');
+  expect((await iv.rows())['ci']).toMatchObject({
+    health: {
+      check: { result: 'ok' },
+      lastCall: { ok: false, error: 'no route', at: expect.any(String) },
+      lastFailure: { ok: false, error: 'no route', at: expect.any(String) },
+    },
+  });
+  await close();
+});
+
+it('keeps a call a host part notes as the last call, and cuts its error to 500 characters', async () => {
+  const { host, users, connectors, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/connectors/put', { id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+  const iv = await as(host, users, 'iv');
+
+  await onFakeClock(async () => { connectors.note('ci', { ok: true, status: 200 }); });
+  expect((await iv.rows())['ci']).toMatchObject({
+    health: { check: { result: 'ok' }, lastCall: { ok: true, status: 200, at: expect.any(String) } },
+  });
+  expect((await iv.rows())['ci']?.['health']).not.toHaveProperty('lastFailure');
+
+  await onFakeClock(async () => { connectors.note('ci', { ok: false, error: 'x'.repeat(600) }); });
+  const health = (await iv.rows())['ci']?.['health'];
+  expect(health).toMatchObject({ lastCall: { ok: false }, lastFailure: { ok: false } });
+  expect(health?.['lastFailure']?.['error']).toHaveLength(500);
+  await close();
+});
+
+it('sends at most one refresh a second for the outcomes note keeps', async () => {
+  const { host, users, connectors, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/connectors/put', { id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+  const iv = await as(host, users, 'iv');
+  // A subscribe answers a snapshot; every later send of the row is one refresh.
+  await iv.rows();
+  const sends = (): number => iv.seen.filter((one) => one.method === 'action' && one.params['channel'] === URI).length;
+  const seeded = sends();
+
+  vi.useFakeTimers();
+  try {
+    // Five calls in one second are one refresh, and the next call is another.
+    for (let one = 0; one < 5; one += 1) connectors.note('ci', { ok: true, status: 200 + one });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(sends() - seeded).toBe(1);
+    connectors.note('ci', { ok: true, status: 300 });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(sends() - seeded).toBe(2);
+  } finally {
+    vi.useRealTimers();
+  }
+  await close();
+});
+
+it('checks each connector when the daemon starts, without waiting for it', async () => {
+  const { host, users, collection, connectors, probe, close } = await served();
+  await collection.put({ id: 'ci', adapter: 'webhook', owner: 'host', config: { target: 'a' } });
+
+  await connectors.openAll();
+  // The check is started and not awaited, so one turn is what lets it finish.
+  await new Promise((done) => { setTimeout(done, 0); });
+
+  const iv = await as(host, users, 'iv');
+  expect((await iv.rows())['ci']).toMatchObject({ state: 'open', health: { check: { result: 'ok' } } });
+  expect(probe.asked).toEqual(['ci']);
+  await close();
+});
+
+it('refuses a check to a reader that is not the connector\'s owner', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const ha = await as(host, users, 'ha');
+  await cy.call('x-ahpd/connectors/put', { id: 'mine', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+  await ha.call('x-ahpd/connectors/put', { id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a' } });
+
+  // A person's connector is that person's to check, and a host's takes connector:host.
+  expect(await ha.call('x-ahpd/connectors/check', { id: 'mine' })).toMatchObject({ code: -32009 });
+  expect(await cy.call('x-ahpd/connectors/check', { id: 'shared' })).toMatchObject({ code: -32009 });
+  expect(await cy.call('x-ahpd/connectors/check', { id: 'mine' })).toMatchObject({ result: { id: 'mine' } });
+  await close();
+});
+
+it('refuses a check of a connector that is not open, or of an adapter that has none', async () => {
+  const { host, users, collection, adapters, close } = await served();
+  const ha = await as(host, users, 'ha');
+  await ha.call('x-ahpd/connectors/put', { id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a' } });
+
+  // A stored connector the host did not open.
+  await collection.put({ id: 'lost', adapter: 'webhook', owner: 'host', config: { target: 'a' } });
+  expect(await ha.call('x-ahpd/connectors/check', { id: 'lost' })).toMatchObject({
+    code: -32602,
+    message: expect.stringContaining('is not an open connector'),
+  });
+
+  // An adapter with no check is not asked to make one.
+  const webhook = adapters['webhook']!;
+  adapters['webhook'] = {
+    name: webhook.name,
+    title: webhook.title,
+    description: webhook.description,
+    by: webhook.by,
+    schema: webhook.schema,
+    capabilities: webhook.capabilities,
+    open: webhook.open,
+  };
+  expect(await ha.call('x-ahpd/connectors/check', { id: 'shared' })).toMatchObject({
+    code: -32602,
+    message: 'webhook has no check',
+  });
+  await close();
+});
+
+it('drops a connector\'s health when it is removed, and checks it again when it is made', async () => {
+  const { host, users, connectors, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/connectors/put', { id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+  await connectors.run('ci', await readerOf(users, 'cy'), 'send', { text: 'x' });
+
+  await cy.call('x-ahpd/connectors/remove', { id: 'ci' });
+  await cy.call('x-ahpd/connectors/put', { id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+
+  const iv = await as(host, users, 'iv');
+  const health = (await iv.rows())['ci']?.['health'];
+  // The check is the one the new open gave; the call the old one made is gone.
+  expect(health).toMatchObject({ check: { result: 'ok' } });
+  expect(health).not.toHaveProperty('lastCall');
+  expect(health).not.toHaveProperty('lastFailure');
   await close();
 });

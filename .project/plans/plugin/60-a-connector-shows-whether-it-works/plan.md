@@ -1,7 +1,7 @@
 ---
 title: A connector shows whether it works
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-23
 revalidated: 2026-10-23
@@ -17,7 +17,7 @@ refs:
   - "[code://packages/sdk/src/connectors/channel.ts#L380-L398](../../../../packages/sdk/src/connectors/channel.ts#L380-L398) - `run`, the one place an action call goes through"
   - "[code://packages/sdk/src/connectors/channel.ts#L400-L449](../../../../packages/sdk/src/connectors/channel.ts#L400-L449) - `moveSecrets`, which refuses a reference in a secret field"
   - "[code://packages/sdk/src/connectors/channel.ts#L172-L180](../../../../packages/sdk/src/connectors/channel.ts#L172-L180) - `ownerAllows`: a host connector takes `connector:host`"
-  - "[code://packages/sdk/src/access/vault.ts#L64-L70](../../../../packages/sdk/src/access/vault.ts#L64-L70) - `secretRef`, the pattern for `envRef`"
+  - "[code://packages/sdk/src/access/vault.ts#L64-L70](../../../../packages/sdk/src/access/vault.ts#L64-L70) - `secretRef`, the single-key rule a reference reader follows"
   - "[code://packages/sdk/src/host/tooling.ts#L531](../../../../packages/sdk/src/host/tooling.ts#L531) - action tools call `connectors.run`"
   - "[code://packages/sdk/test/connectors-channel.test.ts](../../../../packages/sdk/test/connectors-channel.test.ts) - the channel's tests, with a fake adapter and vault"
   - "[code://docs/plugins/PLUGINS.md#L1176](../../../../docs/plugins/PLUGINS.md#L1176) - the connectors commands table"
@@ -67,8 +67,8 @@ host part (the proxy, next plan) -> connectors.note -> last call in memory -> co
 | An adapter may give a check, a call that needs its credentials, to say whether the key is valid | Softov, 2026-10-23 | 01, 03 |
 | The host keeps in memory the last call's status and time, and the last failure's error and time | Softov, 2026-10-23 | 03 |
 | A secret field holds a value or the name of an environment variable, which the host reads when it opens the connector | Softov, 2026-10-23 | 01, 02 |
-| The environment form is `{ "$env": "<NAME>" }`, beside `{ "$secret": "<name>" }` | (defaulted: the shape of `secretRef`) | 01, 02 |
-| Only a host connector may name an environment variable. A team or a person's connector that names one is refused | (defaulted: else any person reads any daemon variable, by sending it to an endpoint they choose) | 02 |
+| The environment form is `{ "fromEnv": "<NAME>" }`, beside `{ "$secret": "<name>" }` | Softov, 2026-10-23: one form, the one presets use | 01, 02 |
+| Only a host connector may name an environment variable. A team or a person's connector that names one is refused on a put, and again when the record is opened | (defaulted: else any person reads any daemon variable, by sending it to an endpoint they choose) | 02 |
 | A row shows an environment reference as it is stored, because the name is not a secret | (defaulted: a client shows where the key comes from) | 02 |
 | A missing variable fails the open, and the connector is `invalid` with a problem line that names the variable | (defaulted: as a missing vault secret does today) | 02 |
 | A check answers `ok`, `denied` (the service refused the credentials), `unreachable` or `failed`, with an optional message | (defaulted: the three outcomes Softov named, and one for anything else) | 01, 03 |
@@ -86,17 +86,17 @@ host part (the proxy, next plan) -> connectors.note -> last call in memory -> co
 - **Data flow** - the adapter answers a check. The channel holds the check, the last call and the last failure for each open connector, and adds them to the row as `health`.
 - **Event flow** - a put, a start, a check command, a `run` and a `note` each update the health, and a coalesced refresh sends the rows.
 - **State flow** - health lives in memory only. A restart clears it, and the checks at start fill it again. A close or a remove drops it.
-- **Layer responsibilities** - sdk: the types, `envRef`, the channel, its tests. docs: the adapter section, the commands table and the grants table.
+- **Layer responsibilities** - sdk: the types, the shared `fromEnvRef`, the channel, its tests. docs: the adapter section, the commands table and the grants table.
 - **Source-of-truth files** - [`code://packages/sdk/src/connectors/channel.ts`](../../../../packages/sdk/src/connectors/channel.ts)
 
 ## Tasks
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The types carry a check and health](task-01-the-types-carry-a-check-and-health.md) | todo | - |
-| [02 - A host secret can name an env variable](task-02-a-host-secret-can-name-an-env-variable.md) | todo | 01 |
-| [03 - The channel keeps each connector's health](task-03-the-channel-keeps-health.md) | todo | 01 |
-| [04 - The docs say how a connector shows health](task-04-the-docs-say-how-health-shows.md) | todo | 02, 03 |
+| [01 - The types carry a check and health](task-01-the-types-carry-a-check-and-health.md) | implemented | - |
+| [02 - A host secret can name an env variable](task-02-a-host-secret-can-name-an-env-variable.md) | implemented | 01 |
+| [03 - The channel keeps each connector's health](task-03-the-channel-keeps-health.md) | implemented | 01 |
+| [04 - The docs say how a connector shows health](task-04-the-docs-say-how-health-shows.md) | implemented | 02, 03 |
 
 ## Risks and tradeoffs
 
@@ -106,7 +106,7 @@ host part (the proxy, next plan) -> connectors.note -> last call in memory -> co
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-types-carry-a-check-and-health.md](task-01-the-types-carry-a-check-and-health.md).
+- **Done so far:** task-01, task-02, task-03 and task-04 are implemented. The sdk has `Adapter.check`, `CheckResult`, `CallOutcome` and `ConnectorHealth`. A host connector's `writeOnly` field may hold `{ "fromEnv": "<NAME>" }`, the form presets use, which the channel reads from the daemon's environment when it opens the connector. A team's or a person's connector that holds one is refused on a put and again at open. The channel keeps each open connector's health in memory. It runs the check after a put and after a start, and records each `run` and each `note`. It sends one refresh a second for them, and serves `x-ahpd/connectors/check`. `docs/plugins/PLUGINS.md` and `docs/sdk/HOST.md` describe all of it.
+- **Next action:** run the verification by hand against a running daemon, then write `implemented.md` and close the plan.
 - **Open questions:** none.
 - **Watch out for:** `state` stays as it is, `open`, `invalid` or `unavailable`. `health` is a second key beside it, and does not change it.
