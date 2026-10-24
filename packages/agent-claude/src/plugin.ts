@@ -29,7 +29,7 @@ export const name = 'agent-claude';
  * which must not import the module to read it; this export is for an embedder
  * that imports the entry directly.
  */
-export const title = 'Claude';
+export const title = 'Agent Claude';
 
 /**
  * The options `apply` receives, as a JSON Schema the daemon checks them against

@@ -31,7 +31,7 @@ export const name = 'agent-cofold';
  * which must not import the module to read it; this export is for an embedder
  * that imports the entry directly.
  */
-export const title = 'Cofold';
+export const title = 'Agent Cofold';
 
 /**
  * A search provider that takes a key.

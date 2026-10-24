@@ -26,7 +26,7 @@ export const name = 'agent-pi';
  * which must not import the module to read it; this export is for an embedder
  * that imports the entry directly.
  */
-export const title = 'pi';
+export const title = 'Agent pi';
 
 /** What an option falls back to. */
 export const defaults = {

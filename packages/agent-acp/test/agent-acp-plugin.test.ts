@@ -156,7 +156,7 @@ it('loads the package from its source file and serves a turn through the server 
   expect(problems).toEqual([]);
   expect(loaded).toHaveLength(1);
   expect(loaded[0]?.name).toBe('agent-acp');
-  expect(loaded[0]?.title).toBe('ACP');
+  expect(loaded[0]?.title).toBe('Agent ACP');
 
   const host = createHost(options);
   const said = peer();
@@ -194,7 +194,7 @@ it('lists a manifest, its title, and the id its entry exports', async () => {
     private: true,
     type: 'module',
     exports: { '.': './entry.js' },
-    ahpd: { entry: './entry.js', title: 'ACP' },
+    ahpd: { entry: './entry.js', title: 'Agent ACP' },
   }));
 
   // The list verb names every spec first, as this does.
@@ -205,7 +205,7 @@ it('lists a manifest, its title, and the id its entry exports', async () => {
   // The key is the id the entry exports; the package's own name is `module`.
   expect(row.name).toBe('agent-acp');
   expect(row.module).toBe('@ahpd/agent-acp');
-  expect(row.title).toBe('ACP');
+  expect(row.title).toBe('Agent ACP');
   expect(row.path).toBe(join(dir, 'entry.js'));
 });
 

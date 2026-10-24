@@ -30,7 +30,7 @@ export const name = 'agent-acp';
  * which must not import the module to read it; this export is for an embedder
  * that imports the entry directly.
  */
-export const title = 'ACP';
+export const title = 'Agent ACP';
 
 /** One option's value in a preset's `env`: a variable, or the name of a secret it is. */
 const envValue = { type: 'string', writeOnly: true, secretAtUse: true };

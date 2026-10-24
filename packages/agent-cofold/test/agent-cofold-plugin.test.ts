@@ -147,7 +147,7 @@ it('loads the package from its source file and serves a turn through the stub mo
   expect(loaded).toHaveLength(1);
   expect(loaded[0]?.name).toBe('agent-cofold');
   // The module exports no title, so this is the manifest's `ahpd.title`.
-  expect(loaded[0]?.title).toBe('Cofold');
+  expect(loaded[0]?.title).toBe('Agent Cofold');
 
   const host = createHost(options);
   const said = peer();
@@ -184,7 +184,7 @@ it('lists a manifest, and its title, with the package name as its id', async () 
     private: true,
     type: 'module',
     exports: { '.': './entry.js' },
-    ahpd: { entry: './entry.js', title: 'Cofold' },
+    ahpd: { entry: './entry.js', title: 'Agent Cofold' },
   }));
 
   const row = await describePlugin(dir, { configDir: REPO, cwd: REPO });
@@ -194,7 +194,7 @@ it('lists a manifest, and its title, with the package name as its id', async () 
   // joined by a dash.
   expect(row.name).toBe('ahpd-agent-cofold');
   expect(row.module).toBe('@ahpd/agent-cofold');
-  expect(row.title).toBe('Cofold');
+  expect(row.title).toBe('Agent Cofold');
   expect(row.path).toBe(join(dir, 'entry.js'));
 });
 
@@ -284,7 +284,7 @@ it('refuses the package when its @ahpd/sdk peer range is not satisfied', async (
     version: '0.0.1',
     type: 'module',
     peerDependencies: { '@ahpd/sdk': '^9.9.9' },
-    ahpd: { entry: './index.js', title: 'Cofold' },
+    ahpd: { entry: './index.js', title: 'Agent Cofold' },
   }, null, 2));
   writeFileSync(join(loose, 'index.js'), 'export function apply() {}\n');
 
