@@ -69,7 +69,7 @@ An agent is a record on `x-ahpd-agents`: `{ id, kind, owner, name, description?,
 
 `extraArgs` is host-only: a team's or a person's record that sets one is refused, because an argument is where a command would come from. `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` in `env` are the kind's key variables, so any owner may set them; every other `env` variable is the host's alone, because a free environment can run a program.
 
-A `models` entry is a model id, `{ "id", "name" }`, or `{ "fetch": "<url>", "match": "<pattern>", "key": { "fromEnv": "NAME" } }`, which reads an OpenAI-shaped model list and keeps the ids the pattern covers, where `*` is any run of characters. A fetch that fails is logged and offers nothing.
+A `models` entry is a model id, `{ "id", "name" }`, or `{ "fetch": "<url>", "match": "<pattern>", "key": "..." }`, which reads an OpenAI-shaped model list and keeps the ids the pattern covers, where `*` is any run of characters. `key` is the bearer token sent with the fetch: the token's text, which is what a record's `{ "fromEnv": "NAME" }` or `{ "$secret": "<name>" }` resolves to when the channel opens it, or `{ "fromEnv": "NAME" }` itself in a preset. A fetch that fails is logged, with no key in the line, and offers nothing.
 
 A record's `env` value is a string, `null` to unset the variable, `{ "fromEnv": "NAME" }` for the daemon's own `NAME`, or `{ "$secret": "host:<name>" }` for a credential kept in the vault. A `fromEnv` variable that is not there when the record opens is left unset.
 
