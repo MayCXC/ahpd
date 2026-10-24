@@ -43,6 +43,7 @@
     "dist",
     "src",
     "icon.svg",
+    "icon-dark.svg",
     "README.md",
     "LICENSE"
   ],
@@ -66,7 +67,10 @@
     "description": "One list of tasks and plans every agent reads and writes.",
     "categories": ["channel", "tool"],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
-    "icons": [{ "src": "./icon.svg" }],
+    "icons": [
+      { "src": "./icon.svg", "theme": "light" },
+      { "src": "./icon-dark.svg", "theme": "dark" }
+    ],
     "contracts": {
       "channels": ["x-ahpd-plans"],
       "tools": [

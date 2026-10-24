@@ -1,7 +1,7 @@
 ---
 title: A plugin icon has a dark variant
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-24
 revalidated: 2026-10-24
@@ -48,7 +48,7 @@ package.json ahpd.icons -> loadOne -> resolveIcons (data: URI, theme kept) -> pl
 | --- | --- | --- |
 | Each Lucide icon gets a light and a dark variant | Softov, 2026-10-24: "about the suggestion on dark icon light icon i think we need this" | 01 |
 | `icon.svg` is the light variant, with `theme: "light"`, and `icon-dark.svg` is the dark variant, with `theme: "dark"` | (defaulted: the existing path stays, so the curation file and `files` entries keep their meaning) | 01 |
-| The light variant strokes in `#1F2328`, and the dark variant strokes in `#E6EDF3` | (defaulted: explicit colours, because `currentColor` has no value in an image; Softov curates them) | 01 |
+| The light variant strokes in `#1F2328`, and the dark variant strokes in `#E6EDF3` | Softov, 2026-10-24: "Keep both" | 01 |
 | The webhook adapter names the same two files as its plugin | (defaulted: one drawing for the plugin and its adapter, as in plan 58) | 01 |
 | The vendor marks keep one icon with no `theme` | (defaulted: their colours read on both backgrounds) | 01 |
 | The host and the clients do not change | [code://packages/server/src/icons.ts#L54](../../../../packages/server/src/icons.ts#L54) | - |
@@ -66,7 +66,7 @@ package.json ahpd.icons -> loadOne -> resolveIcons (data: URI, theme kept) -> pl
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - each-lucide-icon-has-a-dark-variant](task-01-each-lucide-icon-has-a-dark-variant.md) | todo | - |
+| [01 - each-lucide-icon-has-a-dark-variant](task-01-each-lucide-icon-has-a-dark-variant.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -75,12 +75,12 @@ package.json ahpd.icons -> loadOne -> resolveIcons (data: URI, theme kept) -> pl
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-each-lucide-icon-has-a-dark-variant.md](task-01-each-lucide-icon-has-a-dark-variant.md).
+- **Done so far:** task-01 is implemented. The eight Lucide packages ship `icon.svg` in `#1F2328` and `icon-dark.svg` in `#E6EDF3`, and each manifest names both with their `theme` and lists `icon-dark.svg` in `files`. The webhook adapter names the two files. The test in `packages/server/test/plugin-icons.test.ts` finds one `light` and one `dark` icon for each of the eight. The three vendor marks keep one icon with no `theme`. `.project/pending/plugin-58-icon-curation.md` has a dark column and the two colours.
+- **Next action:** Softov curates both colours in ahpw, on a light and on a dark background, and replaces a rejected file at the same path. After that, the plan is built and `implemented.md` is written.
 - **Open questions:** none.
-- **Watch out for:** the `files` list in each `package.json` must name `icon-dark.svg`, or a packed plugin has no dark icon.
+- **Watch out for:** the `files` list in each `package.json` must name `icon-dark.svg`, or a packed plugin has no dark icon. `npm pack --dry-run` in `packages/bot` lists both files. The test run leaves `packages/sdk/test/fixtures/wire.jsonl` dirty, and this session cannot restore it.
 
 ## Final verification checklist
 
 - [ ] ahpw shows each of the eight icons on a light and on a dark background.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

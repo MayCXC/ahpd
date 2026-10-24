@@ -43,6 +43,7 @@
     "dist",
     "src",
     "icon.svg",
+    "icon-dark.svg",
     "README.md",
     "LICENSE"
   ],
@@ -65,7 +66,10 @@
     "description": "A URL that talks to a bot or fires an automation, with a secret per endpoint.",
     "categories": ["connector"],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
-    "icons": [{ "src": "./icon.svg" }],
+    "icons": [
+      { "src": "./icon.svg", "theme": "light" },
+      { "src": "./icon-dark.svg", "theme": "dark" }
+    ],
     "contracts": {
       "routes": ["post /plugins/webhook/:endpoint"],
       "triggerTypes": ["webhook"],
