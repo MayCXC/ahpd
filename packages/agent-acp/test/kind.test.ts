@@ -16,7 +16,7 @@ import type { AgentKind, AgentView, Bag, Session, Start } from '@ahpd/sdk';
  * so the cases here are what `open` builds and when it reads the record:
  *
  * - the kind a load registers, its form, its templates, its host-only fields
- *   and its key variables - and the preset agents it still registers beside it;
+ *   and its key variables;
  * - two records opening two backends, each with its own id, name and server;
  * - an edit to a record, which the next turn reads rather than the turn that is
  *   already running, applied by spawning another server on the same
@@ -63,10 +63,10 @@ const endings = (actions: Bag[]): string[] => actions
   .map((action) => String(action.type))
   .filter((type) => type === 'chat/turnComplete' || type === 'chat/error' || type === 'chat/turnCancelled');
 
-/** One load of the plugin, with one preset so the load has an agent to serve. */
+/** One load of the plugin, with no agent of its own: what it serves is its kind. */
 const load = async () => {
   const { loaded, problems, options: served } = await loadPlugins(
-    [{ name: SOURCE, options: { presets: { acp: { command: process.execPath, args: [FIXTURE] } } } }],
+    [{ name: SOURCE, options: {} }],
     {
       base: { path: folderOf('base'), agents: [echo({ path: folderOf('echo') })] },
       configDir: REPO,
@@ -125,14 +125,14 @@ function opened(
   return { agent, session, actions };
 }
 
-it('registers the acp kind, its templates, host-only fields and key variables, and its preset agents beside it', async () => {
+it('registers the acp kind, its templates, host-only fields and key variables', async () => {
   const { problems, served } = await load();
   expect(problems).toEqual([]);
   const kind = served.agentKinds?.['acp'];
   expect(kind).toMatchObject({
     name: 'acp',
     title: 'Agent Client Protocol',
-    hostOnly: ['command', 'args', 'cwd', 'machine', 'install'],
+    hostOnly: ['base', 'command', 'args', 'cwd', 'machine', 'install'],
   });
   // Each row's vendor key variables: the ones `knownAgents` marks secret and
   // the ones a row signs in with, which is what any owner may set.
@@ -153,14 +153,14 @@ it('registers the acp kind, its templates, host-only fields and key variables, a
   ]);
   expect(typeof kind?.open).toBe('function');
 
-  // The fields of this backend, without the ones the agents channel owns or
-  // the one that picks out of the shipped rows: a record names its own program
-  // and nothing a second kind spells.
+  // The fields of this backend, without the ones the agents channel owns: a
+  // record names a shipped row or its own program and nothing a second kind
+  // spells.
   const fields = Object.keys((kind?.schema.properties ?? {}) as Bag).sort();
   expect(fields).toEqual([
-    'args', 'authenticate', 'command', 'cwd', 'env', 'honoursTrust', 'hostTools', 'install', 'machine', 'page', 'toolsChanged',
+    'args', 'authenticate', 'base', 'command', 'cwd', 'env', 'honoursTrust', 'hostTools', 'install', 'machine', 'page', 'toolsChanged',
   ]);
-  for (const owned of ['base', 'name', 'description', 'icon', 'model', 'provider']) expect(fields).not.toContain(owned);
+  for (const owned of ['name', 'description', 'icon', 'model', 'provider']) expect(fields).not.toContain(owned);
 
   // One template per shipped row, carrying the row's spawn fields so a record
   // made from it runs the agent the row describes, and its vendor's key
@@ -180,10 +180,9 @@ it('registers the acp kind, its templates, host-only fields and key variables, a
   // Copilot signs in on its own, so its template names no method.
   expect(copilot).not.toHaveProperty('authenticate');
 
-  // Presets are still folded into agents of their own until task 07 migrates
-  // them, so the preset this load named is served here as both the kind and an
-  // agent.
-  expect((served.agents ?? []).slice(1).map((one) => one.provider)).toEqual(['acp']);
+  // The load registers the kind and no agent of its own: the base's echo is
+  // all this host serves until a record of the kind is opened.
+  expect((served.agents ?? []).map((one) => one.provider)).toEqual(['echo']);
 });
 
 it('opens one backend per record, with the record\'s own id, name and server', async () => {

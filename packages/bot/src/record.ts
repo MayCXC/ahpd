@@ -149,6 +149,16 @@ export interface BotRecord extends BotKept {
   description?: string;
   /** What it was asked to be, in its own words, where the file says one. */
   instructions?: string;
+  /**
+   * `unavailable` when the agent its `preset` or `harness` names is not one
+   * this host serves, which is a bot that wakes nothing until the record or the
+   * agent is changed.
+   *
+   * A read answers it and a write does not read it: a bot may name an agent
+   * that is not installed yet, and the record says so rather than refusing the
+   * name.
+   */
+  state?: 'unavailable';
 }
 
 /** A record as it was written, with whatever parts an older one kept, before its file is read. */
@@ -209,6 +219,10 @@ const FIELDS = [
   // carries it back is writing what it was given, and it is not read: a chat is
   // the reader's, so it is the same key for two people reading one bot.
   'chat',
+  // Whether the agent it names is one this host serves. Answering a read and
+  // never a record the host keeps, so a body that carries it back changes
+  // nothing and a bot that names a missing agent is still a bot someone made.
+  'state',
 ];
 
 /** An owner, as the four kinds the usage rules spell. */

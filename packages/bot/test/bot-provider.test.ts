@@ -145,9 +145,18 @@ function made(
   const records = files ? fileRecords(configDir) : memoryRecords();
   /** The problems the plugin reported while the host ran. */
   const reported: string[] = [];
+  /**
+   * The agents this host serves, which the host folds in below.
+   *
+   * Built before the plugin is applied so the plugin can be handed the live
+   * list, as the loader hands it: a bot whose agent this host no longer serves
+   * is answered `unavailable`, and that is a question about this list.
+   */
+  const agents: Agent[] = [{ ...echo({ path: root, pace: 0 }), provider: 'base', displayName: 'Base' }, ...extra];
   const { host: plugin, contribution } = pluginHost('bot', context, {
     sessions: () => sessions,
     records: () => records,
+    agents: () => agents,
     // The loader hands a plugin the host's own map; this is the same wire, so a
     // case can say who the agents are.
     ...(over.agentOwners === undefined ? {} : { agentOwners: over.agentOwners }),
@@ -162,7 +171,7 @@ function made(
 
   const base: HostOptions = {
     path: root,
-    agents: [{ ...echo({ path: root, pace: 0 }), provider: 'base', displayName: 'Base' }, ...extra],
+    agents,
     resources: fileResources(),
     sessions,
     records,
@@ -629,6 +638,53 @@ it('refuses a bot naming an agent its owner may not use, on a make and on an edi
   const edited = await write(soft, 'bot://mine', { name: 'Mine', preset: 'theirs' });
   expect(edited).toMatchObject({ code: -32009 });
   expect((await record(soft, 'bot://mine'))['preset']).toBe('base');
+});
+
+it('answers a bot unavailable when the agent it names is not one this host serves', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await as(host, 'soft');
+
+  // A bot may name an agent that is not installed yet, so the write is taken;
+  // what the read says is that a message to it would wake nothing. The agent a
+  // record names is an id, and a plugin removed or an agent record deleted
+  // leaves a bot naming one this host no longer has.
+  expect(await write(soft, 'bot://gone', { name: 'Gone', preset: 'not-an-agent' }, { createOnly: true }))
+    .toEqual({ result: {} });
+  expect((await record(soft, 'bot://gone'))['state']).toBe('unavailable');
+
+  // One the host serves is answered as it was written, and one naming no agent
+  // at all is not unavailable: there is nothing it named to be missing.
+  expect(await write(soft, 'bot://here', { name: 'Here', preset: 'base' }, { createOnly: true }))
+    .toEqual({ result: {} });
+  expect(await record(soft, 'bot://here')).not.toHaveProperty('state');
+  expect(await write(soft, 'bot://plain', { name: 'Plain' }, { createOnly: true })).toEqual({ result: {} });
+  expect(await record(soft, 'bot://plain')).not.toHaveProperty('state');
+});
+
+/*
+ * An agent record the migration made.
+ *
+ * `presets` became host records with the same ids, and the host owns them, so a
+ * bot that named a preset by its id names the record it became: a bot of
+ * somebody else's may still wake on it, and the id is the one it wrote.
+ */
+it('takes a bot naming an agent record the migration made, which the host owns', async () => {
+  const owners = (): ReadonlyMap<string, AgentOwner | undefined> => new Map([
+    ['claude-deepseek-build', 'host'],
+  ]);
+  const migrated: Agent = { ...echo({ path: '/', pace: 0 }), provider: 'claude-deepseek-build', displayName: 'DeepSeek build' };
+  const { host } = made(
+    { soft: ['bot:*', 'session:create'] }, {}, { agentOwners: owners }, true, [migrated],
+  );
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://build', { name: 'Build', preset: 'claude-deepseek-build' }, { createOnly: true }))
+    .toEqual({ result: {} });
+  const held = await record(soft, 'bot://build');
+  expect(held['preset']).toBe('claude-deepseek-build');
+  // The host's record is one every caller with `session:write` may use, and the
+  // host serves the kind it names, so the bot is not unavailable.
+  expect(held).not.toHaveProperty('state');
 });
 
 /*

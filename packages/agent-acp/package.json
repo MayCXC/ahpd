@@ -82,9 +82,6 @@
       "agentKinds": ["acp"]
     },
     "options": {
-      "presets": {
-        "required": true
-      },
       "hostTools": {
         "required": false
       }

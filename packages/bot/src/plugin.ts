@@ -487,6 +487,16 @@ export const apply: Plugin['apply'] = (host, options) => {
    */
   const mayUse = (owner: Owner, provider: string | undefined): boolean => provider === undefined
     || mayUseAgentFor({ owner }, ownershipOf(host.agentOwners(), provider), { hasDirectory: host.hasUsers === true });
+  /*
+   * Whether this host still serves the agent a bot names.
+   *
+   * `machineNeeds` answers `undefined` for an agent nobody has and an empty
+   * record for one that declares nothing, so it is an existence test rather
+   * than a question about machines. A read of a bot whose agent went is
+   * answered `unavailable`, which is a client being told that a message to it
+   * would wake nothing.
+   */
+  const available = (provider: string): boolean => host.machineNeeds(provider) !== undefined;
   host.registerResourceProvider('bot', botProvider({
     root,
     botsDir: join(host.configDir, BOTS_DIR),
@@ -500,6 +510,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     backSessions: backs,
     sessions,
     mayUse,
+    available,
   }));
   /*
    * The wake: every turn one of those chats begins, and every message steered

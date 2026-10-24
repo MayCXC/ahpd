@@ -8,6 +8,7 @@ import { createHost } from '../../sdk/src/host.js';
 import { describePlugin, loadPlugins, pluginIdsOf } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { anyone, signIn } from './people.js';
+import type { AgentKind, AgentView, Bag } from '@ahpd/sdk';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { PluginSpec } from '../../sdk/src/types/plugin.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
@@ -17,9 +18,9 @@ import type { Peer } from '../../sdk/src/types/rpc.js';
  *
  * Every case goes through the real loader and the real host, and the server is
  * the scripted subprocess the other ACP tests use. What is under test is that
- * the manifest resolves the module, that `apply` contributes one provider per
- * preset from a single load, and that a preset with nothing to spawn is skipped
- * and said rather than started.
+ * the manifest resolves the module, that `apply` contributes the `acp` kind and
+ * no agent of its own, and that each record opened from that kind is a backend
+ * the host serves.
  *
  * The source file is named rather than the package directory on purpose:
  * `pnpm test` does not build, and the loader applies a manifest's `ahpd.entry`
@@ -94,14 +95,26 @@ const base = (): HostOptions => ({
 const load = (specs: PluginSpec[], over: Partial<HostOptions> = {}) =>
   loadPlugins(specs, { base: { ...base(), ...over }, configDir: REPO, cwd: REPO, log: () => {} });
 
-/** The spec for the scripted server, under whatever presets the case wants. */
-const spec = (presets: Record<string, Record<string, unknown>>): PluginSpec => ({
-  name: SOURCE,
-  options: {
-    presets: Object.fromEntries(Object.entries(presets).map(([id, over]) => [id, {
-      command: process.execPath, args: [FIXTURE], ...over,
-    }])),
-  },
+/** The spec for the scripted server: no option, since each agent is a record. */
+const SPEC: PluginSpec = { name: SOURCE, options: {} };
+
+/** The `acp` kind a load registered, which is where a record's backend comes from. */
+const kindOf = (options: { agentKinds?: Record<string, AgentKind> }): AgentKind => {
+  const kind = options.agentKinds?.['acp'];
+  if (kind === undefined) throw new Error('no acp kind was registered');
+  return kind;
+};
+
+/** One record, as a kind is handed it: every field read at each call. */
+const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
+  id,
+  kind: 'acp',
+  owner: 'host',
+  name,
+  description: undefined,
+  icon: undefined,
+  model: undefined,
+  get config() { return held(); },
 });
 
 const initialize = async (client: ReturnType<ReturnType<typeof createHost>['accept']>) => {
@@ -150,15 +163,16 @@ const begin = (
   });
 };
 
-it('loads the package from its source file and serves a turn through the server it names', async () => {
-  const { options, loaded, problems } = await load([spec({ acp: {} })]);
+it('loads the package from its source file and serves a turn through the server a record names', async () => {
+  const { options, loaded, problems } = await load([SPEC]);
 
   expect(problems).toEqual([]);
   expect(loaded).toHaveLength(1);
   expect(loaded[0]?.name).toBe('agent-acp');
   expect(loaded[0]?.title).toBe('Agent ACP');
 
-  const host = createHost(options);
+  const agent = kindOf(options).open(viewOf('acp', () => ({ command: process.execPath, args: [FIXTURE] }), 'ACP'));
+  const host = createHost({ ...options, agents: [...(options.agents ?? []), agent] });
   const said = peer();
   const client = host.accept(said);
   const ready = await initialize(client);
@@ -175,7 +189,7 @@ it('loads the package from its source file and serves a turn through the server 
   expect(opened.snapshot.state.turns).toHaveLength(1);
   // The fixture streams `hello` and ` there`, so the turn proves the module the
   // loader resolved is this package and the server it spawned is the one the
-  // spec's `command` named.
+  // record's `command` named.
   expect(opened.snapshot.state.turns[0]?.responseParts[0]?.content).toBe('hello there');
 });
 
@@ -209,24 +223,25 @@ it('lists a manifest, its title, and the id its entry exports', async () => {
   expect(row.path).toBe(join(dir, 'entry.js'));
 });
 
-it('contributes one backend per preset, from one load', async () => {
-  // The codex preset signs in with a key when the daemon has one, and the
-  // scripted server offers no sign-in: a key on the machine running the tests
-  // is not part of the case.
+it('contributes one backend per record, from one load', async () => {
+  // The codex row signs in with a key when the daemon has one, and the scripted
+  // server offers no sign-in: a key on the machine running the tests is not part
+  // of the case.
   vi.stubEnv('CODEX_API_KEY', undefined);
   vi.stubEnv('OPENAI_API_KEY', undefined);
-  const { options, loaded, problems } = await load([
-    spec({ copilot: { name: 'Copilot' }, codex: { name: 'Codex' } }),
-  ]);
+  const { options, loaded, problems } = await load([SPEC]);
 
-  // A plugin is loaded once and its `presets` are what make its agents, so
-  // Copilot and Codex are two backends out of one entry rather than two specs
-  // of one name.
+  // One entry serves the kind, and each record opened from it is a backend of
+  // its own: Copilot and Codex are two records rather than two specs of one
+  // name.
   expect(problems).toEqual([]);
   expect(loaded).toHaveLength(1);
   expect(loaded.map((one) => one.name)).toEqual(['agent-acp']);
 
-  const host = createHost(options);
+  const kind = kindOf(options);
+  const copilot = kind.open(viewOf('copilot', () => ({ command: process.execPath, args: [FIXTURE] }), 'Copilot'));
+  const codex = kind.open(viewOf('codex', () => ({ command: process.execPath, args: [FIXTURE] }), 'Codex'));
+  const host = createHost({ ...options, agents: [...(options.agents ?? []), copilot, codex] });
   const p = peer();
   const client = host.accept(p);
   const ready = await initialize(client);
@@ -243,31 +258,32 @@ it('contributes one backend per preset, from one load', async () => {
   expect(types(p, second.chatUri).at(-1)).toBe('chat/turnComplete');
 });
 
-it('skips a preset with nothing to spawn, and loads the others', async () => {
-  const { options, loaded, problems } = await load([{
-    name: SOURCE,
-    options: { presets: { acp: { command: process.execPath, args: [FIXTURE] }, nope: {} } },
-  }]);
+it('refuses a record with nothing to spawn, and serves the records that open', async () => {
+  const { options, loaded, problems } = await load([SPEC]);
 
-  // `command` is the one thing this package cannot default, and a preset with
-  // nothing to run is worth a line at load rather than a failure on the first
-  // turn.
   expect(loaded.map((one) => one.name)).toEqual(['agent-acp']);
-  expect(problems).toHaveLength(1);
-  expect(problems[0]).toContain('options.presets.nope');
+  expect(problems).toEqual([]);
 
-  const host = createHost(options);
+  // `command` is the one thing this package cannot default, and a record with
+  // nothing to run is refused where it opens rather than failing on a turn.
+  const kind = kindOf(options);
+  expect(() => kind.open(viewOf('nope', () => ({})))).toThrow(
+    'nope names no command, and an acp record names the program its sessions run',
+  );
+
+  const agent = kind.open(viewOf('acp', () => ({ command: process.execPath, args: [FIXTURE] })));
+  const host = createHost({ ...options, agents: [...(options.agents ?? []), agent] });
   const client = host.accept(peer());
   const ready = await initialize(client);
   expect(ready.snapshots[0]?.state.agents.map((one) => one.provider)).toEqual(['base', 'acp']);
 });
 
-it('lists a spec with no presets as unconfigured, naming what it needs', async () => {
+it('lists a spec with no options, or one naming hostTools, as ready', async () => {
   /*
-   * The manifest declares `presets` required, so a listing says what is wrong
-   * before anything is imported or spawned. Without the declaration the same
-   * spec lists as `ready` and the problem only appears when a turn is asked
-   * for, which is the failure this is here to prevent.
+   * The manifest declares no required option now: each agent is a record of the
+   * kind, so a spec with nothing to say is a load with every shipped row
+   * available. A listing says `ready` without importing the entry, which is what
+   * the throwing entry here proves.
    *
    * The real `ahpd` block is copied into a directory whose entry exists, rather
    * than listing this package: `describePlugin` resolves `ahpd.entry`, which is
@@ -288,12 +304,11 @@ it('lists a spec with no presets as unconfigured, naming what it needs', async (
     ahpd: { ...real.ahpd, entry: './entry.js' },
   }));
 
-  const missing = await describePlugin(dir, { configDir: REPO, cwd: REPO });
-  expect(missing.state).toBe('unconfigured');
-  expect(missing.problem).toContain('presets');
+  const bare = await describePlugin(dir, { configDir: REPO, cwd: REPO });
+  expect(bare.state).toBe('ready');
 
   const given = await describePlugin(
-    { name: dir, options: { presets: { copilot: {} } } },
+    { name: dir, options: { hostTools: true } },
     { configDir: REPO, cwd: REPO },
   );
   expect(given.state).toBe('ready');

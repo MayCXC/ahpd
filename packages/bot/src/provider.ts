@@ -158,6 +158,15 @@ export interface BotOptions {
    * Absent on a host that checks nothing, where every agent is the daemon's.
    */
   mayUse?(owner: Owner, provider: string | undefined): boolean;
+  /**
+   * Whether this host serves an agent of this id, asked at each read.
+   *
+   * A bot names its agent by id, and a record that names one this host no
+   * longer serves - a plugin removed, an agent record deleted - is answered
+   * `state: 'unavailable'` rather than waking nothing without a word. Absent on
+   * a host that has no agents to check against, where nothing is marked.
+   */
+  available?(provider: string): boolean;
 }
 
 /**
@@ -702,9 +711,19 @@ export function botProvider(options: BotOptions): BotProvider {
       // having to notice the write.
       const bot = fromAgents(options.yaml, known);
       if (held.leaf === '') {
+        /*
+         * The agent it names is the bot's session's, and one this host does not
+         * serve is said so here: a bot whose agent went is one that wakes
+         * nothing, and a client reading it is told rather than left to find out
+         * when a message goes unanswered.
+         */
+        const provider = bot.preset ?? bot.harness;
+        const state = provider !== undefined && options.available !== undefined && !options.available(provider)
+          ? { state: 'unavailable' as const }
+          : {};
         const answered = mayChat(bot, reader)
-          ? { ...bot, chat: await chatOf(bot, reader === undefined ? self : ownerOfPrincipal(reader)) }
-          : bot;
+          ? { ...bot, ...state, chat: await chatOf(bot, reader === undefined ? self : ownerOfPrincipal(reader)) }
+          : { ...bot, ...state };
         return json(answered);
       }
       const where = named(held.leaf);

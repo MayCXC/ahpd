@@ -13,7 +13,7 @@ import type { AgentKind, AgentView, Bag, Start } from '@ahpd/sdk';
  * so the cases here are what `open` builds and when it reads the record:
  *
  * - the kind a load registers, its form, its template, its host-only field and
- *   its key variables - and the preset agents it still registers beside it;
+ *   its key variables;
  * - two records opening two backends, each with its own id, name and values;
  * - an edit to a record, which the next turn reads rather than the turn that is
  *   already running, applied by restarting the CLI on the same conversation.
@@ -146,7 +146,7 @@ const startOf = (id: string): Start => ({
   workingDirectory: DIR,
 });
 
-it('registers the claude kind, its template and host-only field, and its preset agents beside it', async () => {
+it('registers the claude kind, its template and host-only field', async () => {
   const { problems, served } = await load();
   expect(problems).toEqual([]);
   const kind = served.agentKinds?.['claude'];
@@ -167,9 +167,9 @@ it('registers the claude kind, its template and host-only field, and its preset 
   ]);
   for (const owned of ['name', 'description', 'icon', 'model']) expect(fields).not.toContain(owned);
 
-  // Presets are still folded into agents of their own until task 07 migrates
-  // them, so the built-in is served here as both the kind and an agent.
-  expect((served.agents ?? []).slice(1).map((one) => one.provider)).toEqual(['claude']);
+  // The agents are records of the kind, so the load registers none of its own
+  // beside the echo the base always carries.
+  expect(served.agents ?? []).toHaveLength(1);
 });
 
 it('opens one backend per record, with the record\'s own id, name and values', async () => {

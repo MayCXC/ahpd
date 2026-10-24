@@ -141,12 +141,29 @@ const acpEntry = (): Record<string, unknown> => {
   return entry as Record<string, unknown>;
 };
 
-/** The presets the `@ahpd/agent-acp` entry names, by id. */
+/** The presets the `@ahpd/agent-acp` entry still holds, which the next start moves to records. */
 const presetsOf = (): Record<string, unknown> => {
   const options = acpEntry()['options'];
   if (typeof options !== 'object' || options === null) return {};
   const presets = (options as Record<string, unknown>)['presets'];
   return typeof presets === 'object' && presets !== null ? presets as Record<string, unknown> : {};
+};
+
+/**
+ * One agent record as the file keeps it, or nothing when there is none.
+ *
+ * An agent is a record on the agents channel now, and the daemon's store keeps
+ * each one as `<configDir>/agents/<id>.json`.
+ */
+const recordOf = (id: string): Record<string, unknown> | undefined => {
+  const file = join(configDir, 'agents', `${id}.json`);
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown> : undefined;
+};
+
+/** One agent record written the way the daemon keeps it: the whole record as pretty JSON. */
+const putRecord = (record: Record<string, unknown>): void => {
+  mkdirSync(join(configDir, 'agents'), { recursive: true });
+  writeFileSync(join(configDir, 'agents', `${String(record['id'])}.json`), `${JSON.stringify(record, null, 2)}\n`);
 };
 
 it('is a local command, and no served one', () => {
@@ -289,15 +306,20 @@ it('refuses rather than serving nothing when every folder is answered No', async
 });
 
 describe('what is on PATH', () => {
-  it('asks about a found agent, and a Yes writes it under the presets of @ahpd/agent-acp', async () => {
+  it('asks about a found agent, and a Yes writes it as a host record and names its plugin', async () => {
     stub('gemini', '0.9.0');
     const { said } = await asked('', '', '', '', '', '', '', '', '');
     expect(said).toContain('Gemini? [Y/n]: ');
     expect(read().plugins).toEqual([
-      { name: '@ahpd/agent-acp', options: { presets: { gemini: {} } } },
+      '@ahpd/agent-acp',
       '@ahpd/agent-claude',
       '@ahpd/web',
     ]);
+    // The record is what the agents channel serves; the plugin is what registers
+    // the kind it opens on, and the host is the owner a preset's agent had.
+    expect(recordOf('gemini')).toMatchObject({
+      id: 'gemini', kind: 'acp', owner: 'host', name: 'Gemini', config: {},
+    });
     // The package that runs it is installed with the backend, after the write.
     expect(calls.some((one) => one.program === 'npm' && one.argv.includes('@ahpd/agent-acp'))).toBe(true);
   });
@@ -309,7 +331,34 @@ describe('what is on PATH', () => {
     expect(calls.some((one) => one.argv.includes('@ahpd/agent-acp'))).toBe(false);
   });
 
-  it('shows a preset the file has as configured, asks nothing about it, and keeps its options', async () => {
+  it('shows an agent the file has as a record as configured, asks nothing about it, and keeps it', async () => {
+    put({ plugins: [{ name: '@ahpd/agent-acp', options: { hostTools: false } }] });
+    putRecord({ id: 'gemini', kind: 'acp', owner: 'host', name: 'Gemini', config: { model: 'flash' } });
+    stub('gemini', '0.9.0');
+    const { said } = await asked('', '', '', '', '', '', '', '');
+    expect(said).toContain('Gemini 0.9.0 (configured, @ahpd/agent-acp)');
+    expect(said).not.toContain('Gemini? [Y/n]: ');
+    expect(read().plugins).toEqual([
+      { name: '@ahpd/agent-acp', options: { hostTools: false } },
+      '@ahpd/agent-claude',
+    ]);
+    // Nothing here edits the record: the file as it was is the file it is.
+    expect(recordOf('gemini')).toMatchObject({ config: { model: 'flash' } });
+  });
+
+  it('asks about an agent whose record is there but whose plugin the file does not name', async () => {
+    // A record left behind by a setup that stopped before it wrote the file is
+    // not one the daemon serves, so it is asked about, and the answer is what
+    // puts the plugin that registers its kind in the file.
+    putRecord({ id: 'gemini', kind: 'acp', owner: 'host', name: 'Gemini', config: {} });
+    stub('gemini', '0.9.0');
+    const { said } = await asked('', '', '', '', '', '', '', '', '');
+    expect(said).toContain('Gemini 0.9.0 (not configured, @ahpd/agent-acp)');
+    expect(said).toContain('Gemini? [Y/n]: ');
+    expect(read().plugins).toContain('@ahpd/agent-acp');
+  });
+
+  it('counts a preset the file still holds as configured, until the next start moves it', async () => {
     put({
       plugins: [{
         name: '@ahpd/agent-acp',
@@ -320,10 +369,9 @@ describe('what is on PATH', () => {
     const { said } = await asked('', '', '', '', '', '', '', '');
     expect(said).toContain('Gemini 0.9.0 (configured, @ahpd/agent-acp)');
     expect(said).not.toContain('Gemini? [Y/n]: ');
-    expect(read().plugins).toEqual([
-      { name: '@ahpd/agent-acp', options: { presets: { gemini: { model: 'flash' } }, hostTools: false } },
-      '@ahpd/agent-claude',
-    ]);
+    // The preset is still the only copy of the agent, so no record is made here.
+    expect(recordOf('gemini')).toBeUndefined();
+    expect(presetsOf()).toEqual({ gemini: { model: 'flash' } });
   });
 
   it('asks nothing about the ACP pi preset when the native pi backend is on', async () => {
@@ -335,30 +383,38 @@ describe('what is on PATH', () => {
     expect(read().plugins).toEqual(['@ahpd/agent-claude', '@ahpd/agent-pi', '@ahpd/web']);
   });
 
-  it('offers to remove an ACP pi preset the file has when the native pi backend is on', async () => {
+  it('offers to remove an ACP pi agent the file has when the native pi backend is on', async () => {
     const both = {
       plugins: ['@ahpd/agent-pi', { name: '@ahpd/agent-acp', options: { presets: { pi: {} }, hostTools: false } }],
     };
+    const record = { id: 'pi', kind: 'acp', owner: 'host', name: 'Pi', config: {} };
     put(both);
+    putRecord(record);
     stub('pi-acp', '1.0.0');
     const yes = await asked('', '', '', '', '', '', '', '', '');
-    expect(yes.said).toContain('Remove the ACP pi preset? It clashes with the pi backend. [Y/n]: ');
+    expect(yes.said).toContain('Remove the ACP pi agent? It clashes with the pi backend. [Y/n]: ');
+    // The record and the preset are both of them: a file this start would move
+    // its preset into a record otherwise has two agents of one id.
+    expect(recordOf('pi')).toBeUndefined();
     expect(presetsOf()).toEqual({});
-    // Dropping the preset keeps every other option the entry holds.
+    // Dropping the agent keeps every other option the entry holds.
     expect((acpEntry()['options'] as Record<string, unknown>)['hostTools']).toBe(false);
 
     put(both);
+    putRecord(record);
     const no = await asked('', '', '', '', 'n', '', '', '', '');
-    expect(no.said).toContain('Remove the ACP pi preset? It clashes with the pi backend. [Y/n]: ');
+    expect(no.said).toContain('Remove the ACP pi agent? It clashes with the pi backend. [Y/n]: ');
+    expect(recordOf('pi')).toMatchObject({ id: 'pi', kind: 'acp' });
     expect(presetsOf()).toEqual({ pi: {} });
   });
 
-  it('asks about the ACP pi preset when the native pi backend is answered No', async () => {
+  it('asks about the ACP pi agent when the native pi backend is answered No', async () => {
     stub('pi-acp', '1.0.0');
     const { said } = await asked('', '', 'n', '', '', '', '', '', '');
     expect(said).toContain('Pi? [Y/n]: ');
     expect(said).not.toContain('pi-acp: not asked, the pi backend runs pi');
-    expect(presetsOf()).toEqual({ pi: {} });
+    expect(recordOf('pi')).toMatchObject({ id: 'pi', kind: 'acp', owner: 'host', name: 'Pi', config: {} });
+    expect(read().plugins).toContain('@ahpd/agent-acp');
   });
 
   it('lists every agent it did not find with the line that installs it', async () => {
@@ -428,12 +484,13 @@ describe('what is on PATH', () => {
     expect(said).toContain('pi? [y/N]: ');
   });
 
-  it('shows an install line a preset writes for a missing agent, not the row it shipped with', async () => {
-    put({
-      plugins: [{
-        name: '@ahpd/agent-acp',
-        options: { presets: { gemini: { install: { all: 'npm i -g my-gemini' } } } },
-      }],
+  it('shows an install line a record writes for a missing agent, not the row it shipped with', async () => {
+    // The plugin is in the file, so the record is one this host serves and its
+    // own install line is the one the person would run.
+    put({ plugins: ['@ahpd/agent-acp'] });
+    putRecord({
+      id: 'gemini', kind: 'acp', owner: 'host', name: 'Gemini',
+      config: { install: { all: 'npm i -g my-gemini' } },
     });
     const { said } = await asked('', '', '', '', '', '', '', '');
     expect(said).toContain('  Gemini: npm i -g my-gemini');

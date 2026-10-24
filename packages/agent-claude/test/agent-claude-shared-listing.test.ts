@@ -1,15 +1,11 @@
 import { expect, it, vi } from 'vitest';
 import { join } from 'node:path';
+import type { AgentKind, AgentView, Bag } from '@ahpd/sdk';
 
 /*
- * One listing for the variants of one load.
+ * One listing for the records of one load.
  *
- * Every preset this plugin registers is an agent of its own, and every one of
- * them reads the same projects directory for the same sessions - three presets
- * is three `listSessions` over the same files for one answer, and on dev-01 one
- * of those took fifty seconds. The sharing is inside the plugin, because the
- * host has no way to know that two agents read one store: `registerAgent`
- * records no plugin and `Agent` has no key for a store.
+ * Every record this plugin opens is an agent of its own, and every one of them reads the same projects directory for the same sessions - three records is three `listSessions` over the same files for one answer, and on dev-01 one of those took fifty seconds. The sharing is inside the plugin, because the host has no way to know that two agents read one store: `registerAgent` records no plugin and `Agent` has no key for a store.
  */
 
 const sdk = vi.hoisted(() => ({
@@ -60,31 +56,48 @@ const listed = (sessionId: string, summary: string): Record<string, unknown> => 
   sessionId, summary, lastModified: 1_800_000_000_000, cwd: PATH,
 });
 
-/** The agents one load of the plugin registered, beside the echo in the base. */
-const variants = async (options: Record<string, unknown>) => {
-  const { problems, options: served } = await loadPlugins([{ name: SOURCE, options }], {
+/** The `claude` kind one load of the plugin registered. */
+const kindOf = async (): Promise<AgentKind> => {
+  const { problems, options: served } = await loadPlugins([{ name: SOURCE, options: {} }], {
     base: { path: PATH, agents: [echo({ path: PATH })] },
     configDir: REPO,
     cwd: REPO,
     log: () => {},
   });
   expect(problems).toEqual([]);
-  return (served.agents ?? []).slice(1);
+  const kind = served.agentKinds?.['claude'];
+  if (kind === undefined) throw new Error('no claude kind was registered');
+  return kind;
 };
 
-const presets = {
-  'claude-openrouter': { name: 'Claude OpenRouter' },
-  'claude-openrouter-build': { name: 'Claude OpenRouter Build' },
+/** One record, as a kind is handed it: every field read at each call. */
+const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
+  id,
+  kind: 'claude',
+  owner: 'host',
+  name,
+  description: undefined,
+  icon: undefined,
+  model: undefined,
+  get config() { return held(); },
+});
+
+/** The agents one load opened for the given record ids. */
+const opened = async (ids: string[]) => {
+  const kind = await kindOf();
+  return ids.map((id) => kind.open(viewOf(id, () => ({}))));
 };
 
-it('reads the projects directory once for three variants of one load', async () => {
+const RECORDS = ['claude', 'claude-openrouter', 'claude-openrouter-build'];
+
+it('reads the projects directory once for three records of one load', async () => {
   sdk.listed = 0;
   sdk.sessions = [listed('one', 'One')];
-  const agents = await variants({ presets });
+  const agents = await opened(RECORDS);
   expect(agents).toHaveLength(3);
 
   // What the host does with a listing, once the change to ask every agent at
-  // the same time: three `list` calls, three variants, one directory read.
+  // the same time: three `list` calls, three records, one directory read.
   const answered = await Promise.all(agents.map((agent) => agent.list?.()));
   expect(sdk.listed).toBe(1);
   for (const rows of answered) {
@@ -92,12 +105,12 @@ it('reads the projects directory once for three variants of one load', async () 
   }
 });
 
-it('gives each variant its own array of the rows', async () => {
+it('gives each record its own array of the rows', async () => {
   sdk.listed = 0;
   sdk.sessions = [listed('one', 'One')];
-  const agents = await variants({ presets });
+  const agents = await opened(RECORDS);
   const [first, second] = await Promise.all([agents[0]?.list?.(), agents[1]?.list?.()]) as [{ id: string }[], { id: string }[]];
-  // One listing is shared; a variant handing out another's array would be one
+  // One listing is shared; a record handing out another's array would be one
   // caller's rows turning into another's.
   expect(sdk.listed).toBe(1);
   expect(first).not.toBe(second);
@@ -107,7 +120,7 @@ it('gives each variant its own array of the rows', async () => {
 it('lists again for the next listing, once the first has settled', async () => {
   sdk.listed = 0;
   sdk.sessions = [listed('one', 'One')];
-  const agents = await variants({ presets });
+  const agents = await opened(RECORDS);
   await Promise.all(agents.map((agent) => agent.list?.()));
   expect(sdk.listed).toBe(1);
   // The host holds the catalogue, so nothing here is a cache: a second
@@ -116,10 +129,10 @@ it('lists again for the next listing, once the first has settled', async () => {
   expect(sdk.listed).toBe(2);
 });
 
-it('lists on its own when a variant is registered outside a plugin load', async () => {
+it('lists on its own when a backend is built outside a plugin load', async () => {
   sdk.listed = 0;
   sdk.sessions = [listed('one', 'One')];
-  // The built-in agent, built directly rather than through `apply`: nothing
+  // The built-in backend, built directly rather than through `apply`: nothing
   // hands it a listing, so it reads the directory itself.
   const { claude } = await import('../src/claude.js');
   const agent = claude({ paths: [PATH] });
@@ -127,15 +140,15 @@ it('lists on its own when a variant is registered outside a plugin load', async 
   expect(sdk.listed).toBe(1);
 });
 
-it('hands the same listing to every variant of one load and no other', async () => {
+it('hands the same listing to every record of one load and no other', async () => {
   sdk.listed = 0;
   sdk.sessions = [listed('one', 'One')];
   // Two loads of the plugin, so two listings: the sharing is within a load,
-  // and a preset that read a different `paths` would have to get its own.
-  const first = await variants({ presets });
-  const second = await variants({ presets: { 'claude-other': { name: 'Claude Other' } } });
+  // and a record that read a different `paths` would have to get its own.
+  const first = await opened(RECORDS);
+  const second = await opened(['claude', 'claude-other']);
   expect(first).toHaveLength(3);
-  // The built-in is always registered, so this load is it and the one named.
+  // Two records of the second load, which is the same listing for both.
   expect(second).toHaveLength(2);
   await Promise.all([...first, ...second].map((agent) => agent.list?.()));
   expect(sdk.listed).toBe(2);

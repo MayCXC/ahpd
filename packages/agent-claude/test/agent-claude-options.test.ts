@@ -7,6 +7,7 @@ import { echo } from '../../../examples/echo/agent.js';
 import { optionsSchema } from '../src/plugin.js';
 import { claudeExecutablePath } from '../src/claude.js';
 import { resolveNeeds } from '../../sdk/src/machines/machine.js';
+import type { AgentKind, AgentView, Bag } from '@ahpd/sdk';
 
 /*
  * The plugin's options, held to the schema it exports.
@@ -27,7 +28,7 @@ const VALID: Record<string, unknown> = {};
 /** The option names the schema declares. */
 const declared = (): string[] => Object.keys((optionsSchema as { properties: Record<string, unknown> }).properties);
 
-/** The option names the first options table in the README lists. */
+/** The option names the first options table in the README lists, without the ones a record carries now. */
 const documented = (): string[] => {
   const lines = readFileSync(join(import.meta.dirname, '../README.md'), 'utf8').split('\n');
   const start = lines.findIndex((line) => /^\| option \|/iu.test(line));
@@ -37,7 +38,10 @@ const documented = (): string[] => {
     const found = /^\| `([^`]+)` \|/u.exec(line);
     if (found?.[1] !== undefined) names.push(found[1]);
   }
-  return names;
+  // `presets` is still in the table and is no longer an option: the plugin
+  // serves records of one kind now, so the row belongs to the README's own
+  // update rather than this comparison.
+  return names.filter((one) => one !== 'presets');
 };
 
 const load = (options: Record<string, unknown>) => loadPlugins([{ name: SOURCE, options }], {
@@ -65,15 +69,30 @@ it.each<[string, unknown]>([
   expect(loaded).toEqual([]);
 });
 
-/** The agents one load registered, beside the echo the base always carries. */
-const agentsOf = async (options: Record<string, unknown>) => {
+/** The `claude` kind one load registered. */
+const kindOf = async (options: Record<string, unknown> = {}): Promise<AgentKind> => {
   const { problems, options: served } = await load(options);
   expect(problems).toEqual([]);
-  return (served.agents ?? []).slice(1);
+  const kind = served.agentKinds?.['claude'];
+  if (kind === undefined) throw new Error('no claude kind was registered');
+  return kind;
 };
 
-/** What the first registered agent says a machine needs. */
-const needsOf = async (options: Record<string, unknown>) => (await agentsOf(options))[0]?.machine?.() ?? {};
+/** One record, as a kind is handed it: every field read at each call. */
+const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
+  id,
+  kind: 'claude',
+  owner: 'host',
+  name,
+  description: undefined,
+  icon: undefined,
+  model: undefined,
+  get config() { return held(); },
+});
+
+/** What the first record opened by one load says a machine needs. */
+const needsOf = async (options: Record<string, unknown> = {}) =>
+  (await kindOf(options)).open(viewOf('claude', () => ({}))).machine?.() ?? {};
 
 /** The host binary mount, as a machine that runs the host's own CLI gets it. */
 const HOST_BINARY = {
@@ -108,13 +127,14 @@ it('mounts only the CLI with computerConfigDir false', async () => {
   expect(Object.keys(await needsOf({ computerConfigDir: false, computerCli: 'host' }))).toEqual(['claudeExecutable']);
 });
 
-it('answers one part need for every variant of one load', async () => {
-  const agents = await agentsOf({ computerCliFallback: 'host', presets: { router: {} } });
-  const [built, router] = agents.map((one) => one.machine?.().claudePart);
+it('answers one part need for every record of one load', async () => {
+  const kind = await kindOf({ computerCliFallback: 'host' });
+  const [built, router] = [kind.open(viewOf('claude', () => ({}))), kind.open(viewOf('router', () => ({})))]
+    .map((one) => one.machine?.().claudePart);
   expect(router).toEqual(built);
 });
 
-/** The Claude state volume as every variant declares it, at its own directory. */
+/** The Claude state volume as every record declares it, at its own directory. */
 const stateAt = (dir: string) => ({
   state: dir,
   seed: [
@@ -148,14 +168,16 @@ it('resolves to the state volume alone in mode volume, and to the host mounts in
   expect(kinds('host')).toEqual([['claudeConfigDirectory', 'directory'], ['claudeConfigJson', 'file'], ['claudePart', 'part']]);
 });
 
-it('gives each variant the same state need at its own directory', async () => {
-  const agents = await agentsOf({ presets: { router: {} } });
-  const [built, router] = agents.map((one) => one.machine?.().claudeState);
+it('gives each record the same state need at its own directory', async () => {
+  const kind = await kindOf();
+  const [built, router] = [kind.open(viewOf('claude', () => ({}))), kind.open(viewOf('router', () => ({})))]
+    .map((one) => one.machine?.().claudeState);
   expect(built).toEqual(stateAt('/ahpd/claude'));
   expect(router).toEqual(stateAt('/ahpd/router'));
   // One directory named for both answers equal needs, field by field.
-  const shared = await agentsOf({ computerConfigDir: '/ahpd/shared', presets: { router: {} } });
-  expect(shared[0]?.machine?.().claudeState).toEqual(shared[1]?.machine?.().claudeState);
+  const shared = await kindOf({ computerConfigDir: '/ahpd/shared' });
+  const pair = [shared.open(viewOf('claude', () => ({}))), shared.open(viewOf('router', () => ({})))];
+  expect(pair[0]?.machine?.().claudeState).toEqual(pair[1]?.machine?.().claudeState);
 });
 
 /*

@@ -67,6 +67,7 @@ import { loadPlugins, pluginSet, type LoadOptions } from '../plugins.js';
 import { applyPlugins, type Applied } from '../applyplugins.js';
 import { pluginsChannel } from '../pluginschannel.js';
 import { fileRecords } from '../records.js';
+import { migratePresets } from '../agents/migrate.js';
 import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
 import { pty } from '../pty.js';
@@ -1289,6 +1290,19 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * what their daemon is missing before it says it started.
    */
   stamp('start: plugins');
+  /*
+   * The presets a configuration file still holds, made into records before any
+   * plugin loads: a plugin registers a kind now, and an agent is a record.
+   *
+   * The file is only rewritten once every record is written, so a failure here
+   * leaves it as it was for the next start to try again.
+   */
+  const migrated = await migratePresets({
+    plugins: options.plugins,
+    records: agentRecords,
+    configFile: pluginFile,
+    log: stamp,
+  });
   const holding: LoadOptions = {
     base,
     paths: options.paths,
@@ -1356,7 +1370,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     if (answer.restart) markRestart();
     return answer;
   };
-  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, failures: didFail } = await loadPlugins(options.plugins, { ...holding, set: pluginHoldings });
+  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, failures: didFail } = await loadPlugins(migrated.plugins, { ...holding, set: pluginHoldings });
   // The channel built above starts answering manifests from here.
   loaded = didLoad;
   failures = didFail;
@@ -1370,6 +1384,42 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   // store's, and these are what the plugins brought.
   pluginTypes = pluginTriggerTypes(folded.pluginTriggers);
   for (const problem of problems) stamp(problem);
+
+  /*
+   * The ports a plugin may have replaced, taken from this fold before the
+   * records open: a record's key is read from the vault the fold holds, and a
+   * record's agent is folded in before the host is built.
+   */
+  if (folded.usage !== undefined) metered = folded.usage;
+  if (folded.vault !== undefined) held = folded.vault;
+  kept = folded.automations;
+  /*
+   * The stored records opened, and folded into the load, before the host is
+   * built.
+   *
+   * The daemon bundles no agent, so a start whose agents are all records is an
+   * ordinary start: what a client finds in the first turn is what the host was
+   * built over, and a start with neither a plugin's agent nor a record's is
+   * refused below rather than answered by a host that could serve nothing.
+   *
+   * A record whose id a plugin already serves is reported by the fold and left
+   * out, the same line a fold made later gives.
+   */
+  const agentProblems = new Set(problems);
+  let opened: Agent[] = [];
+  try {
+    opened = await agentLists.agents();
+  }
+  catch (error) {
+    stamp(`The agent records could not be served: ${reason(error)}`);
+  }
+  const start = pluginHoldings.fold(opened);
+  for (const problem of start.problems) {
+    if (agentProblems.has(problem)) continue;
+    agentProblems.add(problem);
+    stamp(problem);
+  }
+  const started = start.options;
 
   /*
    * A plugin that also set the reader, over the module the file named.
@@ -1434,7 +1484,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * configuration file instead. The command carries `--config-file` when this
    * run was given one, so it names the plugin in the file this daemon reads.
    */
-  if (folded.agents.length === 0) {
+  if (started.agents.length === 0) {
     const install = `ahpd plugin install @ahpd/agent-claude${options.configFile === undefined ? '' : ` --config-file ${options.configFile}`}`;
     stamp(`No backend is loaded, so this host could serve nothing. Run ${install} to install Claude Code and add it to "plugins" in ${options.configFile ?? configPath()}, or run npm i in ${configDir()} and add the package to "plugins" yourself.`);
     process.exit(1);
@@ -1447,7 +1497,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * and removes - and the call an action tool makes, which does the live checks
    * in the channel.
    */
-  const host = createHost({ ...folded, connectors: { refs: () => connectorLists.refs(), run: connectorLists.run } });
+  const host = createHost({ ...started, connectors: { refs: () => connectorLists.refs(), run: connectorLists.run } });
   // The plugin channel's marks reach the host that now serves it.
   markRestart = () => { host.markRestartNeeded(); };
   /*
@@ -1462,13 +1512,6 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   for (const one of folded.pluginConnects ?? []) one.host = host;
   turning = () => host.turning();
-  // What the host was finally built over, which is what a served `ahpd usage`
-  // reads: a plugin that registered a store of its own is the one the records
-  // were written to, and a command answering from the daemon's folder beside it
-  // would report a total nothing was charged to.
-  if (folded.usage !== undefined) metered = folded.usage;
-  if (folded.vault !== undefined) held = folded.vault;
-  kept = folded.automations;
   /*
    * A record's agent folded into the running host.
    *
@@ -1481,7 +1524,6 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * one object, and `replace` refuses what moves a port or a scheme - so the
    * connectors port the host was built with is put back beside it.
    */
-  const agentProblems = new Set<string>();
   const refoldAgents = async (agents: Agent[]): Promise<ReadonlySet<string>> => {
     const next = pluginHoldings.fold(agents);
     for (const line of next.problems) {

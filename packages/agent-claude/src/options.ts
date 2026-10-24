@@ -9,23 +9,22 @@
  * have to know the option's name to place it.
  *
  * One declaration rather than two schemas and two translations, because the
- * same option is offered in a session's config and written in a preset, and
+ * same option is offered in a session's config and written in a record, and
  * those drifted once already.
  */
 
 import type { Bag, BoundTool } from '@ahpd/sdk';
-import { bag, fromEnvRef, secretRef } from '@ahpd/sdk';
-import { modelsProblem } from './models.js';
+import { bag, fromEnvRef } from '@ahpd/sdk';
 
 /**
  * One Claude option.
  *
  * A new SDK option is a new declaration here rather than a spread of whatever
- * the SDK takes: a preset is checked when the plugin loads, and a preset that
- * could set anything could set what this backend sets itself.
+ * the SDK takes: a record is checked when it opens, and a record that could
+ * set anything could set what this backend sets itself.
  */
 export interface Declaration {
-  /** What one value is held to, in a preset and in a config bag alike. */
+  /** What one value is held to, in a record and in a config bag alike. */
   schema: Bag;
   /** The `query()` options a value becomes; absent when the CLI takes it live instead. */
   toQuery?: (value: unknown) => Bag;
@@ -54,15 +53,15 @@ export const sandbox: Declaration = {
 };
 
 /**
- * The sandbox a session was stored on, over whatever its preset says.
+ * The sandbox a session was stored on, over whatever its record says.
  *
  * `sandboxEnabled` was a session's own control before the schema stopped
  * declaring it, and a store still holds what that control was left on. An
  * `on` - the word it wrote, or the `true` a client could have sent in its
  * place - is the one value that outlives the control: it turns the sandbox on
- * as the preset's `sandbox: 'on'` does, so an upgrade never runs a session
+ * as the record's `sandbox: 'on'` does, so an upgrade never runs a session
  * less sandboxed than it was. `off`, `default` and `false` are the sandbox
- * being turned off or left alone, and leave the preset in charge.
+ * being turned off or left alone, and leave the record in charge.
  */
 export const storedSandbox = (settings: Record<string, unknown> | undefined): Bag => {
   const held = settings?.['sandboxEnabled'];
@@ -72,9 +71,9 @@ export const storedSandbox = (settings: Record<string, unknown> | undefined): Ba
 /**
  * Extended thinking, which the query is built with.
  *
- * What every session ran on before a preset could say otherwise, which is why
- * it is the one option with a fallback: an install that names no preset is
- * the empty preset, and it has to answer as it answered before.
+ * What every session ran on before a record could say otherwise, which is why
+ * it is the one option with a fallback: an install whose record names nothing
+ * is the empty record, and it has to answer as it answered before.
  */
 export const thinking: Declaration = {
   schema: {
@@ -129,7 +128,7 @@ export const hostHoldsTasks = (values: Bag, offering: BoundTool[]): boolean =>
  *
  * On by default, and read where the CLI's environment is built: a session that
  * keeps its own tools is started with `CLAUDE_CODE_ENABLE_TASKS=1`, unless a
- * preset's own `env` gives the variable a value.
+ * record's own `env` gives the variable a value.
  */
 export const enableTasks: Declaration = {
   schema: {
@@ -163,7 +162,7 @@ export const outputStyle: Declaration = {
  * A value is a string, `null` to unset the variable, `{ "fromEnv": "<VAR>" }`
  * for the daemon's own value of another variable, or `{ "$secret": "<name>" }`
  * for a credential kept in the vault, so a key need not be written in the
- * configuration. The last is `secretAtUse` because a preset's key belongs to
+ * configuration. The last is `secretAtUse` because a record's key belongs to
  * the daemon rather than to whoever wrote it down: the name reaches the plugin
  * whole and is read once, for the load, rather than by the loader on its behalf.
  */
@@ -192,7 +191,7 @@ export const env: Declaration = {
  * The SDK's own shape: a name without the `--`, its value, and `null` for a
  * flag that takes none. A value that is neither is JSON, because what the CLI
  * is handed is always text: `settings` is an object in the configuration and
- * `--settings '<json>'` on the command line, and a person writing a preset
+ * `--settings '<json>'` on the command line, and a person writing a record
  * should not have to escape it themselves.
  */
 export const extraArgs: Declaration = {
@@ -203,28 +202,27 @@ export const extraArgs: Declaration = {
   },
 };
 
-/** Every declared option, by the name a preset gives it. */
+/** Every declared option, by the name a record gives it. */
 export const DECLARED: Record<string, Declaration> = { sandbox, thinking, hostTasks, enableTasks, outputStyle, env, extraArgs };
 
 /**
- * What a preset holds beside the declared options, by the name it gives them.
+ * What a record holds beside the declared options.
  *
- * These three are what make a preset a variant rather than a set of values: its
- * name is what a client reads instead of the id, and its models are what the
- * picker offers. They belong inside the preset, because two presets of one
- * plugin are two agents and each of them is one of these.
+ * These two are what make a record an agent rather than a set of values: which
+ * models the picker offers is this backend's question and not the channel's,
+ * which is why a record's `config` may name them.
  */
 const OF_A_VARIANT: Record<string, Bag> = {
-  name: { type: 'string', description: 'What a client reads instead of the id, which is the preset key.' },
-  models: { type: 'array', description: 'The models this preset offers.' },
+  models: { type: 'array', description: 'The models this record offers.' },
   keepCliModels: { type: 'boolean', description: 'With models, add them to the CLI model list rather than replace it.' },
 };
 
 /**
  * The form a client draws for a record of this kind.
  *
- * The per-preset fields, without `name`, `description`, `icon` and `model`: the
- * agents channel owns those four on every agent, so a record's `config` holds
+ * The fields a record's `config` may hold, without `name`, `description`, `icon`
+ * and `model`: the agents channel owns those four on every agent, so a
+ * record's `config` holds
  * what this backend runs and nothing a second kind could spell differently.
  * `models` and `keepCliModels` stay, because which models a record offers is
  * this backend's question and not the channel's.
@@ -269,66 +267,6 @@ export const ownEnvOf = (values: Bag): Record<string, string | null> => variable
 
 /** The flag settings a set of declared values produces. */
 export const flagSettingsOf = (values: Bag): Bag => through(values, 'toFlags');
-
-/**
- * What is wrong with a preset, named; nothing when it holds.
- *
- * The plugin's own options are held to a JSON Schema by the daemon, and that
- * schema cannot say that every value of one object is itself a shape:
- * `additionalProperties` there is a yes or a no and never carries a schema,
- * so `presets` is declared an object and what is inside one of its names is
- * checked here instead - against the same declarations, so a preset and a
- * config key cannot disagree about what an option may be, and against the
- * list `modelsProblem` reads, so a preset's models are held as strictly as a
- * harness's own are.
- */
-export const presetSchema = (value: unknown, by: string): string | undefined => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return `${by} is not an object of Claude options`;
-  for (const [name, given] of Object.entries(value)) {
-    if (name === 'models') {
-      const wrong = modelsProblem(given, `${by}.models`);
-      if (wrong !== undefined) return wrong;
-      continue;
-    }
-    const one = DECLARED[name];
-    const held = one?.schema ?? OF_A_VARIANT[name];
-    if (held === undefined) return `${by}.${name} is not an option a preset holds`;
-    const wrong = heldTo(held, given, name);
-    if (wrong !== undefined) return `${by}.${name}${wrong.startsWith('.') ? '' : ' '}${wrong}`;
-  }
-  return undefined;
-};
-
-/** What one value is held to by one field's schema, in the words a person reads. */
-const heldTo = (schema: Bag, value: unknown, option: string): string | undefined => {
-  const listed = Array.isArray(schema.enum) ? schema.enum : undefined;
-  if (listed !== undefined) return listed.includes(value) ? undefined : `is not one of ${listed.map(String).join(', ')}`;
-  if (schema.type === 'string') return typeof value === 'string' ? undefined : 'is not a string';
-  if (schema.type === 'boolean') return typeof value === 'boolean' ? undefined : 'is not true or false';
-  if (schema.type === 'object') {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) return 'is not an object';
-    for (const [key, held] of Object.entries(value)) {
-      const named = schema.fromEnv === true ? fromEnvRef(held) : undefined;
-      if (named !== undefined) {
-        if (process.env[named] === undefined) return `.${key} reads ${named}, which the daemon's environment does not have`;
-        continue;
-      }
-      // A name the plugin reads itself is held here whatever it will answer:
-      // whether the vault has it is not a question this check can ask.
-      if (schema.secretAtUse === true && secretRef(held) !== undefined) continue;
-      // An argument is text whatever it was written as, so anything the CLI can
-      // be handed as JSON is held. `{ fromEnv }` is not: it reads the daemon's
-      // own variables, which is what `env` is for and no argument has use of.
-      if (option === 'extraArgs') {
-        if (fromEnvRef(held) !== undefined) return `.${key} reads the daemon's environment only under env`;
-        continue;
-      }
-      if (typeof held !== 'string' && held !== null) return `.${key} is not a string`;
-    }
-    return undefined;
-  }
-  return undefined;
-};
 
 /**
  * The name-and-value pairs of an `env`, and nothing else.

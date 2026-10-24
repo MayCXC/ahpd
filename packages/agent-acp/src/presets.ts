@@ -3,8 +3,8 @@
  *
  * A row is what running one known agent takes: the program, the arguments that
  * put it in ACP mode, the switch that stops it updating itself, and the sign-in
- * it needs once a key is there. A preset takes a row by naming it as its own
- * key or as its `base`, and whatever the preset writes itself wins over the row.
+ * it needs once a key is there. A record takes a row by naming it as its own id
+ * or as its `base`, and whatever the record writes itself wins over the row.
  *
  * The name and the command of each row come from `knownAgents` in `@ahpd/sdk`,
  * which the daemon also reads: a setup offers an agent it finds on PATH, and it
@@ -65,7 +65,7 @@ export interface AcpPreset {
    * the host files it is seeded from.
    *
    * Set only in a machine, never on a spawn on this host. A key is not here: a
-   * person fills its variable in their own preset's `machine.env`.
+   * person fills its variable in their own record's `machine.env`.
    */
   machine?: AcpMachine;
 }
@@ -253,10 +253,11 @@ export const KEY_VARIABLES: string[] = [...new Set(Object.keys(presets).flatMap(
 /**
  * One template per shipped row: the values a record made from it starts with.
  *
- * A record names its own program rather than naming a row, so the row's spawn
- * fields go in whole - the command, the arguments that put it in ACP mode, the
- * environment switches and the machine. The install line and the page travel
- * with them, because they describe the command the record now carries.
+ * A template carries the row's spawn fields whole - the command, the arguments
+ * that put it in ACP mode, the environment switches and the machine - so a
+ * record made from it runs that row whether or not it also names it. The
+ * install line and the page travel with them, because they describe the command
+ * the record now carries.
  *
  * The row's key variables are fields set empty, so a person sees which ones
  * their vendor wants. An empty secret is dropped when the record is written,
@@ -264,10 +265,9 @@ export const KEY_VARIABLES: string[] = [...new Set(Object.keys(presets).flatMap(
  * is named where the row has one, so a record whose key is filled in signs in
  * without the person naming the method as well.
  *
- * `command`, `args`, `cwd`, `machine` and `install` are host-only: a person's
- * or a team's record cannot set them, and a client creating one from a
- * template leaves them out. Such a record has no command until a host record
- * carries one, which is what task 07 of host 122 migrates the presets into.
+ * `base`, `command`, `args`, `cwd`, `machine` and `install` are host-only: a
+ * person's or a team's record cannot set them, and a client creating one from a
+ * template leaves them out.
  */
 export const templates = (): AgentTemplate[] => Object.entries(presets).map(([id, row]) => {
   const known = knownAgents[id];

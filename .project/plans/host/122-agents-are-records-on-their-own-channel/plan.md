@@ -97,7 +97,7 @@ edit -> live record updated -> the session reads it at its next turn
 | [04 - agent-acp registers a kind](task-04-agent-acp-registers-a-kind.md) | implemented | 01 |
 | [05 - agent-cofold registers a kind](task-05-agent-cofold-registers-a-kind.md) | implemented | 01 |
 | [06 - agent-pi registers a kind](task-06-agent-pi-registers-a-kind.md) | implemented | 01 |
-| [07 - Presets become records at the first start](task-07-presets-become-records.md) | todo | 03, 04, 05, 06 |
+| [07 - Presets become records at the first start](task-07-presets-become-records.md) | implemented | 03, 04, 05, 06 |
 | [08 - The docs describe agent records](task-08-docs-describe-agent-records.md) | todo | 07 |
 
 ## Risks and tradeoffs
@@ -108,8 +108,8 @@ edit -> live record updated -> the session reads it at its next turn
 
 ## Resume state
 
-- **Done so far:** task 01, the agents channel, with its tests; the connectors channel and its tests are unchanged. Task 02, the caller's own agent list, with its tests. Task 03, the `claude` kind in agent-claude, with an edit applying at the next turn, while the preset agents still register until task 07. Task 04, the `acp` kind in agent-acp, with the shipped rows as templates, an edit applying at the next turn by another server on the same conversation, and the preset agents still registered until task 07. Task 05, the `cofold` kind in agent-cofold, with one store folder per record, a record's keyed search providers refused because the channel vaults top-level fields only, and the plugin's own agent gone until task 07 migrates its options into a record. Task 06, the `pi` kind in agent-pi, with a record's variables resolved to pi's runtime key per provider each turn and never written to `process.env`, a record's model taking effect at the next turn, and the plugin's own agent gone; a variable pi uses as request headers rather than a key, `ANTHROPIC_AUTH_TOKEN`, is the one thing a record cannot set.
-- **Next action:** task 07, presets become records at the first start. Not started.
+- **Done so far:** task 01, the agents channel, with its tests; the connectors channel and its tests are unchanged. Task 02, the caller's own agent list, with its tests. Task 03, the `claude` kind in agent-claude, with an edit applying at the next turn. Task 04, the `acp` kind in agent-acp, with the shipped rows as templates, an edit applying at the next turn by another server on the same conversation. Task 05, the `cofold` kind in agent-cofold, with one store folder per record, a record's keyed search providers refused because the channel vaults top-level fields only. Task 06, the `pi` kind in agent-pi, with a record's variables resolved to pi's runtime key per provider each turn and never written to `process.env`, a record's model taking effect at the next turn; a variable pi uses as request headers rather than a key, `ANTHROPIC_AUTH_TOKEN`, is the one thing a record cannot set. Task 07, the migration: `config.json`'s presets and per-agent options become `owner: "host"` records at the first start, before any plugin loads, with a backup and a temp-file rename of the file and one line of ids; `ahpd configure` writes records; a bot whose agent is not served reads `unavailable`; the daemon starts on records alone; `presets` is gone from the plugins and their manifests.
+- **Next action:** task 08, the docs, and Softov's by-hand check of a `claude-deepseek-build` session on his daemon.
 - **Open questions:** none.
 - **Watch out for:** Softov's build sessions run on the agent `claude-deepseek-build`. A daemon with this plan must still offer it after the first start, with the same id.
 

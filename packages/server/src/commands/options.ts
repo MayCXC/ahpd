@@ -1032,7 +1032,7 @@ const noCwd = input['noCwd'] === true;
    * The flag picks which plugins run, not how each is set up: a `--plugin`
    * naming a plugin the file lists takes that entry's options and grants. A
    * nested host is started as `ahpd --stdio --plugin <each>`, and a box's own
-   * ahpd keeps its backends' settings in its file - an ACP load's presets, a
+   * ahpd keeps its backends' settings in its file - an ACP load's `hostTools`, a
    * model - so without this every such host loaded its backends bare. The
    * entry's `enabled` is not taken: the person named the plugin for this run.
    */
