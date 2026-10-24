@@ -42,6 +42,7 @@
   "files": [
     "dist",
     "src",
+    "icon.svg",
     "README.md"
   ],
   "engines": {
@@ -67,6 +68,7 @@
     "description": "Runs the Pi coding agent, embedded in process and served as an agent provider.",
     "categories": ["agent"],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "icons": [{ "src": "./icon.svg" }],
     "contracts": {
       "agents": ["*"]
     },

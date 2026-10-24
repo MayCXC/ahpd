@@ -45,6 +45,7 @@
     "dist",
     "src",
     "images",
+    "icon.svg",
     "README.md"
   ],
   "engines": {
@@ -66,6 +67,7 @@
     "description": "Provides isolated Docker/Container environments for agent sessions, including lifecycle management and tools.",
     "categories": ["channel", "tool"],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "icons": [{ "src": "./icon.svg" }],
     "contracts": {
       "channels": ["x-ahpd-computers"],
       "resourceProviders": ["computer"],

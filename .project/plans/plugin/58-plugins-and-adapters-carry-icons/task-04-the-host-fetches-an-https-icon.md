@@ -1,6 +1,6 @@
 ---
 title: The host fetches an https icon and sends it as data
-status: todo
+status: implemented
 depends: [task-02-the-host-sends-a-package-icon.md]
 layer: "server"
 refs:
@@ -48,3 +48,10 @@ It sends the icon as a `data:` URI, under the rules of a file.
 - By hand: a plugin with an `https:` icon shows a `data:` icon in the plugins channel row.
 
 ## Resume
+
+- **Done so far:** `fetchIcons(icons, by, problem, fetcher)` in `packages/server/src/icons.ts` fetches every `https:` source in parallel, with `AbortSignal.timeout(5_000)`, and turns each body into a `data:` URI. A `contentType` the manifest gives wins over the response's. The host drops a body over 32 KB, and it drops a type that is not `image/`, each with one line. `resolveIcons` keeps an `https:` source for it. `loadOne` awaits it on the manifest's icons and on each adapter's icons. That happens before the manifest and the contributions return. An adapter key whose icons all drop is removed. `fetchIcons` and the fetcher are injected through `LoadOneOptions.fetcher` and `LoadOptions.fetcher`, so no test reaches the network. `packages/server/test/plugin-icons.test.ts` has eight new cases, and `docs/plugins/PLUGINS.md` says the host fetches at load.
+- **Next action:** none; task 05 uses the same loader path.
+- **Files:** `packages/server/src/icons.ts`, `packages/server/src/plugins.ts`, `packages/server/test/plugin-icons.test.ts`, `docs/plugins/PLUGINS.md`, this task file.
+- **Open questions:** none.
+- **Departures:** the `data:` body of one file and of one fetched body are built by one `drawn` helper, which the task did not name. A manifest whose fetched icons all drop keeps `icons: []`, as a manifest whose files all drop does. `base` in `loadOne` now falls back to the nearest package of a file spec. So an adapter icon resolves against the package when a spec names its entry file. Task 05 needed that for the webhook adapter.
+- **Watch out for:** every load fetches again, and a reload is a load. There is no cache for a manifest or adapter icon, unlike an Activepieces logo.

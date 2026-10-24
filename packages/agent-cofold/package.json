@@ -46,6 +46,7 @@
   "files": [
     "dist",
     "src",
+    "icon.svg",
     "README.md",
     "LICENSE"
   ],
@@ -75,6 +76,7 @@
     "description": "Runs the Cofold agent runtime, providing access to OpenAI-compat api endpoints.",
     "categories": ["agent"],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "icons": [{ "src": "./icon.svg" }],
     "contracts": {
       "agents": ["*"]
     }
