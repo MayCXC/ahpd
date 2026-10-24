@@ -927,6 +927,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      */
     agents: [],
     /*
+     * Whose each stored agent is, read from the records' channel.
+     *
+     * What decides which agents one caller is told about and may start a
+     * session on: a record's owner, a membership for a team's and the person
+     * for a person's. An id the records do not hold is the daemon's own or a
+     * plugin's, and takes `session:write`.
+     */
+    agentOwners: () => agentLists.owners(),
+    /*
      * What this daemon can do that the protocol cannot.
      *
      * All three touch the machine - a file, a subprocess, a `git` binary - and

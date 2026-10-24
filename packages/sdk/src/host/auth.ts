@@ -1,4 +1,5 @@
 import { ROOT } from './channels.js';
+import { mayUseAgent } from '../agents/usable.js';
 import type { Agent } from '../types/agent.js';
 import type { Connection } from '../types/host.js';
 import type { Bag } from '../types/common.js';
@@ -69,15 +70,20 @@ export function createAuth(ctx: HostContext): Auth {
   /**
    * The agent list as one connection is told it.
    *
-   * The host's sign-in resource is advertised on every backend with
-   * `required: true`, because every command but the handshake and
-   * `authenticate` is refused until somebody signs in - and a client reads
-   * that field to decide whether to prompt before it ever sends a command. For
-   * a connection this host already treats as somebody, root or carrying a
-   * principal, the prompt would be for a token nothing needs, and a client
-   * that insists on it never creates a session at all. So that one resource is
-   * rewritten for that one connection, and nothing else is: a backend's own
-   * resources and GitHub's are listed as they are.
+   * Two rewrites, and both are about one connection. The host's sign-in
+   * resource is advertised on every backend with `required: true`, because
+   * every command but the handshake and `authenticate` is refused until
+   * somebody signs in - and a client reads that field to decide whether to
+   * prompt before it ever sends a command. For a connection this host already
+   * treats as somebody, root or carrying a principal, the prompt would be for
+   * a token nothing needs, and a client that insists on it never creates a
+   * session at all. So that one resource is rewritten for that one connection,
+   * and a backend's own resources and GitHub's are listed as they are.
+   *
+   * And the list holds only the agents this caller may use, decided by
+   * `mayUseAgent` from the owner its record names. An agent left out is not
+   * one this connection is told exists, which is why this is a filter and not
+   * a field it cannot use.
    *
    * A copy rather than an edit, because `options.users.resource` is the
    * directory's own record and `descriptors()` is rebuilt from it for every
@@ -87,21 +93,34 @@ export function createAuth(ctx: HostContext): Auth {
    */
   const agentsFor = (connection: Connection, list: unknown): unknown => {
     if (options.users === undefined) return list;
-    if (connection.root !== true && connection.principal === undefined) return list;
     if (!Array.isArray(list)) return list;
     const id = loginId();
-    return list.map((agent) => {
-      if (typeof agent !== 'object' || agent === null) return agent;
+    const owners = options.agentOwners;
+    /*
+     * Who this connection already is: root, or somebody signed in. Only such a
+     * connection is told the host's sign-in is not required, because only it
+     * has a credential nothing else needs.
+     */
+    const somebody = connection.root === true || connection.principal !== undefined;
+    return list.flatMap((agent) => {
+      if (typeof agent !== 'object' || agent === null) return [agent];
       const held = agent as Bag;
-      if (!Array.isArray(held.protectedResources)) return agent;
+      /*
+       * Whose the agent is, read from its record. An id the records do not
+       * hold is the daemon's own or a plugin's, and takes the host rule.
+       */
+      const provider = held.provider;
+      const owner = typeof provider === 'string' ? owners?.().get(provider) : undefined;
+      if (!mayUseAgent(connection.principal, owner, { root: connection.root === true, hasDirectory: true })) return [];
+      if (!somebody || !Array.isArray(held.protectedResources)) return [agent];
       const mine = held.protectedResources.some((one) => typeof one === 'object' && one !== null && (one as Bag).resource === id);
-      if (!mine) return agent;
-      return {
+      if (!mine) return [agent];
+      return [{
         ...held,
         protectedResources: held.protectedResources.map((one) => (typeof one === 'object' && one !== null && (one as Bag).resource === id
           ? { ...(one as Bag), required: false }
           : one)),
-      };
+      }];
     });
   };
   /** A token any connected client lent for a resource, and has not run out. */

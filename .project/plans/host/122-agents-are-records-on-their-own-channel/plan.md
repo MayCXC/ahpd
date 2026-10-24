@@ -92,7 +92,7 @@ edit -> live record updated -> the session reads it at its next turn
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The agents channel](task-01-the-agents-channel.md) | implemented | - |
-| [02 - A caller sees only the agents it may use](task-02-a-caller-sees-its-agents.md) | todo | 01 |
+| [02 - A caller sees only the agents it may use](task-02-a-caller-sees-its-agents.md) | implemented | 01 |
 | [03 - agent-claude registers a kind](task-03-agent-claude-registers-a-kind.md) | todo | 01 |
 | [04 - agent-acp registers a kind](task-04-agent-acp-registers-a-kind.md) | todo | 01 |
 | [05 - agent-cofold registers a kind](task-05-agent-cofold-registers-a-kind.md) | todo | 01 |
@@ -108,8 +108,8 @@ edit -> live record updated -> the session reads it at its next turn
 
 ## Resume state
 
-- **Done so far:** task 01, the agents channel, with its tests; the connectors channel and its tests are unchanged.
-- **Next action:** task 02, a caller sees only the agents it may use.
+- **Done so far:** task 01, the agents channel, with its tests; the connectors channel and its tests are unchanged. Task 02, the caller's own agent list, with its tests.
+- **Next action:** task 03, agent-claude registers a kind.
 - **Open questions:** none.
 - **Watch out for:** Softov's build sessions run on the agent `claude-deepseek-build`. A daemon with this plan must still offer it after the first start, with the same id.
 

@@ -158,6 +158,13 @@ export interface AgentsChannel {
   openAll(): Promise<void>;
   /** Send every reader what the agents are now. */
   refresh(): Promise<void>;
+  /**
+   * The owner of each stored agent, as the last read of the collection found it.
+   *
+   * An id with no entry is not a record, and so a host agent. What the host
+   * reads to decide which agents one caller is told about.
+   */
+  owners(): ReadonlyMap<string, AgentOwner | undefined>;
 }
 
 export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
@@ -731,5 +738,6 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       await channel.refresh();
     }),
     refresh: () => channel.refresh(),
+    owners: () => owners,
   };
 }

@@ -11,6 +11,7 @@ import {
   directory, hello, peer, signIn,
 } from './users-gate-helpers.js';
 import type { Agent, Start } from '../src/types/agent.js';
+import type { AgentOwner } from '../src/types/agents.js';
 import type { HostOptions } from '../src/types/host.js';
 import type { LoaderContext } from '../src/types/plugin.js';
 import type { Grant } from '../src/types/users.js';
@@ -234,6 +235,17 @@ const other = (starts: Start[]): Agent => {
   };
 };
 
+/*
+ * The backend these cases run on, owned by the person at the keyboard.
+ *
+ * A record of one's own is an agent a person may use without `session:write`,
+ * and that is what these cases need: a host agent takes `session:write` to be
+ * started on, and that grant covers a chat's group as well, because a chat's
+ * groups are the session's - so a role holding it can never be one that may not
+ * add a chat.
+ */
+const OWN = new Map<string, AgentOwner>([['claude', 'user:soft'], ['other', 'user:soft']]);
+
 /** One session the person started, which the plugin then adds a chat to. */
 const started = async (
   client: ReturnType<ReturnType<typeof createHost>['accept']>, name = 'back',
@@ -251,6 +263,7 @@ it('starts a chat on the backend the plugin names, with that backend\'s config',
   const starts: Start[] = [];
   const { plugin, client } = await startingWith({ soft: ['session:create', 'session:read', 'chat:create'] }, 'soft', {
     agents: [claude({ paths: [DIR] }), other(starts)],
+    agentOwners: () => OWN,
   });
   const session = await started(client);
 
@@ -277,7 +290,9 @@ it('starts a chat on the backend the plugin names, with that backend\'s config',
 });
 
 it('refuses a chat the session\'s owner may not create, in the client\'s own words', async () => {
-  const { plugin, client } = await startingWith({ soft: ['session:create', 'session:read'] }, 'soft');
+  const { plugin, client } = await startingWith({ soft: ['session:create', 'session:read'] }, 'soft', {
+    agentOwners: () => OWN,
+  });
   const session = await started(client);
 
   /*
@@ -297,6 +312,7 @@ it('refuses a backend it does not have, and a value that backend does not take',
   const starts: Start[] = [];
   const { plugin, client } = await startingWith({ soft: ['session:create', 'session:read', 'chat:create'] }, 'soft', {
     agents: [claude({ paths: [DIR] }), other(starts)],
+    agentOwners: () => OWN,
   });
   const session = await started(client);
 

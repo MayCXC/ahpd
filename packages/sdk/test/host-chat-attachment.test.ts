@@ -195,7 +195,7 @@ describe('a chat attached to a message', () => {
       agents: [claude({ paths: [REPO] })],
       ...machine(),
       users: directory({
-        ana: ['session:read', 'session:create', 'chat:create', 'chat:send', 'chat:turns'],
+        ana: ['session:write', 'session:read', 'session:create', 'chat:create', 'chat:send', 'chat:turns'],
         gus: ['chat:send', 'chat:turns'],
       }),
     });

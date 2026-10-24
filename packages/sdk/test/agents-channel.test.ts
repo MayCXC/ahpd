@@ -203,6 +203,9 @@ async function served(options: { register?: boolean } = {}) {
     channels: wire.channels,
     methods: wire.methods,
     users,
+    // Whose each record is, as the daemon hands it over: the list a caller is
+    // sent holds the agents it may use, so `cy` reads the one it owns.
+    agentOwners: () => lists.owners(),
   });
   const lists = agentsChannel({
     collection,
