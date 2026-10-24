@@ -143,6 +143,17 @@ export interface ClaudeOptions {
    */
   preset?: Bag;
   /**
+   * The declared options read live from a record, at the start of each turn.
+   *
+   * An agent made from a record has no preset of its own: the record is edited
+   * while the daemon runs, and the session it started is still open. Read here
+   * rather than copied into `preset`, so a turn compares what the CLI was
+   * started with against what the record says now, and a change restarts the
+   * CLI on the same conversation. A preset, which cannot be edited while the
+   * daemon runs, is passed as `preset` instead.
+   */
+  presetOf?: () => Bag;
+  /**
    * The models this harness offers, by id, with a name, or fetched from an
    * endpoint's model list and filtered. Without it, the CLI's own list.
    */
@@ -513,7 +524,7 @@ export function claude(options: ClaudeOptions): Agent {
     // where the daemon's own environment would send it.
     endpoints: () => [{
       name: 'Anthropic API',
-      url: `${(baseUrlOf(options.preset) ?? process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com').replace(/\/$/, '')}/v1/models`,
+      url: `${(baseUrlOf(options.presetOf?.() ?? options.preset) ?? process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com').replace(/\/$/, '')}/v1/models`,
       expectedStatus: 401,
     }],
 
@@ -675,8 +686,10 @@ export function claude(options: ClaudeOptions): Agent {
         ? { env: { ANTHROPIC_API_KEY: start.credentials[ANTHROPIC] } }
         : {}),
       // The declared options this variant was configured with, which its
-      // sessions are built from.
+      // sessions are built from. A record's are read live instead, so a turn
+      // sees an edit without the daemon rebuilding the agent.
       ...(options.preset === undefined ? {} : { preset: options.preset }),
+      ...(options.presetOf === undefined ? {} : { presetOf: options.presetOf }),
       ...(options.models === undefined ? {} : { offerModels: offer }),
       });
     },

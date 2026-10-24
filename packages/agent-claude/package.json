@@ -76,7 +76,8 @@
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
     "icons": [{ "src": "./icon.svg" }],
     "contracts": {
-      "agents": ["*"]
+      "agents": ["*"],
+      "agentKinds": ["claude"]
     },
     "options": {
       "paths": {

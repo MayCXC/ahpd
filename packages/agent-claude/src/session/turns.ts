@@ -150,11 +150,15 @@ export function createTurns(ctx: SessionContext): Turns {
      * The agent this message picked, taken before the model and before the
      * prompt, because it is what decides which CLI the model is switched on.
      *
+     * The record is read first: a session started from an agent record is one
+     * somebody may edit while it runs, and the edit reaches the CLI here - on
+     * the turn after it, with the conversation resumed onto the new CLI.
+     *
      * Named in `beginning` for as long as it takes, so a message queued behind
      * this one waits rather than reaching the CLI beside the one being built.
      */
     ctx.beginning = turnId;
-    const refused = ctx.switchAgent(from?.agent?.uri);
+    const refused = ctx.refreshPreset() ?? ctx.switchAgent(from?.agent?.uri);
     ctx.beginning = undefined;
     if (refused !== undefined) {
       refuseTurn(turnId, text, refused, queuedMessageId, from, attachments);

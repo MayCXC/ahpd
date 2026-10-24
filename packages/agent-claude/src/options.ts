@@ -220,6 +220,24 @@ const OF_A_VARIANT: Record<string, Bag> = {
   keepCliModels: { type: 'boolean', description: 'With models, add them to the CLI model list rather than replace it.' },
 };
 
+/**
+ * The form a client draws for a record of this kind.
+ *
+ * The per-preset fields, without `name`, `description`, `icon` and `model`: the
+ * agents channel owns those four on every agent, so a record's `config` holds
+ * what this backend runs and nothing a second kind could spell differently.
+ * `models` and `keepCliModels` stay, because which models a record offers is
+ * this backend's question and not the channel's.
+ */
+export const kindSchema = (): Bag => ({
+  type: 'object',
+  properties: {
+    ...Object.fromEntries(Object.entries(DECLARED).map(([name, one]) => [name, one.schema])),
+    models: OF_A_VARIANT['models'],
+    keepCliModels: OF_A_VARIANT['keepCliModels'],
+  },
+});
+
 /** The options of one declaration, gathered into a single bag. */
 const through = (values: Bag, member: 'toQuery' | 'toFlags'): Bag => {
   const out: Bag = {};

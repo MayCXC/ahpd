@@ -12,12 +12,12 @@
  */
 
 import type { ModelEntry } from './models.js';
-import type { Plugin, PluginHost } from '@ahpd/sdk';
+import type { AgentKind, Plugin, PluginHost } from '@ahpd/sdk';
 import { bag, eachPreset, readSecrets } from '@ahpd/sdk';
 import { claude } from './claude.js';
 import type { ClaudeOptions } from './claude.js';
 import { sharedCatalogue as oneListing } from './catalog.js';
-import { enableTasks, extraArgs, hostTasks, outputStyle, presetSchema, sandbox, thinking } from './options.js';
+import { enableTasks, extraArgs, hostTasks, kindSchema, outputStyle, presetSchema, sandbox, thinking } from './options.js';
 
 /** The plugin's id, unique among the plugins one daemon loads. */
 export const name = 'agent-claude';
@@ -131,12 +131,38 @@ const named = (variant: Record<string, unknown>, fallback: string): string =>
   typeof variant['name'] === 'string' ? variant['name'] : fallback;
 
 /**
- * One agent's options per variant, out of values `optionsSchema` has checked.
+ * The options every agent of one load shares, and the directories it serves.
  *
  * `paths` defaults to the host's, which is the whole configuration in the
  * ordinary install: the directories the daemon was started on are the ones
  * this backend lists. A deployment that wants the catalogue narrower than the
  * host names its own.
+ *
+ * These are the plugin's own options rather than any one agent's, so a preset
+ * is laid over them and a record takes them as they are: what a record may
+ * override is what the kind's schema declares, and none of these is in it.
+ */
+const defaultsOf = (host: PluginHost, values: Record<string, unknown>) => {
+  const said = values as Partial<ClaudeOptions> & { presets?: Record<string, unknown> };
+  const paths = said.paths ?? host.paths;
+  const shared = {
+    log: (line: string) => host.log(line),
+    // One listing for all of them, and one load's worth of it: every variant
+    // below reads the same `paths` out of the same configuration directory, so
+    // there is one pass over the projects directory for the lot.
+    sharedCatalogue: oneListing(paths),
+    ...(said.computerExecutable === undefined ? {} : { computerExecutable: said.computerExecutable }),
+    ...(said.computerConfigDir === undefined ? {} : { computerConfigDir: said.computerConfigDir }),
+    ...(said.computerCli === undefined ? {} : { computerCli: said.computerCli }),
+    ...(said.computerCliFallback === undefined ? {} : { computerCliFallback: said.computerCliFallback }),
+    ...(said.workerStop === undefined ? {} : { workerStop: said.workerStop }),
+    ...(said.handshakeTimeoutMs === undefined ? {} : { handshakeTimeoutMs: said.handshakeTimeoutMs }),
+  };
+  return { paths, shared };
+};
+
+/**
+ * One agent's options per variant, out of values `optionsSchema` has checked.
  *
  * `presets` is the one option whose contents `optionsSchema` cannot check: it
  * says a preset is an object, and what a preset holds is checked here against
@@ -172,21 +198,7 @@ const optionsOf = async (host: PluginHost, values: Record<string, unknown>): Pro
     },
     { noun: 'variant' },
   );
-  // The options every variant of one load shares, whatever the presets say.
-  const paths = said.paths ?? host.paths;
-  const shared = {
-    log: (line: string) => host.log(line),
-    // One listing for all of them, and one load's worth of it: every variant
-    // below reads the same `paths` out of the same configuration directory, so
-    // there is one pass over the projects directory for the lot.
-    sharedCatalogue: oneListing(paths),
-    ...(said.computerExecutable === undefined ? {} : { computerExecutable: said.computerExecutable }),
-    ...(said.computerConfigDir === undefined ? {} : { computerConfigDir: said.computerConfigDir }),
-    ...(said.computerCli === undefined ? {} : { computerCli: said.computerCli }),
-    ...(said.computerCliFallback === undefined ? {} : { computerCliFallback: said.computerCliFallback }),
-    ...(said.workerStop === undefined ? {} : { workerStop: said.workerStop }),
-    ...(said.handshakeTimeoutMs === undefined ? {} : { handshakeTimeoutMs: said.handshakeTimeoutMs }),
-  };
+  const { paths, shared } = defaultsOf(host, values);
   return variants.map(({ id, name, models, keepCliModels, ...preset }) => ({
     ...shared,
     paths,
@@ -199,7 +211,50 @@ const optionsOf = async (host: PluginHost, values: Record<string, unknown>): Pro
   }));
 };
 
-/** Register one Claude agent per variant, over the directories the host serves. */
+/**
+ * The `claude` kind: the form a record of it fills in, and the backend each
+ * record opens.
+ *
+ * The template is the built-in agent with nothing set, which is what a new
+ * record starts from. `extraArgs` is host-only, because an argument is where a
+ * command would come from; the two credential variables are key fields, so a
+ * team's or a person's record may carry its own key while every other variable
+ * stays the host's to set. The record is read live, so an edit reaches the
+ * session at its next turn.
+ *
+ * The records are beside the preset agents until task 07 of host 122 migrates
+ * them: `presets` still folds one agent per preset, and an id a preset already
+ * serves cannot also be a record's.
+ */
+/** The plugin's own options, as every agent of one load is built with them. */
+type Shared = ReturnType<typeof defaultsOf>['shared'];
+
+const kindOf = (paths: string[], shared: Shared): AgentKind => ({
+  name: 'claude',
+  title: 'Claude Code',
+  description: 'Claude Code, with one record per agent: its own directories, models and options.',
+  schema: kindSchema(),
+  templates: [{
+    name: 'Claude Code',
+    description: 'Claude Code as this host runs it, on the directories the plugin serves.',
+    config: {},
+  }],
+  hostOnly: ['extraArgs'],
+  keyVariables: ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'],
+  open: (record) => claude({
+    ...shared,
+    paths,
+    provider: record.id,
+    displayName: record.name,
+    ...(Array.isArray(record.config['models']) ? { models: record.config['models'] as ModelEntry[] } : {}),
+    ...(typeof record.config['keepCliModels'] === 'boolean' ? { keepCliModels: record.config['keepCliModels'] } : {}),
+    presetOf: () => ({ ...record.config }),
+  }),
+});
+
+/** Register the `claude` kind, and one agent per preset until task 07 migrates them. */
 export const apply: Plugin['apply'] = async (host, options) => {
+  const { paths, shared } = defaultsOf(host, options);
+  host.registerAgentKind(kindOf(paths, shared));
   for (const one of await optionsOf(host, options)) host.registerAgent(claude(one));
 };
