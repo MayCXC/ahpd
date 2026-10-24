@@ -201,6 +201,8 @@ export function webhookAdapter(endpoints: Map<string, Endpoint>): Adapter {
     name: ADAPTER,
     title: 'Webhook',
     description: 'A URL that talks to a bot, starts an automation, or fires the webhook trigger, with a secret per endpoint.',
+    // The same file the plugin declares, resolved against the plugin's package.
+    icons: [{ src: './icon.svg' }],
     schema: SCHEMA,
     capabilities: CAPABILITIES,
     open(connector: Connector) {

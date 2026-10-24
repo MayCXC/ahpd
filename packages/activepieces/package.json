@@ -41,6 +41,7 @@
   "files": [
     "dist",
     "src",
+    "icon.svg",
     "README.md",
     "LICENSE"
   ],
@@ -79,6 +80,7 @@
     "description": "Each installed Activepieces piece is an adapter, and each of its actions is a host tool.",
     "categories": ["connector"],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "icons": [{ "src": "./icon.svg" }],
     "contracts": {
       "adapters": ["ap-*"],
       "closers": ["the child process that runs the pieces"]

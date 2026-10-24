@@ -31,7 +31,7 @@ import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { checkIcons, foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
 import type { Agent, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
-import { resolveIcons } from './icons.js';
+import { fetchIcons, resolveIcons } from './icons.js';
 import { satisfies } from './compat.js';
 
 /** One spec, turned into a URL to import. */
@@ -592,6 +592,13 @@ export interface LoadOneOptions {
    * code as it is now rather than the module it already holds.
    */
   reload?: number;
+  /**
+   * What reaches the network for an `https:` icon, when the host loads one.
+   *
+   * A parameter rather than the global `fetch` so a test answers without a
+   * network, and the same argument `fetch` takes otherwise.
+   */
+  fetcher?: typeof fetch;
 }
 
 /** What one `loadOne` managed: a plugin, or the reasons it is not one. */
@@ -905,8 +912,10 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   const { manifest, target, url } = ready.found;
   const problems = [...ready.found.problems];
   // What a relative icon is resolved against: the package, or the folder of a
-  // single-file plugin, which is what it has in place of one.
-  const base = resolved.packageDir ?? (target === undefined ? undefined : dirname(target));
+  // single-file plugin, which is what it has in place of one. A spec that names
+  // a file inside a package still resolves against that package, as its
+  // manifest's own icons do.
+  const base = resolved.packageDir ?? (target === undefined ? undefined : (nearestManifest(target) ?? dirname(target)));
   // A manifest icon that could not be read was dropped and said, and the load
   // says the same line beside its own.
   if (manifest?.iconProblems !== undefined) problems.push(...manifest.iconProblems);
@@ -1104,13 +1113,23 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
    */
   seal();
   /*
+   * An icon that names an `https:` URL is fetched here, at load, and sent on as
+   * a `data:` URI: a client draws an icon and never contacts the server a
+   * plugin names. A fetch that fails, answers something too large or something
+   * that is not an image costs the icon and one line, as a bad file does.
+   */
+  if (declared?.icons !== undefined && declared.icons.length > 0) {
+    declared = { ...declared, icons: await fetchIcons(declared.icons, `plugin ${name}`, (line) => problems.push(line), options.fetcher) };
+  }
+  /*
    * An adapter's icon is relative to the package of the plugin that registered
    * it, not to the daemon's working folder, so it is read here where that
    * package is known rather than where the channel reads the adapters.
    */
   for (const adapter of Object.values(contribution.adapters)) {
     if (adapter.icons === undefined) continue;
-    const icons = resolveIcons(adapter.icons, base, `plugin ${name}`, (line) => problems.push(line));
+    const read = resolveIcons(adapter.icons, base, `plugin ${name}`, (line) => problems.push(line));
+    const icons = await fetchIcons(read, `plugin ${name}`, (line) => problems.push(line), options.fetcher);
     if (icons.length === 0) delete adapter.icons;
     else adapter.icons = icons;
   }
@@ -1191,6 +1210,8 @@ export interface LoadOptions {
    * its own.
    */
   set?: PluginSet;
+  /** What reaches the network for an `https:` icon; the global `fetch` otherwise. */
+  fetcher?: typeof fetch;
 }
 
 /** One host's worth of options, and what happened on the way to them. */
@@ -1446,6 +1467,7 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
       records: () => hosted.then((host) => host.records),
       collections,
       reload: counts.get(id) ?? 0,
+      ...(options.fetcher === undefined ? {} : { fetcher: options.fetcher }),
     }, (counts.get(id) ?? 0) > 0 ? undefined : named);
     if (one.loaded === undefined || one.contribution === undefined) {
       // The last line is the one that says why this plugin is not running.

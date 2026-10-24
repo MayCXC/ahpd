@@ -1,8 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { loadPlugins } from '../src/plugins.js';
+import { loadPlugins, readManifest } from '../src/plugins.js';
+import { resolveIcons } from '../src/icons.js';
+import { webhookAdapter } from '../../webhook/src/adapter.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { PluginSpec } from '../../sdk/src/types/plugin.js';
@@ -11,9 +13,11 @@ import type { PluginSpec } from '../../sdk/src/types/plugin.js';
  * The icons a manifest and an adapter carry.
  *
  * A plugin names a file beside its package, and what a client receives is the
- * same file as a `data:` URI. A URL or a URI is passed on as it is. An icon
- * that cannot be read, is too large, or points outside the package costs the
- * icon and one problem line, and never the plugin.
+ * same file as a `data:` URI. An `https:` URL is fetched at load and sent on
+ * the same way, so a client never contacts the server a plugin names. A `data:`
+ * URI is passed on as it is. An icon that cannot be read or fetched, is too
+ * large, or points outside the package costs the icon and one problem line, and
+ * never the plugin.
  */
 
 let home: string;
@@ -21,6 +25,10 @@ beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'ahpd-plugin-icons-')); });
 afterEach(() => { rmSync(home, { recursive: true, force: true }); });
 
 const base = (): HostOptions => ({ path: home, agents: [echo({ path: home })] });
+
+/** One answer a test's fetch gives: the body, its type and the status. */
+const answer = (body: string | Buffer, contentType?: string, status = 200): Response =>
+  new Response(body, { status, ...(contentType === undefined ? {} : { headers: { 'content-type': contentType } }) });
 
 /** One file under the temporary home. */
 function write(rel: string, body: string | Buffer): void {
@@ -47,7 +55,12 @@ function pkg(dir: string, ahpd: Record<string, unknown>, apply = ''): string {
   return join(home, dir);
 }
 
-const load = (specs: PluginSpec[]) => loadPlugins(specs, { base: base(), configDir: home, cwd: home, log: () => {} });
+const load = (specs: PluginSpec[], fetcher?: typeof fetch) =>
+  loadPlugins(specs, { base: base(), configDir: home, cwd: home, log: () => {}, ...(fetcher === undefined ? {} : { fetcher }) });
+
+/** The `data:` URI one body is sent as. */
+const dataOf = (body: string | Buffer, contentType: string): string =>
+  `data:${contentType};base64,${Buffer.from(body).toString('base64')}`;
 
 describe('ahpd.icons', () => {
   it('reads a relative SVG as a data: URI, and sizes an SVG any', async () => {
@@ -79,13 +92,103 @@ describe('ahpd.icons', () => {
     }]);
   });
 
-  it('passes an https: URL through as it is', async () => {
+  it('fetches an https: SVG at load, and sends it as a data: URI', async () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>';
+    const seen: string[] = [];
+    let signal: AbortSignal | null | undefined;
+    const fetcher: typeof fetch = async (input, init) => {
+      seen.push(String(input));
+      signal = init?.signal;
+      return answer(svg, 'image/svg+xml');
+    };
     const dir = pkg('icons-url', { description: 'An icon at a URL.', icons: [{ src: 'https://example.com/icon.svg', theme: 'dark' }] });
 
-    const { loaded, problems } = await load([dir]);
+    const { loaded, problems } = await load([dir], fetcher);
 
     expect(problems).toEqual([]);
-    expect(loaded[0]?.manifest?.icons).toEqual([{ src: 'https://example.com/icon.svg', theme: 'dark' }]);
+    expect(seen).toEqual(['https://example.com/icon.svg']);
+    // A slow server must not hold the load, so the fetch carries a timeout.
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(loaded[0]?.manifest?.icons).toEqual([{
+      src: dataOf(svg, 'image/svg+xml'),
+      contentType: 'image/svg+xml',
+      sizes: ['any'],
+      theme: 'dark',
+    }]);
+  });
+
+  it('fetches an https: PNG, keeping its type and no sizes', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const fetcher: typeof fetch = async () => answer(png, 'image/png');
+    const dir = pkg('icons-url-png', { description: 'A PNG at a URL.', icons: [{ src: 'https://example.com/icon.png' }] });
+
+    const { loaded, problems } = await load([dir], fetcher);
+
+    expect(problems).toEqual([]);
+    expect(loaded[0]?.manifest?.icons).toEqual([{ src: dataOf(png, 'image/png'), contentType: 'image/png' }]);
+  });
+
+  it('keeps a contentType the manifest gives over the answer\'s', async () => {
+    const svg = '<svg/>';
+    const fetcher: typeof fetch = async () => answer(svg, 'image/png');
+    const dir = pkg('icons-url-typed', { description: 'A typed icon.', icons: [{ src: 'https://example.com/icon', contentType: 'image/svg+xml' }] });
+
+    const { loaded, problems } = await load([dir], fetcher);
+
+    expect(problems).toEqual([]);
+    expect(loaded[0]?.manifest?.icons).toEqual([{
+      src: dataOf(svg, 'image/svg+xml'),
+      contentType: 'image/svg+xml',
+      sizes: ['any'],
+    }]);
+  });
+
+  it('drops an icon whose fetch is not ok with one line, and loads the plugin', async () => {
+    const fetcher: typeof fetch = async () => answer('gone', 'text/plain', 404);
+    const dir = pkg('icons-url-missing', { description: 'A missing URL icon.', icons: [{ src: 'https://example.com/nope.svg' }] });
+
+    const { loaded, problems } = await load([dir], fetcher);
+
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0]?.manifest?.icons).toEqual([]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('could not be fetched: HTTP 404');
+  });
+
+  it('drops an icon whose fetch throws with one line, and loads the plugin', async () => {
+    const fetcher: typeof fetch = async () => { throw new Error('no route'); };
+    const dir = pkg('icons-url-throws', { description: 'An unreachable icon.', icons: [{ src: 'https://example.com/icon.svg' }] });
+
+    const { loaded, problems } = await load([dir], fetcher);
+
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0]?.manifest?.icons).toEqual([]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('could not be fetched: no route');
+  });
+
+  it('drops a fetched icon over 32 KB with one line', async () => {
+    const fetcher: typeof fetch = async () => answer(Buffer.alloc(33 * 1024, 'a'), 'image/svg+xml');
+    const dir = pkg('icons-url-big', { description: 'A large URL icon.', icons: [{ src: 'https://example.com/icon.svg' }] });
+
+    const { loaded, problems } = await load([dir], fetcher);
+
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0]?.manifest?.icons).toEqual([]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('larger than 32 KB');
+  });
+
+  it('drops a fetched icon that is not an image with one line', async () => {
+    const fetcher: typeof fetch = async () => answer('<html></html>', 'text/html');
+    const dir = pkg('icons-url-html', { description: 'An HTML icon.', icons: [{ src: 'https://example.com/icon.svg' }] });
+
+    const { loaded, problems } = await load([dir], fetcher);
+
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0]?.manifest?.icons).toEqual([]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('is not an image: text/html');
   });
 
   it('passes a small data: URI through as it is', async () => {
@@ -204,6 +307,33 @@ describe('Adapter.icons', () => {
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain('could not be read');
   });
+
+  it('fetches an https: adapter icon at load, and sends it as a data: URI', async () => {
+    const svg = '<svg/>';
+    const fetcher: typeof fetch = async () => answer(svg, 'image/svg+xml');
+    const dir = pkg('plugin-adapter-url', { description: 'An adapter with a URL icon.' }, adapter('https://example.com/icon.svg'));
+
+    const { options, problems } = await load([dir], fetcher);
+
+    expect(problems).toEqual([]);
+    expect(options.adapters?.['demo']?.icons).toEqual([{
+      src: dataOf(svg, 'image/svg+xml'),
+      contentType: 'image/svg+xml',
+      sizes: ['any'],
+    }]);
+  });
+
+  it('removes an adapter icon that all drop, as for a file', async () => {
+    const fetcher: typeof fetch = async () => { throw new Error('no route'); };
+    const dir = pkg('plugin-adapter-url-bad', { description: 'An adapter with an unreachable icon.' }, adapter('https://example.com/icon.svg'));
+
+    const { options, problems } = await load([dir], fetcher);
+
+    expect(options.adapters?.['demo']).toBeDefined();
+    expect(options.adapters?.['demo']?.icons).toBeUndefined();
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('could not be fetched');
+  });
 });
 
 describe('a single-file plugin', () => {
@@ -224,5 +354,55 @@ describe('a single-file plugin', () => {
       contentType: 'image/svg+xml',
       sizes: ['any'],
     }]);
+  });
+});
+
+describe('the packages in this repository', () => {
+  const REPO = join(import.meta.dirname, '../../..');
+  const OWN = [
+    'activepieces',
+    'agent-acp',
+    'agent-claude',
+    'agent-cofold',
+    'agent-pi',
+    'bot',
+    'computer',
+    'push',
+    'tasks',
+    'tunnel-devtunnel',
+    'webhook',
+  ];
+
+  for (const name of OWN) {
+    it(`${name} ships one SVG icon, and its manifest reads as data:`, () => {
+      const dir = join(REPO, 'packages', name);
+      const manifest = readManifest(dir);
+
+      expect(manifest.iconProblems).toBeUndefined();
+      expect(manifest.icons).toHaveLength(1);
+      const icon = manifest.icons?.[0];
+      expect(icon?.src.startsWith('data:image/svg+xml;base64,')).toBe(true);
+      expect(icon?.contentType).toBe('image/svg+xml');
+      expect(icon?.sizes).toEqual(['any']);
+
+      const svg = readFileSync(join(dir, 'icon.svg'), 'utf8');
+      expect(Buffer.byteLength(svg, 'utf8')).toBeLessThanOrEqual(32 * 1024);
+      expect(svg).not.toMatch(/<script/i);
+      expect(svg).not.toMatch(/\son[a-z]+\s*=/i);
+
+      const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as { files?: string[] };
+      expect(pkg.files).toContain('icon.svg');
+    });
+  }
+
+  it('gives the webhook adapter the icon its plugin declares', () => {
+    const dir = join(REPO, 'packages', 'webhook');
+    const adapter = webhookAdapter(new Map());
+
+    expect(adapter.icons).toEqual([{ src: './icon.svg' }]);
+    const problems: string[] = [];
+    const icons = resolveIcons(adapter.icons, dir, 'plugin webhook', (line) => problems.push(line));
+    expect(problems).toEqual([]);
+    expect(icons[0]?.src.startsWith('data:image/svg+xml;base64,')).toBe(true);
   });
 });

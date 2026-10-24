@@ -1,6 +1,6 @@
 ---
 title: Each of our plugins ships an icon
-status: todo
+status: implemented
 depends: [task-02-the-host-sends-a-package-icon.md]
 layer: "packages"
 refs:
@@ -53,3 +53,10 @@ Softov curates each SVG before it is kept.
 - By hand: ahpw shows each plugin with its icon after a restart.
 
 ## Resume
+
+- **Done so far:** each of the eleven packages has an `icon.svg`, between 401 and 1921 bytes. Nine are Lucide drawings under the ISC licence, and each of those keeps the licence comment. Claude carries the starburst that Simple Icons publishes under CC0. The pi package carries the three-square mark from `https://pi.dev/logo-auto.svg`. Those two replace the first Lucide choices, which you said were wrong. Every `package.json` names `./icon.svg` in `ahpd.icons` and lists `icon.svg` in `files`. The webhook adapter carries the same file. `packages/server/test/plugin-icons.test.ts` reads each package's manifest and checks one `data:image/svg+xml` icon. It also checks a size under 32 KB, no script or event attribute, and the `files` entry. One more case checks the webhook adapter's icon. `.project/pending/plugin-58-icon-curation.md` holds one row per plugin with its file, source and licence, and waits for your reply.
+- **Next action:** you curate each candidate in the pending file, and a rejected one is replaced with the SVG you give.
+- **Files:** `packages/activepieces/icon.svg`, `packages/agent-acp/icon.svg`, `packages/agent-claude/icon.svg`, `packages/agent-cofold/icon.svg`, `packages/agent-pi/icon.svg`, `packages/bot/icon.svg`, `packages/computer/icon.svg`, `packages/push/icon.svg`, `packages/tasks/icon.svg`, `packages/tunnel-devtunnel/icon.svg`, `packages/webhook/icon.svg`, the eleven `package.json` files, `packages/webhook/src/adapter.ts`, `packages/server/src/plugins.ts`, `packages/server/test/plugin-icons.test.ts`, `.project/pending/plugin-58-icon-curation.md`, this task file.
+- **Open questions:** which candidates you keep, and whether Cofold takes a vendor mark.
+- **Departures:** the task did not name `packages/server/src/plugins.ts`. An adapter icon resolved against `src/` when a test named a package's entry file. So `base` now falls back to the nearest package. Lucide has no `tunnel` icon, so Dev Tunnel uses `waypoints`. The test reads each package's manifest rather than applying all eleven plugins, because several need options and services a test host does not have.
+- **Watch out for:** the pi and Claude marks are the vendors' trademarks. A later change to either needs the vendor's terms, not only a licence from the drawing's author.

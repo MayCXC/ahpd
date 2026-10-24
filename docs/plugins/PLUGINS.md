@@ -1054,11 +1054,11 @@ A plugin, and each adapter it registers, may carry icons in the `Icon` shape the
 ]
 ```
 
-A `src` that is a relative path is a file in the plugin's package. An adapter's path is relative to the package of the plugin that registered it. The host reads each file once, at load, and sends it to a client as a `data:image/svg+xml;base64,...` or `data:image/png;base64,...` URI. An `https:` URL or a `data:` URI is sent as it is.
+A `src` that is a relative path is a file in the plugin's package. An adapter's path is relative to the package of the plugin that registered it. The host reads each file once, at load, and sends it to a client as a `data:image/svg+xml;base64,...` or `data:image/png;base64,...` URI. An `https:` URL is fetched once, at the same load, and sent on as a `data:` URI under the same rules as a file: a client never contacts the server a plugin names. A `data:` URI is sent as it is.
 
-`contentType` is taken from the manifest when it gives one, and otherwise from the extension: `.svg`, `.png`, `.jpg`, `.jpeg` or `.webp`. An icon with another extension and no `contentType` is dropped. An SVG with no `sizes` is sent with `["any"]`.
+`contentType` is taken from the manifest when it gives one, and otherwise from the extension: `.svg`, `.png`, `.jpg`, `.jpeg` or `.webp`. An icon with another extension and no `contentType` is dropped. A fetched icon takes the response's `image/` type when the manifest gives none, and an answer that is not an image is dropped. An SVG with no `sizes` is sent with `["any"]`.
 
-One icon is at most 32 KB, and a larger file or `data:` URI is dropped. So is a path that resolves outside the package, and a file that is not there. A dropped file costs the icon and one line in the daemon's log, and the plugin still loads. An icon of the wrong shape refuses the manifest instead, because the field is checked before the plugin loads.
+One icon is at most 32 KB, and a larger file, a larger fetched body or a larger `data:` URI is dropped. So is a path that resolves outside the package, a file that is not there, and an `https:` URL that cannot be fetched within 5 seconds. A dropped icon costs the icon and one line in the daemon's log, and the plugin still loads. An icon of the wrong shape refuses the manifest instead, because the field is checked before the plugin loads.
 
 A client draws an icon as an image, an `<img>` or a native image view, and never inline in the document. The host does not sanitize one: an SVG can carry a script, and drawing it as an image runs none.
 

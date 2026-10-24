@@ -45,6 +45,7 @@
   "files": [
     "dist",
     "src",
+    "icon.svg",
     "README.md"
   ],
   "engines": {
@@ -66,6 +67,7 @@
     "description": "Delivers push notifications to connected devices when agent sessions require user attention.",
     "categories": [],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "icons": [{ "src": "./icon.svg" }],
     "contracts": {
       "resourceProviders": ["push"]
     },

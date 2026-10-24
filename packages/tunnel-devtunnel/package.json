@@ -43,6 +43,7 @@
   "files": [
     "dist",
     "src",
+    "icon.svg",
     "README.md"
   ],
   "engines": {
@@ -64,6 +65,7 @@
     "description": "A Dev Tunnel that forwards the bound port, so a client reaches the daemon from anywhere.",
     "categories": [],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "icons": [{ "src": "./icon.svg" }],
     "contracts": {},
     "options": {
       "command": { "required": false },

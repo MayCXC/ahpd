@@ -46,6 +46,7 @@
   "files": [
     "dist",
     "src",
+    "icon.svg",
     "README.md"
   ],
   "engines": {
@@ -73,6 +74,7 @@
     "description": "Claude Code as an agent provider, with support for multiple configurations and presets.",
     "categories": ["agent"],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "icons": [{ "src": "./icon.svg" }],
     "contracts": {
       "agents": ["*"]
     },
