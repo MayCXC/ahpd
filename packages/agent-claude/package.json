@@ -70,7 +70,7 @@
   },
   "ahpd": {
     "entry": "./dist/index.js",
-    "title": "Claude",
+    "title": "Agent Claude",
     "description": "Claude Code as an agent provider, with support for multiple configurations and presets.",
     "categories": ["agent"],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],

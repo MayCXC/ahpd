@@ -77,7 +77,7 @@ describe('describePlugin', () => {
   it('takes a plugin package\'s manifest for a file inside it', async () => {
     const row = await listing(join(here, '..', '..', 'agent-claude', 'src', 'index.ts'));
     expect(row.module).toBe('@ahpd/agent-claude');
-    expect(row.title).toBe('Claude');
+    expect(row.title).toBe('Agent Claude');
   });
 
   it('lists a spec that does not resolve as missing, with its problem and no path', async () => {
