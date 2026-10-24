@@ -399,8 +399,9 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [59 - A plugin loads, unloads and reloads while the daemon runs](plugin/59-a-plugin-loads-and-unloads-live/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | - |
 | [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | proxy 04 |
 | [61 - A plugin icon has a dark variant](plugin/61-a-plugin-icon-has-a-dark-variant/plan.md) | medium | planned 2026-10-24; one task, todo | plugin 58 | - |
+| [62 - A working connector is ready, not open](plugin/62-a-working-connector-is-ready/plan.md) | medium | planned 2026-10-24; one task, todo | - | - |
 
-Next free number in `plugin`: `62`.
+Next free number in `plugin`: `63`.
 
 ## container
 
@@ -524,9 +525,11 @@ Reference: [00-proxy.md](proxy/00-proxy.md)
 | [01 - The proxy knows its providers and model names](proxy/01-the-proxy-knows-its-providers-and-models/plan.md) | high | built 2026-10-01 ([implemented.md](proxy/01-the-proxy-knows-its-providers-and-models/implemented.md)) | - | proxy 02 |
 | [02 - The proxy serves a person's chat completions and messages, streamed back unchanged](proxy/02-the-proxy-serves-a-persons-model-calls/plan.md) | high | built 2026-10-06 ([implemented.md](proxy/02-the-proxy-serves-a-persons-model-calls/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | proxy 01, policy 01, usage 01, host 35 | container 05 p12 |
 | [03 - A refused port in the proxy tests stays refused](proxy/03-a-refused-port-in-the-proxy-tests-stays-refused/plan.md) | high | implemented 2026-10-20 | - | - |
-| [04 - A model provider is a connector](proxy/04-providers-are-connectors/plan.md) | high | planned 2026-10-23; four tasks, todo | plugin 60 | - |
+| [04 - A model provider is a connector](proxy/04-providers-are-connectors/plan.md) | high | planned 2026-10-23; four tasks, todo | plugin 60 | proxy 05 |
+| [05 - A provider's own models are callable, and the proxy answers at the root](proxy/05-a-providers-own-models-are-callable/plan.md) | high | planned 2026-10-24; six tasks, todo | proxy 04 | proxy 06 |
+| [06 - The proxy serves every model endpoint](proxy/06-the-proxy-serves-every-model-endpoint/plan.md) | high | planned 2026-10-24; seven tasks, todo; batches are proxy 07 | proxy 05 | - |
 
-Next free number in `proxy`: `05`.
+Next free number in `proxy`: `07`.
 
 ## vault
 
