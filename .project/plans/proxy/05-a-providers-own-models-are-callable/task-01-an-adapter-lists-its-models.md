@@ -1,6 +1,6 @@
 ---
 title: An adapter lists its models
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

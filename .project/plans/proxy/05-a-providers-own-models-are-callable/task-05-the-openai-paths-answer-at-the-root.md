@@ -1,6 +1,6 @@
 ---
 title: The OpenAI paths answer at the root
-status: implemented
+status: done
 depends: []
 layer: "server"
 refs:

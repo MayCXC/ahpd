@@ -1,6 +1,6 @@
 ---
 title: The host adapters list their models
-status: implemented
+status: done
 depends: [task-01-an-adapter-lists-its-models.md]
 layer: "server"
 refs:

@@ -1,6 +1,6 @@
 ---
 title: The docs name a model by its provider
-status: implemented
+status: done
 depends: [task-03-a-fetched-model-is-callable.md, task-04-the-models-list-carries-openrouter-fields.md, task-05-the-openai-paths-answer-at-the-root.md]
 layer: "docs"
 refs:

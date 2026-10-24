@@ -1,6 +1,6 @@
 ---
 title: The models list carries OpenRouter's fields
-status: implemented
+status: done
 depends: [task-03-a-fetched-model-is-callable.md]
 layer: "server"
 refs:

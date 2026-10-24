@@ -99,12 +99,12 @@ GET /models | /v1/models -> table names + catalog names the caller may use, with
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An adapter lists its models](task-01-an-adapter-lists-its-models.md) | implemented | - |
-| [02 - The host adapters list their models](task-02-the-host-adapters-list-their-models.md) | implemented | 01 |
-| [03 - A fetched model is callable](task-03-a-fetched-model-is-callable.md) | implemented | 01, 02 |
-| [04 - The models list carries OpenRouter's fields](task-04-the-models-list-carries-openrouter-fields.md) | implemented | 03 |
-| [05 - The OpenAI paths answer at the root](task-05-the-openai-paths-answer-at-the-root.md) | implemented | - |
-| [06 - The docs name a model by its provider](task-06-the-docs-name-a-model-by-its-provider.md) | implemented | 03, 04, 05 |
+| [01 - An adapter lists its models](task-01-an-adapter-lists-its-models.md) | done | - |
+| [02 - The host adapters list their models](task-02-the-host-adapters-list-their-models.md) | done | 01 |
+| [03 - A fetched model is callable](task-03-a-fetched-model-is-callable.md) | done | 01, 02 |
+| [04 - The models list carries OpenRouter's fields](task-04-the-models-list-carries-openrouter-fields.md) | done | 03 |
+| [05 - The OpenAI paths answer at the root](task-05-the-openai-paths-answer-at-the-root.md) | done | - |
+| [06 - The docs name a model by its provider](task-06-the-docs-name-a-model-by-its-provider.md) | done | 03, 04, 05 |
 
 ## Risks and tradeoffs
 
@@ -115,8 +115,8 @@ GET /models | /v1/models -> table names + catalog names the caller may use, with
 
 ## Resume state
 
-- **Done so far:** all six tasks are implemented. `Adapter.models(connector)` exists, the four host adapters answer it, and `providers()` binds each row's `models()` to its open connector. `ModelProvider.prefix` exists, and `openai-compatible` answers its connector id there. `packages/server/src/proxy/catalog.ts` keeps each open connector's list. `route` reads a name the table does not hold as `<prefix>/<id>`, and the models list carries `name`, `context_length`, `pricing` and `total_count`. The OpenAI paths answer at the root beside `/v1`, and the docs name a model by its provider. The refs' line numbers are corrected to this tree.
-- **Next action:** Softov reads the final verification checklist below, then the plan is closed with `implemented.md`.
+- **Done so far:** all six tasks are done, and #88 merged them on 2026-10-24. `Adapter.models(connector)` exists, the four host adapters answer it, and `providers()` binds each row's `models()` to its open connector. `ModelProvider.prefix` exists, and `openai-compatible` answers its connector id there. `packages/server/src/proxy/catalog.ts` keeps each open connector's list. `route` reads a name the table does not hold as `<prefix>/<id>`, and the models list carries `name`, `context_length`, `pricing` and `total_count`. The OpenAI paths answer at the root beside `/v1`, and the docs name a model by its provider. The refs' line numbers are corrected to this tree.
+- **Next action:** Softov runs the checks in `.project/pending/proxy-05-model-checks.md`. Then the plan closes with `implemented.md`.
 - **Open questions:** none.
 - **Watch out for:** a table name keeps the one-slash rule of `MODEL_NAME`. Only a fetched name holds more.
 

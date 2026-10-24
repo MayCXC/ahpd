@@ -1,6 +1,6 @@
 ---
 title: A fetched model is callable
-status: implemented
+status: done
 depends: [task-01-an-adapter-lists-its-models.md, task-02-the-host-adapters-list-their-models.md]
 layer: "server"
 refs:
