@@ -21,9 +21,9 @@ import { applyPresets, planPresets } from '../src/agents/migrate.js';
  * The secret a preset wrote in plaintext is a case of its own: a record may hold
  * no value a listing would serve, so it is moved to the vault under the record's
  * own name, as a put of the agents channel moves one, and the record keeps a
- * reference. A file with no presets is given its built-in claude once, which is
- * what keeps a record a person removed removed. A preset that did not become a
- * record stays in the file, because it is the only copy of that agent.
+ * reference. A preset that did not become a record stays in the file, a removed
+ * claude stays removed, and a value a flag set for one run is never made a
+ * record.
  *
  * Every case is in a folder of its own under the system's temporary folder, and
  * the records are a store in memory: nothing here reads or writes a person's own
@@ -429,3 +429,40 @@ it('keeps a preset that did not become a record in the file', async () => {
   });
 });
 
+it('leaves the file as it is when the run loads a spec the file does not hold', async () => {
+  written([{ name: '@ahpd/agent-claude', options: { presets: { mine: { name: 'Mine' } } } }]);
+  const before = readFileSync(configFile, 'utf8');
+
+  // A `--plugin` naming the package by a path: the file's entry is not the spec
+  // this run loads, so its presets are neither made records nor touched. The
+  // built-in claude is still the one agent an install has.
+  const moved = await migrate(['./tools/agent-claude']);
+
+  expect(moved.written).toEqual(['claude']);
+  expect([...(await held()).keys()]).toEqual(['claude']);
+  expect(readFileSync(configFile, 'utf8')).toBe(before);
+  expect(backups()).toEqual([]);
+});
+
+it('plans from the file, so a value a flag set for this run is not made permanent', async () => {
+  written([{ name: '@ahpd/agent-claude', options: { presets: { mine: { name: 'Mine' } } } }]);
+
+  // What `--plugin-option agent-claude.presets.mine.model=run-only` builds: the
+  // file's entry with a value set for this run, and a preset only this run has.
+  const injected: PluginSpec[] = [{
+    name: '@ahpd/agent-claude',
+    options: { presets: { mine: { name: 'Mine', model: 'run-only' }, run: { name: 'Run only' } } },
+  }];
+
+  const moved = await migrate(injected);
+
+  // The records are the file's own presets, with the file's values.
+  expect(moved.written).toEqual(['claude', 'mine']);
+  expect([...(await held())].map(([id]) => id).sort()).toEqual(['claude', 'mine']);
+  expect((await held()).get('mine')).toMatchObject({ name: 'Mine', config: {} });
+  // The loader is handed this run's spec without the presets a record holds,
+  // and the file lost only the presets that became records.
+  expect(moved.plugins).toEqual([{ name: '@ahpd/agent-claude' }]);
+  expect(entryOf('@ahpd/agent-claude')).toEqual({ name: '@ahpd/agent-claude' });
+  expect(backups()).toHaveLength(1);
+});

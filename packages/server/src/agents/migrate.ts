@@ -7,12 +7,13 @@
  * channel serves, and a plugin registers a kind and no agent at all, so the
  * presets a file still holds would otherwise be dropped without a word.
  *
- * This runs at the start, in two steps around the plugin load: the plan says
- * which agents the presets describe, and the write step runs once the kinds
- * have loaded, because a kind's schema is what says which fields of a record
- * are secrets. Each plaintext key is moved to the vault under the record's own
- * name, as a put of the agents channel does, and the record keeps
- * `{ "$secret": "<name>" }` in its place.
+ * This runs at the start, in two steps around the plugin load. The plan reads
+ * the configuration file's own entries, and never the merged options a flag
+ * builds for this run, so a `--plugin-option` is not made permanent. The write
+ * step runs once the kinds have loaded, because a kind's schema is what says
+ * which fields of a record are secrets: each plaintext key is moved to the
+ * vault under the record's own name, as a put of the agents channel does, and
+ * the record keeps `{ "$secret": "<name>" }` in its place.
  *
  * The records are written first and the file second, so a failure leaves the
  * file as it was and the records already written, and the next start finds the
@@ -122,9 +123,9 @@ interface Described {
  * value comes from is not read here, so no key is moved or logged.
  *
  * `builtin` is whether the built-in claude is planned when the values do not
- * name it: true while the spec still holds a `presets` key, and on the first
- * migration a file with none is found in. A `presets.claude: false` is always
- * taken as written, so a person who turned it off is answered.
+ * name it: true while the file entry still holds a `presets` key, and on the
+ * first migration a file with none is found in. A `presets.claude: false` is
+ * always taken as written, so a person who turned it off is answered.
  */
 const plansOf = (spec: PluginSpec, kind: PresetKind, builtin: boolean): Described[] => {
   const values = specOptions(spec);
@@ -297,9 +298,14 @@ export interface PlanOptions {
   log(message: string): void;
 }
 
-/** What the plan found, and what the write step is handed once the plugins load. */
+/**
+ * What the plan found, and what the write step is handed once the plugins load.
+ *
+ * The specs are the run's own with what a record takes out of them, so a plugin
+ * never reads a second copy of the values a record holds.
+ */
 export interface PresetPlan {
-  /** The specs to hand the loader, with what a record takes out of them. */
+  /** The specs to hand the loader. */
   plugins: PluginSpec[];
   /** The configuration file the presets were written in. */
   configFile: string;
@@ -309,7 +315,7 @@ export interface PresetPlan {
   entries: EntryPlan[];
   /** Agents with no file entry to take them out of: the run's own, or a file's built-in. */
   loose: Planned[];
-  /** Whether the file could not be read, so no preset can be taken out of it. */
+  /** Whether the file could not be read, so the records are written and the file is left. */
   unreadable: boolean;
   /** Whether this pass marks the presets as moved, so a removed claude stays removed. */
   marker: boolean;
@@ -318,10 +324,15 @@ export interface PresetPlan {
 /**
  * Read the configuration file's presets, and say which agents they describe.
  *
- * Each entry of the file is paired by name with the spec this run loads it as,
- * so the presets a record was made of are the ones taken out of that entry and
- * no other. A spec a flag named for this run alone is not paired, and what it
- * carries is written as a record with the file left as it is.
+ * The plan is taken from the file's own entries, paired by name with the specs
+ * this run loads: a spec a flag named for this run alone is not paired, so what
+ * it carries is neither made a record nor taken out of the file. A `--plugin`
+ * list that loads none of the file's entries leaves the file as it is.
+ *
+ * With no file at all, only the built-in claude is planned, and only when the
+ * records have never been migrated: there is nothing in a file to lose. A file
+ * nothing can parse leaves the run's own options as the only copy of its
+ * agents, so they are planned and the file is left as it is.
  */
 export const planPresets = (options: PlanOptions): PresetPlan => {
   let held: Record<string, unknown> | undefined;
@@ -363,14 +374,15 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
     }
   };
 
-  /** The agents one spec of this run describes. */
-  const describedBy = (spec: PluginSpec, kind: PresetKind): Described[] => {
-    // The built-in claude is planned while the spec still holds a `presets`
-    // key; a spec with none is given it only on the first migration.
-    const builtin = kind === 'claude' && (specOptions(spec)['presets'] !== undefined || !migrated);
-    if (builtin) marker = true;
-    return plansOf(spec, kind, builtin);
+  /** The built-in claude one spec would have registered, unless it turned it off. */
+  const builtinOf = (spec: PluginSpec): Described | undefined => {
+    if (bag(specOptions(spec)['presets'])['claude'] === false) return undefined;
+    return { key: 'claude', plan: { kind: 'claude', id: 'claude', name: 'Claude Code', config: {} } };
   };
+
+  /** The run's specs that load a claude, whatever the file holds. */
+  const claudeSpecs = (): PluginSpec[] => options.plugins
+    .filter((spec) => (typeof spec === 'string' || spec.enabled !== false) && kindOfSpec(spec) === 'claude');
 
   const paired = new Set<number>();
   if (held !== undefined) {
@@ -389,20 +401,53 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
         && nameOf(spec) === name);
       if (at === -1) return;
       paired.add(at);
+      const values = bag(raw['options']);
+      // The built-in claude is planned while the entry still holds a `presets`
+      // key; a file entry with none is given it only on the first migration.
+      const builtin = kind === 'claude' && (values['presets'] !== undefined || !migrated);
       const entry: EntryPlan = { index, kind, agents: [] };
-      take(kind, describedBy(options.plugins[at] as PluginSpec, kind), entry);
+      take(kind, plansOf(raw as unknown as PluginSpec, kind, builtin), entry);
+      // The marker is for a claude question that this pass settled: the entry
+      // holds presets now, or this is the first migration and it is being given
+      // its built-in agent.
+      if (kind === 'claude' && (values['presets'] !== undefined || !migrated)) marker = true;
       if (entry.agents.length > 0) entries.push(entry);
     });
+    // A claude spec the file holds no entry for - a `--plugin` this run named -
+    // still gets the built-in agent once, so a host whose only agent is that one
+    // has an agent at all. What the run's own options say is this run's and is
+    // not made a record.
+    if (!migrated) {
+      for (const [at, spec] of options.plugins.entries()) {
+        if (paired.has(at)) continue;
+        if (kindOfSpec(spec) !== 'claude') continue;
+        const one = builtinOf(spec);
+        if (one === undefined) continue;
+        marker = true;
+        take('claude', [one]);
+      }
+    }
+  } else if (unreadable) {
+    // A file nothing can parse: no entry can be paired with a spec, and nothing
+    // can be taken out of it, so the run's own options are the only copy of
+    // those agents and they become the records the next start reads.
+    for (const spec of options.plugins) {
+      if (typeof spec !== 'string' && spec.enabled === false) continue;
+      const kind = kindOfSpec(spec);
+      if (kind === undefined) continue;
+      if (kind === 'claude') marker = true;
+      take(kind, plansOf(spec, kind, kind === 'claude' && !migrated));
+    }
+  } else if (!migrated) {
+    // No configuration file at all: there is nothing to take the presets out
+    // of, and the built-in claude is the one agent every install has.
+    for (const spec of claudeSpecs()) {
+      const one = builtinOf(spec);
+      if (one === undefined) continue;
+      marker = true;
+      take('claude', [one]);
+    }
   }
-  // The specs the file did not name are this run's own: their agents are
-  // written, and there is no entry to take them out of.
-  options.plugins.forEach((spec, at) => {
-    if (paired.has(at)) return;
-    if (typeof spec !== 'string' && spec.enabled === false) return;
-    const kind = kindOfSpec(spec);
-    if (kind === undefined) return;
-    take(kind, describedBy(spec, kind));
-  });
 
   const cleaned = options.plugins.map((spec, at) => {
     const kind = held !== undefined && !paired.has(at) ? undefined : kindOfSpec(spec);
@@ -603,7 +648,6 @@ export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
       }
     }
   }
-
   mark();
 
   const kept = backup === undefined ? '' : ` ${backup} holds the file as it was.`;
