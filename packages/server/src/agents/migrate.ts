@@ -16,7 +16,9 @@
  *
  * The records are written first and the file second, so a failure leaves the
  * file as it was and the records already written, and the next start finds the
- * records and writes only the rest.
+ * records and writes only the rest. Only the presets that became records, or
+ * that the records already held, are taken out: one that could not become a
+ * record stays in the file, which is its only copy.
  *
  * The built-in claude a file with no presets still describes is written once: a
  * marker beside the file says so, so a record a person removed stays removed.
@@ -102,6 +104,13 @@ interface Planned {
   model?: string;
 }
 
+/** One agent a preset described, and the preset key it was written at. */
+interface Described {
+  /** The key under `presets`, or nothing when the agent was the plugin's own options. */
+  key?: string;
+  plan: Planned;
+}
+
 /**
  * The agents one spec's options describe.
  *
@@ -117,25 +126,25 @@ interface Planned {
  * migration a file with none is found in. A `presets.claude: false` is always
  * taken as written, so a person who turned it off is answered.
  */
-const plansOf = (spec: PluginSpec, kind: PresetKind, builtin: boolean): Planned[] => {
+const plansOf = (spec: PluginSpec, kind: PresetKind, builtin: boolean): Described[] => {
   const values = specOptions(spec);
   if (kind === 'claude') {
     const presets = bag(values['presets']);
-    const plans: Planned[] = [];
+    const described: Described[] = [];
     if (presets['claude'] !== false && (presets['claude'] !== undefined || builtin)) {
       const given = bag(presets['claude']);
-      plans.push({ kind, id: 'claude', name: text(given['name']) ?? 'Claude Code', config: without(given, ['name']) });
+      described.push({ key: 'claude', plan: { kind, id: 'claude', name: text(given['name']) ?? 'Claude Code', config: without(given, ['name']) } });
     }
     for (const [id, one] of Object.entries(presets)) {
       if (id === 'claude' || one === false) continue;
       const given = bag(one);
-      plans.push({ kind, id, name: text(given['name']) ?? id, config: without(given, ['name']) });
+      described.push({ key: id, plan: { kind, id, name: text(given['name']) ?? id, config: without(given, ['name']) } });
     }
-    return plans;
+    return described;
   }
   if (kind === 'acp') {
     const presets = bag(values['presets']);
-    const plans: Planned[] = [];
+    const described: Described[] = [];
     for (const [id, one] of Object.entries(presets)) {
       if (one === false) continue;
       const given = bag(one);
@@ -145,16 +154,19 @@ const plansOf = (spec: PluginSpec, kind: PresetKind, builtin: boolean): Planned[
       const known = knownAgents[id] ?? (base === undefined ? undefined : knownAgents[base]);
       const description = text(given['description']);
       const model = text(given['model']);
-      plans.push({
-        kind,
-        id,
-        name: text(given['name']) ?? known?.name ?? id,
-        config: without(given, ['name', 'description', 'model']),
-        ...(description === undefined ? {} : { description }),
-        ...(model === undefined ? {} : { model }),
+      described.push({
+        key: id,
+        plan: {
+          kind,
+          id,
+          name: text(given['name']) ?? known?.name ?? id,
+          config: without(given, ['name', 'description', 'model']),
+          ...(description === undefined ? {} : { description }),
+          ...(model === undefined ? {} : { model }),
+        },
       });
     }
-    return plans;
+    return described;
   }
   // cofold and pi wrote one agent as their own options, and every other option
   // was that agent's: it stays as the plugin's defaults, which a record that
@@ -163,11 +175,13 @@ const plansOf = (spec: PluginSpec, kind: PresetKind, builtin: boolean): Planned[
   if (provider === undefined) return [];
   const description = text(values['description']);
   return [{
-    kind,
-    id: provider,
-    name: text(values['displayName']) ?? provider,
-    config: {},
-    ...(description === undefined ? {} : { description }),
+    plan: {
+      kind,
+      id: provider,
+      name: text(values['displayName']) ?? provider,
+      config: {},
+      ...(description === undefined ? {} : { description }),
+    },
   }];
 };
 
@@ -189,16 +203,14 @@ const recordOf = (plan: Planned): StoredRecord => ({
  *
  * The values are the record's now, so a plugin that read them would be reading
  * a second copy. An entry left with no options at all loses the key, which is
- * how a person would have written it. A kind this run does not load is left
- * alone, because its records were not written either.
+ * how a person would have written it.
  */
-const cleanSpec = (spec: PluginSpec, loaded: ReadonlySet<PresetKind>): PluginSpec => {
+const cleanSpec = (spec: PluginSpec, kind: PresetKind): PluginSpec => {
   if (typeof spec === 'string') return spec;
   // A switched-off entry is one this run does not load, so its presets were not
   // written either and are the only copy of its agents.
   if (spec.enabled === false) return spec;
-  const kind = kindOfSpec(spec);
-  if (kind === undefined || !loaded.has(kind) || spec.options === undefined) return spec;
+  if (spec.options === undefined) return spec;
   const held = bag(spec.options);
   const keys = PER_AGENT[kind];
   if (!keys.some((key) => held[key] !== undefined)) return spec;
@@ -207,30 +219,62 @@ const cleanSpec = (spec: PluginSpec, loaded: ReadonlySet<PresetKind>): PluginSpe
   return Object.keys(kept).length === 0 ? rest : { ...rest, options: kept };
 };
 
+/** One entry of the configuration file, and the agents it described. */
+interface EntryPlan {
+  /** The entry's place in the file's `plugins`. */
+  index: number;
+  kind: PresetKind;
+  /** The agents it described, in the order they are written. */
+  agents: Described[];
+}
+
 /**
- * The configuration file without the presets a record now holds.
+ * The file without the presets a record now holds.
  *
- * Only the entries of a kind this run loads are touched: a file may list a
- * plugin this run does not, and its presets are still the only copy of its
- * agents. A string entry has no options to take out.
+ * Only a preset that is a record now, or was one already, is taken out: one
+ * whose id could not be a record, or that the write step could not write, is
+ * the only copy there is and stays. A `presets` object left empty loses the
+ * key; one left holding a preset that did not move keeps it.
  */
 const stripped = (
   held: Record<string, unknown>,
-  loaded: ReadonlySet<PresetKind>,
+  entries: readonly EntryPlan[],
+  records: ReadonlySet<string>,
 ): { entry: Record<string, unknown>; changed: boolean } => {
   const plugins = held['plugins'];
   if (!Array.isArray(plugins)) return { entry: held, changed: false };
+  const byIndex = new Map(entries.map((one) => [one.index, one]));
   let changed = false;
-  const next = plugins.map((one) => {
-    if (!isRecord(one) || one['enabled'] === false) return one;
-    const kind = typeof one['name'] === 'string' ? kindOfName(one['name']) : undefined;
-    if (kind === undefined || !loaded.has(kind)) return one;
+  const next = plugins.map((one, index) => {
+    const plan = byIndex.get(index);
+    if (plan === undefined || !isRecord(one)) return one;
     const options = one['options'];
     if (!isRecord(options)) return one;
-    const keys = PER_AGENT[kind];
-    if (!keys.some((key) => options[key] !== undefined)) return one;
+    const kept = { ...options };
+    let took = false;
+    if (plan.kind === 'claude' || plan.kind === 'acp') {
+      const presets = kept['presets'];
+      if (isRecord(presets)) {
+        const rest = { ...presets };
+        for (const { key, plan: agent } of plan.agents) {
+          if (key === undefined || !records.has(agent.id) || !(key in rest)) continue;
+          delete rest[key];
+          took = true;
+        }
+        if (took) {
+          if (Object.keys(rest).length === 0) delete kept['presets'];
+          else kept['presets'] = rest;
+        }
+      }
+    } else if (plan.agents.some(({ plan: agent }) => records.has(agent.id))) {
+      for (const key of PER_AGENT[plan.kind]) {
+        if (!(key in kept)) continue;
+        delete kept[key];
+        took = true;
+      }
+    }
+    if (!took) return one;
     changed = true;
-    const kept = without(options, keys);
     const { options: _options, ...rest } = one;
     return Object.keys(kept).length === 0 ? rest : { ...rest, options: kept };
   });
@@ -261,17 +305,24 @@ export interface PresetPlan {
   configFile: string;
   /** The file as it was read, for the write step to rewrite; absent when there is none. */
   held?: Record<string, unknown>;
-  /** The agents the presets describe. */
-  plans: Planned[];
-  /** The kinds this run loads, whose records are the ones written. */
-  loaded: PresetKind[];
+  /** The entries of the file that described an agent, by their place in it. */
+  entries: EntryPlan[];
+  /** Agents with no file entry to take them out of: the run's own, or a file's built-in. */
+  loose: Planned[];
   /** Whether the file could not be read, so no preset can be taken out of it. */
   unreadable: boolean;
   /** Whether this pass marks the presets as moved, so a removed claude stays removed. */
   marker: boolean;
 }
 
-/** Read the presets this run was configured with, and say which agents they describe. */
+/**
+ * Read the configuration file's presets, and say which agents they describe.
+ *
+ * Each entry of the file is paired by name with the spec this run loads it as,
+ * so the presets a record was made of are the ones taken out of that entry and
+ * no other. A spec a flag named for this run alone is not paired, and what it
+ * carries is written as a record with the file left as it is.
+ */
 export const planPresets = (options: PlanOptions): PresetPlan => {
   let held: Record<string, unknown> | undefined;
   let unreadable = false;
@@ -289,20 +340,14 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
   // presets are gone is not a file that asks for it again, and a record a
   // person removed stays removed.
   const migrated = existsSync(markerOf(options.configFile));
-  const plans: Planned[] = [];
+  const entries: EntryPlan[] = [];
+  const loose: Planned[] = [];
   const named = new Map<string, PresetKind>();
-  const loaded: PresetKind[] = [];
   let marker = false;
-  for (const spec of options.plugins) {
-    if (typeof spec !== 'string' && spec.enabled === false) continue;
-    const kind = kindOfSpec(spec);
-    if (kind === undefined) continue;
-    if (!loaded.includes(kind)) loaded.push(kind);
-    // The built-in claude is planned while the spec still holds a `presets`
-    // key; a spec with none is given it only on the first migration.
-    const builtin = kind === 'claude' && (specOptions(spec)['presets'] !== undefined || !migrated);
-    if (builtin) marker = true;
-    for (const plan of plansOf(spec, kind, builtin)) {
+
+  const take = (kind: PresetKind, described: Described[], entry?: EntryPlan): void => {
+    for (const one of described) {
+      const { plan } = one;
       if (!isRecordSlug(plan.id)) {
         options.log(`The ${kind} preset ${plan.id} did not become a record: its id is not a slug: ${RECORD_SLUG}`);
         continue;
@@ -313,11 +358,57 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
         continue;
       }
       named.set(plan.id, kind);
-      plans.push(plan);
+      if (entry === undefined) loose.push(plan);
+      else entry.agents.push(one);
     }
+  };
+
+  /** The agents one spec of this run describes. */
+  const describedBy = (spec: PluginSpec, kind: PresetKind): Described[] => {
+    // The built-in claude is planned while the spec still holds a `presets`
+    // key; a spec with none is given it only on the first migration.
+    const builtin = kind === 'claude' && (specOptions(spec)['presets'] !== undefined || !migrated);
+    if (builtin) marker = true;
+    return plansOf(spec, kind, builtin);
+  };
+
+  const paired = new Set<number>();
+  if (held !== undefined) {
+    const filePlugins = held['plugins'];
+    const listed = Array.isArray(filePlugins) ? filePlugins : [];
+    listed.forEach((raw, index) => {
+      if (!isRecord(raw) || raw['enabled'] === false) return;
+      const name = raw['name'];
+      if (typeof name !== 'string') return;
+      const kind = kindOfName(name);
+      if (kind === undefined) return;
+      // The spec this run loads that entry as. A flag naming another spec of the
+      // same kind never equals this name, so that entry is left alone.
+      const at = options.plugins.findIndex((spec, position) => !paired.has(position)
+        && (typeof spec === 'string' || spec.enabled !== false)
+        && nameOf(spec) === name);
+      if (at === -1) return;
+      paired.add(at);
+      const entry: EntryPlan = { index, kind, agents: [] };
+      take(kind, describedBy(options.plugins[at] as PluginSpec, kind), entry);
+      if (entry.agents.length > 0) entries.push(entry);
+    });
   }
-  const cleaned = options.plugins.map((spec) => cleanSpec(spec, new Set(loaded)));
-  return { plugins: cleaned, configFile: options.configFile, ...(held === undefined ? {} : { held }), plans, loaded, unreadable, marker };
+  // The specs the file did not name are this run's own: their agents are
+  // written, and there is no entry to take them out of.
+  options.plugins.forEach((spec, at) => {
+    if (paired.has(at)) return;
+    if (typeof spec !== 'string' && spec.enabled === false) return;
+    const kind = kindOfSpec(spec);
+    if (kind === undefined) return;
+    take(kind, describedBy(spec, kind));
+  });
+
+  const cleaned = options.plugins.map((spec, at) => {
+    const kind = held !== undefined && !paired.has(at) ? undefined : kindOfSpec(spec);
+    return kind === undefined ? spec : cleanSpec(spec, kind);
+  });
+  return { plugins: cleaned, configFile: options.configFile, ...(held === undefined ? {} : { held }), entries, loose, unreadable, marker };
 };
 
 /**
@@ -449,10 +540,16 @@ export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
   }
 
   // Every record first: a file rewritten before them would lose the agents if
-  // one write failed.
+  // one write failed. A record already there is one this file's preset already
+  // became, so its preset is taken out with the ones written now.
   const written: string[] = [];
-  for (const agent of plan.plans) {
-    if (present.has(agent.id)) continue;
+  const accounted = new Set<string>();
+  const agents = [...plan.entries.flatMap((entry) => entry.agents.map((one) => one.plan)), ...plan.loose];
+  for (const agent of agents) {
+    if (present.has(agent.id)) {
+      accounted.add(agent.id);
+      continue;
+    }
     const kind = options.kinds[agent.kind];
     if (kind === undefined) {
       // The kind did not load, so what its schema says is a secret is unknown
@@ -478,6 +575,7 @@ export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
       return { written };
     }
     present.add(agent.id);
+    accounted.add(agent.id);
     written.push(agent.id);
   }
 
@@ -490,7 +588,7 @@ export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
   let changed = false;
   let backup: string | undefined;
   if (plan.held !== undefined) {
-    const taken = stripped(plan.held, new Set(plan.loaded));
+    const taken = stripped(plan.held, plan.entries, accounted);
     changed = taken.changed;
     if (changed) {
       // Beside the file and named after it, before anything is written over it.
@@ -512,10 +610,7 @@ export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
   if (written.length > 0) {
     options.log(`Moved ${String(written.length)} ${written.length === 1 ? 'preset' : 'presets'} to agent records owned by the host: ${written.join(', ')}.${kept}`);
   } else if (changed) {
-    const ids = plan.plans.map((one) => one.id);
-    options.log(ids.length === 0
-      ? `The presets in ${plan.configFile} were taken out: they described no agent.${kept}`
-      : `The presets in ${plan.configFile} were already agent records: ${ids.join(', ')}.${kept}`);
+    options.log(`The presets in ${plan.configFile} were already agent records: ${agents.map((one) => one.id).join(', ')}.${kept}`);
   }
   return { written };
 };

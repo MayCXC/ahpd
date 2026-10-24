@@ -22,7 +22,8 @@ import { applyPresets, planPresets } from '../src/agents/migrate.js';
  * no value a listing would serve, so it is moved to the vault under the record's
  * own name, as a put of the agents channel moves one, and the record keeps a
  * reference. A file with no presets is given its built-in claude once, which is
- * what keeps a record a person removed removed.
+ * what keeps a record a person removed removed. A preset that did not become a
+ * record stays in the file, because it is the only copy of that agent.
  *
  * Every case is in a folder of its own under the system's temporary folder, and
  * the records are a store in memory: nothing here reads or writes a person's own
@@ -403,5 +404,28 @@ it('gives a file with no presets its built-in claude once, and leaves a removed 
   expect(again.written).toEqual([]);
   expect(await held()).toEqual(new Map());
   expect(said).toEqual([]);
+});
+
+it('keeps a preset that did not become a record in the file', async () => {
+  written([
+    { name: '@ahpd/agent-acp', options: { presets: { Bad_Id: { command: 'x' }, gemini: {} } } },
+    { name: '@ahpd/agent-cofold', options: { provider: 'gemini', displayName: 'Gemini' } },
+  ]);
+
+  const moved = await migrate(filed());
+
+  expect(moved.written).toEqual(['gemini']);
+  // The one that became a record is gone; the one whose id is not a slug is the
+  // only copy of its agent and stays, in the object it was written in.
+  expect(entryOf('@ahpd/agent-acp')).toEqual({
+    name: '@ahpd/agent-acp',
+    options: { presets: { Bad_Id: { command: 'x' } } },
+  });
+  // And the cofold entry, whose agent lost the id to the acp one, keeps the
+  // provider that described it.
+  expect(entryOf('@ahpd/agent-cofold')).toEqual({
+    name: '@ahpd/agent-cofold',
+    options: { provider: 'gemini', displayName: 'Gemini' },
+  });
 });
 
