@@ -67,7 +67,7 @@ export { partsOf, SNAPSHOT_TAG } from './resources/attachments.js';
 export type { Part, PartOptions, PartSource } from './resources/attachments.js';
 export { checkReferences, memoryAutomations, pluginTriggerTypes, RUN_HISTORY_LIMIT, sameOwnerOrHost } from './automations/automations.js';
 export type { AutomationsOptions } from './automations/automations.js';
-export type { ConnectorOwner, ConnectorRef } from './types/connectors.js';
+export type { CallOutcome, CheckResult, ConnectorHealth, ConnectorOwner, ConnectorRef } from './types/connectors.js';
 export { disableConditionsOf } from './automations/automations.js';
 export { enablementKeyOf, memoryEnablement } from './plugins/enablement.js';
 export type { EnablementStore, HeldDecisions, HeldEnablementStore } from './plugins/enablement.js';

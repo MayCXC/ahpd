@@ -541,6 +541,11 @@ host.registerAdapter({
   run(connector, action, input) {
     return say(connector.config['bot'] as string, input['text'] as string);
   },
+  async check(connector) {
+    // A call that needs the key: `ok` when it is accepted, `denied` when not.
+    const answer = await ping(connector.config['bot'] as string, connector.config['secret'] as string);
+    return answer.ok ? { result: 'ok' } : { result: 'denied', message: answer.reason };
+  },
 });
 ```
 
@@ -550,7 +555,7 @@ host.registerAdapter({
   writes the value to the vault under the owner's scope and keeps
   `{ "$secret": "<name>" }` in the record, so no record, snapshot, answer or log
   holds it. A client sends an empty value for a field it is never shown, and the
-  connector keeps the secret it has.
+  connector keeps the secret it has. A `writeOnly` field of a host connector may also hold `{ "fromEnv": "<NAME>" }`, the form a preset's `env` already uses: the host reads that variable of its own environment when it opens the connector, and keeps the name in the record, which is not a secret. A team's or a person's connector that names a variable is refused, on a put and again when the record is opened, because the daemon's environment is nobody's own and a person's connector that read it could send any variable to an endpoint they choose.
 - A field marked `x-ahpd-connector` with `{ "adapter": "<name>" }` names a
   connector of that adapter. It is checked when the automation whose trigger
   holds it is saved: the host refuses an id it serves no such connector for, and
@@ -578,6 +583,7 @@ host.registerAdapter({
   named one. It answers a promise of the result, which the host hands the model
   as the tool's answer. An adapter with no `run` offers no action tool, and a
   `run` that throws is what the model is told, under the alias it named.
+- `check(connector)` is optional, and says whether the connector works with a call that needs its key. `connector` is the row `open` got. It answers `{ result, message? }`: `ok` when the service accepted the key, `denied` when it refused the credentials, `unreachable` when the service did not answer, or `failed` for anything else. The host runs it after each open: a put waits for the answer, so a put says whether the key is right, and a start does not, so a slow service cannot hold it. A check that has not answered in 10 seconds counts as `unreachable`, and one that throws is `failed` with its message. An adapter with no `check` leaves its connectors with no check.
 
 The `@ahpd/activepieces` plugin makes one adapter for each Activepieces piece its `pieces` option names, and runs the actions of each in a child process - [activepieces.md](activepieces.md).
 
@@ -1167,14 +1173,17 @@ of, with `config` holding a reference where a secret was moved, and a `state`:
 | `invalid` | Its config no longer fits its adapter's schema, or the adapter refused to open it |
 | `unavailable` | No loaded plugin registers its adapter, so it cannot be opened |
 
+A row also carries a `health` when the host knows one, and no `health` key when it knows nothing. `health.check` is the last check, `{ result, message?, at }`. `health.lastCall` is the last call the connector made or answered, `{ at, ok, status?, error? }`, and `health.lastFailure` is the last such call that failed. A call is one an `action` made through `run`, or one a host part reported for the connector, as the model proxy does. Health is kept in memory only: a restart clears it, and the checks a start runs fill the check part again. An error message is kept as the thrower gave it, at most 500 characters.
+
 `connector:list` opens the channel, and reads the caller's own connectors, their teams' and the host's, and no other person's. `connector:all` reads every row, and is admitted without `connector:list`. A caller with neither grant reads no connector, its own included, and is refused the subscription. A subscribe also takes `?owner=me`, which narrows the listing to the caller's own connectors.
 
-Two commands change a connector:
+Two commands change a connector, and a third checks one:
 
 | Method | Grant | What it does |
 | --- | --- | --- |
-| `x-ahpd/connectors/put` | `connector:put`, and the owner's | Makes or changes `{ id, adapter, owner, title?, config }`, moves each `writeOnly` value to the vault, writes the record and opens it. Answers the row |
+| `x-ahpd/connectors/put` | `connector:put`, and the owner's | Makes or changes `{ id, adapter, owner, title?, config }`, moves each `writeOnly` value to the vault, writes the record and opens it. Answers the row, with the check it waited for |
 | `x-ahpd/connectors/remove` | `connector:remove`, and the owner's | Closes `{ id }`, takes its secrets out of the vault and takes the record out |
+| `x-ahpd/connectors/check` | `connector:put`, and the owner's | Runs the check of `{ id }` again and answers the row. It refuses a connector that is not open, or one whose adapter has no `check` |
 
 The owner narrows the grant. A `host` connector needs `connector:put` to be made
 and `connector:remove` to be removed, and `connector:host` beside either. A

@@ -176,6 +176,7 @@ The verbs that read or change this host's own settings, one line each. The rest 
 | List every connector | `connector:all` | `x-ahpd-connectors`, and it is admitted without `connector:list` |
 | Make or change a connector | `connector:put`, and `connector:host` for a host connector | `x-ahpd/connectors/put` |
 | Remove a connector | `connector:remove`, and `connector:host` for a host connector | `x-ahpd/connectors/remove` |
+| Check a connector | `connector:put`, and `connector:host` for a host connector | `x-ahpd/connectors/check` |
 | Change a host-wide root config key | `config:change` | `root/configChanged`, and a `replace` - `config:write` covers it |
 | Push `workspaceTrust` | `trust:push` | The same action, when every key it carries is a connection's own - `trust:write` covers it |
 | Push only `defaultShell` or a terminal key | none, but a sign-in | It changes nothing anybody else reads |

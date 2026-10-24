@@ -69,21 +69,25 @@ export const secretRef = (value: unknown): string | undefined => {
   return typeof named === 'string' ? named : undefined;
 };
 
+/** The names a variable may be written as, and the shell's rule for one. */
+const VARIABLE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
 /**
  * The variable this value reads from the daemon's environment, or `undefined`
  * when it reads none.
  *
  * `secretRef`'s sibling and its rule: an object whose only key is `fromEnv` and
- * whose value is a non-empty string. An object with anything beside `fromEnv`
- * is a value of its own rather than a reference, the way one with anything
- * beside `$secret` is, and an empty name reads a variable that is not there.
+ * whose value is a name a variable may be written as. An object with anything
+ * beside `fromEnv` is a value of its own rather than a reference, the way one
+ * with anything beside `$secret` is, and so is one whose name has a character
+ * a variable's name cannot hold.
  */
 export const fromEnvRef = (value: unknown): string | undefined => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
   const keys = Object.keys(value);
   if (keys.length !== 1 || keys[0] !== 'fromEnv') return undefined;
   const named = (value as { fromEnv?: unknown }).fromEnv;
-  return typeof named === 'string' && named !== '' ? named : undefined;
+  return typeof named === 'string' && VARIABLE.test(named) ? named : undefined;
 };
 
 /**

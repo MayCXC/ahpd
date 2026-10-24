@@ -94,6 +94,43 @@ export interface Connector {
 }
 
 /**
+ * What one check of a connector answered.
+ *
+ * `ok` is a connector that works, `denied` a service that refused its
+ * credentials, `unreachable` a service that did not answer in time, and
+ * `failed` anything else. A message says what the service answered, when the
+ * adapter has one to give.
+ */
+export interface CheckResult {
+  /** What the check found. */
+  result: 'ok' | 'denied' | 'unreachable' | 'failed';
+  /** One line the service answered, when it gave one. */
+  message?: string;
+}
+
+/** One call a connector made or answered, as a row carries it. */
+export interface CallOutcome {
+  /** When it happened, as an ISO time. */
+  at: string;
+  /** Whether it worked. */
+  ok: boolean;
+  /** The status the service answered, when there was one. */
+  status?: number;
+  /** What went wrong, as the thrower gave it, at most 500 characters. */
+  error?: string;
+}
+
+/** What the host knows about one connector's health, kept in memory only. */
+export interface ConnectorHealth {
+  /** The last check, and when it ran. */
+  check?: CheckResult & { at: string };
+  /** The last call the connector made or answered. */
+  lastCall?: CallOutcome;
+  /** The last call that failed. */
+  lastFailure?: CallOutcome;
+}
+
+/**
  * One adapter a plugin offers.
  *
  * The name is the adapter's identity and is a slug, because it is also the
@@ -130,6 +167,15 @@ export interface Adapter {
    * nothing to stop.
    */
   open(connector: Connector): void | (() => void | Promise<void>);
+  /**
+   * Say whether one connector works, with a call that needs its credentials.
+   *
+   * The host calls it after each open: a put waits for the answer, so its
+   * result says whether the key is right, and a start does not. It is handed
+   * the connector as `open` was, with each secret read back. An adapter with
+   * no check leaves its connectors with no `health.check`.
+   */
+  check?(connector: Connector): Promise<CheckResult>;
   /**
    * Run one of the adapter's `action` capabilities for one connector.
    *

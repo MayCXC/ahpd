@@ -132,21 +132,31 @@ describe('PluginHost.secret', () => {
 });
 
 /*
- * The two readers a plugin's preset map is read through.
+ * The readers a value that names where its secret lives is read through.
  *
  * `fromEnvRef` is `secretRef`'s sibling and takes its rule: the one key is the
- * whole of it. `readSecrets` is one preset's `env`, read through the host, so
- * the loader is not the one asking for a credential.
+ * whole of it, and the name is one a variable may be written as. `readSecrets`
+ * is one preset's `env`, read through the host, so the loader is not the one
+ * asking for a credential.
  */
 
 describe('fromEnvRef', () => {
   it('answers the variable of a reference', () => {
     expect(fromEnvRef({ fromEnv: 'X' })).toBe('X');
+    expect(fromEnvRef({ fromEnv: 'CODEX_API_KEY' })).toBe('CODEX_API_KEY');
+    expect(fromEnvRef({ fromEnv: '_x9' })).toBe('_x9');
+  });
+
+  it('answers nothing for a name a variable cannot have', () => {
+    // The empty name is not one either, and neither is one with a dash or a dot.
+    for (const not of ['', '9X', 'A-B', 'A.B', 'A B', '$X']) {
+      expect(fromEnvRef({ fromEnv: not })).toBeUndefined();
+    }
   });
 
   it('answers nothing for anything that is not one reference', () => {
-    // The empty name is not one either: there is no variable called nothing.
-    for (const not of ['X', 3, null, undefined, ['X'], {}, { fromEnv: '' }, { fromEnv: 'X', other: 1 }, { fromEnv: 3 }]) {
+    // An extra key makes it a value of its own, as it does for `secretRef`.
+    for (const not of ['X', 3, null, undefined, ['X'], {}, { fromEnv: 'X', other: 1 }, { fromEnv: 3 }]) {
       expect(fromEnvRef(not)).toBeUndefined();
     }
   });
