@@ -359,12 +359,14 @@ describe('a single-file plugin', () => {
 
 describe('the packages in this repository', () => {
   const REPO = join(import.meta.dirname, '../../..');
-  const OWN = [
-    'activepieces',
+
+  /** The vendor marks, which carry their own colour and read on both backgrounds. */
+  const VENDOR = ['activepieces', 'agent-claude', 'agent-pi'];
+
+  /** The Lucide drawings, which ship a light and a dark variant. */
+  const LUCIDE = [
     'agent-acp',
-    'agent-claude',
     'agent-cofold',
-    'agent-pi',
     'bot',
     'computer',
     'push',
@@ -373,7 +375,14 @@ describe('the packages in this repository', () => {
     'webhook',
   ];
 
-  for (const name of OWN) {
+  /** The one check each icon file goes through: small, and no script. */
+  const wellFormed = (svg: string): void => {
+    expect(Buffer.byteLength(svg, 'utf8')).toBeLessThanOrEqual(32 * 1024);
+    expect(svg).not.toMatch(/<script/i);
+    expect(svg).not.toMatch(/\son[a-z]+\s*=/i);
+  };
+
+  for (const name of VENDOR) {
     it(`${name} ships one SVG icon, and its manifest reads as data:`, () => {
       const dir = join(REPO, 'packages', name);
       const manifest = readManifest(dir);
@@ -384,25 +393,53 @@ describe('the packages in this repository', () => {
       expect(icon?.src.startsWith('data:image/svg+xml;base64,')).toBe(true);
       expect(icon?.contentType).toBe('image/svg+xml');
       expect(icon?.sizes).toEqual(['any']);
+      expect(icon?.theme).toBeUndefined();
 
-      const svg = readFileSync(join(dir, 'icon.svg'), 'utf8');
-      expect(Buffer.byteLength(svg, 'utf8')).toBeLessThanOrEqual(32 * 1024);
-      expect(svg).not.toMatch(/<script/i);
-      expect(svg).not.toMatch(/\son[a-z]+\s*=/i);
+      wellFormed(readFileSync(join(dir, 'icon.svg'), 'utf8'));
 
       const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as { files?: string[] };
       expect(pkg.files).toContain('icon.svg');
     });
   }
 
-  it('gives the webhook adapter the icon its plugin declares', () => {
+  for (const name of LUCIDE) {
+    it(`${name} ships a light and a dark SVG icon, and each manifest icon reads as data:`, () => {
+      const dir = join(REPO, 'packages', name);
+      const manifest = readManifest(dir);
+
+      expect(manifest.iconProblems).toBeUndefined();
+      expect(manifest.icons).toHaveLength(2);
+      const [light, dark] = manifest.icons ?? [];
+      expect(light?.theme).toBe('light');
+      expect(dark?.theme).toBe('dark');
+      for (const icon of [light, dark]) {
+        expect(icon?.src.startsWith('data:image/svg+xml;base64,')).toBe(true);
+        expect(icon?.contentType).toBe('image/svg+xml');
+        expect(icon?.sizes).toEqual(['any']);
+      }
+
+      wellFormed(readFileSync(join(dir, 'icon.svg'), 'utf8'));
+      wellFormed(readFileSync(join(dir, 'icon-dark.svg'), 'utf8'));
+
+      const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as { files?: string[] };
+      expect(pkg.files).toContain('icon.svg');
+      expect(pkg.files).toContain('icon-dark.svg');
+    });
+  }
+
+  it('gives the webhook adapter the two icons its plugin declares', () => {
     const dir = join(REPO, 'packages', 'webhook');
     const adapter = webhookAdapter(new Map());
 
-    expect(adapter.icons).toEqual([{ src: './icon.svg' }]);
+    expect(adapter.icons).toEqual([
+      { src: './icon.svg', theme: 'light' },
+      { src: './icon-dark.svg', theme: 'dark' },
+    ]);
     const problems: string[] = [];
     const icons = resolveIcons(adapter.icons, dir, 'plugin webhook', (line) => problems.push(line));
     expect(problems).toEqual([]);
+    expect(icons).toHaveLength(2);
     expect(icons[0]?.src.startsWith('data:image/svg+xml;base64,')).toBe(true);
+    expect(icons[1]?.src.startsWith('data:image/svg+xml;base64,')).toBe(true);
   });
 });

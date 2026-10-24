@@ -1,6 +1,6 @@
 ---
 title: Each Lucide icon has a dark variant
-status: todo
+status: implemented
 depends: []
 layer: "packages"
 refs:
@@ -65,3 +65,10 @@ The manifest names both, each with its `theme`.
 - By hand: Softov sees each icon in ahpw on a light and on a dark background.
 
 ## Resume
+
+- **Done so far:** each of the eight Lucide packages ships `icon.svg`, which strokes in `#1F2328`, and `icon-dark.svg`, which strokes in `#E6EDF3`. Each new file keeps the Lucide licence comment. Each of the eight manifests names the two icons with their `theme` and lists `icon-dark.svg` in `files`. The webhook adapter names the same two files. `packages/server/test/plugin-icons.test.ts` reads each of the eleven manifests. The eight Lucide ones find one `light` and one `dark` `data:` icon. The Activepieces, Claude and pi marks keep one icon with no `theme`. It also checks both files of each Lucide package for the size limit, a script and an event attribute, and that `files` names both. `.project/pending/plugin-58-icon-curation.md` has a dark column and the two stroke colours, and waits for your curation.
+- **Next action:** you curate `#1F2328` and `#E6EDF3` in ahpw, on a light and on a dark background. Replace a rejected file at the same path.
+- **Files:** in `packages/{agent-acp,agent-cofold,bot,computer,push,tasks,tunnel-devtunnel,webhook}`, each `icon.svg`, `icon-dark.svg` and `package.json`; also `packages/webhook/src/adapter.ts`, `packages/server/test/plugin-icons.test.ts`, `.project/pending/plugin-58-icon-curation.md`, this task file, the plan and the index. The session cannot commit, so they are left in the worktree.
+- **Open questions:** none. Every row of the plan's Answers table holds.
+- **Departures:** the test reads each manifest with `readManifest`, as plan 58's test does, and not a full plugin load. Several of the eleven plugins need options and services a test host does not have. The curation file now names plan 61 in its `plans` list, beside plan 58. The test run leaves `packages/sdk/test/fixtures/wire.jsonl` dirty; `git checkout -- packages/sdk/test/fixtures/wire.jsonl` is denied in this session, so Softov restores it.
+- **Watch out for:** a client that ignores `theme` draws the first icon. The light variant comes first in each list, so such a client draws what it drew before.
