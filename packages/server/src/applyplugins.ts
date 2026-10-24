@@ -1,4 +1,4 @@
-import type { Host, Loaded, Route } from '@ahpd/sdk';
+import type { Agent, Host, Loaded, Route } from '@ahpd/sdk';
 import { specsIn } from './install.js';
 import { nameOf } from './plugins.js';
 import type { Planned, PluginSet } from './plugins.js';
@@ -43,6 +43,15 @@ export interface ApplyPluginsOptions {
   host?(): Host | undefined;
   /** One line for each problem, as the daemon reports them. */
   log?(message: string): void;
+  /**
+   * The agents made from records, as the last fold took them.
+   *
+   * Folded in beside the plugins, so a change taken while the daemon runs hands
+   * the host the whole list rather than dropping every stored agent for the
+   * length of one plugin change. Read at the fold rather than taken as a value,
+   * because a record made since the last load is in it.
+   */
+  records?(): readonly Agent[];
   /**
    * The plugins to import again, even though the file says what it said before.
    *
@@ -188,7 +197,7 @@ export const applyPlugins = async (options: ApplyPluginsOptions): Promise<Applie
     else if (entry.disabled) trouble(`plugin ${entry.id} is switched off, so there is nothing to reload; enable it first`);
   }
 
-  const folded = set.fold();
+  const folded = set.fold([...(options.records?.() ?? [])]);
   for (const line of folded.problems) trouble(line);
 
   if (changed) {

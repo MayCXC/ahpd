@@ -1,6 +1,6 @@
 ---
 title: The agents channel
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server"
 refs:
@@ -65,9 +65,9 @@ Each record is one agent in the root state's agent list.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Files:** none yet.
-- **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** a status, error or log must never carry a key or a secret value.
+- **Done so far:** `packages/sdk/src/types/agents.ts` holds `AgentKind`, `AgentRecord`, `AgentOwner`, `AgentView`, `AgentState`, `AgentHealth` and `AgentTemplate`. `packages/sdk/src/agents/channel.ts` builds `agentsChannel` over `recordsChannel` on `x-ahpd-agents`: `list`/`get`/`put`/`remove`/`check`, gated by `agent:list`, `agent:put` and `agent:remove`, with `agent:host` for a host record, a membership for a team record and the same person for a user record. Each row carries a `state` of `ready`, `invalid` or `unavailable`; `check` opens the kind, runs its probe under a ten-second limit and answers its health. A `put` or a `remove` takes a new fold through `host.replace`, which sends `root/agentsChanged`; a record edited in place fills the live view, so the agent and its sessions stay, and a `remove` ends the sessions first. Secrets go to the vault under `agent/<id>/<field>`, `env.<name>` values included, and no row, answer, error or log line carries one. The connectors code both channels share moved to `packages/sdk/src/channels/owners.ts`; the connectors channel's words, paths and tests are unchanged and still pass. `packages/sdk/test/agents-channel.test.ts` has 17 tests.
+- **Next action:** task 02, the caller's own agent list.
+- **Files:** `packages/sdk/src/types/agents.ts`, `packages/sdk/src/agents/channel.ts`, `packages/sdk/src/channels/owners.ts`, `packages/sdk/src/connectors/channel.ts`, `packages/sdk/src/types/plugin.ts`, `packages/sdk/src/types/host.ts`, `packages/sdk/src/types/index.ts`, `packages/sdk/src/plugins/plugins.ts`, `packages/sdk/src/plugins/validate.ts`, `packages/sdk/src/access/users.ts`, `packages/sdk/src/index.ts`, `packages/server/src/plugins.ts`, `packages/server/src/applyplugins.ts`, `packages/server/src/commands/run.ts`, `packages/sdk/test/agents-channel.test.ts`, `packages/sdk/test/users-host.test.ts`, `docs/sdk/USERS.md`.
+- **Departures:** the shared code went to a new `packages/sdk/src/channels/owners.ts` rather than staying in the connectors file, and the connectors channel imports it from there. `foldHostOptions` now answers `records`, the ids of the records it folded, because an agent dropped by an id clash is not distinguishable from an accepted one otherwise; `PluginSet.fold` takes the record agents as an argument. `applyPlugins` grew a `records?()` option: it folds before `host.replace`, so without the daemon's current record agents a live plugin change would drop every stored agent for the length of the change. `check` is bounded at ten seconds. The `agent` subject was added to `OPERATIONS` and to the grants table in `docs/sdk/USERS.md`, because a role editor reads subjects from `_meta['ahpd.grants']`; the built-in `admin` holds `*:*` and `member` names none of the four, so step 16 holds without a role table in code.
+- **Open questions:** `run.ts` still refuses to start when the fold holds no agent, and it reads only `folded.agents`; a daemon whose only agents come from records would exit before any record is opened, which task 07's first start has to settle. There is no `agent:all` in the Answers, so `agent:host` does not let an admin read another person's row: the channel reads own, team and host records only. `applyPlugins` replaces the host fold with the plugin fold, which removes the `connectors` port until the daemon's own `refoldAgents` puts it back; the call to `agentLists.openAll()` in the plugin-change path is what restores it, so that call must stay.
+- **Watch out for:** a status, error or log must never carry a key or a secret value. The record's live view is filled rather than replaced on an edit, and replacing it would end the sessions that run on the agent.

@@ -576,22 +576,22 @@ export const checkTriggerType = (value: unknown, by: string): void => {
  * `src` can be read at all is the host's question, because only the host knows
  * the package a path is relative to.
  */
-export const checkIcons = (value: unknown, by: string): void => {
+export const checkIcons = (value: unknown, by: string, method = 'registerAdapter'): void => {
   if (value === undefined) return;
   if (!Array.isArray(value)) {
-    throw new Error(miss(by, 'registerAdapter', 'icons', 'a list of icons, each with a src'));
+    throw new Error(miss(by, method, 'icons', 'a list of icons, each with a src'));
   }
   for (const held of value) {
-    const icon = asObject(held, by, 'registerAdapter', 'an icon');
-    stringy(icon, 'src', by, 'registerAdapter');
+    const icon = asObject(held, by, method, 'an icon');
+    stringy(icon, 'src', by, method);
     if (icon.contentType !== undefined && typeof icon.contentType !== 'string') {
-      throw new Error(miss(by, 'registerAdapter', 'contentType', 'a string, the MIME type of the icon, or nothing'));
+      throw new Error(miss(by, method, 'contentType', 'a string, the MIME type of the icon, or nothing'));
     }
     if (icon.sizes !== undefined && (!Array.isArray(icon.sizes) || icon.sizes.some((one) => typeof one !== 'string'))) {
-      throw new Error(miss(by, 'registerAdapter', 'sizes', 'a list of strings, such as 48x48 or any, or nothing'));
+      throw new Error(miss(by, method, 'sizes', 'a list of strings, such as 48x48 or any, or nothing'));
     }
     if (icon.theme !== undefined && icon.theme !== 'light' && icon.theme !== 'dark') {
-      throw new Error(miss(by, 'registerAdapter', 'theme', 'light or dark, or nothing'));
+      throw new Error(miss(by, method, 'theme', 'light or dark, or nothing'));
     }
   }
 };
@@ -647,6 +647,60 @@ export const checkAdapter = (value: unknown, by: string): string => {
   // then no action of it is ever offered as a tool.
   if (object.run !== undefined && typeof object.run !== 'function') {
     throw new Error(miss(by, 'registerAdapter', 'run', 'a function running one action of a connector, or nothing'));
+  }
+  return name;
+};
+
+/**
+ * Check one `registerAgentKind` value against `AgentKind`, and answer its name.
+ *
+ * The name is a slug and the schema an object, because those are the two the
+ * host acts on: the name is what every stored record carries, and the schema is
+ * what a client draws and what a record's own config is checked against. The
+ * two field lists are read because a put acts on them: `hostOnly` keeps a
+ * setting to the host's record, and `keyVariables` is what lets a person's
+ * record set an environment variable at all.
+ */
+export const checkAgentKind = (value: unknown, by: string): string => {
+  const object = asObject(value, by, 'registerAgentKind', 'agent kind');
+  for (const member of ['name', 'title', 'description']) stringy(object, member, by, 'registerAgentKind');
+  const name = object.name as string;
+  if (!isRecordSlug(name)) {
+    throw new Error(miss(by, 'registerAgentKind', name, `a slug, ${RECORD_SLUG}`));
+  }
+  if (!right(object.schema, 'object')) {
+    throw new Error(miss(by, 'registerAgentKind', 'schema', 'an object, the JSON Schema a client draws the form from'));
+  }
+  const names = (member: 'hostOnly' | 'keyVariables'): void => {
+    const held = object[member];
+    if (held === undefined) return;
+    if (!Array.isArray(held) || held.some((one) => typeof one !== 'string' || one === '')) {
+      throw new Error(miss(by, 'registerAgentKind', member, 'a list of field or variable names, or nothing'));
+    }
+  };
+  names('hostOnly');
+  names('keyVariables');
+  if (object.templates !== undefined) {
+    if (!Array.isArray(object.templates)) {
+      throw new Error(miss(by, 'registerAgentKind', 'templates', 'a list of templates, or nothing'));
+    }
+    for (const held of object.templates) {
+      const template = asObject(held, by, 'registerAgentKind', 'a template');
+      stringy(template, 'name', by, 'registerAgentKind');
+      for (const member of ['description', 'model']) {
+        if (template[member] !== undefined && typeof template[member] !== 'string') {
+          throw new Error(miss(by, 'registerAgentKind', member, 'a string, or nothing'));
+        }
+      }
+      if (template.config !== undefined && !right(template.config, 'object')) {
+        throw new Error(miss(by, 'registerAgentKind', 'config', 'an object, or nothing'));
+      }
+      if (template.icon !== undefined) checkIcons([template.icon], by, 'registerAgentKind');
+    }
+  }
+  checkIcons(object.icons, by, 'registerAgentKind');
+  if (typeof object.open !== 'function') {
+    throw new Error(miss(by, 'registerAgentKind', 'open', 'a function building the backend for one record'));
   }
   return name;
 };

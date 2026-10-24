@@ -97,6 +97,8 @@ export { policyChannels, policyProviders } from './access/policy.js';
 export type { PolicyChannels, PolicyLimits, PolicyProvider } from './access/policy.js';
 export { recordsChannel, recordsDomain, recordsMethods, servedRecords } from './resources/recordschannel.js';
 export type { RecordEntry, RecordsChannel, RecordsChannelOptions, RecordsDomain, RecordsSource, ServedRecords } from './resources/recordschannel.js';
+export { agentsChannel } from './agents/channel.js';
+export type { AgentsChannel, AgentsChannelOptions } from './agents/channel.js';
 export { connectorsChannel } from './connectors/channel.js';
 export type { ConnectorsChannel, ConnectorsChannelOptions, ConnectorState } from './connectors/channel.js';
 export { BINDINGS_KEY, BINDINGS_SCHEME, bindingTarget, bindingsOf, checkBindings } from './connectors/bindings.js';

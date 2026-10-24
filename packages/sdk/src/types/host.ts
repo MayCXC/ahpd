@@ -14,6 +14,7 @@ import type { AutomationStore } from './automations.js';
 import type { EnablementStore } from '../plugins/enablement.js';
 import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
 import type { ConnectorRef, ServedAdapter } from './connectors.js';
+import type { ServedAgentKind } from './agents.js';
 import type { ConnectorsChannel } from '../connectors/channel.js';
 import type { SessionStore } from './sessions.js';
 import type { ComputerPort } from './computers.js';
@@ -151,6 +152,14 @@ export interface HostOptions {
    * adapter is not here cannot be opened.
    */
   adapters?: Record<string, ServedAdapter>;
+  /**
+   * The agent kinds the plugins offer, by name.
+   *
+   * The fold fills this from `registerAgentKind`, and one name is one kind: a
+   * second plugin registering it is reported and loses that kind alone. A
+   * stored record whose `kind` is not here is served as `unavailable`.
+   */
+  agentKinds?: Record<string, ServedAgentKind>;
   /**
    * The connectors this host serves, as a session's bindings are checked.
    *

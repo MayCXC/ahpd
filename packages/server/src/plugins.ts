@@ -1333,8 +1333,14 @@ export interface PluginSet {
   contributions(): Contribution[];
   /** The plugins that did not load, by id, with the line that says why. */
   failures(): Record<string, string>;
-  /** Fold the base with every contribution. */
-  fold(): FoldedOptions;
+  /**
+   * Fold the base with every contribution, and the agents made from records.
+   *
+   * `records` is what the agents channel opened from its stored records. It is
+   * passed on every fold rather than kept, because a record made or removed
+   * while the daemon runs is a new list.
+   */
+  fold(records?: Agent[]): FoldedOptions;
   /**
    * Answer what a plugin waiting on `sessions()` or `records()` reads.
    *
@@ -1544,7 +1550,7 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
     loaded: () => [...kept.values()].map((one) => one.loaded),
     contributions,
     failures: () => Object.fromEntries([...failed].map(([id, line]) => [id, line])),
-    fold: () => foldHostOptions(options.base, contributions()),
+    fold: (records?: Agent[]) => foldHostOptions(options.base, contributions(), records),
     settle: (host) => { reached = host; settled(host); },
   };
 };
