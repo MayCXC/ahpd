@@ -67,7 +67,7 @@ import { loadPlugins, pluginSet, type LoadOptions } from '../plugins.js';
 import { applyPlugins, type Applied } from '../applyplugins.js';
 import { pluginsChannel } from '../pluginschannel.js';
 import { fileRecords } from '../records.js';
-import { migratePresets } from '../agents/migrate.js';
+import { applyPresets, planPresets } from '../agents/migrate.js';
 import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
 import { pty } from '../pty.js';
@@ -1291,15 +1291,17 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   stamp('start: plugins');
   /*
-   * The presets a configuration file still holds, made into records before any
-   * plugin loads: a plugin registers a kind now, and an agent is a record.
+   * The presets a configuration file still holds, read before any plugin loads:
+   * a plugin registers a kind now, and an agent is a record.
    *
-   * The file is only rewritten once every record is written, so a failure here
-   * leaves it as it was for the next start to try again.
+   * Only the plans are made here. They are written once the kinds have loaded,
+   * because a kind's schema is what says which of a record's fields are
+   * secrets, and a plaintext key must not reach a record or a listing. The file
+   * is only rewritten once every record and every vault write succeeded, so a
+   * failure here leaves it as it was for the next start to try again.
    */
-  const migrated = await migratePresets({
+  const planned = planPresets({
     plugins: options.plugins,
-    records: agentRecords,
     configFile: pluginFile,
     log: stamp,
   });
@@ -1370,7 +1372,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     if (answer.restart) markRestart();
     return answer;
   };
-  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, failures: didFail } = await loadPlugins(migrated.plugins, { ...holding, set: pluginHoldings });
+  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, failures: didFail } = await loadPlugins(planned.plugins, { ...holding, set: pluginHoldings });
   // The channel built above starts answering manifests from here.
   loaded = didLoad;
   failures = didFail;
@@ -1393,6 +1395,20 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   if (folded.usage !== undefined) metered = folded.usage;
   if (folded.vault !== undefined) held = folded.vault;
   kept = folded.automations;
+  /*
+   * The presets written now that the kinds and the vault are known.
+   *
+   * A record's secrets are moved to the vault the fold holds, under the record's
+   * own name, before the record is stored: nothing here reads one, and no
+   * listing serves one. The file is rewritten only after each record is.
+   */
+  await applyPresets({
+    plan: planned,
+    records: agentRecords,
+    kinds: agentKinds,
+    vault: held,
+    log: stamp,
+  });
   /*
    * The stored records opened, and folded into the load, before the host is
    * built.

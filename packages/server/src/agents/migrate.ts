@@ -7,11 +7,16 @@
  * channel serves, and a plugin registers a kind and no agent at all, so the
  * presets a file still holds would otherwise be dropped without a word.
  *
- * This runs once, at the start and before the plugins load: every preset
- * becomes a record owned by the host, which is who owned the agents a preset
- * registered. The records are written first and the file second, so a failure
- * leaves the file as it was and the records already written, and the next start
- * finds the records and nothing left to move.
+ * This runs at the start, in two steps around the plugin load: the plan says
+ * which agents the presets describe, and the write step runs once the kinds
+ * have loaded, because a kind's schema is what says which fields of a record
+ * are secrets. Each plaintext key is moved to the vault under the record's own
+ * name, as a put of the agents channel does, and the record keeps
+ * `{ "$secret": "<name>" }` in its place.
+ *
+ * The records are written first and the file second, so a failure leaves the
+ * file as it was and the records already written, and the next start finds the
+ * records and writes only the rest.
  *
  * The configuration file is the person's own, so it is copied beside itself
  * before it is rewritten, and the new text is written to a temporary name and
@@ -21,7 +26,7 @@
 
 import { copyFileSync, existsSync } from 'node:fs';
 import { bag, isRecord, isRecordSlug, knownAgents, reason, RECORD_SLUG } from '@ahpd/sdk';
-import type { PluginSpec, RecordCollection, StoredRecord } from '@ahpd/sdk';
+import type { PluginSpec, RecordCollection, ServedAgentKind, StoredRecord, Vault } from '@ahpd/sdk';
 import { nameOf } from '../plugins.js';
 import { readEntry, writeEntry } from '../install.js';
 
@@ -76,6 +81,13 @@ const without = (value: Record<string, unknown>, keys: readonly string[]): Recor
 /** The options a spec names, as an object. */
 const specOptions = (spec: PluginSpec): Record<string, unknown> => (typeof spec === 'string' ? {} : bag(spec.options));
 
+/** A deep copy of a parsed value, so a move never writes to the file it read. */
+const copied = <T>(value: T): T => {
+  if (Array.isArray(value)) return value.map((one) => copied(one)) as unknown as T;
+  if (isRecord(value)) return Object.fromEntries(Object.entries(value).map(([key, one]) => [key, copied(one)])) as T;
+  return value;
+};
+
 /** One agent a preset described, as the record it becomes. */
 interface Planned {
   kind: PresetKind;
@@ -93,8 +105,8 @@ interface Planned {
  * takes them all but the three the channel owns: `name`, `description` and
  * `model` are the record's own fields and not part of its `config`. An ACP
  * preset keeps its `base`, because a record takes the shipped row it may name
- * the same way. A `$secret` and a `fromEnv` stay as they were written: a value
- * is never read here, so no key is moved or logged.
+ * the same way. A `$secret` and a `fromEnv` stay as they were written: where a
+ * value comes from is not read here, so no key is moved or logged.
  */
 const plansOf = (spec: PluginSpec, kind: PresetKind): Planned[] => {
   const values = specOptions(spec);
@@ -222,47 +234,54 @@ const stripped = (
 /** A moment as a file name carries it: no colon or dot a name cannot hold. */
 const stampOf = (when: Date): string => when.toISOString().replaceAll(/[:.]/g, '-');
 
-/** What `migratePresets` is given. */
-export interface MigrateOptions {
+/** What `planPresets` is given. */
+export interface PlanOptions {
   /** The plugins this run loads, as the file and the flags named them. */
   plugins: PluginSpec[];
-  /** The `agents` collection, where every agent is a record now. */
-  records: RecordCollection;
   /** The configuration file the presets were written in. */
   configFile: string;
-  /** One line per thing done, naming record ids and no value. */
+  /** One line per preset that cannot become a record, naming the id and no value. */
   log(message: string): void;
-  /** The clock the backup's timestamp is taken from. */
-  now?(): Date;
 }
 
-/** What `migratePresets` did. */
-export interface Migrated {
-  /** The specs with what a record now holds taken out of them. */
+/** What the plan found, and what the write step is handed once the plugins load. */
+export interface PresetPlan {
+  /** The specs to hand the loader, with what a record takes out of them. */
   plugins: PluginSpec[];
-  /** The ids of the records this run wrote. */
-  written: string[];
+  /** The configuration file the presets were written in. */
+  configFile: string;
+  /** The file as it was read, for the write step to rewrite; absent when there is none. */
+  held?: Record<string, unknown>;
+  /** The agents the presets describe. */
+  plans: Planned[];
+  /** The kinds this run loads, whose records are the ones written. */
+  loaded: PresetKind[];
+  /** Whether the file could not be read, so no preset can be taken out of it. */
+  unreadable: boolean;
 }
 
-/**
- * Make the presets this run was configured with into records, and take them out
- * of the configuration file.
- *
- * A failure at any step leaves the file as it was and the records already
- * written, and says so without a value: the next start finds the records it
- * made and writes only the rest. Nothing is done, and nothing is logged, when
- * the run was configured with no preset the records do not already hold - which
- * is what a second start after this one finds.
- */
-export const migratePresets = async (options: MigrateOptions): Promise<Migrated> => {
+/** Read the presets this run was configured with, and say which agents they describe. */
+export const planPresets = (options: PlanOptions): PresetPlan => {
+  let held: Record<string, unknown> | undefined;
+  let unreadable = false;
+  if (existsSync(options.configFile)) {
+    try {
+      held = readEntry(options.configFile);
+    }
+    catch {
+      // The parser's own words are not repeated: it quotes the text it choked
+      // on, and the file may hold a key.
+      unreadable = true;
+    }
+  }
   const plans: Planned[] = [];
   const named = new Map<string, PresetKind>();
-  const loaded = new Set<PresetKind>();
+  const loaded: PresetKind[] = [];
   for (const spec of options.plugins) {
     if (typeof spec !== 'string' && spec.enabled === false) continue;
     const kind = kindOfSpec(spec);
     if (kind === undefined) continue;
-    loaded.add(kind);
+    if (!loaded.includes(kind)) loaded.push(kind);
     for (const plan of plansOf(spec, kind)) {
       if (!isRecordSlug(plan.id)) {
         options.log(`The ${kind} preset ${plan.id} did not become a record: its id is not a slug: ${RECORD_SLUG}`);
@@ -277,7 +296,115 @@ export const migratePresets = async (options: MigrateOptions): Promise<Migrated>
       plans.push(plan);
     }
   }
-  const cleaned = options.plugins.map((spec) => cleanSpec(spec, loaded));
+  const cleaned = options.plugins.map((spec) => cleanSpec(spec, new Set(loaded)));
+  return { plugins: cleaned, configFile: options.configFile, ...(held === undefined ? {} : { held }), plans, loaded, unreadable };
+};
+
+/**
+ * The fields a kind keeps secret: its `writeOnly` fields and its `keyVariables`.
+ *
+ * The same set the agents channel moves on a put, so a record this writes keeps
+ * no value a listing would serve.
+ */
+const secretFieldsOf = (kind: ServedAgentKind): string[] => {
+  const fields = new Set(Object.entries(bag(kind.schema['properties']))
+    .filter(([, one]) => isRecord(one) && one['writeOnly'] === true)
+    .map(([field]) => field));
+  for (const variable of kind.keyVariables ?? []) fields.add(`env.${variable}`);
+  return [...fields];
+};
+
+/** The value at a dotted field path. */
+const readAt = (config: Record<string, unknown>, path: readonly string[]): unknown => {
+  let at: unknown = config;
+  for (const key of path) {
+    if (!isRecord(at)) return undefined;
+    at = at[key];
+  }
+  return at;
+};
+
+/** Set a value at a dotted field path, making the objects it needs. */
+const putAt = (config: Record<string, unknown>, path: readonly string[], value: unknown): void => {
+  const last = path[path.length - 1] as string;
+  let at = config;
+  for (const key of path.slice(0, -1)) {
+    const next = at[key];
+    if (isRecord(next)) { at = next; continue; }
+    const made: Record<string, unknown> = {};
+    at[key] = made;
+    at = made;
+  }
+  at[last] = value;
+};
+
+/**
+ * One record's config, with every secret it wrote in plaintext moved to the
+ * vault.
+ *
+ * A record may hold no value of a secret field: the channel's own put moves it
+ * under the record's name and keeps `{ "$secret": "<name>" }`, and a listing
+ * serves the record as it is stored. A `$secret` or a `fromEnv` the preset wrote
+ * stays as it was: both name where the value comes from and carry none of it,
+ * and a host record resolves either.
+ */
+const withSecretsMoved = async (
+  config: Record<string, unknown>,
+  kind: ServedAgentKind,
+  id: string,
+  vault: Vault | undefined,
+): Promise<Record<string, unknown>> => {
+  const out = copied(config);
+  for (const field of secretFieldsOf(kind)) {
+    const path = field.split('.');
+    const value = readAt(out, path);
+    // An absent field, an empty one and every value that is not a string is
+    // no secret this could leak.
+    if (typeof value !== 'string' || value === '') continue;
+    if (vault === undefined) throw new Error(`this host has no vault, so ${field} cannot be kept`);
+    // The name a put of the agents channel gives a host record's secret.
+    const name = `host:agent/${id}/${field}`;
+    await vault.set(name, value);
+    putAt(out, path, { $secret: name });
+  }
+  return out;
+};
+
+/** What `applyPresets` is given. */
+export interface ApplyOptions {
+  /** What the plan found, and the specs the loader was handed. */
+  plan: PresetPlan;
+  /** The `agents` collection, where every agent is a record now. */
+  records: RecordCollection;
+  /** The kinds this run loaded, by name, which is what says where a key goes. */
+  kinds: Readonly<Record<string, ServedAgentKind>>;
+  /** Where a secret is kept; a host with none writes no record that holds one. */
+  vault: Vault | undefined;
+  /** One line per thing done, naming record ids and no value. */
+  log(message: string): void;
+  /** The clock the backup's timestamp is taken from. */
+  now?(): Date;
+}
+
+/** What `applyPresets` did. */
+export interface Applied {
+  /** The ids of the records this run wrote. */
+  written: string[];
+}
+
+/**
+ * Write the planned agents as records, and take them out of the configuration
+ * file.
+ *
+ * A failure at any step leaves the file as it was and the records already
+ * written, and says so without a value: the next start finds the records it
+ * made and writes only the rest. Nothing is done, and nothing is logged, when
+ * the plan found no agent the records do not already hold - which is what a
+ * second start after this one finds.
+ */
+export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
+  const { plan } = options;
+  const clock = options.now ?? (() => new Date());
 
   let present: Set<string>;
   try {
@@ -285,50 +412,60 @@ export const migratePresets = async (options: MigrateOptions): Promise<Migrated>
   }
   catch (error) {
     options.log(`The presets were not moved: the agent records could not be read: ${reason(error)}`);
-    return { plugins: options.plugins, written: [] };
+    return { written: [] };
   }
 
   // Every record first: a file rewritten before them would lose the agents if
   // one write failed.
   const written: string[] = [];
-  for (const plan of plans) {
-    if (present.has(plan.id)) continue;
+  for (const agent of plan.plans) {
+    if (present.has(agent.id)) continue;
+    const kind = options.kinds[agent.kind];
+    if (kind === undefined) {
+      // The kind did not load, so what its schema says is a secret is unknown
+      // and no plugin serves the record: it stays in the file to try again.
+      options.log(`${agent.id} did not become a record: the kind ${agent.kind} did not load.`);
+      continue;
+    }
+    let config: Record<string, unknown>;
     try {
-      await options.records.put(recordOf(plan));
+      config = await withSecretsMoved(agent.config, kind, agent.id, options.vault);
     }
     catch (error) {
-      options.log(`The presets were not moved: ${plan.id} could not be written as a record: ${reason(error)}`);
-      return { plugins: options.plugins, written };
+      options.log(`The presets were not moved: ${agent.id} could not be written as a record: ${reason(error)}`);
+      return { written };
     }
-    present.add(plan.id);
-    written.push(plan.id);
+    try {
+      await options.records.put(recordOf({ ...agent, config }));
+    }
+    catch (error) {
+      options.log(`The presets were not moved: ${agent.id} could not be written as a record: ${reason(error)}`);
+      return { written };
+    }
+    present.add(agent.id);
+    written.push(agent.id);
+  }
+
+  if (plan.unreadable) {
+    options.log(`The presets were not taken out of ${plan.configFile}: it could not be read, and is as it was.`);
+    return { written };
   }
 
   let changed = false;
   let backup: string | undefined;
-  if (existsSync(options.configFile)) {
-    let held: Record<string, unknown>;
-    try {
-      held = readEntry(options.configFile);
-    }
-    catch {
-      // Not the parser's own words: a parser quotes the text it choked on, and
-      // the file may hold a key. The records are written; the file is as it was.
-      options.log(`The presets were not taken out of ${options.configFile}: it could not be read, and is as it was.`);
-      return { plugins: cleaned, written };
-    }
-    const taken = stripped(held, loaded);
+  if (plan.held !== undefined) {
+    const taken = stripped(plan.held, new Set(plan.loaded));
     changed = taken.changed;
     if (changed) {
       // Beside the file and named after it, before anything is written over it.
-      backup = `${options.configFile}.bak-${stampOf((options.now ?? (() => new Date()))())}`;
+      backup = `${plan.configFile}.bak-${stampOf(clock())}`;
       try {
-        copyFileSync(options.configFile, backup);
-        writeEntry(options.configFile, taken.entry);
+        copyFileSync(plan.configFile, backup);
+        writeEntry(plan.configFile, taken.entry);
       }
       catch (error) {
-        options.log(`The presets in ${options.configFile} were not taken out: ${reason(error)}`);
-        return { plugins: cleaned, written };
+        options.log(`The presets in ${plan.configFile} were not taken out: ${reason(error)}`);
+        return { written };
       }
     }
   }
@@ -337,10 +474,10 @@ export const migratePresets = async (options: MigrateOptions): Promise<Migrated>
   if (written.length > 0) {
     options.log(`Moved ${String(written.length)} ${written.length === 1 ? 'preset' : 'presets'} to agent records owned by the host: ${written.join(', ')}.${kept}`);
   } else if (changed) {
-    const ids = plans.map((one) => one.id);
+    const ids = plan.plans.map((one) => one.id);
     options.log(ids.length === 0
-      ? `The presets in ${options.configFile} were taken out: they described no agent.${kept}`
-      : `The presets in ${options.configFile} were already agent records: ${ids.join(', ')}.${kept}`);
+      ? `The presets in ${plan.configFile} were taken out: they described no agent.${kept}`
+      : `The presets in ${plan.configFile} were already agent records: ${ids.join(', ')}.${kept}`);
   }
-  return { plugins: cleaned, written };
+  return { written };
 };

@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { memoryRecords } from '@ahpd/sdk';
-import type { PluginSpec, RecordCollection, StoredRecord } from '@ahpd/sdk';
-import { migratePresets } from '../src/agents/migrate.js';
+import type { PluginSpec, RecordCollection, ServedAgentKind, StoredRecord, Vault } from '@ahpd/sdk';
+import { applyPresets, planPresets } from '../src/agents/migrate.js';
 
 /*
  * The presets a configuration file holds, made into host records at the start.
@@ -18,6 +18,11 @@ import { migratePresets } from '../src/agents/migrate.js';
  * nothing to move, a record that cannot be written leaving the file alone, and
  * the ids that cannot become a record at all being said rather than kept.
  *
+ * The secret a preset wrote in plaintext is a case of its own: a record may hold
+ * no value a listing would serve, so it is moved to the vault under the record's
+ * own name, as a put of the agents channel moves one, and the record keeps a
+ * reference.
+ *
  * Every case is in a folder of its own under the system's temporary folder, and
  * the records are a store in memory: nothing here reads or writes a person's own
  * configuration.
@@ -25,6 +30,9 @@ import { migratePresets } from '../src/agents/migrate.js';
 
 /** The moment every backup is stamped with, so a name is expectable. */
 const WHEN = new Date('2026-10-24T12:00:00.000Z');
+
+/** The value the ACP preset below writes in plaintext, which no record may hold. */
+const KEY = 'sk-a-key-nobody may read in a log';
 
 /** The file's own plugins: two Claude variants, two ACP rows, cofold and pi. */
 const PLUGINS: PluginSpec[] = [
@@ -49,7 +57,7 @@ const PLUGINS: PluginSpec[] = [
     options: {
       hostTools: false,
       presets: {
-        codex: { env: { CODEX_API_KEY: 'sk-a-key-nobody may read in a log' } },
+        codex: { env: { CODEX_API_KEY: KEY } },
         work: { base: 'copilot', name: 'Copilot work', command: 'copilot', env: { COPILOT_HOME: '/tmp/copilot' } },
       },
     },
@@ -64,16 +72,40 @@ const PLUGINS: PluginSpec[] = [
   },
 ];
 
+/** One kind as a plugin registers it, with only the fields the migration reads. */
+const kindOf = (name: string, schema: Record<string, unknown>, keyVariables?: string[]): ServedAgentKind => ({
+  name,
+  title: name,
+  description: `the ${name} kind`,
+  schema,
+  ...(keyVariables === undefined ? {} : { keyVariables }),
+  by: 'test',
+  open: () => { throw new Error('no record is opened here'); },
+});
+
+/**
+ * The four kinds, with the secret fields the channel's own put reads: an ACP
+ * key and a claude token are `keyVariables`, and a cofold key is `writeOnly`.
+ */
+const KINDS: Record<string, ServedAgentKind> = {
+  claude: kindOf('claude', { properties: { models: {}, env: {} } }, ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN']),
+  acp: kindOf('acp', { properties: { command: {}, env: {} } }, ['CODEX_API_KEY', 'COPILOT_GITHUB_TOKEN', 'GEMINI_API_KEY']),
+  cofold: kindOf('cofold', { properties: { apiKey: { type: 'string', writeOnly: true }, baseUrl: {} } }),
+  pi: kindOf('pi', { properties: { env: {} } }, ['DEEPSEEK_API_KEY']),
+};
+
 let dir: string;
 let configFile: string;
 let records: RecordCollection;
 let said: string[];
+let secrets: Map<string, string>;
 
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'ahpd-migrate-'));
   configFile = join(dir, 'config.json');
   records = await memoryRecords().collection('agents', { format: 'json' });
   said = [];
+  secrets = new Map();
 });
 
 afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
@@ -85,15 +117,24 @@ const written = (plugins: unknown): string => {
   return text;
 };
 
-/** One run of the migration, over the file as it is now. */
-const migrate = async (plugins: PluginSpec[], store: RecordCollection = records) =>
-  migratePresets({
-    plugins,
-    records: store,
-    configFile,
-    log: (line) => { said.push(line); },
-    now: () => WHEN,
-  });
+/** The vault a start writes a record's key to, in memory. */
+const vault = (): Vault => ({
+  get: async (name) => secrets.get(name),
+  set: async (name, value) => { secrets.set(name, value); },
+  delete: async (name) => secrets.delete(name),
+  list: async () => [...secrets.keys()].sort(),
+});
+
+/**
+ * One start's migration: the plan the daemon makes before the plugins load,
+ * then the write step once the kinds are known.
+ */
+const migrate = async (plugins: PluginSpec[], store: RecordCollection = records, keyring: Vault | undefined = vault()) => {
+  const say = (line: string): void => { said.push(line); };
+  const plan = planPresets({ plugins, configFile, log: say });
+  const applied = await applyPresets({ plan, records: store, kinds: KINDS, vault: keyring, log: say, now: () => WHEN });
+  return { plugins: plan.plugins, written: applied.written };
+};
 
 /** Every record the store holds, by id. */
 const held = async (store: RecordCollection = records): Promise<Map<string, StoredRecord>> =>
@@ -104,6 +145,9 @@ const file = (): Record<string, unknown> => JSON.parse(readFileSync(configFile, 
 
 /** The plugin entries the file now holds. */
 const entries = (): Record<string, unknown>[] => (file()['plugins'] as Record<string, unknown>[]);
+
+/** The plugins a run reads from the file when no flag names any. */
+const filed = (): PluginSpec[] => entries() as unknown as PluginSpec[];
 
 /** The one entry the file holds under this package. */
 const entryOf = (name: string): Record<string, unknown> => {
@@ -154,12 +198,14 @@ it('moves every preset to a host record of the same id, and takes them out of th
   });
 
   // An ACP record takes the shipped row's name and keeps its own `base`, which
-  // is how a record names a row it is not named after.
+  // is how a record names a row it is not named after. Its key was written in
+  // plaintext, so it is in the vault and the record holds a reference.
   expect(all.get('codex')).toMatchObject({
     kind: 'acp',
     name: 'Codex',
-    config: { env: { CODEX_API_KEY: 'sk-a-key-nobody may read in a log' } },
+    config: { env: { CODEX_API_KEY: { $secret: 'host:agent/codex/env.CODEX_API_KEY' } } },
   });
+  expect(secrets.get('host:agent/codex/env.CODEX_API_KEY')).toBe(KEY);
   expect(all.get('work')).toMatchObject({
     kind: 'acp',
     name: 'Copilot work',
@@ -202,8 +248,7 @@ it('finds nothing to do at a second start', async () => {
 
   // The second start reads the file the first one left, which is what the
   // daemon does: the plugins are the ones the file names.
-  const cleaned = entries() as unknown as PluginSpec[];
-  const again = await migrate(cleaned);
+  const again = await migrate(filed());
 
   expect(again.written).toEqual([]);
   expect(await held()).toEqual(recordsBefore);
@@ -230,7 +275,14 @@ it('leaves the file untouched when a record cannot be written, and writes the re
   expect([...await held()]).toHaveLength(3);
   expect(readFileSync(configFile, 'utf8')).toBe(before);
   expect(backups()).toEqual([]);
-  expect(stopped.plugins).toEqual(PLUGINS);
+  // The loader was handed the cleaned specs before the writes, so a failure
+  // cannot put the presets back into a plugin's options.
+  expect(stopped.plugins).toEqual([
+    { name: '@ahpd/agent-claude' },
+    { name: '@ahpd/agent-acp', options: { hostTools: false } },
+    { name: '@ahpd/agent-cofold', options: { model: 'deepseek-chat' } },
+    { name: '@ahpd/agent-pi' },
+  ]);
   expect(said.join('\n')).toContain('work could not be written as a record: the disk is full');
   expect(said.join('\n')).not.toContain('sk-a-key');
 
@@ -249,10 +301,7 @@ it('says each preset whose id cannot be a record, and moves the others', async (
     { name: '@ahpd/agent-cofold', options: { provider: 'gemini', displayName: 'Gemini' } },
   ]);
 
-  const moved = await migrate([
-    { name: '@ahpd/agent-acp', options: { presets: { Bad_Id: { command: 'x' }, gemini: {} } } },
-    { name: '@ahpd/agent-cofold', options: { provider: 'gemini', displayName: 'Gemini' } },
-  ]);
+  const moved = await migrate(filed());
 
   expect(moved.written).toEqual(['gemini']);
   expect([...(await held()).keys()]).toEqual(['gemini']);
@@ -269,10 +318,7 @@ it('keeps the presets of a plugin this run does not load', async () => {
   ]);
   const before = file();
 
-  await migrate([
-    { name: '@ahpd/agent-claude', enabled: false, options: { presets: { claude: false, mine: { name: 'Mine' } } } },
-    { name: '@ahpd/agent-acp', options: { presets: { gemini: {} } } },
-  ]);
+  await migrate(filed());
 
   // The switched-off entry is the only copy of its agents, so it is as it was.
   expect(entryOf('@ahpd/agent-claude')).toEqual((before['plugins'] as Record<string, unknown>[])[0]);
@@ -321,3 +367,22 @@ it('does nothing when the file has no preset and its records are there', async (
   expect(said).toEqual([]);
   expect(backups()).toEqual([]);
 });
+
+it('moves a plaintext key into the vault, and keeps no value in the record, a listing or a line', async () => {
+  written([{ name: '@ahpd/agent-acp', options: { presets: { codex: { env: { CODEX_API_KEY: KEY } } } } }]);
+
+  const moved = await migrate(filed());
+
+  expect(moved.written).toEqual(['codex']);
+  // The record holds the name the channel's own put gives a host record's
+  // secret, and the vault holds the value.
+  expect((await held()).get('codex')).toMatchObject({
+    config: { env: { CODEX_API_KEY: { $secret: 'host:agent/codex/env.CODEX_API_KEY' } } },
+  });
+  expect(secrets.get('host:agent/codex/env.CODEX_API_KEY')).toBe(KEY);
+  // Nowhere a client, a reader of the records or a log reader looks carries it.
+  expect(JSON.stringify(await records.list())).not.toContain('sk-a-key');
+  expect(readFileSync(configFile, 'utf8')).not.toContain('sk-a-key');
+  expect(said.join('\n')).not.toContain('sk-a-key');
+});
+
