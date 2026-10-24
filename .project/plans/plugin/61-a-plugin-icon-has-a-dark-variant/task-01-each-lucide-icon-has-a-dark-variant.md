@@ -1,6 +1,6 @@
 ---
 title: Each Lucide icon has a dark variant
-status: implemented
+status: done
 depends: []
 layer: "packages"
 refs:

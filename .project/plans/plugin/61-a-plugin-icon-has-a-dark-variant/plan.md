@@ -1,7 +1,7 @@
 ---
 title: A plugin icon has a dark variant
 domain: plugin
-status: active
+status: built
 priority: medium
 created: 2026-10-24
 revalidated: 2026-10-24
@@ -66,7 +66,7 @@ package.json ahpd.icons -> loadOne -> resolveIcons (data: URI, theme kept) -> pl
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - each-lucide-icon-has-a-dark-variant](task-01-each-lucide-icon-has-a-dark-variant.md) | implemented | - |
+| [01 - each-lucide-icon-has-a-dark-variant](task-01-each-lucide-icon-has-a-dark-variant.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -75,12 +75,12 @@ package.json ahpd.icons -> loadOne -> resolveIcons (data: URI, theme kept) -> pl
 
 ## Resume state
 
-- **Done so far:** task-01 is implemented. The eight Lucide packages ship `icon.svg` in `#1F2328` and `icon-dark.svg` in `#E6EDF3`, and each manifest names both with their `theme` and lists `icon-dark.svg` in `files`. The webhook adapter names the two files. The test in `packages/server/test/plugin-icons.test.ts` finds one `light` and one `dark` icon for each of the eight. The three vendor marks keep one icon with no `theme`. `.project/pending/plugin-58-icon-curation.md` has a dark column and the two colours.
-- **Next action:** Softov curates both colours in ahpw, on a light and on a dark background, and replaces a rejected file at the same path. After that, the plan is built and `implemented.md` is written.
+- **Done so far:** the plan is built, merged in #86 on 2026-10-24. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the `files` list in each `package.json` must name `icon-dark.svg`, or a packed plugin has no dark icon. `npm pack --dry-run` in `packages/bot` lists both files. The test run leaves `packages/sdk/test/fixtures/wire.jsonl` dirty, and this session cannot restore it.
 
 ## Final verification checklist
 
-- [ ] ahpw shows each of the eight icons on a light and on a dark background.
+- [x] ahpw shows each of the eight icons on a light and on a dark background.
 - [x] `plans/index.md` updated.

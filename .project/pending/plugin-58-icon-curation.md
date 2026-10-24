@@ -44,4 +44,3 @@ The Activepieces mark, the Claude starburst and the pi mark are the vendors' tra
 ## Reply
 
 Write "keep" or "replace" for each row, or what you want instead.
-Name a colour in place of `#1F2328` or `#E6EDF3` if you want another one.
