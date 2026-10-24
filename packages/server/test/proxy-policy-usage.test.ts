@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { memoryPolicies, type ModelUse, type Policies, type Policy, type Usage, type UsageTotal } from '@ahpd/sdk';
 import {
   answerJson, fakeProvider, isAnthropicError, isOpenAiError, MARKER, memoryUsage, pause, people, ROOT_TOKEN, send, serveProxy,
-  type FakeProvider, type People, type Served, type ServeOptions,
+  type FakeProvider, type People, type ProviderFixture, type Served, type ServeOptions,
 } from './fixtures/proxy-harness.js';
 import type { ProxySetting } from '../src/proxy/providers.js';
 
@@ -70,29 +70,29 @@ const keeping = (totals: Record<string, UsageTotal> = {}): Usage & { entries: Mo
 };
 
 /**
- * Softov's table with every provider pointed at fakes: `openrouter` and
+ * Softov's model names, with every connector pointed at fakes: `openrouter` and
  * `anthropic` at `remote`, `local` at `local`, each answering its own dialect.
  */
-const softov = (remote: string, local: string): ProxySetting => ({
-  providers: {
-    openrouter: { endpoint: remote, accepts: ['openai-chat'], key: { env: 'OPENROUTER_API_KEY' } },
-    anthropic: { endpoint: remote, accepts: ['anthropic-messages'], key: { env: 'ANTHROPIC_API_KEY' } },
-    local: { endpoint: local, accepts: ['openai-chat'] },
+const softov = (remote: string, local: string): { proxy: ProxySetting; providers: ProviderFixture[] } => ({
+  proxy: {
+    models: {
+      'anthropic/claude-sonnet-5-5': [
+        { provider: 'anthropic', id: 'claude-sonnet-5-5' },
+        { provider: 'openrouter', id: 'anthropic/claude-sonnet-5.5', price: { input: 2, output: 10 } },
+      ],
+      'openai/gpt-5.5': [{ provider: 'openrouter', id: 'openai/gpt-5.5', price: { input: 5, output: 30 } }],
+      'local/default': [{ provider: 'local', id: 'local-model' }],
+      // A price with one side only, and a price of nothing at all.
+      'local/output-only': [{ provider: 'local', id: 'local-model', price: { output: 2 } }],
+      'local/free': [{ provider: 'local', id: 'local-model', price: { input: 0, output: 0 } }],
+    },
   },
-  models: {
-    'anthropic/claude-sonnet-5-5': [
-      { provider: 'anthropic', id: 'claude-sonnet-5-5' },
-      { provider: 'openrouter', id: 'anthropic/claude-sonnet-5.5', price: { input: 2, output: 10 } },
-    ],
-    'openai/gpt-5.5': [{ provider: 'openrouter', id: 'openai/gpt-5.5', price: { input: 5, output: 30 } }],
-    'local/default': [{ provider: 'local', id: 'local-model' }],
-    // A price with one side only, and a price of nothing at all.
-    'local/output-only': [{ provider: 'local', id: 'local-model', price: { output: 2 } }],
-    'local/free': [{ provider: 'local', id: 'local-model', price: { input: 0, output: 0 } }],
-  },
+  providers: [
+    { id: 'openrouter', adapter: 'openrouter', endpoint: remote, accepts: ['openai-chat'] },
+    { id: 'anthropic', adapter: 'anthropic', endpoint: remote, accepts: ['anthropic-messages'] },
+    { id: 'local', adapter: 'openai-compatible', endpoint: local, key: null },
+  ],
 });
-
-const KEYS = { OPENROUTER_API_KEY: MARKER, ANTHROPIC_API_KEY: MARKER };
 
 /** An OpenAI chat completion reporting usage. */
 const COMPLETION = {
@@ -121,7 +121,7 @@ const setup = async (options: ServeOptions = {}, answer: unknown = COMPLETION) =
   const local = await fakeProvider(answerJson(200, answer));
   fakes.push(remote, local);
   const usage = memoryUsage();
-  const served = await serveProxy({ users: who.users, env: KEYS, proxy: softov(remote.endpoint, local.endpoint), usage: () => usage, ...options });
+  const served = await serveProxy({ users: who.users, ...softov(remote.endpoint, local.endpoint), usage: () => usage, ...options });
   open.push(served);
   return { remote, local, usage, served };
 };
@@ -182,7 +182,7 @@ describe('a call at a limit', () => {
     const local = await fakeProvider(answerJson(200, COMPLETION));
     fakes.push(remote, local);
     const served = await serveProxy({
-      users: who.users, env: KEYS, proxy: softov(remote.endpoint, local.endpoint),
+      users: who.users, ...softov(remote.endpoint, local.endpoint),
       usage: () => usage, policies: await rows(LIMITED), policiesCheck: true,
     });
     open.push(served);
@@ -236,7 +236,7 @@ describe('the call is recorded', () => {
       owner: 'user:ana',
       team: 'backend',
       project: 'billing',
-      model: { name: 'openai/gpt-5.5', provider: 'openrouter', input: 1000, output: 300, cache: { read: 200 } },
+      model: { name: 'openai/gpt-5.5', provider: 'openrouter', connector: 'openrouter', input: 1000, output: 300, cache: { read: 200 } },
       pools: ['user:ana', 'team:backend', 'project:backend:billing'],
     });
     // (1000 + 200) * $5 + 300 * $30, per million, split into what was sent and
@@ -262,11 +262,11 @@ describe('the call is recorded', () => {
     });
     fakes.push(remote);
     const usage = memoryUsage();
-    const served = await serveProxy({ users: who.users, env: KEYS, proxy: softov(remote.endpoint, remote.endpoint), usage: () => usage });
+    const served = await serveProxy({ users: who.users, ...softov(remote.endpoint, remote.endpoint), usage: () => usage });
     open.push(served);
     await send(served.port, MESSAGES, { headers: { 'x-api-key': who.ana, 'x-ahp-scope': 'backend:ahpd' }, body: { model: 'anthropic/claude-sonnet-5-5', stream: true } });
     const [entry] = await settled(usage, 1);
-    expect(entry?.model).toEqual({ name: 'anthropic/claude-sonnet-5-5', provider: 'anthropic', input: 40, output: 9, cache: { read: 7, write: 3 } });
+    expect(entry?.model).toEqual({ name: 'anthropic/claude-sonnet-5-5', provider: 'anthropic', connector: 'anthropic', input: 40, output: 9, cache: { read: 7, write: 3 } });
     expect(entry?.project).toBe('ahpd');
     // The anthropic entry has no price.
     expect(entry?.cost).toBeUndefined();
@@ -279,12 +279,12 @@ describe('the call is recorded', () => {
     });
     fakes.push(remote);
     const usage = memoryUsage();
-    const served = await serveProxy({ users: who.users, env: KEYS, proxy: softov(remote.endpoint, remote.endpoint), usage: () => usage });
+    const served = await serveProxy({ users: who.users, ...softov(remote.endpoint, remote.endpoint), usage: () => usage });
     open.push(served);
     await send(served.port, CHAT, { headers: { 'x-api-key': who.ana }, body: { model: 'openai/gpt-5.5', stream: true } });
     const entries = await settled(usage, 1);
     expect(entries).toHaveLength(1);
-    expect(entries[0]?.model).toEqual({ name: 'openai/gpt-5.5', provider: 'openrouter' });
+    expect(entries[0]?.model).toEqual({ name: 'openai/gpt-5.5', provider: 'openrouter', connector: 'openrouter' });
     expect(entries[0]?.cost).toBeUndefined();
     expect(entries[0]?.providerCost).toBeUndefined();
     // Nothing was injected to ask for it.
@@ -300,7 +300,7 @@ describe('the call is recorded', () => {
     });
     fakes.push(remote);
     const usage = memoryUsage();
-    const served = await serveProxy({ users: who.users, env: KEYS, proxy: softov(remote.endpoint, remote.endpoint), usage: () => usage });
+    const served = await serveProxy({ users: who.users, ...softov(remote.endpoint, remote.endpoint), usage: () => usage });
     open.push(served);
     // The caller's connection is cut too, so the request fails rather than ending.
     await expect(send(served.port, MESSAGES, { headers: { 'x-api-key': who.ana }, body: { model: 'anthropic/claude-sonnet-5-5', stream: true } }))
@@ -358,11 +358,11 @@ describe('the call is recorded', () => {
     });
     fakes.push(remote);
     const usage = memoryUsage();
-    const served = await serveProxy({ users: who.users, env: KEYS, proxy: softov(remote.endpoint, remote.endpoint), usage: () => usage });
+    const served = await serveProxy({ users: who.users, ...softov(remote.endpoint, remote.endpoint), usage: () => usage });
     open.push(served);
     expect((await send(served.port, CHAT, { headers: { 'x-api-key': who.ana }, body: { model: 'local/default', stream: true } })).status).toBe(200);
     const [entry] = await settled(usage, 1);
-    expect(entry?.model).toEqual({ name: 'local/default', provider: 'local', input: 1200, output: 300 });
+    expect(entry?.model).toEqual({ name: 'local/default', provider: 'openai-compatible', connector: 'local', input: 1200, output: 300 });
     expect(entry?.providerCost).toEqual(REPORTED_COST);
     expect(entry?.cost).toEqual(REPORTED_COST);
   });
@@ -379,7 +379,7 @@ describe('the call is recorded', () => {
     const remote = await fakeProvider(answerJson(200, COMPLETION));
     fakes.push(remote);
     const served = await serveProxy({
-      users: who.users, env: KEYS, proxy: softov(remote.endpoint, remote.endpoint),
+      users: who.users, ...softov(remote.endpoint, remote.endpoint),
       usage: () => ({ ...memoryUsage(), record: async () => { throw new Error('disk full'); } }),
     });
     open.push(served);
@@ -404,9 +404,10 @@ describe('a session\'s call', () => {
       const remote = await fakeProvider(answerJson(200, COMPLETION));
       fakes.push(remote);
       const usage = memoryUsage();
-      const table: ProxySetting = { ...softov(remote.endpoint, remote.endpoint), ...(sessionCalls === undefined ? {} : { sessionCalls }) };
+      const { proxy, providers } = softov(remote.endpoint, remote.endpoint);
+      const table: ProxySetting = { ...proxy, ...(sessionCalls === undefined ? {} : { sessionCalls }) };
       const served = await serveProxy({
-        users: who.users, env: KEYS, proxy: table, usage: () => usage,
+        users: who.users, proxy: table, providers, usage: () => usage,
         whose: await session(), policies: await rows(ALLOW_ALL, DENY_OPENAI), policiesCheck: true,
       });
       open.push(served);
@@ -428,8 +429,9 @@ describe('a session\'s call', () => {
     const remote = await fakeProvider(answerJson(200, COMPLETION));
     fakes.push(remote);
     const usage = memoryUsage();
+    const { proxy, providers } = softov(remote.endpoint, remote.endpoint);
     const served = await serveProxy({
-      users: who.users, env: KEYS, proxy: { ...softov(remote.endpoint, remote.endpoint), sessionCalls: 'skip' }, usage: () => usage,
+      users: who.users, proxy: { ...proxy, sessionCalls: 'skip' }, providers, usage: () => usage,
       whose: await session(), policies: await rows(ALLOW_ALL, DENY_OPENAI), policiesCheck: true,
     });
     open.push(served);
@@ -447,7 +449,7 @@ describe('a session\'s call', () => {
     fakes.push(remote);
     const usage = memoryUsage();
     const served = await serveProxy({
-      env: KEYS, proxy: softov(remote.endpoint, remote.endpoint), usage: () => usage,
+      ...softov(remote.endpoint, remote.endpoint), usage: () => usage,
       whose: (token) => (token === 'session-token' ? { session: 's-2' } : undefined),
       policies: await rows(DENY_OPENAI), policiesCheck: true,
     });

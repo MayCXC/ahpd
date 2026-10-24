@@ -1,6 +1,6 @@
 ---
 title: The proxy routes through connectors
-status: todo
+status: implemented
 depends: [task-01-an-adapter-can-serve-models.md, task-02-the-host-ships-four-provider-adapters.md]
 layer: "server"
 refs:
@@ -62,3 +62,8 @@ Each attempt reports its outcome to the connector, and each usage record names t
 - A team connector answers only under that team's scope, in a test.
 
 ## Resume
+
+- **Done so far:** `providers.ts` holds the names and `sessionCalls` only, and refuses a file that writes `providers`. `route` takes the open `ProviderConnector`s and the caller. It matches an entry's `provider` by connector id first, and by adapter name otherwise. It orders the caller's own, then the scope team's, then the host's, by id, with each later one a fallback. A `Candidate` carries the connector id, the adapter, the entry, the URL and the key. The listener has `providers()` and `note()` in place of `env`, notes each sent attempt, and writes `provider` and `connector` on the `ModelUse`. `run.ts` hands the proxy `connectorLists.providers` and `connectorLists.note`. `ahpd proxy list` prints the model names only. `ModelCall` has `connector`.
+- **Next action:** none for this task.
+- **Open questions:** none.
+- **Watch out for:** the tests changed in `proxy-route.test.ts`, `proxy-forward.test.ts`, `proxy-policy-usage.test.ts`, `config-check.test.ts`, `proxy-listener.test.ts`, `proxy-list.test.ts`, `proxy-usage-captures.test.ts` and `fixtures/proxy-harness.ts`, which is more than this task's Files list. The `commands/options.ts` schema description also changed, beside the check.

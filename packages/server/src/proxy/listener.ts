@@ -3,23 +3,24 @@
  *
  * A person's own tool posts a chat completion or a message here with its ahpd
  * token, naming a model `<maker>/<name>`. The call is checked (the guard, the
- * caller, the body), routed to the first provider entry that can take it, and
- * sent there with that provider's own model id and key; the provider's answer
+ * caller, the body), routed to the first connector that can take it, and sent
+ * there with that connector's own model id and key; the provider's answer
  * streams back as it came, SSE included, and nothing is translated.
  *
  * Every refusal is the caller's dialect's own error body, so a tool shows it
- * rather than failing to parse it. A provider's key is read from its variable
- * per call and goes into the one upstream header and nowhere else: not a
- * refusal, not a log line, not a record.
+ * rather than failing to parse it. A connector's key is the one the connectors
+ * channel resolved when it opened it, and it goes into the one upstream header
+ * and nowhere else: not a refusal, not a log line, not a record.
  *
- * The proxy configuration is the one read when the daemon started; a
- * provider's key is read from the environment and a caller from the users
- * file on every call.
+ * The model names are the configuration read when the daemon started. The open
+ * connectors and their keys are read per call, a caller from the users file per
+ * call, and each attempt is reported to the connector that served it.
  */
 
 import type { RequestHandler } from '@cofold/remote';
 import {
-  chargeFor, decide, type Cost, type ModelUse, type Owner, type PayOrder, type Policies, type Scope, type Usage, type Users,
+  chargeFor, decide, type Cost, type ModelUse, type Owner, type PayOrder, type Policies, type ProviderConnector, type Scope,
+  type Usage, type Users,
 } from '@ahpd/sdk';
 import { foreign, guarded, isUnder, json, originRefusal, PROXY_PREFIX, type ApiOrigins } from '../http.js';
 import { callerName, callerOf, type ProxyCaller, type SessionCaller } from './caller.js';
@@ -41,7 +42,7 @@ export const MAX_BODY_BYTES = 32 * 1024 * 1024;
 
 /** What the proxy is built from. */
 export interface ProxyOptions {
-  /** The providers and model names, as read when the daemon started. */
+  /** The model names, as read when the daemon started. */
   proxy(): ProxyConfiguration;
   /** The deployment's own token, which is root. */
   token?: string;
@@ -73,8 +74,16 @@ export interface ProxyOptions {
   otherwise(request: Request): Promise<Response>;
   /** One line to the daemon's log. Never handed a header or a key. */
   onProblem?(line: string): void;
-  /** Where a provider's key is read from. The process's environment when absent. */
-  env?: Readonly<Record<string, string | undefined>>;
+  /**
+   * The open provider connectors, read per call, so a connector put or removed
+   * while the daemon runs is used or left at once. The answer may hold a key.
+   */
+  providers(): readonly ProviderConnector[];
+  /**
+   * Record one call's outcome for one connector, as the connectors channel
+   * does: `ok` for a 2xx, and a failure with the status or the error.
+   */
+  note?(id: string, outcome: { ok: boolean; status?: number; error?: string }): void;
   /** The `fetch` a call goes out through. The global one when absent. */
   fetch?: typeof fetch;
   /** Overrides `HEADERS_TIMEOUT_MS`. */
@@ -442,12 +451,13 @@ const policyFor = (options: ProxyOptions, charged: Charged, name: string, zone: 
 };
 
 /** Why one candidate was left, for the log. */
-type Left = { provider: string; why: string };
+type Left = { connector: string; why: string };
 
 /** What one attempt at a candidate came to. */
 type Attempt =
   | { kind: 'answered'; response: Response; controller: AbortController }
-  | { kind: 'failed'; why: string; status: 502 | 504; retry: boolean };
+  /** `sent` is false when the caller had hung up and no request went out. */
+  | { kind: 'failed'; why: string; status: 502 | 504; retry: boolean; sent: boolean };
 
 /**
  * The proxy, as the request handler a listener carries.
@@ -491,7 +501,7 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
    * why `retry` is set from the error's code and not from the failure.
    */
   const attempt = async (request: Request, dialect: Dialect, body: Record<string, unknown>, candidate: Candidate): Promise<Attempt> => {
-    if (request.signal.aborted) return { kind: 'failed', why: 'not tried, the caller hung up', status: 502, retry: false };
+    if (request.signal.aborted) return { kind: 'failed', why: 'not tried, the caller hung up', status: 502, retry: false, sent: false };
     const controller = new AbortController();
     const hangUp = (): void => { controller.abort(); };
     request.signal.addEventListener('abort', hangUp, { once: true });
@@ -509,10 +519,10 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
       return { kind: 'answered', response, controller };
     }
     catch (error) {
-      if (timedOut) return { kind: 'failed', why: `no answer within ${String(headersTimeout / 1000)} s`, status: 504, retry: false };
-      if (request.signal.aborted) return { kind: 'failed', why: 'left when the caller hung up', status: 502, retry: false };
+      if (timedOut) return { kind: 'failed', why: `no answer within ${String(headersTimeout / 1000)} s`, status: 504, retry: false, sent: true };
+      if (request.signal.aborted) return { kind: 'failed', why: 'left when the caller hung up', status: 502, retry: false, sent: true };
       const code = codeOf(error);
-      return { kind: 'failed', why: failureOf(error), status: 502, retry: code !== undefined && NEVER_ARRIVED.has(code) };
+      return { kind: 'failed', why: failureOf(error), status: 502, retry: code !== undefined && NEVER_ARRIVED.has(code), sent: true };
     }
     finally {
       clearTimeout(timer);
@@ -537,33 +547,41 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
     const proxy = options.proxy();
     const charged = chargedAs(caller, options, proxy);
     const check = policyFor(options, charged, name, zone);
-    const routed = await route(proxy, name, dialect, { ...(options.env === undefined ? {} : { env: options.env }), ...(check === undefined ? {} : { allowed: check.allowed }) });
+    const routed = await route(proxy, name, dialect, {
+      providers: options.providers(),
+      caller,
+      ...(check === undefined ? {} : { allowed: check.allowed }),
+    });
     if ('refusal' in routed) return refuse(routed.refusal);
 
     const at = new Date().toISOString();
     const left: Left[] = [];
     const who = callerName(caller);
     const said = (end: string): void => {
-      const tried = left.map((one) => `${one.provider} ${one.why}`).join(', ');
+      const tried = left.map((one) => `${one.connector} ${one.why}`).join(', ');
       say(`proxy: ${who} ${name}: ${tried === '' ? '' : `${tried}; `}${end}`);
+    };
+    /** Keep one attempt in the connector's health, as the connectors channel keeps it. */
+    const noted = (connector: string, outcome: { ok: boolean; status?: number; error?: string }): void => {
+      options.note?.(connector, outcome);
     };
 
     for (const [index, candidate] of routed.candidates.entries()) {
       const last = index === routed.candidates.length - 1;
       const tried = await attempt(request, dialect, body, candidate);
       if (tried.kind === 'failed') {
-        if (!last && tried.retry) {
-          left.push({ provider: candidate.provider, why: tried.why });
-          continue;
-        }
-        left.push({ provider: candidate.provider, why: tried.why });
+        // A call that never went out is not the connector's failure.
+        if (tried.sent) noted(candidate.connector, { ok: false, error: tried.why });
+        left.push({ connector: candidate.connector, why: tried.why });
+        if (!last && tried.retry) continue;
         said(`answered ${String(tried.status)}`);
         const message = tried.status === 504
-          ? `model ${name} on ${candidate.provider} sent no answer in time`
-          : `model ${name} on ${candidate.provider} could not be reached`;
+          ? `model ${name} on ${candidate.connector} sent no answer in time`
+          : `model ${name} on ${candidate.connector} could not be reached`;
         return refuse({ status: tried.status, message });
       }
       const { response, controller } = tried;
+      noted(candidate.connector, { ok: response.ok, status: response.status });
       /*
        * A provider's 401 or 403 is about the key this host called it with and
        * not the credential the caller arrived with, so it is not streamed back
@@ -580,18 +598,18 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
       if (response.status === 401 || response.status === 403) {
         const words = await refusalWords(response, candidate.key === undefined ? [] : [candidate.key]);
         left.push({
-          provider: candidate.provider,
+          connector: candidate.connector,
           why: words === '' ? String(response.status) : `${String(response.status)} ${words}`,
         });
         said('answered 502');
-        return refuse({ status: 502, message: `model ${name} on ${candidate.provider} refused this host's key` });
+        return refuse({ status: 502, message: `model ${name} on ${candidate.connector} refused this host's key` });
       }
       if (!last && (response.status === 429 || response.status >= 500)) {
         await response.body?.cancel().catch(() => undefined);
-        left.push({ provider: candidate.provider, why: String(response.status) });
+        left.push({ connector: candidate.connector, why: String(response.status) });
         continue;
       }
-      if (response.status >= 400 || left.length > 0) said(`${candidate.provider} answered ${String(response.status)}`);
+      if (response.status >= 400 || left.length > 0) said(`${candidate.connector} answered ${String(response.status)}`);
       return streamed(request, dialect, response, controller, (tokens, providerCost) => {
         const pools = check?.keysOf(candidate.entry);
         record(options, charged, {
@@ -599,7 +617,7 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
           ...(providerCost === undefined ? {} : { providerCost }),
           ...(pools === undefined ? {} : { pools }),
         });
-      }, (why) => { say(`proxy: ${who} ${name}: ${candidate.provider} ${why}`); });
+      }, (why) => { say(`proxy: ${who} ${name}: ${candidate.connector} ${why}`); });
     }
     // Unreachable: a route answers at least one candidate.
     return refuse({ status: 502, message: `model ${name} could not be reached` });
@@ -685,11 +703,16 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
     if ('refusal' in called) return refusalBody(dialect, called.refusal);
     const proxy = options.proxy();
     const charged = chargedAs(called.caller, options, proxy);
+    const open = options.providers();
     const names: string[] = [];
     for (const name of Object.keys(proxy.models)) {
       const check = policyFor(options, charged, name, undefined);
       for (const one of DIALECTS) {
-        const routed = await route(proxy, name, one, { ...(options.env === undefined ? {} : { env: options.env }), ...(check === undefined ? {} : { allowed: check.allowed }) });
+        const routed = await route(proxy, name, one, {
+          providers: open,
+          caller: called.caller,
+          ...(check === undefined ? {} : { allowed: check.allowed }),
+        });
         if ('candidates' in routed) { names.push(name); break; }
       }
     }
@@ -753,7 +776,7 @@ const record = (options: ProxyOptions, charged: Charged, call: Answered): void =
       ...(session.chat === undefined ? {} : { chat: session.chat }),
       ...(session.turn === undefined ? {} : { turn: session.turn }),
     }),
-    model: { name: call.name, provider: call.candidate.provider, ...call.tokens },
+    model: { name: call.name, provider: call.candidate.provider, connector: call.candidate.connector, ...call.tokens },
     ...(cost === undefined ? {} : { cost }),
     ...(provider === undefined ? {} : { providerCost: provider }),
     pools: poolsOf(charged.owner, charged.scope, call.pools),

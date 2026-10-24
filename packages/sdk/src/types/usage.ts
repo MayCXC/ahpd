@@ -69,6 +69,8 @@ export interface ModelCall {
   name: string;
   /** Where it ran, such as `openrouter` or `anthropic`. */
   provider?: string;
+  /** The id of the connector that served it, which names whose key paid. */
+  connector?: string;
   /** Prompt tokens. */
   input?: number;
   /** Tokens written back. */

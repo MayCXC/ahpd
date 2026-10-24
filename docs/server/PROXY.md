@@ -2,7 +2,7 @@
 
 The proxy lets a person point their own tool, Claude Code or a script, at this host and call a model by its `<maker>/<name>` with their ahpd token. The host picks the provider, calls it with the provider's own key, and streams the answer back unchanged. Policies say who may call which model, and each call is recorded against the caller's pools.
 
-The providers and the model names are the `modelProxy` key of the configuration; `ahpd proxy list` shows them. This page is about calling them.
+A provider is a connector, made from one of the four adapters the host ships, with its key in the vault or in a daemon variable. The model names are the `modelProxy` key of the configuration, and `ahpd proxy list` shows them. This page is about adding a provider and calling a model through one.
 
 ## Turning it on
 
@@ -53,13 +53,67 @@ A person's call is charged to a team and project, named in an `X-AHP-Scope` head
 
 A session's own token is answered as that session, when the host hands sessions a token for the proxy.
 
+## Adding a provider
+
+A provider is a connector, made from one of the four adapters the host ships. Its key is a secret: the connectors channel keeps it in the vault, or a host connector names a daemon variable with `{ "fromEnv": "<NAME>" }`. The record never holds the key.
+
+| Adapter | Config | Called in |
+| --- | --- | --- |
+| `openrouter` | `key`, required; `endpoint`, which defaults to `https://openrouter.ai/api/v1` | `openai-chat` |
+| `anthropic` | `key`, required; `endpoint`, which defaults to `https://api.anthropic.com` | `anthropic-messages` |
+| `openai` | `key`, required; `endpoint`, which defaults to `https://api.openai.com/v1` | `openai-chat` |
+| `openai-compatible` | `endpoint`, required; `key`, optional; `accepts`, which defaults to `["openai-chat"]` | `accepts` |
+
+A client makes one with `x-ahpd/connectors/put`. This is the host's OpenRouter account, whose key goes to the vault:
+
+```json
+{ "id": "openrouter-main", "adapter": "openrouter", "owner": "host", "config": { "key": "sk-or-..." } }
+```
+
+An `openai-compatible` server, such as a model on this machine, needs no key unless it asks for one:
+
+```json
+{ "id": "local", "adapter": "openai-compatible", "owner": "host", "config": { "endpoint": "http://127.0.0.1:1234/v1" } }
+```
+
+A host connector may name a daemon variable instead of a value for the vault, which is the way to keep a key where it already is:
+
+```json
+{ "id": "openrouter-main", "adapter": "openrouter", "owner": "host", "config": { "key": { "fromEnv": "OPENROUTER_API_KEY" } } }
+```
+
+Only a host connector may name one: a team's or a person's connector is refused. The variable is read when the connector opens, so one that is not set leaves it closed. A connector that is put or removed takes effect on the next call, because the proxy reads the open connectors each time. `x-ahpd-adapters` lists the four adapters with the form and the icon of each.
+
+### Whose connector serves a call
+
+A model entry names a provider, which is an adapter's name or one connector's id. The call goes to the first usable connector of it, in this order:
+
+1. the caller's own, `user:<id>`;
+2. the team of the call's scope, `team:<team>`;
+3. the host's, `host`.
+
+Two connectors of one tier are tried in id order, and each one after the first is a fallback. A team connector serves a call only when the call's scope is that team, and a person's connector serves only that person. To choose one endpoint among several, name the connector's id in the entry. The usage record says which connector's key paid.
+
+### Moving from `modelProxy.providers`
+
+A file that still writes `modelProxy.providers` stops the daemon at start, with a message that names this page. Make one connector for each entry, then remove the key from the file.
+
+| Entry | Connector |
+| --- | --- |
+| `openrouter`, with a key in `OPENROUTER_API_KEY` | `{ "id": "openrouter", "adapter": "openrouter", "owner": "host", "config": { "key": { "fromEnv": "OPENROUTER_API_KEY" } } }` |
+| `anthropic`, with a key in `ANTHROPIC_API_KEY` | `{ "id": "anthropic", "adapter": "anthropic", "owner": "host", "config": { "key": { "fromEnv": "ANTHROPIC_API_KEY" } } }` |
+| `openai`, with a key in `OPENAI_API_KEY` | `{ "id": "openai", "adapter": "openai", "owner": "host", "config": { "key": { "fromEnv": "OPENAI_API_KEY" } } }` |
+| `local`, an `openai-compatible` endpoint | `{ "id": "local", "adapter": "openai-compatible", "owner": "host", "config": { "endpoint": "http://127.0.0.1:1234/v1" } }` |
+
+An entry that named a provider now names the connector's id, or the adapter's name when that is enough. A key the file wrote is a secret, and goes to the vault through the put. A key that was in a daemon variable is `{ "fromEnv": "<NAME>" }`.
+
 ## How a name is routed
 
 The body's `model` is a `<maker>/<name>` from the `modelProxy.models` table. The call goes to the first entry of that name, in the file's order, whose provider:
 
 1. accepts the dialect the call came in,
 2. is allowed by policy, when `policies.check` is on, and
-3. has its key variable set, or needs no key.
+3. has a connector this caller may use, as the order above says.
 
 The body is sent unchanged except for `model`, which becomes that provider's own id. The provider's key goes in its dialect's header: `Authorization: Bearer` for `openai-chat`, `x-api-key` for `anthropic-messages`. Your token, `X-AHP-Scope`, cookies, connection headers (with any header your `Connection` header names) and the account headers below are not sent. Nothing is added to the body: an OpenAI stream that does not ask for `stream_options.include_usage` is recorded without tokens.
 
@@ -99,16 +153,16 @@ Every refusal is the dialect's own error body, so the tool shows the message. On
 | 405 | `invalid_request_error` | A method other than `POST` (or `GET` on `/v1/models`) |
 | 413 | `request_too_large` | A body over 32 MiB |
 | 502 | `api_error` | The provider could not be reached |
-| 503 | `api_error` | Every entry's key variable is unset; the message names each provider and variable, never a value |
+| 503 | `api_error` | No open connector serves any entry for this caller; the message names each provider it looked for, never a value |
 | 504 | `timeout_error` | The provider sent no status in time; the next entry is not tried |
 
 ## The models list
 
-`GET /v1/models` lists the names you could call now: a name with at least one entry whose key is set (or needs none) and that a policy allows you. Only the names are listed, never a provider, its id, a price or a variable. It answers in Anthropic's list shape when `anthropic-version` is sent, and OpenAI's otherwise.
+`GET /v1/models` lists the names you could call now: a name with at least one open connector you may use and that a policy allows you. Only the names are listed, never a connector, its id, a price or a key. It answers in Anthropic's list shape when `anthropic-version` is sent, and OpenAI's otherwise.
 
 ## What is recorded
 
-Each answered call writes one usage record with `source: "proxy"`: the model name, the provider, the tokens the answer reported, the owner (`user:<id>`, or `root:<host>` for the deployment token), the team and project, and the pools those give. A record is written when the stream ends, is cut, or fails. `ahpd usage` shows them.
+Each answered call writes one usage record with `source: "proxy"`: the model name, the adapter that answered, the connector whose key paid, the tokens the answer reported, the owner (`user:<id>`, or `root:<host>` for the deployment token), the team and project, and the pools those give. A record is written when the stream ends, is cut, or fails. `ahpd usage` shows them.
 
 A record carries two costs. `providerCost` is what the provider reported, when it reported one: OpenRouter sends `usage.cost` with `cost_details`, which give the amount and what was sent and what came back. `cost` is what the pools are charged. With a `price` on the entry it is worked out from the price (`from: "price"`), with cache tokens at the input price; without one it is the provider's own figure (`from: "harness"`), so a call nobody priced is charged what it cost. A price that names one side and not the other gives no cost at all when the unnamed side has tokens, because an absent price is not a price of zero; a side priced at 0 is free.
 

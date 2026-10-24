@@ -101,6 +101,8 @@ An unknown key is logged and ignored:
 
 Keys with no flag: `httpApi`, `modelProxy`, `usage`, `policies`, `mcpServers`, `commandParser`. Flags with no key: `--no-plugins`, `--no-cwd`, `--plugin-option`, `--stdio`, `--config-file`.
 
+`modelProxy` holds the model names only: a provider is a connector now, added as [The model proxy](PROXY.md#adding-a-provider) says. A file that still writes `modelProxy.providers` stops the start.
+
 [Reference](REFERENCE.md) has every key.
 
 ## Terminal rules

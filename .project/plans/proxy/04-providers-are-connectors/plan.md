@@ -1,7 +1,7 @@
 ---
 title: A model provider is a connector
 domain: proxy
-status: planned
+status: active
 priority: high
 created: 2026-10-23
 revalidated: 2026-10-23
@@ -83,7 +83,7 @@ tool -> POST /v1/chat/completions -> route: model entry names openrouter
 | `openrouter` and `openai` accept `openai-chat`, and `anthropic` accepts `anthropic-messages` | (defaulted: today's built-ins) | 02 |
 | Each check is one call that needs the key: `GET /key` on OpenRouter, `GET /models` on OpenAI and on an OpenAI-compatible endpoint, and `GET /v1/models` on Anthropic | (defaulted: OpenRouter answers `/models` with no key, so that call proves nothing) | 02 |
 | A check answers `ok` for 2xx, `denied` for 401 and 403, `unreachable` when the call does not connect, and `failed` with the status otherwise | (defaulted: plugin 60's four outcomes) | 02 |
-| The icons are the vendors' marks in colour for OpenRouter, Anthropic and OpenAI, and a coloured Lucide `server` for `openai-compatible`. Softov curates each one | (defaulted: as plugin 58 task 05, and Softov asked for colour on 2026-10-23) | 02 |
+| The icons are the vendors' own marks in colour, and `openai-compatible` is the OpenAI mark in yellow | Softov, 2026-10-24: "open ai icons are not the same. the compact could be the same just yellot. anthropic also is not the same logo." | 02 |
 | A team connector serves a call only when the call's scope is that team | (defaulted: as a team's secret is read only for that team's work) | 03 |
 | Two connectors in one tier are tried in id order, and each one after the first is a fallback | (defaulted: today's fallback, before the first byte) | 03 |
 | Each attempt is reported through `note`: 2xx is `ok`, and any other status or a failed connection is a failure with its status or error | (defaulted: plugin 60 left `note` for the proxy) | 03 |
@@ -109,10 +109,10 @@ tool -> POST /v1/chat/completions -> route: model entry names openrouter
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An adapter can serve models](task-01-an-adapter-can-serve-models.md) | todo | - |
-| [02 - The host ships four provider adapters](task-02-the-host-ships-four-provider-adapters.md) | todo | 01 |
-| [03 - The proxy routes through connectors](task-03-the-proxy-routes-through-connectors.md) | todo | 01, 02 |
-| [04 - The docs say a provider is a connector](task-04-the-docs-say-a-provider-is-a-connector.md) | todo | 03 |
+| [01 - An adapter can serve models](task-01-an-adapter-can-serve-models.md) | implemented | - |
+| [02 - The host ships four provider adapters](task-02-the-host-ships-four-provider-adapters.md) | implemented | 01 |
+| [03 - The proxy routes through connectors](task-03-the-proxy-routes-through-connectors.md) | implemented | 01, 02 |
+| [04 - The docs say a provider is a connector](task-04-the-docs-say-a-provider-is-a-connector.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
@@ -123,7 +123,7 @@ tool -> POST /v1/chat/completions -> route: model entry names openrouter
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-an-adapter-can-serve-models.md](task-01-an-adapter-can-serve-models.md), after plugin 60 is merged.
+- **Done so far:** all four tasks are implemented. An adapter declares `models` and answers `provider`, and the host ships four provider adapters with icons. The proxy routes through the open connectors in owner order, and the docs and the domain say so.
+- **Next action:** Softov moves `config-dev.json` to connectors with `.project/pending/proxy-04-move-config-dev.md`. Then the plan closes with `implemented.md`.
 - **Open questions:** none.
-- **Watch out for:** the model names table stays in the file and keeps `sessionCalls`. Only `providers` goes.
+- **Watch out for:** the model names table stays in the file and keeps `sessionCalls`. Only `providers` goes, and a file that still writes it is refused at start.

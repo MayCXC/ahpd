@@ -60,6 +60,7 @@ import { API_PREFIX, apiHandler, json, listenApi, plainRequests, pluginRoutes, w
 import { servedRegistry, type ServedFacts } from './served.js';
 import { updateMethod } from './update.js';
 import { proxyHandler } from '../proxy/listener.js';
+import { hostAdapters } from '../proxy/adapters.js';
 import { loadPlugins, pluginSet, type LoadOptions } from '../plugins.js';
 import { applyPlugins, type Applied } from '../applyplugins.js';
 import { pluginsChannel } from '../pluginschannel.js';
@@ -549,12 +550,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   });
   /*
    * The model proxy, under `/v1` in front of the API on whichever listener
-   * carries it, and only while `httpApi` is on. Its providers and model
-   * names are the configuration read at startup; the environment, the users
-   * file and the usage store are read per call.
+   * carries it, and only while `httpApi` is on. Its model names are the
+   * configuration read at startup; the open provider connectors, the users
+   * file and the usage store are read per call. The connectors channel is
+   * built below, so its list is read through the closure each time.
    */
   const served = api === undefined ? undefined : proxyHandler({
     proxy: () => options.modelProxy,
+    providers: () => connectorLists.providers(),
+    note: (id, outcome) => { connectorLists.note(id, outcome); },
     ...(token === undefined ? {} : { token }),
     ...(users === undefined ? {} : { users }),
     policies,
@@ -754,6 +758,34 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     },
     onProblem: listProblem,
   });
+  /*
+   * The four provider adapters the host ships, beside the plugins' adapters.
+   * A model provider is a connector, so these are not a plugin: the host
+   * registers them itself, and the proxy calls whatever they opened. Their
+   * icons are read once, in the adapters module.
+   */
+  const hostAdapterSet: Record<string, ServedAdapter> = Object.fromEntries(
+    Object.entries(hostAdapters({ onProblem: stamp })).map(([name, adapter]) => [name, { ...adapter, by: 'host' }]),
+  );
+  /** A plugin adapter whose name a host adapter takes, already said. */
+  const adapterClashes = new Set<string>();
+  /**
+   * The plugins' adapters with the host's over them.
+   *
+   * The host's four are not something a plugin replaces: a plugin that
+   * registers one of the names is said in the log once, and its adapter is not
+   * the one a connector is checked against.
+   */
+  const withHostAdapters = (from: Record<string, ServedAdapter> | undefined): Record<string, ServedAdapter> => {
+    for (const [name, adapter] of Object.entries(from ?? {})) {
+      if (!Object.hasOwn(hostAdapterSet, name) || adapter.by === 'host') continue;
+      const clash = `${adapter.by}:${name}`;
+      if (adapterClashes.has(clash)) continue;
+      adapterClashes.add(clash);
+      stamp(`plugin ${adapter.by} registers the ${name} adapter, which the host ships, so the host's adapter is used`);
+    }
+    return { ...from, ...hostAdapterSet };
+  };
   const lists = servedRecords(
     'ahpd',
     [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel, adapterLists.channel, connectorLists.channel],
@@ -1221,7 +1253,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // listing, the adapters and the routes without anything being rebuilt.
     loaded = answer.loaded;
     failures = answer.failures;
-    adapters = now.adapters ?? {};
+    adapters = withHostAdapters(now.adapters);
     pluginTypes = pluginTriggerTypes(now.pluginTriggers);
     liveRoutes = answer.routes;
     // A plugin loaded later acts on the host as its own client, as one loaded
@@ -1241,7 +1273,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   liveRoutes = registered;
   // And the two channels start answering adapters, which is what a stored
   // connector is checked against when it opens below.
-  adapters = folded.adapters ?? {};
+  adapters = withHostAdapters(folded.adapters);
   // The trigger types a save is now checked against: the host's own two are the
   // store's, and these are what the plugins brought.
   pluginTypes = pluginTriggerTypes(folded.pluginTriggers);

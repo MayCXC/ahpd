@@ -566,8 +566,8 @@ host.registerAdapter({
 - `schema` is checked as a whole, so a `oneOf` with an alternative for each kind
   of connector refuses a field that belongs to another kind, rather than letting
   `open` discover it.
-- `capabilities` are listed for a client. The types are `receive`,
-  `command` and `action`, and `ui` is reserved for a later plan; a type this
+- `capabilities` are listed for a client. The types are `receive`, `command`,
+  `action` and `models`, and `ui` is reserved for a later plan; a type this
   version does not know is shown by its title. An `action` is the one type the
   host runs, as a tool a session calls - [An action offered as a
   tool](#an-action-offered-as-a-tool).
@@ -584,6 +584,19 @@ host.registerAdapter({
   as the tool's answer. An adapter with no `run` offers no action tool, and a
   `run` that throws is what the model is told, under the alias it named.
 - `check(connector)` is optional, and says whether the connector works with a call that needs its key. `connector` is the row `open` got. It answers `{ result, message? }`: `ok` when the service accepted the key, `denied` when it refused the credentials, `unreachable` when the service did not answer, or `failed` for anything else. The host runs it after each open: a put waits for the answer, so a put says whether the key is right, and a start does not, so a slow service cannot hold it. A check that has not answered in 10 seconds counts as `unreachable`, and one that throws is `failed` with its message. An adapter with no `check` leaves its connectors with no check.
+
+- `provider(connector)` is optional, and is how the model proxy calls a
+  connector of the adapter. It answers `{ endpoint, accepts, key? }`: where the
+  provider answers, the dialects it is called in (`openai-chat` or
+  `anthropic-messages`), and the key a call goes out with, or nothing when it
+  takes none. `connector` is the row `open` got, so a `writeOnly` field is the
+  value the vault holds. An adapter with no `provider` serves no model.
+- An adapter whose connectors serve models declares a `models` capability. The
+  capability tells a client that the proxy may call a connector of it; the
+  `provider` member says where. The host lists the open connectors whose adapter
+  has `provider` to the proxy, with the owner of each, and the proxy chooses
+  among them. The host itself ships four: `openrouter`, `anthropic`, `openai`
+  and `openai-compatible` - [The model proxy](../server/PROXY.md#adding-a-provider).
 
 The `@ahpd/activepieces` plugin makes one adapter for each Activepieces piece its `pieces` option names, and runs the actions of each in a child process - [activepieces.md](activepieces.md).
 

@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Cost, ModelUse } from '@ahpd/sdk';
 import {
   fakeProvider, memoryUsage, pause, people, send, serveProxy,
-  type FakeProvider, type People, type Served,
+  type FakeProvider, type People, type ProviderFixture, type Served,
 } from './fixtures/proxy-harness.js';
 import type { ProxySetting } from '../src/proxy/providers.js';
 
@@ -41,18 +41,20 @@ afterEach(async () => {
 });
 
 /**
- * Both providers answer at the fake, and no entry carries a price, so what a
+ * Both connectors answer at the fake, and no entry carries a price, so what a
  * record is charged is what the answer itself reported.
  */
-const table = (endpoint: string): ProxySetting => ({
-  providers: {
-    openrouter: { endpoint, accepts: ['anthropic-messages', 'openai-chat'] },
-    deepseek: { endpoint, accepts: ['anthropic-messages', 'openai-chat'] },
-  },
-  models: {
-    'anthropic/claude-sonnet-4': [{ provider: 'openrouter', id: 'anthropic/claude-sonnet-4' }],
-    'deepseek/deepseek-flash': [{ provider: 'deepseek', id: 'deepseek-flash' }],
-  },
+const table = (endpoint: string) => ({
+  proxy: {
+    models: {
+      'anthropic/claude-sonnet-4': [{ provider: 'openrouter', id: 'anthropic/claude-sonnet-4' }],
+      'deepseek/deepseek-flash': [{ provider: 'deepseek', id: 'deepseek-flash' }],
+    },
+  } satisfies ProxySetting,
+  providers: [
+    { id: 'openrouter', adapter: 'openai-compatible', endpoint, accepts: ['anthropic-messages', 'openai-chat'] },
+    { id: 'deepseek', adapter: 'openai-compatible', endpoint, accepts: ['anthropic-messages', 'openai-chat'] },
+  ] as ProviderFixture[],
 });
 
 /** The tokens a record keeps of an answer. */
@@ -213,7 +215,7 @@ const replay = async (one: Case): Promise<{ answers: ModelUse[]; sent: number }>
   });
   fakes.push(provider);
   const usage = memoryUsage();
-  const served = await serveProxy({ users: who.users, env: {}, proxy: table(provider.endpoint), usage: () => usage });
+  const served = await serveProxy({ users: who.users, ...table(provider.endpoint), usage: () => usage });
   open.push(served);
   const answered = await send(served.port, one.at, {
     headers: { 'x-api-key': who.ana },
@@ -238,8 +240,9 @@ describe('a captured answer', () => {
       expect(sent).toBe(1);
       const [entry] = answers;
       expect(entry?.source).toBe('proxy');
-      // The tokens the answer reported, with the cache counted once.
-      expect(entry?.model).toEqual({ name: one.name, provider: one.provider, ...one.tokens });
+      // The adapter that answered, the connector whose key paid, and the
+      // tokens the answer reported, with the cache counted once.
+      expect(entry?.model).toEqual({ name: one.name, provider: 'openai-compatible', connector: one.provider, ...one.tokens });
       // No entry carries a price, so the pools are charged what the answer
       // reported - the same figure kept beside it as the provider's cost.
       expect(entry?.providerCost).toEqual(one.cost);

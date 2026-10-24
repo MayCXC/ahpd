@@ -9,14 +9,14 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { memoryPolicies, type Grant, type Users } from '@ahpd/sdk';
 import {
   answerJson, fakeProvider, isAnthropicError, isOpenAiError, MARKER, memoryUsage, people, ROOT_TOKEN, send, serveProxy,
-  type People, type Served, type ServeOptions,
+  type People, type ProviderFixture, type Served, type ServeOptions,
 } from './fixtures/proxy-harness.js';
 
 let folder: string;
@@ -56,11 +56,28 @@ const personOf = async (id: string, grants: Grant[]): Promise<string> => {
   return who.users.mint(id);
 };
 
-/** A table whose one name, `fake/model`, is served by `endpoint` in both dialects with no key. */
+/** A table whose one name, `fake/model`, is served by one connector at `endpoint` in both dialects. */
 const table = (endpoint: string) => ({
-  providers: { fake: { endpoint, accepts: ['openai-chat', 'anthropic-messages'] as ('openai-chat' | 'anthropic-messages')[] } },
-  models: { 'fake/model': [{ provider: 'fake', id: 'fake-model' }] },
+  proxy: { models: { 'fake/model': [{ provider: 'fake', id: 'fake-model' }] } },
+  providers: [{ id: 'fake', adapter: 'fake', endpoint, accepts: ['openai-chat', 'anthropic-messages'] as ('openai-chat' | 'anthropic-messages')[] }],
 });
+
+/**
+ * A host connector at `endpoint`, kept where the daemon reads its connectors.
+ *
+ * The adapter is one the host ships, so no plugin registers it, and its key is
+ * read from `variable` of the daemon's own environment when one is named.
+ */
+const writeConnector = (endpoint: string, variable?: string): void => {
+  const dir = join(folder, 'ahpd', 'connectors');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'fake.json'), `${JSON.stringify({
+    id: 'fake',
+    adapter: 'openai-compatible',
+    owner: 'host',
+    config: { endpoint, ...(variable === undefined ? {} : { key: { fromEnv: variable } }) },
+  }, null, 2)}\n`);
+};
 
 const CHAT = '/v1/chat/completions';
 const MESSAGES = '/v1/messages';
@@ -70,7 +87,7 @@ const asRoot = { authorization: `Bearer ${ROOT_TOKEN}` };
 describe('/v1 answers in each dialect, and refuses in its own error shape', () => {
   it('reads /v1/chat/completions as openai-chat and /v1/messages as anthropic-messages', async () => {
     const fake = await okProvider();
-    const served = await proxy({ proxy: table(fake.endpoint) });
+    const served = await proxy({ ...table(fake.endpoint) });
     expect((await send(served.port, CHAT, { headers: asRoot, body: CALL })).status).toBe(200);
     expect((await send(served.port, MESSAGES, { headers: asRoot, body: CALL })).status).toBe(200);
     expect(fake.received.map((one) => one.url)).toEqual(['/v1/chat/completions', '/v1/v1/messages']);
@@ -139,7 +156,7 @@ describe('/v1 answers in each dialect, and refuses in its own error shape', () =
 
   it('accepts a loopback Host at any port, which is where a forward lands', async () => {
     const fake = await okProvider();
-    const served = await proxy({ proxy: table(fake.endpoint) });
+    const served = await proxy({ ...table(fake.endpoint) });
     for (const host of ['127.0.0.1:41999', 'localhost:7', '[::1]:65000', 'localhost']) {
       expect((await send(served.port, CHAT, { headers: { ...asRoot, host }, body: CALL })).status, host).toBe(200);
     }
@@ -157,7 +174,7 @@ describe('/v1 answers in each dialect, and refuses in its own error shape', () =
 describe('a caller is a person, root or a session, and may call', () => {
   it('refuses a call with no credential, or one this host does not know, with 401 before anything is read', async () => {
     const fake = await okProvider();
-    const served = await proxy({ proxy: table(fake.endpoint) });
+    const served = await proxy({ ...table(fake.endpoint) });
     for (const path of [CHAT, MESSAGES]) {
       const none = await send(served.port, path, { body: CALL });
       expect(none.status).toBe(401);
@@ -174,7 +191,7 @@ describe('a caller is a person, root or a session, and may call', () => {
 
   it('takes the credential as Bearer or as x-api-key, and refuses two that differ', async () => {
     const fake = await okProvider();
-    const served = await proxy({ proxy: table(fake.endpoint) });
+    const served = await proxy({ ...table(fake.endpoint) });
     expect((await send(served.port, CHAT, { headers: { authorization: `Bearer ${who.ana}` }, body: CALL })).status).toBe(200);
     expect((await send(served.port, MESSAGES, { headers: { 'x-api-key': who.ana }, body: CALL })).status).toBe(200);
     expect((await send(served.port, CHAT, { headers: { authorization: `Bearer ${who.ana}`, 'x-api-key': who.ana }, body: CALL })).status).toBe(200);
@@ -186,13 +203,13 @@ describe('a caller is a person, root or a session, and may call', () => {
 
   it('answers the deployment token as root, which needs no grant and no scope', async () => {
     const fake = await okProvider();
-    const served = await proxy({ proxy: table(fake.endpoint) });
+    const served = await proxy({ ...table(fake.endpoint) });
     expect((await send(served.port, CHAT, { headers: { 'x-api-key': ROOT_TOKEN }, body: CALL })).status).toBe(200);
   });
 
   it('refuses a person without proxy:call with 403 naming the grant', async () => {
     const fake = await okProvider();
-    const served = await proxy({ proxy: table(fake.endpoint) });
+    const served = await proxy({ ...table(fake.endpoint) });
     const fay = await send(served.port, CHAT, { headers: { authorization: `Bearer ${who.fay}` }, body: CALL });
     expect(fay.status).toBe(403);
     expect(isOpenAiError(fay.json)).toBe(true);
@@ -210,7 +227,7 @@ describe('a caller is a person, root or a session, and may call', () => {
 
   it('calls for a role holding only proxy:call, and refuses a list to it', async () => {
     const fake = await okProvider();
-    const served = await proxy({ proxy: table(fake.endpoint) });
+    const served = await proxy({ ...table(fake.endpoint) });
     const caller = await personOf('cal', ['proxy:call']);
     expect((await send(served.port, CHAT, { headers: { authorization: `Bearer ${caller}` }, body: CALL })).status).toBe(200);
     const listed = await send(served.port, '/v1/models', { headers: { 'x-api-key': caller } });
@@ -229,7 +246,7 @@ describe('a caller is a person, root or a session, and may call', () => {
   it('reads the scope from X-AHP-Scope, then ?scope=, then the primary', async () => {
     const fake = await okProvider();
     const usage = memoryUsage();
-    const served = await proxy({ proxy: table(fake.endpoint), usage: () => usage });
+    const served = await proxy({ ...table(fake.endpoint), usage: () => usage });
     const key = { 'x-api-key': who.ana };
     expect((await send(served.port, CHAT, { headers: key, body: CALL })).status).toBe(200);
     expect((await send(served.port, CHAT, { headers: { ...key, 'x-ahp-scope': 'backend:ahpd' }, body: CALL })).status).toBe(200);
@@ -251,7 +268,7 @@ describe('a caller is a person, root or a session, and may call', () => {
     let verified = 0;
     const counting: Users = { ...who.users, verify: async (token) => { verified += 1; return who.users.verify(token); } };
     const served = await proxy({
-      proxy: table(fake.endpoint),
+      ...table(fake.endpoint),
       users: counting,
       whose: (token) => (token === 'session-token' ? { session: 's-1', chat: 'c-1', turn: 't-1' } : undefined),
     });
@@ -263,7 +280,7 @@ describe('a caller is a person, root or a session, and may call', () => {
 
   it('accepts only the deployment token and whose on a host with no users directory', async () => {
     const fake = await okProvider();
-    const served = await serveProxy({ proxy: table(fake.endpoint), whose: (token) => (token === 's' ? { session: 's-1' } : undefined) });
+    const served = await serveProxy({ ...table(fake.endpoint), whose: (token) => (token === 's' ? { session: 's-1' } : undefined) });
     open.push(served);
     expect((await send(served.port, CHAT, { headers: asRoot, body: CALL })).status).toBe(200);
     expect((await send(served.port, CHAT, { headers: { authorization: 'Bearer s' }, body: CALL })).status).toBe(200);
@@ -274,23 +291,28 @@ describe('a caller is a person, root or a session, and may call', () => {
 });
 
 describe('GET /v1/models lists the names a caller may use', () => {
-  /** Softov's table, as a fixture. */
+  /** Softov's table and the connectors it names, as fixtures. */
   const SOFTOV = {
-    providers: { local: { endpoint: 'http://127.0.0.1:1/v1', accepts: ['openai-chat'] as 'openai-chat'[] } },
-    models: {
-      'anthropic/claude-sonnet-5-5': [
-        { provider: 'anthropic', id: 'claude-sonnet-5-5' },
-        { provider: 'openrouter', id: 'anthropic/claude-sonnet-5.5', price: { input: 2, output: 10 } },
-      ],
-      'anthropic/claude-opus-5-5': [{ provider: 'anthropic', id: 'claude-opus-5-5' }],
-      'openai/gpt-5.5': [{ provider: 'openrouter', id: 'openai/gpt-5.5', price: { input: 5, output: 30 } }],
-      'local/default': [{ provider: 'local', id: 'local-model' }],
+    proxy: {
+      models: {
+        'anthropic/claude-sonnet-5-5': [
+          { provider: 'anthropic', id: 'claude-sonnet-5-5' },
+          { provider: 'openrouter', id: 'anthropic/claude-sonnet-5.5', price: { input: 2, output: 10 } },
+        ],
+        'anthropic/claude-opus-5-5': [{ provider: 'anthropic', id: 'claude-opus-5-5' }],
+        'openai/gpt-5.5': [{ provider: 'openrouter', id: 'openai/gpt-5.5', price: { input: 5, output: 30 } }],
+        'local/default': [{ provider: 'local', id: 'local-model' }],
+      },
     },
+    providers: [
+      { id: 'openrouter', adapter: 'openrouter', endpoint: 'https://openrouter.ai/api/v1', accepts: ['openai-chat'] },
+      { id: 'anthropic', adapter: 'anthropic', endpoint: 'https://api.anthropic.com', accepts: ['anthropic-messages'] },
+      { id: 'local', adapter: 'openai-compatible', endpoint: 'http://127.0.0.1:1/v1', accepts: ['openai-chat'], key: null },
+    ] satisfies ProviderFixture[],
   };
-  const ALL_KEYS = { OPENROUTER_API_KEY: MARKER, ANTHROPIC_API_KEY: MARKER, OPENAI_API_KEY: MARKER };
 
-  it('lists every name with a key set, in OpenAI\'s shape by default', async () => {
-    const served = await proxy({ proxy: SOFTOV, env: ALL_KEYS });
+  it('lists every name an open connector serves, in OpenAI\'s shape by default', async () => {
+    const served = await proxy({ ...SOFTOV });
     const got = await send(served.port, '/v1/models', { headers: { authorization: `Bearer ${who.ana}` } });
     expect(got.status).toBe(200);
     expect(got.json).toEqual({
@@ -309,7 +331,7 @@ describe('GET /v1/models lists the names a caller may use', () => {
   });
 
   it('answers in Anthropic\'s shape when anthropic-version is sent', async () => {
-    const served = await proxy({ proxy: SOFTOV, env: ALL_KEYS });
+    const served = await proxy({ ...SOFTOV });
     const got = await send(served.port, '/v1/models', { headers: { 'x-api-key': who.ana, 'anthropic-version': '2023-06-01' } });
     expect(got.status).toBe(200);
     const body = got.json as { data: { type: string; id: string; display_name: string; created_at: string }[]; has_more: boolean; first_id: string; last_id: string };
@@ -320,8 +342,8 @@ describe('GET /v1/models lists the names a caller may use', () => {
     expect(body.last_id).toBe('local/default');
   });
 
-  it('drops a name whose every entry has no key set', async () => {
-    const served = await proxy({ proxy: SOFTOV, env: { OPENROUTER_API_KEY: MARKER } });
+  it('drops a name whose every entry names no open connector', async () => {
+    const served = await proxy({ proxy: SOFTOV.proxy, providers: SOFTOV.providers.filter((one) => one.id !== 'anthropic') });
     const got = await send(served.port, '/v1/models', { headers: { 'x-api-key': who.ana } });
     expect((got.json as { data: { id: string }[] }).data.map((one) => one.id)).toEqual(['anthropic/claude-sonnet-5-5', 'openai/gpt-5.5', 'local/default']);
   });
@@ -330,7 +352,7 @@ describe('GET /v1/models lists the names a caller may use', () => {
     const policies = memoryPolicies();
     await policies.put({ id: 'everyone', scope: 'all', kind: 'model', effect: 'allow', match: { model: ['*'] } });
     await policies.put({ id: 'no-openai', scope: 'all', kind: 'model', effect: 'deny', match: { model: ['openai/*'] } });
-    const served = await proxy({ proxy: SOFTOV, env: ALL_KEYS, policies, policiesCheck: true });
+    const served = await proxy({ ...SOFTOV, policies, policiesCheck: true });
     const ana = await send(served.port, '/v1/models', { headers: { 'x-api-key': who.ana } });
     expect((ana.json as { data: { id: string }[] }).data.map((one) => one.id)).not.toContain('openai/gpt-5.5');
     expect((ana.json as { data: { id: string }[] }).data).toHaveLength(3);
@@ -339,7 +361,7 @@ describe('GET /v1/models lists the names a caller may use', () => {
   });
 
   it('needs proxy:models, and refuses no credential with 401 in OpenAI\'s body', async () => {
-    const served = await proxy({ proxy: SOFTOV, env: ALL_KEYS });
+    const served = await proxy({ ...SOFTOV });
     const none = await send(served.port, '/v1/models');
     expect(none.status).toBe(401);
     expect(isOpenAiError(none.json)).toBe(true);
@@ -353,7 +375,7 @@ describe('GET /v1/models lists the names a caller may use', () => {
   });
 
   it('lists for a role holding only proxy:models, and refuses a call to it', async () => {
-    const served = await proxy({ proxy: SOFTOV, env: ALL_KEYS });
+    const served = await proxy({ ...SOFTOV });
     const lister = await personOf('lis', ['proxy:models']);
     const listed = await send(served.port, '/v1/models', { headers: { 'x-api-key': lister } });
     expect(listed.status).toBe(200);
@@ -428,13 +450,11 @@ const daemon = (config: unknown, env: Record<string, string> = {}): Promise<Daem
 describe('the daemon serves /v1 beside /api, and only while httpApi is on', () => {
   it('answers a call on its own port with httpApi on, never printing the provider\'s key', async () => {
     const fake = await okProvider();
+    writeConnector(fake.endpoint, 'FAKE_PROVIDER_KEY');
     const one = await daemon({
       httpApi: true,
       plugins: [BACKEND],
-      modelProxy: {
-        providers: { fake: { endpoint: fake.endpoint, accepts: ['openai-chat'], key: { env: 'FAKE_PROVIDER_KEY' } } },
-        models: { 'fake/model': [{ provider: 'fake', id: 'fake-model' }]},
-      },
+      modelProxy: { models: { 'fake/model': [{ provider: 'fake', id: 'fake-model' }] } },
     }, { FAKE_PROVIDER_KEY: MARKER });
     const got = await send(one.port, CHAT, { headers: asRoot, body: CALL });
     expect(got.status).toBe(200);
@@ -456,7 +476,8 @@ describe('the daemon serves /v1 beside /api, and only while httpApi is on', () =
 
   it('moves /v1 with /api to the API\'s own port', async () => {
     const fake = await okProvider();
-    const one = await daemon({ httpApi: { port: 0 }, plugins: [BACKEND], modelProxy: table(fake.endpoint) });
+    writeConnector(fake.endpoint);
+    const one = await daemon({ httpApi: { port: 0 }, plugins: [BACKEND], modelProxy: table(fake.endpoint).proxy });
     expect(one.apiPort).toBeGreaterThan(0);
     expect((await send(one.apiPort, CHAT, { headers: asRoot, body: CALL })).status).toBe(200);
     const moved = await send(one.port, CHAT, { headers: asRoot, body: CALL });

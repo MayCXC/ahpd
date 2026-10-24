@@ -1,29 +1,36 @@
 /**
- * Which provider a model name is called on.
+ * Which connector a model name is called on.
  *
  * A name lists the entries serving it in the order the file writes them, and a
- * call goes to the first that can take it: its provider accepts the caller's
- * dialect, a policy allows it, and its key is set or it has none. The rest that
- * could are kept in order, for the listener to fall back to when the first
- * fails before answering.
+ * call goes to each entry's connectors in turn: the caller's own first, then
+ * the scope team's, then the host's, each tier in id order. An entry's provider
+ * names an adapter, and every open connector of it is a candidate in that
+ * order; it may also name one connector's id, which is the only candidate for
+ * it. A policy may refuse an entry, and a connector whose provider does not
+ * speak the caller's dialect is left out. The rest are kept in order, for the
+ * listener to fall back to when the first fails before answering.
  *
  * Nothing is called and nothing is logged here: what a route answers is known
- * from the table, the policy and the environment, so a call that could never
- * be made is refused before anything is spent finding that out.
+ * from the table, the open connectors and the policy, so a call that could
+ * never be made is refused before anything is spent finding that out.
  */
 
+import type { ProviderConnector } from '@ahpd/sdk';
+import type { ProxyCaller } from './caller.js';
 import { CALLER_PATHS, UPSTREAM_PATHS, type Refusal } from './dialects.js';
 import { DIALECTS, type Dialect, type ModelEntry, type ProxyConfiguration } from './providers.js';
 
-/** One entry a call may go to, with everything the call needs. */
+/** One connector a call may go to, with everything the call needs. */
 export interface Candidate {
-  /** The provider's id, as the table names it. */
+  /** The connector's id, which names whose key pays for the call. */
+  connector: string;
+  /** The adapter that connector is of, such as `openrouter`. */
   provider: string;
   /** The entry: the provider's own model id and its price. */
   entry: ModelEntry;
   /** The URL the call is posted to. */
   url: string;
-  /** The provider's key, read from its variable; absent for a provider with none. */
+  /** The connector's key, from the vault or the daemon's environment; absent when it has none. */
   key?: string;
 }
 
@@ -32,14 +39,77 @@ export type Routed = { candidates: Candidate[] } | { refusal: Refusal };
 
 /** What a route reads besides the table. */
 export interface RouteOptions {
-  /** Where keys are read from. The process's environment when absent. */
-  env?: Readonly<Record<string, string | undefined>>;
+  /** The open provider connectors, as the connectors channel lists them. */
+  providers: readonly ProviderConnector[];
+  /** Who makes the call: their own connectors come first, then a team's, then the host's. */
+  caller?: ProxyCaller;
   /**
    * Why a policy refuses this entry, or nothing when it allows it. Every entry
    * is allowed when absent. A promise, because a policy store is read.
    */
   allowed?(entry: ModelEntry): string | undefined | Promise<string | undefined>;
 }
+
+/** Where a caller stands among connector owners: the person and the team a connector may be theirs. */
+interface Places {
+  /** The id of the person the call runs for, when it runs for one. */
+  me?: string;
+  /** The team the call is charged to, when it is. */
+  team?: string;
+}
+
+/**
+ * The person and the team a caller brings.
+ *
+ * A person is themselves. A session is the person whose work it is, when
+ * `owner` names one. Root is the daemon, which owns no connector: it calls the
+ * host's.
+ */
+const placesOf = (caller?: ProxyCaller): Places => {
+  if (caller === undefined || caller.kind === 'root') return {};
+  const team = caller.scope?.team;
+  const me = caller.kind === 'person'
+    ? caller.principal.id
+    : caller.owner !== undefined && caller.owner.startsWith('user:') ? caller.owner.slice('user:'.length) : undefined;
+  return { ...(me === undefined ? {} : { me }), ...(team === undefined ? {} : { team }) };
+};
+
+/** Which tier a connector serves a caller from: 0 their own, 1 their team's, 2 the host's, `undefined` nobody's it is. */
+const tierOf = (connector: ProviderConnector, places: Places): 0 | 1 | 2 | undefined => {
+  if (connector.owner === 'host') return 2;
+  if (places.me !== undefined && connector.owner === `user:${places.me}`) return 0;
+  if (places.team !== undefined && connector.owner === `team:${places.team}`) return 1;
+  return undefined;
+};
+
+/**
+ * The connectors an entry names at all, whoever owns them.
+ *
+ * An entry names one connector by its id when such a connector exists, and
+ * that connector alone: the id is how a person points at one endpoint. It names
+ * an adapter otherwise, and every open connector of that adapter answers.
+ */
+const namedBy = (entry: ModelEntry, providers: readonly ProviderConnector[]): ProviderConnector[] => {
+  const byId = providers.filter((one) => one.id === entry.provider);
+  if (byId.length > 0) return byId;
+  return providers.filter((one) => one.adapter === entry.provider);
+};
+
+/**
+ * The connectors a caller may use for an entry, in the order they are tried.
+ *
+ * Their own first, then their team's, then the host's, each tier in connector
+ * id order. A connector of another person or another team is not theirs.
+ */
+const usableFor = (entry: ModelEntry, providers: readonly ProviderConnector[], places: Places): ProviderConnector[] =>
+  namedBy(entry, providers)
+    .map((one) => ({ one, tier: tierOf(one, places) }))
+    .filter((one): one is { one: ProviderConnector; tier: 0 | 1 | 2 } => one.tier !== undefined)
+    .sort((one, two) => one.tier - two.tier || one.one.id.localeCompare(two.one.id))
+    .map((one) => one.one);
+
+/** Whether a connector's provider speaks one dialect. */
+const speaks = (connector: ProviderConnector, dialect: Dialect): boolean => connector.provider.accepts.includes(dialect);
 
 /**
  * An endpoint and a dialect's path, joined with exactly one slash.
@@ -50,26 +120,34 @@ export interface RouteOptions {
 export const upstreamUrl = (endpoint: string, dialect: Dialect): string =>
   `${endpoint.replace(/\/+$/u, '')}${UPSTREAM_PATHS[dialect]}`;
 
+/** The same provider named twice, once. */
+const distinct = (names: readonly string[]): string[] => [...new Set(names)];
+
 /**
- * The entries a call of `name` in `dialect` may go to, or the refusal.
+ * The candidates a call of `name` in `dialect` may go to, or the refusal.
  *
- * The filters run in the order the refusals are told: no entry at all, no
- * entry in this dialect, none a policy allows, none with its key set. So a
- * name a policy refuses is a 403 whatever its keys, and a key is only reported
- * missing for an entry the caller could otherwise have used.
+ * The filters run in the order the refusals are told: no entry at all, no open
+ * connector for the entries, no connector in this dialect, none a policy
+ * allows, and none the caller may use. So a name a policy refuses is a 403
+ * whatever its connectors, and a connector is only reported unusable for an
+ * entry the caller could otherwise have used.
  */
-export async function route(proxy: ProxyConfiguration, name: string, dialect: Dialect, options: RouteOptions = {}): Promise<Routed> {
-  const env = options.env ?? process.env;
+export async function route(proxy: ProxyConfiguration, name: string, dialect: Dialect, options: RouteOptions): Promise<Routed> {
   const entries = (Object.hasOwn(proxy.models, name) ? proxy.models[name] : undefined) ?? [];
-  // An entry naming a provider the table does not hold serves nothing.
-  const known = entries.filter((entry) => Object.hasOwn(proxy.providers, entry.provider));
-  if (known.length === 0) {
+  if (entries.length === 0) {
     return { refusal: { status: 404, message: `model ${name} is not served here`, code: 'model_not_found' } };
   }
 
-  const speaking = known.filter((entry) => proxy.providers[entry.provider]?.accepts.includes(dialect));
+  const places = placesOf(options.caller);
+  // An entry naming a provider no open connector answers serves nothing yet.
+  const known = entries.filter((entry) => namedBy(entry, options.providers).length > 0);
+  if (known.length === 0) {
+    return { refusal: { status: 503, message: `model ${name} has no open connector for ${distinct(entries.map((entry) => entry.provider)).join(', ')}` } };
+  }
+
+  const speaking = known.filter((entry) => namedBy(entry, options.providers).some((one) => speaks(one, dialect)));
   if (speaking.length === 0) {
-    const other = DIALECTS.find((one) => one !== dialect && known.some((entry) => proxy.providers[entry.provider]?.accepts.includes(one)));
+    const other = DIALECTS.find((one) => one !== dialect && known.some((entry) => namedBy(entry, options.providers).some((connector) => speaks(connector, one))));
     const where = other === undefined ? '' : ` is served in ${other}, not ${dialect}: call POST ${CALLER_PATHS[other]}`;
     return { refusal: { status: 404, message: `model ${name}${where}`, code: 'model_not_found' } };
   }
@@ -84,24 +162,25 @@ export async function route(proxy: ProxyConfiguration, name: string, dialect: Di
   if (allowed.length === 0) return { refusal: { status: 403, message: firstRefusal ?? `model ${name} is refused` } };
 
   const candidates: Candidate[] = [];
-  const missing: string[] = [];
+  const nowhere: string[] = [];
   for (const entry of allowed) {
-    const provider = proxy.providers[entry.provider];
-    if (provider === undefined) continue;
-    const key = provider.key === undefined ? undefined : env[provider.key.env];
-    if (provider.key !== undefined && key === undefined) {
-      missing.push(`${entry.provider} needs ${provider.key.env}`);
+    const usable = usableFor(entry, options.providers, places).filter((one) => speaks(one, dialect));
+    if (usable.length === 0) {
+      nowhere.push(entry.provider);
       continue;
     }
-    candidates.push({
-      provider: entry.provider,
-      entry,
-      url: upstreamUrl(provider.endpoint, dialect),
-      ...(key === undefined ? {} : { key }),
-    });
+    for (const one of usable) {
+      candidates.push({
+        connector: one.id,
+        provider: one.adapter,
+        entry,
+        url: upstreamUrl(one.provider.endpoint, dialect),
+        ...(one.provider.key === undefined ? {} : { key: one.provider.key }),
+      });
+    }
   }
   if (candidates.length === 0) {
-    return { refusal: { status: 503, message: `model ${name} has no provider with its key set: ${missing.join(', ')}` } };
+    return { refusal: { status: 503, message: `model ${name} has no connector this caller may use for ${distinct(nowhere).join(', ')}` } };
   }
   return { candidates };
 }

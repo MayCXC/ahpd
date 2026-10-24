@@ -1,6 +1,6 @@
 ---
 title: The docs say a provider is a connector
-status: todo
+status: implemented
 depends: [task-03-the-proxy-routes-through-connectors.md]
 layer: "docs"
 refs:
@@ -45,3 +45,8 @@ Softov has the steps to move his own file before he restarts.
 - By hand: Softov follows the pending file and his daemon starts with the proxy working.
 
 ## Resume
+
+- **Done so far:** `docs/server/PROXY.md` has "Adding a provider", "Whose connector serves a call" and "Moving from `modelProxy.providers`". Its routing, refusal, models list and record sections name connectors. `docs/server/CONFIGURE.md` points at those sections. `docs/plugins/PLUGINS.md` lists `models` among the capability types and documents `provider(connector)`. `.project/plans/proxy/00-proxy.md` has the four adapters, the owner order and the channel in its contracts and runtime path. `.project/pending/proxy-04-move-config-dev.md` has Softov's steps.
+- **Next action:** none for this task. Softov moves `config-dev.json` before the restart, and curates the four icons.
+- **Open questions:** none.
+- **Watch out for:** the move section is the only place in `docs` that writes the vendor key variables. `docs/server/CONFIGURE.md` names `modelProxy.providers` only to say the start refuses it.
