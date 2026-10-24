@@ -8,6 +8,8 @@
 
 Claude Code as a backend for [`@ahpd/sdk`](https://www.npmjs.com/package/@ahpd/sdk), and the plugin that lets the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon run it.
 
+The plugin registers the agent kind `claude`: every Claude Code agent is a record on the agents channel, `x-ahpd-agents`, and one load serves all of them. A record's id is the provider a client names, and its `config` holds what that one agent runs on.
+
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/agent-claude`](https://github.com/softov/ahpd/tree/main/packages/agent-claude).
 
 ## Install
@@ -35,7 +37,7 @@ Update, remove and one-run flags such as `--plugin` are in [Plugins](https://git
 
 The ordinary install takes no options: it catalogues whatever directories the daemon was started on. `paths` is the one option a person sets most often, because it narrows the catalogue the daemon serves. Everything else has a default that fits most installs. The daemon loads the change on its next restart.
 
-Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. An option written per variant, such as `provider`, `displayName`, `models` or `keepCliModels`, fails the load and says where it goes: inside `presets.<id>`.
+Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. These are the plugin's answers for every agent it serves, not any one agent's: what one agent runs on is its record's `config`, below. `provider`, `displayName` and `name` are not options at all - a record's id is the provider and its `name` is what a client draws.
 
 | Option | Default | What it does |
 | --- | --- | --- |
@@ -43,45 +45,45 @@ Every option below is a key under `options` in the plugin's entry, and the daemo
 | `computerExecutable` | `claude` | Where the CLI is *inside a machine* |
 | `computerCli` | `part` | Where the CLI a machine runs comes from |
 | `computerCliFallback` | `refuse` | With `computerCli: "part"`, what a machine gets when the `claude` part cannot be built |
-| `computerConfigDir` | `/ahpd/<variant>`, or `/ahpd/claude` for the built-in | The configuration directory the CLI reads *inside a machine*; `false` leaves the image's own |
+| `computerConfigDir` | `/ahpd/<id>`, or `/ahpd/claude` for the first record | The configuration directory the CLI reads *inside a machine*; `false` leaves the image's own |
 | `workerStop` | `worker` | What a stop given in a subagent's chat stops |
 | `handshakeTimeoutMs` | `120000` | How long the CLI has to answer its handshake before its session treats it as a CLI that died |
-| `presets` | the built-in `claude` | The variants this package registers an agent for, by the id clients name |
 
 `computerCli` is `part`, the `claude` part this host builds at its pinned version, or `host`, which mounts this host's own installed CLI. `computerCliFallback` is `refuse`, which refuses a Claude session in a machine and names the part, or `host`, which mounts this host's own CLI instead and logs that it did. `workerStop` is `worker`, which stops that subagent and lets the turn that started it go on, or `session`, which cancels that turn instead. `handshakeTimeoutMs` is how long a CLI has to take the control request that says it is up: a cold start with several MCP servers is slow, and a machine slower than that is what the option is for. A CLI that misses the bound is treated as one that died, so the turn fails with that reason and the query is closed.
 
-### `presets.<id>`
+### A record of the kind
 
-Each key under `presets` is the id clients name for that agent, and each one registers an agent of its own, with its own name, models and options. The built-in `claude` is registered whether or not it is written: an object under its key is laid over it, and `false` drops it.
+An agent is a record on `x-ahpd-agents`: `{ id, kind, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model` on every kind, so this plugin declares only the fields below, and a new record starts from the kind's one template - Claude Code with nothing set - so an empty `config` is the ordinary agent.
 
 | Field | Default | What it does |
 | --- | --- | --- |
-| `name` | the preset's key | What a client reads instead of the id |
 | `models` | the CLI's own list | The models that agent offers in the picker |
 | `keepCliModels` | `false` | With `models`, add them to the CLI's list rather than replace it |
 | `sandbox` | `default` | The CLI's own sandbox for shell commands: `default` leaves it to the settings files, `on` and `off` set it |
 | `thinking` | `adaptive` | Extended thinking: `adaptive` lets the agent decide when to think, `disabled` is none |
 | `outputStyle` | none | The name of a style from the CLI's own settings |
 | `env` | none | Variables for the CLI's process, laid over the daemon's own environment on this host, and the whole of it in a machine |
-| `extraArgs` | none | Arguments the CLI is started with beyond the ones this backend builds |
+| `extraArgs` | none | Arguments the CLI is started with beyond the ones this backend builds. **Host records only** |
 | `hostTasks` | `true` | Whether Claude leaves its own task tools to the host's `task_add`. Off keeps them, and their calls write the session's plan |
 | `enableTasks` | `true` | Start the CLI with `CLAUDE_CODE_ENABLE_TASKS=1` whenever Claude keeps its own task tools |
 
-A `models` entry is a model id, `{ "id", "name" }`, or `{ "fetch": "<url>", "match": "<pattern>", "key": { "fromEnv": "NAME" } }`, which reads an OpenAI-shaped model list and keeps the ids the pattern covers, where `*` is any run of characters. A fetch that fails is logged and offers nothing.
+`extraArgs` is host-only: a team's or a person's record that sets one is refused, because an argument is where a command would come from. `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` in `env` are the kind's key variables, so any owner may set them; every other `env` variable is the host's alone, because a free environment can run a program.
 
-A preset's `env` value is a string, `null` to unset the variable, `{ "fromEnv": "NAME" }` for the daemon's own `NAME`, or `{ "$secret": "host:<name>" }` for a credential kept in the vault. A variable that is named with `fromEnv` and is not there when the plugin loads skips the preset that names it.
+A `models` entry is a model id, `{ "id", "name" }`, or `{ "fetch": "<url>", "match": "<pattern>", "key": "..." }`, which reads an OpenAI-shaped model list and keeps the ids the pattern covers, where `*` is any run of characters. `key` is the bearer token sent with the fetch: the token's text, which is what a record's `{ "fromEnv": "NAME" }` or `{ "$secret": "<name>" }` resolves to when the channel opens it, or `{ "fromEnv": "NAME" }` itself in a preset. A fetch that fails is logged, with no key in the line, and offers nothing.
 
-`ahpd vault set host:<name>` keeps the credential a preset's `env` reads with `{ "$secret": "host:<name>" }`, from standard input. See [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md#marking-a-credential) for what a credential is.
+A record's `env` value is a string, `null` to unset the variable, `{ "fromEnv": "NAME" }` for the daemon's own `NAME`, or `{ "$secret": "host:<name>" }` for a credential kept in the vault. A `fromEnv` variable that is not there when the record opens is left unset.
+
+`ahpd vault set host:<name>` keeps the credential a record's `env` reads with `{ "$secret": "host:<name>" }`, from standard input. See [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md#marking-a-credential) for what a credential is.
 
 An `extraArgs` value is given by name without the `--`, and `null` for a flag that takes none. A value that is not a string reaches the CLI as its JSON text, so `"settings": { "permissions": { "allow": ["Read"] } }` is started as `--settings '{"permissions":{"allow":["Read"]}}'`.
 
-Every field is checked when the plugin loads. A preset that is wrongly written, whose `fromEnv` variable is not in the daemon's environment or whose `$secret` cannot be read, is not registered: it is skipped with one line naming it, which is stamped to the daemon's log and printed by `ahpd start` and `ahpd restart` as `skipped: <plugin>: <the preset and why>`, above the line that says the daemon is up. The other presets register as they were written, and the load is refused only when no preset is left to register an agent for.
+A record is checked against the kind's schema when it is put, and opened again on every start. One whose `config` no longer fits, or whose `$secret` the vault cannot answer, is written and shown as `invalid` with one line saying why and naming no value; a record whose kind no plugin registers any more is kept and shown as `unavailable`.
 
 ### Tasks
 
 A Claude session uses the host's task tools by default. When the tasks plugin is loaded and offers `task_add`, the session's own `TodoWrite`, `TaskCreate`, `TaskUpdate`, `TaskList` and `TaskGet` are denied. The model adds its tasks with the host's tool, so every session works one list. A host that offers no `task_add` has nothing to put in their place, and the session keeps its own tools there.
 
-`hostTasks: false` in a preset keeps Claude's own tools; so does a host with no tasks plugin loaded. In either case the CLI is started with `CLAUDE_CODE_ENABLE_TASKS=1`, which `enableTasks` does and which is on by default. A value the preset's own `env` gives the variable is kept rather than written over. Each `TodoWrite`, `TaskCreate` and `TaskUpdate` is then written into the session's plan, and [The task list](https://github.com/softov/ahpd/blob/main/docs/plugins/TASK-LIST.md) says how.
+`hostTasks: false` in a record keeps Claude's own tools; so does a host with no tasks plugin loaded. In either case the CLI is started with `CLAUDE_CODE_ENABLE_TASKS=1`, which `enableTasks` does and which is on by default. A value the record's own `env` gives the variable is kept rather than written over. Each `TodoWrite`, `TaskCreate` and `TaskUpdate` is then written into the session's plan, and [The task list](https://github.com/softov/ahpd/blob/main/docs/plugins/TASK-LIST.md) says how.
 
 ## In your own host
 
@@ -100,24 +102,34 @@ await listen({ port: 9187 }, (peer) => host.accept(peer));
 
 `createHost` takes a list of agents, so this can run alongside other backends. The plugin entry wraps the same `claude()`.
 
-## Presets
+## Records
 
-The built-in `claude` is Claude Code as it runs here, named `Claude Code`, and it is registered whether or not it is written. An object under its key is laid over it, and `false` drops it:
+One agent is one record. A client makes or edits one with `x-ahpd/agents/put`, and the daemon keeps it at `agents/<id>.json` in its configuration folder. The host's Claude Code, with nothing set, is the record below; a second agent is another record from the same kind, and a session picks the agent rather than a set of options of it:
+
+```json
+{ "id": "claude", "kind": "claude", "owner": "host", "name": "Claude Code", "config": {} }
+```
+
+A record that names its own options and its own endpoint is a second agent on the picker, from the one plugin. The key is a `$secret`, so the record holds a reference and the vault holds the value:
 
 ```json
 {
-  "plugins": [
-    { "name": "@ahpd/agent-claude", "options": {
-      "presets": {
-        "claude": { "thinking": "adaptive", "sandbox": "on" },
-        "read-only": { "name": "Claude, read only", "thinking": "disabled", "sandbox": "on", "outputStyle": "concise" }
-      }
-    } }
-  ]
+  "id": "claude-deepseek-build",
+  "kind": "claude",
+  "owner": "host",
+  "name": "DeepSeek build",
+  "config": {
+    "thinking": "adaptive",
+    "models": [{ "id": "deepseek-chat", "name": "DeepSeek Chat" }],
+    "env": {
+      "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
+      "ANTHROPIC_AUTH_TOKEN": { "$secret": "host:deepseek" }
+    }
+  }
 }
 ```
 
-Two presets, two entries in the picker, and a session picks the agent rather than a preset of it. Every key is the id clients name for that agent, and a preset that names none of its own is called by its key. With nothing written the built-in runs on what this backend has always run on, which is `thinking: "adaptive"` and no sandbox layer.
+A client puts the key's value, and the channel moves it to the vault under `host:agent/<id>/env.ANTHROPIC_AUTH_TOKEN` and keeps a `{ "$secret": "<name>" }` in its place, so no client is shown the value again. The record below names `host:deepseek`, the form a record written by hand on disk uses, which may name any entry of the vault; `ahpd vault set host:deepseek` keeps that entry from standard input. The endpoint a record names is the one it is probed at, and an edit of the record reaches a running session at its next turn.
 
 ### Project files, and trust
 
@@ -125,34 +137,28 @@ A session in a folder the host was not told to trust loads none of that folder's
 
 ### A second Claude on another endpoint
 
-A preset with its own name, its own models and an `env` that points the CLI elsewhere is a second agent on the picker, from the one entry:
+A record with its own name, its own models and an `env` that points the CLI elsewhere is a second agent on the picker, from the one plugin. A host record may name a daemon variable instead of a vault entry, which keeps the key where it already is, and fetch the endpoint's model list rather than writing it out:
 
 ```json
 {
-  "plugins": [
-    { "name": "@ahpd/agent-claude", "options": {
-      "presets": {
-        "claude-openrouter": {
-          "name": "Claude OpenRouter",
-          "models": [
-            "stealth/space-bunny-alpha",
-            { "fetch": "https://openrouter.ai/api/v1/models", "match": "anthropic/*" }
-          ],
-          "env": {
-            "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
-            "ANTHROPIC_AUTH_TOKEN": { "fromEnv": "OPENROUTER_API_KEY" },
-            "ANTHROPIC_API_KEY": "",
-            "ANTHROPIC_MODEL": "stealth/space-bunny-alpha",
-            "ANTHROPIC_SMALL_FAST_MODEL": "stealth/space-bunny-alpha"
-          }
-        }
-      }
-    } }
-  ]
+  "id": "claude-openrouter",
+  "kind": "claude",
+  "owner": "host",
+  "name": "Claude OpenRouter",
+  "config": {
+    "models": [
+      { "fetch": "https://openrouter.ai/api/v1/models", "match": "anthropic/*" }
+    ],
+    "env": {
+      "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
+      "ANTHROPIC_AUTH_TOKEN": { "fromEnv": "OPENROUTER_API_KEY" },
+      "ANTHROPIC_API_KEY": ""
+    }
+  }
 }
 ```
 
-Both agents carry their key in the daemon's environment, and the endpoint a preset names is the one it is probed at.
+Both agents carry their key in the daemon's environment or in the vault, and the endpoint a record names is the one it is probed at.
 
 ## What it does
 
@@ -194,9 +200,9 @@ Sessions use whatever the Claude CLI is signed in with. A client can push a toke
 
 ### In a machine
 
-A session in a machine runs the CLI from the `claude` part at its pinned version, not this host's: `computerCli: "host"` mounts this host's binary instead, and `computerCliFallback: "host"` mounts it only when the part cannot be built. Its configuration is a state volume at `/ahpd/<variant>`, seeded from this host's settings, instructions, skills, agents, commands and the MCP servers of `~/.claude.json`, never the sign-in. A profile with `state: "host"` mounts this host's `~/.claude` instead, sign-in included.
+A session in a machine runs the CLI from the `claude` part at its pinned version, not this host's: `computerCli: "host"` mounts this host's binary instead, and `computerCliFallback: "host"` mounts it only when the part cannot be built. Its configuration is a state volume at `/ahpd/<id>`, seeded from this host's settings, instructions, skills, agents, commands and the MCP servers of `~/.claude.json`, never the sign-in. A profile with `state: "host"` mounts this host's `~/.claude` instead, sign-in included.
 
-The CLI there runs with the variant's own `env`, a pushed token and `CLAUDE_CONFIG_DIR`, and nothing of the daemon's environment: the daemon's `ANTHROPIC_*` and `CLAUDE_CODE_OAUTH_TOKEN` cross only when the variant names them with `{ "fromEnv" }`. So a variant signs in with `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token`, or `ANTHROPIC_API_KEY` in its `env`, and a machine that used to share this host's sign-in needs one of those or a sign-in made once inside it. See [Claude Code in a machine](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#claude-code-in-a-machine).
+The CLI there runs with the record's own `env`, a pushed token and `CLAUDE_CONFIG_DIR`, and nothing of the daemon's environment: the daemon's `ANTHROPIC_*` and `CLAUDE_CODE_OAUTH_TOKEN` cross only when the record names them with `{ "fromEnv" }`. So a record signs in with `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token`, or `ANTHROPIC_API_KEY` in its `env`, and a machine that used to share this host's sign-in needs one of those or a sign-in made once inside it. See [Claude Code in a machine](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#claude-code-in-a-machine).
 
 ## Documentation
 

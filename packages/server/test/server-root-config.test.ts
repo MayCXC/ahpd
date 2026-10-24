@@ -495,39 +495,49 @@ describe('a credential in a plugin key', () => {
     });
   });
 
-  it('is a preset environment value, which is where Claude keeps its key', async () => {
+  it('is a search provider\'s key, however deep in the plugin options it sits', async () => {
     const root = await withPlugins([{
-      name: CLAUDE,
-      options: { presets: { default: { env: { ANTHROPIC_API_KEY: 'sk-1', ANTHROPIC_AUTH_TOKEN: 'at-1' }, sandbox: 'on' } } },
+      name: COFOLD,
+      options: { tools: { web: { search: { tavily: { apiKey: 'tv-1' }, brave: { apiKey: 'bs-1' }, duckduckgo: true } } } },
     }], undefined, repo);
-    const answered = (await root.values())[`plugins.${pluginIdOf(CLAUDE)}`] as { options: { presets: Record<string, unknown> } };
-    expect(answered.options.presets['default']).toEqual({
-      env: { ANTHROPIC_API_KEY: '<set>', ANTHROPIC_AUTH_TOKEN: '<set>' },
-      sandbox: 'on',
+    const answered = (await root.values())[`plugins.${pluginIdOf(COFOLD)}`] as {
+      options: { tools: { web: { search: Record<string, unknown> } } };
+    };
+    expect(answered.options.tools.web.search).toEqual({
+      tavily: { apiKey: '<set>' },
+      brave: { apiKey: '<set>' },
+      duckduckgo: true,
     });
   });
 
-  it('is left as it is when a client sends a whole preset back', async () => {
-    const options = { presets: { default: { env: { ANTHROPIC_API_KEY: 'sk-1' }, sandbox: 'on' } } };
-    const root = await withPlugins([{ name: CLAUDE, options }], undefined, repo);
-    const answer = await root.write({ [`plugins.${pluginIdOf(CLAUDE)}`]: { options: { presets: { default: { env: { ANTHROPIC_API_KEY: '<set>' }, sandbox: 'off' } } } } });
+  it('is left as it is when a client sends a whole provider back, masked', async () => {
+    const options = { tools: { web: { search: { tavily: { apiKey: 'tv-1' }, duckduckgo: true } } } };
+    const root = await withPlugins([{ name: COFOLD, options }], undefined, repo);
+    const answer = await root.write({
+      [`plugins.${pluginIdOf(COFOLD)}`]: {
+        options: { tools: { web: { search: { tavily: { apiKey: '<set>' }, duckduckgo: false } } } },
+      },
+    });
     expect(answer).toEqual({ restartNeeded: true });
-    expect(held().plugins).toEqual([{ name: CLAUDE, options: { presets: { default: { env: { ANTHROPIC_API_KEY: 'sk-1' }, sandbox: 'off' } } } }]);
+    expect(held().plugins).toEqual([{
+      name: COFOLD,
+      options: { tools: { web: { search: { tavily: { apiKey: 'tv-1' }, duckduckgo: false } } } },
+    }]);
   });
 });
 
 describe('one Claude entry', () => {
   it('is keyed by its name, with its own options under it', async () => {
-    const root = await withPlugins([{ name: CLAUDE, options: { presets: { work: { thinking: 'disabled' } } } }], undefined, repo);
+    const root = await withPlugins([{ name: CLAUDE, options: { workerStop: 'session' } }], undefined, repo);
     const values = await root.values() as Record<string, { options: Record<string, unknown> }>;
     expect(Object.keys(values)).toEqual(['plugins.agent-claude']);
-    expect(values[`plugins.${pluginIdOf(CLAUDE)}`]?.options).toEqual({ presets: { work: { thinking: 'disabled' } } });
+    expect(values[`plugins.${pluginIdOf(CLAUDE)}`]?.options).toEqual({ workerStop: 'session' });
   });
 
   it('is a write that edits its own entry', async () => {
-    const root = await withPlugins([{ name: CLAUDE, options: { presets: { work: { thinking: 'disabled' } } } }], undefined, repo);
-    await root.write({ [`plugins.${pluginIdOf(CLAUDE)}`]: { options: { presets: { work: { thinking: 'adaptive' } } } } });
-    expect(held().plugins).toEqual([{ name: CLAUDE, options: { presets: { work: { thinking: 'adaptive' } } } }]);
+    const root = await withPlugins([{ name: CLAUDE, options: { workerStop: 'session' } }], undefined, repo);
+    await root.write({ [`plugins.${pluginIdOf(CLAUDE)}`]: { options: { workerStop: 'worker' } } });
+    expect(held().plugins).toEqual([{ name: CLAUDE, options: { workerStop: 'worker' } }]);
   });
 
   it('is refused by key when no entry holds that one', async () => {

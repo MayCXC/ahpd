@@ -12,6 +12,7 @@
  */
 
 import type { Agent } from '../types/agent.js';
+import type { AgentOwner, ServedAgentKind } from '../types/agents.js';
 import type { SessionConfigAnswerer } from '../types/completions.js';
 import type { ServedAdapter } from '../types/connectors.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from '../types/events.js';
@@ -30,7 +31,7 @@ import { isRecordPath, isRecordSlug, RECORD_PATH, RECORD_SLUG } from '../resourc
 import type { Pair } from '../utils/pair.js';
 import { reason } from '../utils/values.js';
 import { readSecret } from '../access/vault.js';
-import { checkAdapter, checkAgent, checkChannel, checkChatRequest, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName } from './validate.js';
+import { checkAdapter, checkAgent, checkAgentKind, checkChannel, checkChatRequest, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName } from './validate.js';
 
 /**
  * One contributed backend, as the host keeps it: the plugin's own agent with a
@@ -244,6 +245,14 @@ export interface FoldedOptions {
    */
   problems: string[];
   /**
+   * The ids of the records this fold served, in the order they were given.
+   *
+   * A record whose id the daemon or a plugin already serves is dropped and is
+   * not here, so a channel can tell a record the host runs from one it holds
+   * and cannot. Empty when no record was given.
+   */
+  records: string[];
+  /**
    * Every plugin that registered a route, by plugin name.
    *
    * Not a `HostOptions` key: a route is not an option the host is built over
@@ -273,11 +282,12 @@ const triggerEntries = new WeakMap<Contribution, PluginTriggers>();
  *
  * The rules, made literal:
  *
- * - `agents` and `tools` append, in contribution order. A `provider` already
- *   registered - by the base or by an earlier plugin - is a problem naming
- *   both, and the agent that lost it is dropped: the first registration keeps
- *   the id, and a client that asks for it gets the backend that has always
- *   answered for it rather than whichever loaded last.
+ * - `agents` and `tools` append, in contribution order, and the agents made
+ *   from stored records append after them. A `provider` already registered -
+ *   by the base, by an earlier plugin or by an earlier record - is a problem
+ *   naming both, and the agent that lost it is dropped: the first registration
+ *   keeps the id, and a client that asks for it gets the backend that has
+ *   always answered for it rather than whichever loaded last.
  * - A port is set once. A later contribution that lands on a value already
  *   there - the daemon's or another plugin's - is a problem naming both and
  *   the value does not move, unless the later one carries `'replace'`, which
@@ -293,7 +303,7 @@ const triggerEntries = new WeakMap<Contribution, PluginTriggers>();
  *   per plugin: the daemon binds the host onto each and closes them when it
  *   stops, so the fold neither composes them nor reads them.
  */
-export function foldHostOptions(base: HostOptions, contributions: Contribution[]): FoldedOptions {
+export function foldHostOptions(base: HostOptions, contributions: Contribution[], records: readonly Agent[] = []): FoldedOptions {
   const problems: string[] = [];
   /*
    * From the base's own property descriptors, rather than a spread.
@@ -328,6 +338,8 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   const harnesses = new Map<string, string>();
   for (const agent of base.agents) harnesses.set(agent.provider.toLowerCase(), 'the daemon');
   const added: Agent[] = [];
+  /** The ids of the record agents this fold took, in the order they were given. */
+  const served: string[] = [];
   /*
    * The plugin each added agent came from, by provider. Seeded from the
    * base's record, and an agent the base was handed directly has none.
@@ -515,6 +527,52 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
     // refuses a second one from the same plugin, so there is nothing to
     // arbitrate here.
     if (contribution.bindings !== undefined) bindings.push(contribution.bindings);
+  }
+
+  /*
+   * The agent kinds, keyed by name and never merged over one another.
+   *
+   * A kind names one form and one `open`, so two plugins offering one name is a
+   * collision: it is reported, and the first registration keeps it. Seeded from
+   * the base for the same reason the adapters are.
+   */
+  const agentKinds: Record<string, ServedAgentKind> = { ...base.agentKinds };
+  for (const contribution of contributions) {
+    for (const [name, kind] of Object.entries(contribution.agentKinds ?? {})) {
+      const held = agentKinds[name];
+      if (held !== undefined) {
+        problems.push(`plugin ${contribution.by} registers agent kind ${name}, which ${held.by === 'the daemon' ? 'the daemon' : `plugin ${held.by}`} already registered`);
+        continue;
+      }
+      agentKinds[name] = kind;
+    }
+  }
+  if (Object.keys(agentKinds).length > 0) options.agentKinds = agentKinds;
+
+  /*
+   * The agents made from records, after the plugins' own.
+   *
+   * A record is one person's agent, so an id the daemon or a plugin already
+   * serves is reported and the record is not served: a provider names one
+   * backend, and a record may not take the id of one written in code. The
+   * record stays on disk and is listed as `invalid`, the way a connector of a
+   * missing adapter stays and is listed `unavailable`.
+   */
+  for (const agent of records) {
+    const held = providers.get(agent.provider);
+    const scheme = schemes.get(agent.provider.toLowerCase());
+    if (held === undefined && scheme !== undefined) {
+      problems.push(`the agent record ${agent.provider} is not served: ${scheme === 'the daemon' ? 'the daemon' : `plugin ${scheme}`} already registered that id as a scheme`);
+      continue;
+    }
+    if (held !== undefined) {
+      problems.push(`the agent record ${agent.provider} is not served: ${held === 'the daemon' ? 'the daemon' : `plugin ${held}`} already serves that id`);
+      continue;
+    }
+    providers.set(agent.provider, 'a record');
+    harnesses.set(agent.provider.toLowerCase(), 'a record');
+    added.push(keptAgent(agent));
+    served.push(agent.provider);
   }
 
   if (added.length > 0) options.agents = [...options.agents, ...added];
@@ -741,7 +799,7 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   const chatPreambles = contributions.flatMap((one) => one.preambles);
   if (chatPreambles.length > 0) options.chatPreambles = chatPreambles;
 
-  return { options, problems, routes };
+  return { options, problems, routes, records: served };
 }
 
 /** What one `apply` is handed, and what it recorded. */
@@ -782,6 +840,14 @@ export interface HostRecordingOptions {
    * after the one that makes machines, and a machine is made long after both.
    */
   agents?: () => Agent[];
+  /**
+   * Whose each stored agent is, read when `agentOwners` is called.
+   *
+   * A function for the same reason `agents` is: the records are folded while
+   * the daemon runs, and a plugin keeping a record that names an agent asks at
+   * each use rather than once at load.
+   */
+  agentOwners?: () => ReadonlyMap<string, AgentOwner | undefined>;
   /**
    * Where a plugin's usage records go, read when `recordUsage` is called.
    *
@@ -941,6 +1007,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     providers: {},
     channels: {},
     adapters: {},
+    agentKinds: {},
     methods: {},
     events: events as unknown as HostHandlers,
     closers: [],
@@ -1038,6 +1105,9 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       const agent = options.agents?.().find((one) => one.provider === provider);
       return agent === undefined ? undefined : agent.machine?.() ?? {};
     },
+    // Empty rather than absent on a host with no agents channel: every agent
+    // there is the daemon's own, which is what a map with no entry says.
+    agentOwners: () => options.agentOwners?.() ?? new Map(),
     /*
      * Read from the live port rather than a snapshot, and dropped rather than
      * thrown when there is none: a host nobody asked to keep usage on is not a
@@ -1512,6 +1582,16 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
         throw new Error(miss(by, 'registerAdapter', named, 'a name no other adapter in this plugin uses'));
       }
       contribution.adapters[named] = { ...adapter, by };
+    },
+    registerAgentKind(kind) {
+      open();
+      const named = checkAgentKind(kind, by);
+      declared(by, options.contracts, 'agentKinds', named);
+      const held = contribution.agentKinds ??= {};
+      if (held[named] !== undefined) {
+        throw new Error(miss(by, 'registerAgentKind', named, 'a name no other agent kind in this plugin uses'));
+      }
+      held[named] = { ...kind, by };
     },
     on(event, handle) {
       // The context is captured, not rebuilt when the event fires: it is the

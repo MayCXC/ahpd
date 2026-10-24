@@ -41,10 +41,23 @@
 
 import { INVALID_PARAMS, INTERNAL_ERROR, RpcError } from '../rpc.js';
 import { sameOwnerOrHost } from '../automations/automations.js';
-import { fromEnvRef, scopeOf, secretRef } from '../access/vault.js';
+import { fromEnvRef, secretRef } from '../access/vault.js';
+import {
+  CONNECTOR_SECRETS,
+  DENIED,
+  HELD,
+  asOwner,
+  forgetAll as forgetRecordSecrets,
+  heldAgainst as heldSecrets,
+  moveSecrets as moveRecordSecrets,
+  onTeam,
+  ownerAllows,
+  refuseOwner,
+  resolved as resolvedRecord,
+  writeOnly,
+} from '../channels/owners.js';
 import { isRecordSlug } from '../resources/records.js';
 import { recordsChannel, type RecordsChannel } from '../resources/recordschannel.js';
-import { membership } from '../usage/scopes.js';
 import { bag, isRecord, reason } from '../utils/values.js';
 import type { CallOutcome, CheckResult, Connector, ConnectorHealth, ConnectorOwner, ConnectorRef, ProviderConnector, ServedAdapter } from '../types/connectors.js';
 import type { PluginMethod } from '../types/plugin.js';
@@ -60,9 +73,6 @@ const PUT = `${DOMAIN}/put`;
 const REMOVE = `${DOMAIN}/remove`;
 const CHECK = `${DOMAIN}/check`;
 
-/** What a client is shown in place of a secret, which is also what the schema is held against. */
-const HELD = '<set>';
-
 /** How long a check may take before its connector is called `unreachable`. */
 const CHECK_LIMIT_MS = 10_000;
 
@@ -71,9 +81,6 @@ const HEALTH_MESSAGE_LIMIT = 500;
 
 /** The least time between two refreshes that a call outcome sends. */
 const NOTE_REFRESH_MS = 1000;
-
-/** The gate's code for a grant a caller does not hold. */
-const DENIED = -32009;
 
 /** The three states a connector row can be in. */
 export type ConnectorState = 'ready' | 'invalid' | 'unavailable';
@@ -187,56 +194,6 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   /** The config a stored record holds, as an object. */
   const configOf = (record: StoredRecord): Record<string, unknown> => bag(record.config);
 
-  /** A value as a connector's owner, or nothing when it names no scope. */
-  const asOwner = (value: unknown): ConnectorOwner | undefined =>
-    (typeof value === 'string' && /^(?:host|team:[^/]+|user:[^/]+)$/u.test(value) ? value as ConnectorOwner : undefined);
-
-  /** The name a moved secret is kept under, in the owner's scope. */
-  const secretNameOf = (owner: ConnectorOwner, id: string, field: string): string => {
-    const rest = `connector/${id}/${field}`;
-    if (owner === 'host') return `host:${rest}`;
-    return `${owner}/${rest}`;
-  };
-
-  /** Whether this reader is on this team, by the same rule a team secret is written by. */
-  const onTeam = (reader: Principal, team: string): boolean =>
-    (reader.memberships ?? []).some((one) => membership(one)?.team === team);
-
-  /**
-   * Whether this reader may make or remove a connector of this owner.
-   *
-   * Every owner takes `connector:put` to be made and `connector:remove` to be
-   * removed. A `host` connector then takes `connector:host` as well. A
-   * `team:<team>` connector takes a membership of that team. A `user:<id>`
-   * connector is that person's own, and takes the caller to be that person. No
-   * reader is the root connection or a host with no users directory, and both
-   * are the daemon itself. A caller holding `config:write` is not let into a
-   * host's, a team's or a person's connector by it, which is why this is asked
-   * again in `handle` and not only by the gate.
-   */
-  const ownerAllows = (owner: ConnectorOwner | undefined, reader: Principal | undefined, verb: 'put' | 'remove'): boolean => {
-    if (reader === undefined) return true;
-    if (owner === undefined) return false;
-    if (!reader.can(`connector:${verb}` as Grant)) return false;
-    if (owner === 'host') return reader.can('connector:host' as Grant);
-    if (owner.startsWith('user:')) return reader.plugin === undefined && reader.id === owner.slice('user:'.length);
-    return onTeam(reader, owner.slice('team:'.length));
-  };
-
-  /** Refuse one caller the owner's rule keeps out. */
-  const refuseOwner = (doing: string, owner: ConnectorOwner, reader: Principal | undefined, verb: 'put' | 'remove'): void => {
-    if (ownerAllows(owner, reader, verb)) return;
-    throw new RpcError(DENIED, `${owner} is not ${reader?.id ?? 'this connection'}'s to ${doing}`);
-  };
-
-  /** The fields an adapter's schema marks `writeOnly`: the values that are secrets. */
-  const writeOnly = (schema: Record<string, unknown>): string[] => {
-    const properties = bag(schema['properties']);
-    return Object.entries(properties)
-      .filter(([, one]) => isRecord(one) && one['writeOnly'] === true)
-      .map(([field]) => field);
-  };
-
   /**
    * A config with each moved secret stood in for by what a client is shown.
    *
@@ -245,13 +202,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
    * filled the value in under are asked of the record and a value nobody may
    * read is never read to ask them.
    */
-  const heldAgainst = (config: Record<string, unknown>): Record<string, unknown> => {
-    const out: Record<string, unknown> = { ...config };
-    for (const [field, value] of Object.entries(out)) {
-      if (secretRef(value) !== undefined || fromEnvRef(value) !== undefined) out[field] = HELD;
-    }
-    return out;
-  };
+  const heldAgainst = (config: Record<string, unknown>): Record<string, unknown> => heldSecrets(config, CONNECTOR_SECRETS);
 
   /** Whether a stored config is still one the adapter's schema describes. */
   const fits = (config: Record<string, unknown>, schema: Record<string, unknown>): boolean => {
@@ -377,40 +328,6 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     onProblem: problem,
   });
 
-  /**
-   * The config an adapter is opened with: each reference read back.
-   *
-   * A `$secret` is read from the vault, and a `fromEnv` from the daemon's own
-   * environment. A variable that is not set, or is set empty, is refused the
-   * way a vault that holds no name is. A `fromEnv` in a connector that is not
-   * the host's is refused before the variable is read, as a put refuses it:
-   * a record written straight into the collection never reaches the check.
-   */
-  const resolved = async (config: Record<string, unknown>, owner: ConnectorOwner): Promise<Record<string, unknown>> => {
-    const out: Record<string, unknown> = {};
-    for (const [field, value] of Object.entries(config)) {
-      const name = secretRef(value);
-      if (name !== undefined) {
-        const held = await options.vault()?.get(name);
-        if (held === undefined) throw new Error(`the vault holds no ${name}`);
-        out[field] = held;
-        continue;
-      }
-      const variable = fromEnvRef(value);
-      if (variable !== undefined) {
-        if (owner !== 'host') {
-          throw new Error(`A connector's ${field} may read the daemon's environment only for a host connector`);
-        }
-        const held = process.env[variable];
-        if (held === undefined || held === '') throw new Error(`the environment holds no ${variable}`);
-        out[field] = held;
-        continue;
-      }
-      out[field] = value;
-    }
-    return out;
-  };
-
   /** One check, or `unreachable` when it takes more than the limit to answer. */
   const within = async (check: Promise<CheckResult>): Promise<CheckResult> => {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -513,7 +430,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       adapter: adapter.name,
       owner,
       ...(typeof record.title === 'string' ? { title: record.title } : {}),
-      config: await resolved(config, owner),
+      config: await resolvedRecord(config, owner, options.vault(), CONNECTOR_SECRETS),
     };
     await close(record.id);
     const stop = adapter.open(connector);
@@ -557,92 +474,6 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     }
   };
 
-  /**
-   * The config a put keeps: each secret moved, and a reference kept in its place.
-   *
-   * `held` is what the record held before, and it is read only when the owner
-   * is the same: a connector that changed hands takes none of its old secrets
-   * with it. A field sent empty keeps the secret it already had, because a
-   * client is never given one to send back; a field left out drops its secret,
-   * which is what a record written whole does.
-   */
-  const moveSecrets = async (
-    adapter: ServedAdapter,
-    config: Record<string, unknown>,
-    held: Record<string, unknown>,
-    owner: ConnectorOwner,
-    id: string,
-    vault: Vault | undefined,
-  ): Promise<Record<string, unknown>> => {
-    const out: Record<string, unknown> = { ...config };
-    for (const field of writeOnly(adapter.schema)) {
-      const value = config[field];
-      const was = secretRef(held[field]);
-      const mine = was !== undefined && was === secretNameOf(owner, id, field);
-      if (value === undefined) {
-        delete out[field];
-        if (mine) await forget(vault, was, id);
-        continue;
-      }
-      if (secretRef(value) !== undefined) {
-        throw new RpcError(INVALID_PARAMS, `A connector's ${field} is a secret: send its value, not a reference to it`);
-      }
-      const variable = fromEnvRef(value);
-      if (variable !== undefined) {
-        /*
-         * Only a host connector may name one: the daemon's environment is
-         * nobody's own, and a person's connector that read it could send any
-         * variable of the daemon to an endpoint they choose.
-         */
-        if (owner !== 'host') {
-          throw new RpcError(INVALID_PARAMS, `A connector's ${field} may read the daemon's environment only for a host connector`);
-        }
-        if (mine) await forget(vault, was, id);
-        out[field] = { fromEnv: variable };
-        continue;
-      }
-      if (value === '') {
-        if (!mine) { delete out[field]; continue; }
-        out[field] = { $secret: was };
-        continue;
-      }
-      if (typeof value !== 'string') {
-        throw new RpcError(INVALID_PARAMS, `A connector's ${field} is a secret, so it is sent as a string`);
-      }
-      const name = secretNameOf(owner, id, field);
-      try {
-        scopeOf(name);
-      } catch (error) {
-        throw new RpcError(INVALID_PARAMS, reason(error));
-      }
-      if (vault === undefined) throw new RpcError(INTERNAL_ERROR, 'This host has no vault, so a secret cannot be kept');
-      await vault.set(name, value);
-      out[field] = { $secret: name };
-    }
-    return out;
-  };
-
-  /** Take one secret out of the vault, saying so and going on when the store refuses. */
-  const forget = async (vault: Vault | undefined, name: string, id: string): Promise<void> => {
-    if (vault === undefined) return;
-    try {
-      await vault.delete(name);
-    } catch (error) {
-      problem(`${id}'s secret ${name} could not be taken out: ${reason(error)}`);
-    }
-  };
-
-  /** Take every secret a removed record names out, and only the ones this connector put there. */
-  const forgetAll = async (record: StoredRecord, owner: ConnectorOwner | undefined, id: string): Promise<void> => {
-    const config = configOf(record);
-    for (const field of Object.keys(config)) {
-      const name = secretRef(config[field]);
-      if (name === undefined) continue;
-      if (owner !== undefined && name !== secretNameOf(owner, id, field)) continue;
-      await forget(options.vault(), name, id);
-    }
-  };
-
   /** A string param that names one connector, or a refusal saying what the command needs. */
   const idParam = (command: string, params: Record<string, unknown>): string => {
     const id = params.id;
@@ -655,7 +486,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   const put: PluginMethod = {
     grant: 'connector:put' as Grant,
     describe: () => ({ title: 'Make a connector', description: 'Makes or changes one connector, and opens it.' }),
-    authorize: async (params, reader) => ownerAllows(asOwner(params.owner), reader, 'put'),
+    authorize: async (params, reader) => ownerAllows('connector', asOwner(params.owner), reader, 'put'),
     handle: async (params, reader) => {
       const id = idParam(PUT, params);
       const adapterName = params.adapter;
@@ -670,7 +501,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       if (owner === undefined) {
         throw new RpcError(INVALID_PARAMS, `${PUT} needs owner, one of host, team:<team> or user:<id>`);
       }
-      refuseOwner('make', owner, reader, 'put');
+      refuseOwner('connector', 'make', owner, reader, 'put');
       const config = params.config ?? {};
       if (!isRecord(config)) {
         throw new RpcError(INVALID_PARAMS, "A connector's config is a JSON object, and that is not one");
@@ -688,7 +519,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
        * `connector:remove`, as its remove does.
        */
       const moving = before !== undefined && was !== owner;
-      if (moving && was !== undefined) refuseOwner('take', was, reader, 'remove');
+      if (moving && was !== undefined) refuseOwner('connector', 'take', was, reader, 'remove');
       if (moving && was === undefined && reader !== undefined && !reader.can('connector:remove' as Grant)) {
         throw new RpcError(DENIED, `${id} is not ${reader.id}'s to take`);
       }
@@ -710,7 +541,16 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
         throw new RpcError(INVALID_PARAMS, reason(error));
       }
       checkAutomationLinks(adapter, config, owner);
-      const moved = await moveSecrets(adapter, config, kept, owner, id, options.vault());
+      const moved = await moveRecordSecrets({
+        rules: CONNECTOR_SECRETS,
+        fields: writeOnly(adapter.schema),
+        config,
+        held: kept,
+        owner,
+        id,
+        vault: options.vault(),
+        problem,
+      });
       const record: StoredRecord = {
         id,
         adapter: adapterName,
@@ -723,7 +563,9 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       owners.set(id, owner);
       known.set(id, { id, adapter: adapterName, owner });
       // The secrets kept under the owner it left are no record's any more.
-      if (moving && was !== undefined) await forgetAll(before, was, id);
+      if (moving && was !== undefined) {
+        await forgetRecordSecrets(configOf(before), was, id, CONNECTOR_SECRETS, options.vault(), problem);
+      }
       try {
         await openOne(adapter, record, owner);
         // A put is where a person learns the key is wrong, so it waits for the check.
@@ -744,7 +586,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       const id = params.id;
       if (typeof id !== 'string') return false;
       const before = await options.collection.get(id);
-      return before !== undefined && ownerAllows(asOwner(before.owner), reader, 'remove');
+      return before !== undefined && ownerAllows('connector', asOwner(before.owner), reader, 'remove');
     },
     handle: async (params, reader) => {
       const id = idParam(REMOVE, params);
@@ -756,9 +598,9 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
        * gate let through with `connector:remove` reaches it; a record that
        * names one is the owner's, and the gate's grant does not widen that.
        */
-      if (owner !== undefined) refuseOwner('remove', owner, reader, 'remove');
+      if (owner !== undefined) refuseOwner('connector', 'remove', owner, reader, 'remove');
       await close(id);
-      await forgetAll(before, owner, id);
+      await forgetRecordSecrets(configOf(before), owner, id, CONNECTOR_SECRETS, options.vault(), problem);
       await options.collection.remove(id);
       owners.delete(id);
       known.delete(id);
@@ -779,14 +621,14 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       const id = params.id;
       if (typeof id !== 'string') return false;
       const before = await options.collection.get(id);
-      return before !== undefined && ownerAllows(asOwner(before.owner), reader, 'put');
+      return before !== undefined && ownerAllows('connector', asOwner(before.owner), reader, 'put');
     },
     handle: async (params, reader) => {
       const id = idParam(CHECK, params);
       const before = await options.collection.get(id);
       if (before === undefined) throw new RpcError(INVALID_PARAMS, `${SCHEME} holds no ${id}`);
       const owner = asOwner(before.owner);
-      if (owner !== undefined) refuseOwner('check', owner, reader, 'put');
+      if (owner !== undefined) refuseOwner('connector', 'check', owner, reader, 'put');
       const entry = open.get(id);
       if (entry === undefined) throw new RpcError(INVALID_PARAMS, `${id} is not an open connector`);
       const adapter = options.adapters()[entry.connector.adapter];

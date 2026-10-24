@@ -239,14 +239,13 @@ The CLI runs with `CLAUDE_CONFIG_DIR=/ahpd/<variant>`: `/ahpd/claude` for the bu
 
 The fallback mount is checked with every other mount when the machine is made, whether the part builds or not, so a mount at the same target is refused naming both. A host path that is not there is refused at create, naming the need and the path, instead of becoming an empty directory the session exits 127 in.
 
-**A variant takes its own `env` into the machine, and nothing of the daemon's.** The CLI in a machine runs with the variant's preset `env`, a credential a client pushed laid over it, and `CLAUDE_CONFIG_DIR` last. The daemon's `HOME`, `PATH` and `PWD` never cross, and its `ANTHROPIC_*` and `CLAUDE_CODE_OAUTH_TOKEN` cross only when the variant's `env` names them, as `{ "fromEnv": "ANTHROPIC_API_KEY" }`. A variable the variant unsets with `null` is absent inside too. These travel by name on the one `docker exec` that starts the CLI, never as the container's own environment, because `docker exec` cannot unset a variable the container holds: so the built-in Claude and an OpenRouter variant on one machine each get only their own keys.
+**A variant takes its own `env` into the machine, and nothing of the daemon's.** The CLI in a machine runs with the record's own `env`, a credential a client pushed laid over it, and `CLAUDE_CONFIG_DIR` last. The daemon's `HOME`, `PATH` and `PWD` never cross, and its `ANTHROPIC_*` and `CLAUDE_CODE_OAUTH_TOKEN` cross only when the variant's `env` names them, as `{ "fromEnv": "ANTHROPIC_API_KEY" }`. A variable the variant unsets with `null` is absent inside too. These travel by name on the one `docker exec` that starts the CLI, never as the container's own environment, because `docker exec` cannot unset a variable the container holds: so the built-in Claude and an OpenRouter variant on one machine each get only their own keys.
 
-**No sign-in is seeded.** `.credentials.json` never reaches a state volume. A variant signs in with `CLAUDE_CODE_OAUTH_TOKEN`, the token `claude setup-token` prints, which does not need refreshing, or with `ANTHROPIC_API_KEY`, written in its own `env` as `{ "$secret": "<scope>:<name>" }` or `{ "fromEnv": "NAME" }`. A `$secret` there is read when the plugin loads, and a preset whose secret cannot be read is skipped with a line naming it. A machine whose variant names neither is still made, and the CLI's own sign-in refusal is what the session says.
+**No sign-in is seeded.** `.credentials.json` never reaches a state volume. A variant signs in with `CLAUDE_CODE_OAUTH_TOKEN`, the token `claude setup-token` prints, which does not need refreshing, or with `ANTHROPIC_API_KEY`, written in its own `env` as `{ "$secret": "<scope>:<name>" }` or `{ "fromEnv": "NAME" }`. A `$secret` there is read when the record opens, and a record whose secret cannot be read is shown as invalid with a line naming it. A machine whose variant names neither is still made, and the CLI's own sign-in refusal is what the session says.
 
 ```json
-{ "plugins": [{ "name": "@ahpd/agent-claude", "options": {
-  "presets": { "claude": { "env": { "CLAUDE_CODE_OAUTH_TOKEN": { "$secret": "host:claude-token" } } } }
-} }] }
+{ "id": "claude", "kind": "claude", "owner": "host", "name": "Claude Code",
+  "config": { "env": { "CLAUDE_CODE_OAUTH_TOKEN": { "$secret": "host:claude-token" } } } }
 ```
 
 **Upgrading from the host's sign-in.** A machine used to mount this host's `~/.claude`, sign-in included. In a state volume it no longer does, so a person signs in again: once inside the machine, with `docker exec -it -e CLAUDE_CONFIG_DIR=/ahpd/claude <id> claude` and `/login`, which the state volume then keeps for that profile and owner, or with a token in the variant's `env` as above. A profile with `state: "host"` keeps the old shared sign-in instead; every machine that mounts it uses the same subscription, and anything running in one can read it.
@@ -298,15 +297,14 @@ pi declares only the variables its provider list names. A variable that pi's own
 
 ### ACP agents in a machine
 
-Each shipped `@ahpd/agent-acp` preset brings a `machine` block: the part its CLI comes from, a state directory at `/ahpd/<id>` seeded from the agent's own host files, never its login file, and the variables that point the CLI at that directory. Codex is `CODEX_HOME=/ahpd/codex` seeded from `~/.codex/config.toml`, `AGENTS.md` and `skills/`; OpenCode, Kilo and Devin move `XDG_CONFIG_HOME` and `XDG_DATA_HOME` under their state directory; Cursor runs `cursor-agent`, the name its part and its host installer share; Amp's part holds `amp-acp` and the Amp CLI it runs, which `AMP_CLI_PATH` names, and Amp has no variable that moves its settings, so it has no state directory. A preset's own `machine` is laid over the shipped one by key, and its `env` by variable:
+Each shipped `@ahpd/agent-acp` template brings a `machine` block: the part its CLI comes from, a state directory at `/ahpd/<id>` seeded from the agent's own host files, never its login file, and the variables that point the CLI at that directory. Codex is `CODEX_HOME=/ahpd/codex` seeded from `~/.codex/config.toml`, `AGENTS.md` and `skills/`; OpenCode, Kilo and Devin move `XDG_CONFIG_HOME` and `XDG_DATA_HOME` under their state directory; Cursor runs `cursor-agent`, the name its part and its host installer share; Amp's part holds `amp-acp` and the Amp CLI it runs, which `AMP_CLI_PATH` names, and Amp has no variable that moves its settings, so it has no state directory. A record's own `machine` is laid over the template's by key, and its `env` by variable:
 
 ```json
-{ "plugins": [{ "name": "@ahpd/agent-acp", "options": {
-  "presets": { "codex": { "machine": { "env": { "OPENAI_API_KEY": { "$secret": "user:ada/openai" } } } } }
-} }] }
+{ "id": "codex", "kind": "acp", "owner": "host", "name": "Codex",
+  "config": { "machine": { "env": { "OPENAI_API_KEY": { "$secret": "user:ada/openai" } } } } }
 ```
 
-A key is never in the shipped block: a person fills its variable in their own preset's `machine.env`, and a `$secret` there is read when the machine is made and passed by name on each command.
+A key is never in the shipped block: a host record fills its variable in its own `machine.env`, and a `$secret` there is read when the machine is made and passed by name on each command.
 
 ## ssh machines
 
@@ -342,7 +340,7 @@ A policy names every ssh machine with `computer: ["ssh.*"]`.
 
 ### What the box needs
 
-- ahpd at this host's version, and the plugins of the agents it serves, each configured in the box's own `config.json`. The host on the box loads a plugin with the options its own file gives it, so an ACP load's `presets` and cofold's `model` live there.
+- ahpd at this host's version, and the plugins of the agents it serves, each configured in the box's own `config.json`. The host on the box loads a plugin with the options its own file gives it, and serves the agent records in its own `agents` folder, so cofold's `model` lives in the file and an ACP agent's in its record.
 - `ahpd` on the `PATH` of a non-interactive login, which a Node installed by nvm is not. Otherwise name its full path in `host`.
 - Its own model credentials. Nothing is sent from this host: `host` above sources a file on the box, because a non-interactive ssh reads no profile.
 - This host's key in `authorized_keys`, and the box's host key known to this host. Every call passes `BatchMode=yes`, so a password prompt or an unknown host key fails with ssh's own sentence.
@@ -813,9 +811,13 @@ node scripts/computer.mjs start --mount type=bind,src=/github/ahpd,dst=/work
 
 ## Trying it from a checkout
 
-A daemon with the computer plugin and the ACP bridge, using the test fixture as the agent:
+A daemon with the computer plugin and the ACP bridge, with the test fixture as the `acp` record:
 
 ```sh
+mkdir -p /tmp/ahpd-computer-config/ahpd/agents
+cat > /tmp/ahpd-computer-config/ahpd/agents/acp.json <<'JSON'
+{ "id": "acp", "kind": "acp", "owner": "host", "name": "Test ACP", "config": { "command": "node", "args": ["/srv/acp.mjs"] } }
+JSON
 cat > /tmp/ahpd-computer.json <<'JSON'
 {
   "port": 9216,
@@ -824,11 +826,11 @@ cat > /tmp/ahpd-computer.json <<'JSON'
   "paths": ["/github/ahpd"],
   "plugins": [
     { "name": "./packages/computer/src/index.ts", "options": { "image": "node:22", "bodyMounts": true } },
-    { "name": "./packages/agent-acp/src/index.ts", "options": { "presets": { "acp": { "command": "node", "args": ["/srv/acp.mjs"] } } } }
+    { "name": "./packages/agent-acp/src/index.ts" }
   ]
 }
 JSON
-node --conditions development --import ./scripts/dev.mjs packages/server/src/main.ts --config-file /tmp/ahpd-computer.json
+XDG_CONFIG_HOME=/tmp/ahpd-computer-config node --conditions development --import ./scripts/dev.mjs packages/server/src/main.ts --config-file /tmp/ahpd-computer.json
 ```
 
 From a client, write a manifest to `computer://box` with `mounts: ["/github/ahpd/packages/agent-acp/test/fixtures/acp-server.mjs:/srv/acp.mjs:ro"]` and `workdir: "/srv"`, create a session with `config: { "computer": "computer://box" }`, and send a turn. It should answer `chat/turnComplete`. After `resourceDelete` on `computer://box`, `docker ps -a --filter label=ahpd.computer=1` should be empty.

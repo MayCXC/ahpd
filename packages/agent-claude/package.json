@@ -71,12 +71,13 @@
   "ahpd": {
     "entry": "./dist/index.js",
     "title": "Agent Claude",
-    "description": "Claude Code as an agent provider, with support for multiple configurations and presets.",
+    "description": "Claude Code as an agent backend, one record per configuration.",
     "categories": ["agent"],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
     "icons": [{ "src": "./icon.svg" }],
     "contracts": {
-      "agents": ["*"]
+      "agents": ["*"],
+      "agentKinds": ["claude"]
     },
     "options": {
       "paths": {
@@ -101,9 +102,6 @@
         "required": false
       },
       "workerStop": {
-        "required": false
-      },
-      "presets": {
         "required": false
       }
     }

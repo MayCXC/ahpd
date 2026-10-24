@@ -2,17 +2,15 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it, vi } from 'vitest';
-import { env, extraArgs, optionDefaults, outputStyle, presetSchema, sandbox, thinking } from '../src/options.js';
+import { loadPlugins } from '../../server/src/plugins.js';
+import { echo } from '../../../examples/echo/agent.js';
+import { env, extraArgs, optionDefaults, outputStyle, sandbox, thinking } from '../src/options.js';
+import type { AgentKind, AgentView, Bag, Start } from '@ahpd/sdk';
 
 /*
  * Each Claude option, declared once.
  *
- * A declaration is what a value may be and where it goes, and both the schema
- * a preset is checked against and the options a session's `query()` is built
- * from are made of them. So the cases here are the two questions a declaration
- * answers - does this value hold, and what does it become - and a preset's
- * values going through them into a session, which is the half that only holds
- * if `session.ts` asks.
+ * A declaration is what a value may be and where it goes, and both the kind schema a record is drawn from and the options a session's `query()` is built from are made of them. So the cases here are the two questions a declaration answers - does this value hold, and what does it become - and a record's values going through them into a session, which is the half that only holds if `session.ts` asks.
  */
 
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
@@ -41,27 +39,56 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
 
 const sdk = vi.hoisted(() => ({ options: [] as Record<string, unknown>[], flags: [] as Record<string, unknown>[] }));
 
-const { createSession } = await import('../src/session.js');
-
 const settle = async (times = 8): Promise<void> => {
   for (let i = 0; i < times; i++) await new Promise((done) => { setTimeout(done, 0); });
 };
 
-/** One session's `query()` options, on a variant holding the given values. */
+const REPO = join(import.meta.dirname, '../../..');
+const SOURCE = './packages/agent-claude/src/index.ts';
+
+/** The `claude` kind one load registered. */
+const kindOf = async (): Promise<AgentKind> => {
+  const { problems, options: served } = await loadPlugins([{ name: SOURCE, options: {} }], {
+    base: { path: '/tmp/ahpd-declared', agents: [echo({ path: '/tmp/ahpd-declared' })] },
+    configDir: REPO,
+    cwd: REPO,
+    log: () => {},
+  });
+  expect(problems).toEqual([]);
+  const kind = served.agentKinds?.['claude'];
+  if (kind === undefined) throw new Error('no claude kind was registered');
+  return kind;
+};
+
+/** One record, as a kind is handed it: every field read at each call. */
+const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
+  id,
+  kind: 'claude',
+  owner: 'host',
+  name,
+  description: undefined,
+  icon: undefined,
+  model: undefined,
+  get config() { return held(); },
+});
+
+/** One session's `query()` options, on a record holding the given values. */
 const queried = async (
-  preset: Record<string, unknown>,
+  config: Bag,
   settings?: Record<string, unknown>,
-  extra: Record<string, unknown> = {},
+  extra: Partial<Start> = {},
 ): Promise<Record<string, unknown>> => {
   sdk.options = [];
   sdk.flags = [];
-  createSession({
+  const kind = await kindOf();
+  kind.open(viewOf('claude', () => config)).create({
     uri: 'ahp-session:/declared',
     chatUri: 'ahp-chat:/declared',
-    cwd: mkdtempSync(join(tmpdir(), 'ahpd-declared-')),
+    settings: settings ?? {},
+    clientToolTimeoutMs: 60_000,
+    schema: () => ({ type: 'object', properties: {} }),
     emit: () => {},
-    preset,
-    ...(settings === undefined ? {} : { settings }),
+    workingDirectory: mkdtempSync(join(tmpdir(), 'ahpd-declared-')),
     ...extra,
   });
   await settle();
@@ -96,22 +123,11 @@ it('leaves the output style to the flag settings, which the CLI takes live', () 
   expect(outputStyle.toQuery).toBeUndefined();
 });
 
-it('holds a preset to the declared fields, and names the one that does not hold', () => {
-  expect(presetSchema({ sandbox: 'on', thinking: 'disabled', hostTasks: false, outputStyle: 'concise', env: { A: 'b' }, extraArgs: { flag: null } }, 'options.presets.work'))
-    .toBeUndefined();
-  expect(presetSchema({ temperature: 1 }, 'options.presets.work'))
-    .toBe('options.presets.work.temperature is not an option a preset holds');
-  expect(presetSchema({ sandbox: 'maybe' }, 'options.presets.work'))
-    .toBe('options.presets.work.sandbox is not one of default, on, off');
-  expect(presetSchema({ env: 'A=b' }, 'options.presets.work'))
-    .toBe('options.presets.work.env is not an object');
-});
-
 it('says what an option is when nothing named one', () => {
   expect(optionDefaults()).toEqual({ thinking: 'adaptive', hostTasks: true, enableTasks: true });
 });
 
-it('builds a session query from the declared values of its preset', async () => {
+it('builds a session query from the declared values of its record', async () => {
   const options = await queried({ sandbox: 'on', thinking: 'disabled', outputStyle: 'concise' });
   expect(options.settings).toEqual({ sandbox: { enabled: true } });
   expect(options.thinking).toEqual({ type: 'disabled' });
@@ -128,7 +144,7 @@ it('names a switched-off plugin server in the CLI\'s own settings', async () => 
   const options = await queried({ sandbox: 'on' }, undefined, { deniedMcpServers: ['one', 'two words'] });
   // A plugin is a directory the CLI opens itself, so a server the host left
   // out of `mcpServers` can still be found there. The list is one the CLI
-  // reads from its settings, and what a preset put in them is added to rather
+  // reads from its settings, and what a record put in them is added to rather
   // than replaced.
   expect(options.settings).toEqual({
     sandbox: { enabled: true },
@@ -140,21 +156,21 @@ it('adds no settings of its own when nothing was switched off', async () => {
   expect((await queried({ sandbox: 'default' }, undefined, { deniedMcpServers: [] })).settings).toBeUndefined();
 });
 
-it('a preset with sandbox off wins over a stored on', async () => {
+it('a record with sandbox off wins over a stored on', async () => {
   /*
    * `sandboxEnabled` is the control a session had before the schema stopped
    * declaring it, and a store still holds an `on` from it. That value was
-   * spread over the preset's, so `off` was the one word a preset could not
-   * say: a variant built to run unsandboxed ran sandboxed on any session
+   * spread over the record's, so `off` was the one word a record could not
+   * say: a record built to run unsandboxed ran sandboxed on any session
    * somebody had once turned the sandbox on for.
    */
   expect((await queried({ sandbox: 'off' }, { sandboxEnabled: 'on' })).settings)
     .toEqual({ sandbox: { enabled: false } });
 });
 
-it('a preset with no sandbox keeps a stored on', async () => {
+it('a record with no sandbox keeps a stored on', async () => {
   // The other half of that: an upgrade never runs a session less sandboxed
-  // than it was, so a stored on still turns it on where the preset is silent.
+  // than it was, so a stored on still turns it on where the record is silent.
   expect((await queried({ thinking: 'disabled' }, { sandboxEnabled: 'on' })).settings)
     .toEqual({ sandbox: { enabled: true } });
 });

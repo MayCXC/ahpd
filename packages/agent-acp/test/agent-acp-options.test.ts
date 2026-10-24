@@ -19,7 +19,7 @@ const SOURCE = './packages/agent-acp/src/index.ts';
 const NAME = 'agent-acp';
 
 /** Options that pass, which each case spoils one key of. */
-const VALID: Record<string, unknown> = { presets: { node: { command: 'node' } } };
+const VALID: Record<string, unknown> = { hostTools: false, toolsChanged: 'notify' };
 
 /** The option names the schema declares. */
 const declared = (): string[] => Object.keys((optionsSchema as { properties: Record<string, unknown> }).properties);
@@ -49,8 +49,8 @@ it('declares every option its README lists, and no other', () => {
 });
 
 it.each<[string, unknown]>([
-  ['presets', 3],
   ['hostTools', 5],
+  ['toolsChanged', 5],
 ])('reports %s of the wrong type and skips the plugin', async (key, value) => {
   const { loaded, problems } = await load({ ...VALID, [key]: value });
   expect(problems).toHaveLength(1);
@@ -58,8 +58,13 @@ it.each<[string, unknown]>([
   expect(loaded).toEqual([]);
 });
 
-it('reports a spec with no presets as missing a required option', async () => {
+it('loads with no options at all, since each agent is a record', async () => {
   const { loaded, problems } = await load({});
-  expect(problems).toEqual([`plugin ${NAME} skipped: plugins.${NAME}.options.presets is required`]);
-  expect(loaded).toEqual([]);
+  expect(problems).toEqual([]);
+  expect(loaded.map((one) => one.name)).toEqual([NAME]);
+});
+
+it('passes an option it does not know through, naming it', async () => {
+  const { problems } = await load({ ...VALID, presets: {} });
+  expect(problems.join('\n')).toContain(`plugins.${NAME}.options.presets is not an option ${NAME} knows; passed through`);
 });

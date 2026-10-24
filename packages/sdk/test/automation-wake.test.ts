@@ -76,7 +76,9 @@ const watchingSilence = (): Bag => ({
 });
 
 /** What driving a session through a host that knows people costs the driver. */
-const DRIVER: Grant[] = ['session:create', 'session:state', 'chat:turns', 'chat:send'];
+// `session:write` beside the operations, because the daemon's own agent takes
+// it to be started on: `session:create` alone is not enough for one.
+const DRIVER: Grant[] = ['session:write', 'session:create', 'session:state', 'chat:turns', 'chat:send'];
 
 type Client = ReturnType<ReturnType<typeof createHost>['accept']>;
 

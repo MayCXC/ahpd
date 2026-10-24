@@ -15,17 +15,34 @@ export interface OfferedModel {
 }
 
 /**
+ * A key a fetch entry sends as its bearer token.
+ *
+ * The channel opens a record with its config resolved, so a record's `key`
+ * arrives as the token's text whether it was written as `{ fromEnv }` or as a
+ * `$secret`. A preset, or any caller that did not pass through the channel,
+ * still holds `{ fromEnv }`, which names the daemon variable to read.
+ */
+export type ModelKey = string | { fromEnv: string };
+
+/**
  * One entry of the `models` option.
  *
  * A model id, a model with a name, or a fetch: `fetch` is a URL answering an
  * OpenAI-shaped `{ data: [{ id, name? }] }`, `match` keeps the ids it covers
- * (`*` is any run of characters), and `key` names the daemon variable sent as
- * a bearer token.
+ * (`*` is any run of characters), and `key` is the bearer token sent with the
+ * request.
  */
 export type ModelEntry =
   | string
   | { id: string; name?: string }
-  | { fetch: string; match?: string; key?: { fromEnv: string } };
+  | { fetch: string; match?: string; key?: ModelKey };
+
+/** Whether a value is a token's text or the daemon variable it is read from. */
+const isKey = (value: unknown): value is ModelKey => {
+  if (typeof value === 'string') return value !== '';
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    && typeof (value as { fromEnv?: unknown })['fromEnv'] === 'string';
+};
 
 /** The model Claude Code names on an assistant message it wrote itself, such as an API error. */
 const SYNTHETIC = '<synthetic>';
@@ -62,10 +79,7 @@ export const modelsProblem = (value: unknown, by = 'options.models'): string | u
     }
     if (typeof held.fetch === 'string' && held.fetch !== '') {
       if (held.match !== undefined && typeof held.match !== 'string') return `${at}.match is not a string`;
-      const key = held.key as Record<string, unknown> | undefined;
-      if (key !== undefined && (typeof key !== 'object' || key === null || typeof key.fromEnv !== 'string')) {
-        return `${at}.key is not { fromEnv }`;
-      }
+      if (held.key !== undefined && !isKey(held.key)) return `${at}.key is not a string or { fromEnv }`;
       continue;
     }
     return `${at} has neither an id nor a fetch`;
@@ -81,13 +95,24 @@ const matcher = (pattern: string | undefined): ((id: string) => boolean) => {
   return (id) => test.test(id);
 };
 
+/**
+ * The bearer token a fetch entry's `key` names.
+ *
+ * A record's key is already the text the channel resolved, so it is sent as it
+ * is; a `{ fromEnv }` names a variable of the daemon's own environment.
+ */
+const tokenOf = (key: ModelKey | undefined): string | undefined => {
+  if (key === undefined) return undefined;
+  return typeof key === 'string' ? key : process.env[key.fromEnv];
+};
+
 /** One fetch entry's models; nothing, and a line said, when the endpoint fails. */
 const fetched = async (
-  entry: { fetch: string; match?: string; key?: { fromEnv: string } },
+  entry: { fetch: string; match?: string; key?: ModelKey },
   log: (line: string) => void,
   get: typeof fetch,
 ): Promise<OfferedModel[]> => {
-  const token = entry.key === undefined ? undefined : process.env[entry.key.fromEnv];
+  const token = tokenOf(entry.key);
   try {
     const answer = await get(entry.fetch, token === undefined ? {} : { headers: { authorization: `Bearer ${token}` } });
     if (!answer.ok) throw new Error(`HTTP ${String(answer.status)}`);
@@ -99,7 +124,10 @@ const fetched = async (
       .map((one) => ({ id: one.id, name: typeof one.name === 'string' && one.name !== '' ? one.name : one.id }));
   }
   catch (error) {
-    log(`models from ${entry.fetch} could not be read: ${error instanceof Error ? error.message : String(error)}`);
+    // A fetch layer may quote what it was handed, so the token never reaches the
+    // line even when it is in the error's own words.
+    const said = error instanceof Error ? error.message : String(error);
+    log(`models from ${entry.fetch} could not be read: ${token === undefined || token === '' ? said : said.replaceAll(token, '<redacted>')}`);
     return [];
   }
 };

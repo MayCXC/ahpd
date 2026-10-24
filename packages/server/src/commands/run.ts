@@ -13,9 +13,10 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { canonicalFromCli, check, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
 import type { Command, JsonSchema, Registry } from '@cofold/commands';
-import type { AutomationStore, AutomationsOptions, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, AutomationStore, AutomationsOptions, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, ServedAgentKind, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   adaptersChannel,
+  agentsChannel,
   clientPluginsIn,
   connectorsChannel,
   createHost,
@@ -66,6 +67,7 @@ import { loadPlugins, pluginSet, type LoadOptions } from '../plugins.js';
 import { applyPlugins, type Applied } from '../applyplugins.js';
 import { pluginsChannel } from '../pluginschannel.js';
 import { fileRecords } from '../records.js';
+import { applyPresets, planPresets } from '../agents/migrate.js';
 import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
 import { pty } from '../pty.js';
@@ -725,6 +727,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const recordStore = fileRecords(configDir(), { onProblem: listProblem });
   const connectorRecords = await recordStore.collection('connectors', { format: 'json' });
   /*
+   * The agents, each one a record of a kind a plugin registers.
+   *
+   * The same store as the connectors: a plugin takes the store over as a whole,
+   * and a channel reading another folder would answer from records nobody
+   * writes.
+   */
+  const agentRecords = await recordStore.collection('agents', { format: 'json' });
+  /*
    * The adapters the load folds in, read through the closure: both channels
    * are built before the plugins are loaded, and an adapter row answers from
    * the first listing after it, as the plugin channel's manifest does.
@@ -759,6 +769,51 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       if (entry === undefined) return undefined;
       return { owner: ownerOf(entry._meta?.['ahpd.owner']) };
     },
+    onProblem: listProblem,
+  });
+  /*
+   * The agent kinds the load folds in, and the agents the records opened.
+   *
+   * Both are read through closures: the channel is built before the plugins are
+   * loaded and before the host exists, and a kind registered later, or an agent
+   * folded later, reaches the listing that follows it.
+   */
+  let agentKinds: Record<string, ServedAgentKind> = {};
+  /** The agents of the records, as the last fold took them. */
+  let recordAgents: Agent[] = [];
+  /**
+   * What serves an agent id the records do not hold.
+   *
+   * A put of a new record asks this before writing: an id is unique across
+   * every agent, so a record under an id the daemon or a plugin already serves
+   * would be folded away while its row stayed in the list. Read from the
+   * loaded plugins and the daemon's own fold rather than the host, because a
+   * name is what the answer needs and the host keeps only the backends.
+   */
+  const agentHolder = (id: string): string | undefined => {
+    for (const one of pluginHoldings.loaded()) {
+      const held = pluginHoldings.held(one.name);
+      if (held?.contribution.agents.some((agent) => agent.provider === id) === true) return `plugin ${one.name}`;
+    }
+    if (recordAgents.some((agent) => agent.provider === id)) return 'an agent record';
+    return folded.agents.some((agent) => agent.provider === id) ? 'the daemon' : undefined;
+  };
+  /*
+   * The agents made from records, beside the connectors.
+   *
+   * `refold` and `endSessionsOf` are the host's, and the host is built over
+   * this channel's channel below: both are closures because a channel is made
+   * before the host it asks.
+   */
+  const agentLists = agentsChannel({
+    collection: agentRecords,
+    kinds: () => agentKinds,
+    vault: () => held,
+    // The same checker a connector's and a plugin's config is held to.
+    check: (value, schema, label) => { check(value, schema as JsonSchema, label); },
+    refold: (agents) => refoldAgents(agents),
+    endSessionsOf: (id) => host.endSessionsOf(id),
+    holderOf: agentHolder,
     onProblem: listProblem,
   });
   /*
@@ -798,8 +853,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   };
   const lists = servedRecords(
     'ahpd',
-    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel, adapterLists.channel, connectorLists.channel],
-    { ...peopleLists?.methods, ...policyLists.methods, ...pluginLists.methods, ...connectorLists.methods },
+    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel, adapterLists.channel, connectorLists.channel, agentLists.channel],
+    { ...peopleLists?.methods, ...policyLists.methods, ...pluginLists.methods, ...connectorLists.methods, ...agentLists.methods },
   );
 
   /*
@@ -846,10 +901,17 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * is held to is what is known when the save arrives.
    */
   const automations = memory
-    ? memoryAutomations({ pluginTypes: () => pluginTypes, connectors: () => connectorLists.refs() })
+    ? memoryAutomations({
+      pluginTypes: () => pluginTypes,
+      connectors: () => connectorLists.refs(),
+      agents: () => agentLists.owners(),
+      hasUsers: () => users !== undefined,
+    })
     : daemonAutomations((message) => process.stdout.write(`${message}\n`), {
       pluginTypes: () => pluginTypes,
       connectors: () => connectorLists.refs(),
+      agents: () => agentLists.owners(),
+      hasUsers: () => users !== undefined,
     });
   automationsStore = automations;
 
@@ -872,6 +934,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * answer a turn.
      */
     agents: [],
+    /*
+     * Whose each stored agent is, read from the records' channel.
+     *
+     * What decides which agents one caller is told about and may start a
+     * session on: a record's owner, a membership for a team's and the person
+     * for a person's. An id the records do not hold is the daemon's own or a
+     * plugin's, and takes `session:write`.
+     */
+    agentOwners: () => agentLists.owners(),
     /*
      * What this daemon can do that the protocol cannot.
      *
@@ -1219,6 +1290,24 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * what their daemon is missing before it says it started.
    */
   stamp('start: plugins');
+  /*
+   * The presets a configuration file still holds, read before any plugin loads:
+   * a plugin registers a kind now, and an agent is a record.
+   *
+   * Only the plans are made here. They are written once the kinds have loaded,
+   * because a kind's schema is what says which of a record's fields are
+   * secrets, and a plaintext key must not reach a record or a listing. The file
+   * is only rewritten once every record and every vault write succeeded, so a
+   * failure here leaves it as it was for the next start to try again.
+   */
+  const planned = planPresets({
+    plugins: options.plugins,
+    configFile: pluginFile,
+    // The marker that says the presets were moved once belongs beside the
+    // records, not beside a file a `--config-file` may have put anywhere.
+    recordsDir: configDir(),
+    log: stamp,
+  });
   const holding: LoadOptions = {
     base,
     paths: options.paths,
@@ -1256,6 +1345,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       noPlugins: options.noPlugins,
       host: () => host,
       log: stamp,
+      records: () => recordAgents,
       ...(reload === undefined ? {} : { reload }),
     });
     const now = pluginHoldings.fold().options;
@@ -1265,6 +1355,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     failures = answer.failures;
     adapters = withHostAdapters(now.adapters);
     pluginTypes = pluginTriggerTypes(now.pluginTriggers);
+    // A kind a plugin brought or took away is what the stored records are read
+    // against, so the list is replaced before they are opened again.
+    agentKinds = now.agentKinds ?? {};
     liveRoutes = answer.routes;
     // A plugin loaded later acts on the host as its own client, as one loaded
     // at start does, and it can only be handed the host once the host exists.
@@ -1273,10 +1366,16 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     await pluginLists.refresh();
     await adapterLists.refresh();
     await connectorLists.refresh();
+    /*
+     * The records again, against the kinds this fold holds: one of a kind a
+     * plugin just brought opens now, and one of a kind it took away is listed
+     * `unavailable` and its sessions end.
+     */
+    await agentLists.openAll();
     if (answer.restart) markRestart();
     return answer;
   };
-  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, failures: didFail } = await loadPlugins(options.plugins, { ...holding, set: pluginHoldings });
+  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, failures: didFail } = await loadPlugins(planned.plugins, { ...holding, set: pluginHoldings });
   // The channel built above starts answering manifests from here.
   loaded = didLoad;
   failures = didFail;
@@ -1284,10 +1383,63 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   // And the two channels start answering adapters, which is what a stored
   // connector is checked against when it opens below.
   adapters = withHostAdapters(folded.adapters);
+  // And the kinds a stored agent record is read against when it is opened below.
+  agentKinds = folded.agentKinds ?? {};
   // The trigger types a save is now checked against: the host's own two are the
   // store's, and these are what the plugins brought.
   pluginTypes = pluginTriggerTypes(folded.pluginTriggers);
   for (const problem of problems) stamp(problem);
+
+  /*
+   * The ports a plugin may have replaced, taken from this fold before the
+   * records open: a record's key is read from the vault the fold holds, and a
+   * record's agent is folded in before the host is built.
+   */
+  if (folded.usage !== undefined) metered = folded.usage;
+  if (folded.vault !== undefined) held = folded.vault;
+  kept = folded.automations;
+  /*
+   * The presets written now that the kinds and the vault are known.
+   *
+   * A record's secrets are moved to the vault the fold holds, under the record's
+   * own name, before the record is stored: nothing here reads one, and no
+   * listing serves one. The file is rewritten only after each record is.
+   */
+  await applyPresets({
+    plan: planned,
+    records: agentRecords,
+    recordsDir: configDir(),
+    kinds: agentKinds,
+    vault: held,
+    log: stamp,
+  });
+  /*
+   * The stored records opened, and folded into the load, before the host is
+   * built.
+   *
+   * The daemon bundles no agent, so a start whose agents are all records is an
+   * ordinary start: what a client finds in the first turn is what the host was
+   * built over, and a start with neither a plugin's agent nor a record's is
+   * refused below rather than answered by a host that could serve nothing.
+   *
+   * A record whose id a plugin already serves is reported by the fold and left
+   * out, the same line a fold made later gives.
+   */
+  const agentProblems = new Set(problems);
+  let opened: Agent[] = [];
+  try {
+    opened = await agentLists.agents();
+  }
+  catch (error) {
+    stamp(`The agent records could not be served: ${reason(error)}`);
+  }
+  const start = pluginHoldings.fold(opened);
+  for (const problem of start.problems) {
+    if (agentProblems.has(problem)) continue;
+    agentProblems.add(problem);
+    stamp(problem);
+  }
+  const started = start.options;
 
   /*
    * A plugin that also set the reader, over the module the file named.
@@ -1352,7 +1504,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * configuration file instead. The command carries `--config-file` when this
    * run was given one, so it names the plugin in the file this daemon reads.
    */
-  if (folded.agents.length === 0) {
+  if (started.agents.length === 0) {
     const install = `ahpd plugin install @ahpd/agent-claude${options.configFile === undefined ? '' : ` --config-file ${options.configFile}`}`;
     stamp(`No backend is loaded, so this host could serve nothing. Run ${install} to install Claude Code and add it to "plugins" in ${options.configFile ?? configPath()}, or run npm i in ${configDir()} and add the package to "plugins" yourself.`);
     process.exit(1);
@@ -1365,7 +1517,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * and removes - and the call an action tool makes, which does the live checks
    * in the channel.
    */
-  const host = createHost({ ...folded, connectors: { refs: () => connectorLists.refs(), run: connectorLists.run } });
+  const host = createHost({ ...started, connectors: { refs: () => connectorLists.refs(), run: connectorLists.run } });
   // The plugin channel's marks reach the host that now serves it.
   markRestart = () => { host.markRestartNeeded(); };
   /*
@@ -1380,13 +1532,41 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   for (const one of folded.pluginConnects ?? []) one.host = host;
   turning = () => host.turning();
-  // What the host was finally built over, which is what a served `ahpd usage`
-  // reads: a plugin that registered a store of its own is the one the records
-  // were written to, and a command answering from the daemon's folder beside it
-  // would report a total nothing was charged to.
-  if (folded.usage !== undefined) metered = folded.usage;
-  if (folded.vault !== undefined) held = folded.vault;
-  kept = folded.automations;
+  /*
+   * A record's agent folded into the running host.
+   *
+   * The agents channel asks this with every record it has open, after a put or
+   * a remove and at a start, and gets back the ids the host took. A record
+   * whose id a plugin or the daemon already serves is reported and left out:
+   * the record stays on disk and the channel lists it `invalid`.
+   *
+   * The whole options object goes to the host, not the agents alone - a fold is
+   * one object, and `replace` refuses what moves a port or a scheme - so the
+   * connectors port the host was built with is put back beside it.
+   */
+  const refoldAgents = async (agents: Agent[]): Promise<ReadonlySet<string>> => {
+    const next = pluginHoldings.fold(agents);
+    for (const line of next.problems) {
+      // The same clash comes back on every fold, and is the log's once.
+      if (agentProblems.has(line)) continue;
+      agentProblems.add(line);
+      stamp(line);
+    }
+    const now = next.options;
+    adapters = withHostAdapters(now.adapters);
+    pluginTypes = pluginTriggerTypes(now.pluginTriggers);
+    agentKinds = now.agentKinds ?? {};
+    const refused = host.replace({ ...now, connectors: { refs: () => connectorLists.refs(), run: connectorLists.run } });
+    if (refused !== undefined) throw new Error(refused);
+    recordAgents = agents;
+    return new Set(next.records);
+  };
+  /*
+   * Every stored agent of a kind a plugin registered, opened and folded into the
+   * host before the listener answers: a session a client starts in the first
+   * turn finds the agent in the root list already.
+   */
+  await agentLists.openAll();
   /*
    * Every stored connector of an adapter a plugin registered, opened before
    * the listener answers: a call that arrives in the first turn after the

@@ -180,6 +180,6 @@ export function piAgent(
      */
     machine: () => piMachine(provider),
 
-    create: (start) => piSession(options, start),
+    create: (start) => piSession(options, start, options.open),
   };
 }

@@ -13,19 +13,21 @@
  * that hangs must not hold up the setup. The real runner kills it; the caller's
  * runner is trusted to honour the same options.
  *
- * The person's own `@ahpd/agent-acp` presets are read here as plain data, by
- * the plugin's package name. This file does not import that package: the
- * server may import `@ahpd/sdk` and not a package that runs an agent, which is
- * also why the rows themselves live in the sdk.
+ * The agents a person already has are read here as plain data: an `acp` record
+ * keeps the command and install lines a row is found by, and a preset a file
+ * still holds is read by the plugin's package name. This file does not import
+ * that package: the server may import `@ahpd/sdk` and not a package that runs an
+ * agent, which is also why the rows themselves live in the sdk.
  */
 
 import { installLine, knownAgents, type KnownAgent } from '@ahpd/sdk';
+import type { StoredRecord } from '@ahpd/sdk';
 import { asSpec } from './config.js';
 import type { Runner } from './install.js';
 import { onPath } from './onpath.js';
 import { isNamed } from './plugins.js';
 
-/** The plugin every ACP agent runs through, and the name a person's presets sit under. */
+/** The plugin every ACP agent runs through, which is what registers the kind they are records of. */
 export const AGENT_PLUGIN = '@ahpd/agent-acp';
 
 /** How long a `--version` may take before the process is stopped. */
@@ -46,13 +48,13 @@ export interface RuntimeFound {
 
 /** One agent found on PATH. */
 export interface AgentFound {
-  /** The shipped row, with the person's preset over its command, install and page. */
+  /** The shipped row, with this agent's own command, install and page over it. */
   agent: KnownAgent;
   /** The full path on PATH. */
   path: string;
   /** The first line of `--version`, absent when it failed or timed out. */
   version?: string;
-  /** Whether the person's configuration already names a preset for this id. */
+  /** Whether this host already has an agent of this id, as a record or a preset. */
   configured: boolean;
 }
 
@@ -154,11 +156,11 @@ const installOf = (held: unknown): KnownAgent['install'] | undefined => {
   return Object.keys(install).length === 0 ? undefined : install;
 };
 
-/** One row with a person's own command, install lines and page over it. */
-const withPreset = (agent: KnownAgent, preset: Record<string, unknown>): KnownAgent => {
-  const command = typeof preset['command'] === 'string' && preset['command'] !== '' ? preset['command'] : agent.command;
-  const install = installOf(preset['install']) ?? agent.install;
-  const page = typeof preset['page'] === 'string' && preset['page'] !== '' ? preset['page'] : agent.page;
+/** One agent's own command, install lines and page, over the row's. */
+const withRecord = (agent: KnownAgent, config: Record<string, unknown>): KnownAgent => {
+  const command = typeof config['command'] === 'string' && config['command'] !== '' ? config['command'] : agent.command;
+  const install = installOf(config['install']) ?? agent.install;
+  const page = typeof config['page'] === 'string' && config['page'] !== '' ? config['page'] : agent.page;
   return {
     ...agent,
     command,
@@ -167,7 +169,11 @@ const withPreset = (agent: KnownAgent, preset: Record<string, unknown>): KnownAg
   };
 };
 
-/** The presets the person's `@ahpd/agent-acp` entry holds, by id. */
+/** Whether a file's plugin list names this package, however it is written. */
+const namesPlugin = (plugins: unknown, name: string): boolean => Array.isArray(plugins)
+  && plugins.map(asSpec).some((spec) => spec !== undefined && isNamed(spec, name));
+
+/** The presets a file still holds for `@ahpd/agent-acp`, by id. */
 const presetsIn = (plugins: unknown): Map<string, Record<string, unknown>> => {
   const presets = new Map<string, Record<string, unknown>>();
   if (!Array.isArray(plugins)) return presets;
@@ -184,19 +190,45 @@ const presetsIn = (plugins: unknown): Map<string, Record<string, unknown>> => {
 };
 
 /**
+ * The agents this host already has, by id: every `acp` record, and a preset the
+ * file still holds for an id no record names.
+ *
+ * The record wins, because it is what the daemon serves. A preset is read only
+ * until the start that moves it to a record, so a setup run between an upgrade
+ * and that start shows the agents the file says it has rather than offering
+ * every one of them again.
+ *
+ * A record is only served when the plugin that registers its kind is in the
+ * list, so a record left behind by a setup that stopped before writing the file
+ * is not shown as configured: the question that adds the plugin is asked again.
+ */
+export const configuredAgents = (
+  plugins: unknown,
+  records: readonly StoredRecord[],
+): Map<string, Record<string, unknown>> => {
+  const found = presetsIn(plugins);
+  if (!namesPlugin(plugins, AGENT_PLUGIN)) return found;
+  for (const one of records) {
+    if (one.kind !== 'acp') continue;
+    const config = one.config;
+    found.set(one.id, typeof config === 'object' && config !== null && !Array.isArray(config) ? config as Record<string, unknown> : {});
+  }
+  return found;
+};
+
+/**
  * Every known agent, with the ones on PATH and the ones that are not.
  *
- * `plugins` is the file's own list, read before any question so an agent the
- * file already names is shown as configured rather than offered again.
+ * `configured` is `configuredAgents`, read before any question so an agent this
+ * host already has is shown as configured rather than offered again.
  */
-export const findAgents = async (search: Search, plugins: unknown): Promise<AgentsFound> => {
+export const findAgents = async (search: Search, configured: ReadonlyMap<string, Record<string, unknown>>): Promise<AgentsFound> => {
   const platform = search.platform ?? process.platform;
-  const presets = presetsIn(plugins);
   const agents: AgentFound[] = [];
   const missing: KnownAgent[] = [];
   for (const row of Object.values(knownAgents)) {
-    const preset = presets.get(row.id);
-    const agent = preset === undefined ? row : withPreset(row, preset);
+    const config = configured.get(row.id);
+    const agent = config === undefined ? row : withRecord(row, config);
     const path = onPath(agent.command, search.path, platform);
     if (path === undefined) {
       missing.push(agent);
@@ -206,7 +238,7 @@ export const findAgents = async (search: Search, plugins: unknown): Promise<Agen
     agents.push({
       agent,
       path,
-      configured: preset !== undefined,
+      configured: config !== undefined,
       ...(version === undefined ? {} : { version }),
     });
   }

@@ -1291,15 +1291,24 @@ export function createHost(options: HostOptions): Host {
   wirePlugins();
 
   /*
-   * The users directory, watched only while a plugin listens for its change:
-   * a host nobody asks keeps no watch on the folder open.
+   * The users directory, watched while a plugin listens for its change or the
+   * host is told whose agents are.
+   *
+   * A change to the directory is a change to who may use what: a person who
+   * joined a team, or left one, may use a different set of agents from that
+   * moment. The agent list is sent again, and `seenBy` filters it for each
+   * connection, so a membership change reaches the callers it alters.
    *
    * Whether a plugin listens for it is what a live fold can change, so the
    * condition is asked again by `replace` rather than read once here.
    */
   const listeningForUsers = (): boolean => (options.events?.users_changed?.length ?? 0) > 0;
-  const openUsersWatch = (): { close(): void } | undefined => listeningForUsers()
-    ? options.users?.watch?.(() => { void fire({ type: 'users_changed' }); })
+  const watchingUsers = (): boolean => listeningForUsers() || options.agentOwners !== undefined;
+  const openUsersWatch = (): { close(): void } | undefined => watchingUsers()
+    ? options.users?.watch?.(() => {
+      if (listeningForUsers()) void fire({ type: 'users_changed' });
+      dispatch(ROOT, { type: 'root/agentsChanged', agents: descriptors() });
+    })
     : undefined;
   let usersWatch = openUsersWatch();
 
@@ -1399,8 +1408,8 @@ export function createHost(options: HostOptions): Host {
       ctx.contributing = permitted([...ctx.contributed, ...ctx.actionTools]);
       wireChannels();
       wirePlugins();
-      if (listeningForUsers() && usersWatch === undefined) usersWatch = openUsersWatch();
-      else if (!listeningForUsers() && usersWatch !== undefined) { usersWatch.close(); usersWatch = undefined; }
+      if (watchingUsers() && usersWatch === undefined) usersWatch = openUsersWatch();
+      else if (!watchingUsers() && usersWatch !== undefined) { usersWatch.close(); usersWatch = undefined; }
       for (const provider of fresh) {
         const agent = agents.get(provider);
         if (agent !== undefined) probeAgent(agent);

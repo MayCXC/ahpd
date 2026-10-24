@@ -19,7 +19,7 @@
  */
 
 import type { ModelInfo, Store } from '@cofold/agents';
-import { activityOf, bag, idOf, str, uriOf } from '@ahpd/sdk';
+import { activityOf, bag, idOf, reason, str, uriOf } from '@ahpd/sdk';
 import type { Bag, Session, Start } from '@ahpd/sdk';
 import { rowOf, storeOf } from './agent.js';
 import type { CofoldOptions, Held } from './agent.js';
@@ -42,6 +42,17 @@ import { createTurns, partsFor } from './turns.js';
  * stripped of its scheme is left alone, which is what a `resume` carries.
  */
 export const sessionIdOf = (uri: string): string => idOf(uri);
+
+/**
+ * What a turn is built from, out of the options, and what a record may change
+ * between two of them.
+ *
+ * A record's store, its machine's configuration directory and an embedder's
+ * adapter and policy are chosen when the record is opened: a store that moved
+ * under a running session would lose the conversation it is writing, and a
+ * policy is what the session's controls were drawn from. These are the rest.
+ */
+const LIVE_KEYS = ['model', 'baseUrl', 'apiKey', 'instructions', 'resource', 'autoCompactTokens', 'tools'] as const;
 
 /**
  * One conversation over a cofold agent.
@@ -97,6 +108,39 @@ export function cofoldSession(
    * is public - gets one of its own, which is what a single session had.
    */
   const store = sharedStore ?? storeOf(options);
+
+  /**
+   * Read the record again, and put what it says now on the options a turn runs
+   * on.
+   *
+   * The turn already running is not touched: a session reads this at the start
+   * of a turn, so an edit lands on the next one and a turn that is streaming
+   * ends on what it started with. A record that can no longer be used - a key
+   * the vault would not read back, a form the kind no longer describes - comes
+   * back as a sentence, which the turn answers instead of running.
+   *
+   * The sentence names the record and never what it holds: the config it was
+   * built from has each key already read from the vault, and that is exactly
+   * what must not reach a client.
+   */
+  const refreshOptions = (): string | undefined => {
+    const live = options.recordOf;
+    if (live === undefined) return undefined;
+    let now: CofoldOptions;
+    try {
+      now = live();
+    }
+    catch (error) {
+      return `${provider}: the record cannot be used: ${reason(error)}`;
+    }
+    const holding = options as unknown as Record<string, unknown>;
+    const read = now as unknown as Record<string, unknown>;
+    for (const key of LIVE_KEYS) {
+      if (read[key] === undefined) delete holding[key];
+      else holding[key] = read[key];
+    }
+    return undefined;
+  };
 
   /** Finished turns. The running one is `active` and is deliberately not here. */
   const turns: Bag[] = [...(start.seed ?? [])];
@@ -159,6 +203,7 @@ export function cofoldSession(
     queued,
     settings,
     touch,
+    refreshOptions,
     offered: start.tools ?? [],
     active: undefined,
     handle: undefined,

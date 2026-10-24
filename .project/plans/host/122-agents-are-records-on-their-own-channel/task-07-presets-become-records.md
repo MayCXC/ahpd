@@ -1,6 +1,6 @@
 ---
 title: Presets become records at the first start
-status: todo
+status: implemented
 depends: [task-03-agent-claude-registers-a-kind.md, task-04-agent-acp-registers-a-kind.md, task-05-agent-cofold-registers-a-kind.md, task-06-agent-pi-registers-a-kind.md]
 layer: "server, bot"
 refs:
@@ -45,9 +45,15 @@ At its first start on this version, the daemon makes one host record per preset 
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Files:** none yet.
-- **Open questions:** none.
-- **Departures:** none.
+- **Done so far:** steps 1-11. The daemon reads the plan (`planPresets`) before any plugin loads and writes it (`applyPresets`) once the kinds and the vault are known, because a kind's schema is what says which of a record's fields are secrets. The plan is taken from the configuration file's own entries, paired by name with the specs this run loads: a `--plugin-option` is never made permanent, and a `--plugin` spec the file does not hold leaves the file as it is. Each plaintext secret is moved to the vault under `host:agent/<id>/<field>`, as the channel's own put does, and the record keeps `{ "$secret": "<name>" }`; a `$secret` or a `fromEnv` stays as written. It writes one `owner: "host"` record per preset with the preset key as the id (the `provider` option for cofold and pi), writes every record and every vault entry before it touches the file, copies the file to `config.json.bak-<stamp>`, writes a temp name and renames it over, and logs one line of ids only. Only a preset that became a record, or that the records already held, leaves the file. A marker beside the records, `presets-state.json` in the agents folder rather than the configuration file's folder (which `--config-file` may put elsewhere), is written once a complete pass has moved the presets: the built-in claude is planned while the file entry still holds a `presets` key, and for a file entry with none only while that marker is absent. A record a person removed therefore stays removed, and a second start that finds no preset does nothing. `ahpd configure` writes a host record through the same `agents` collection (`takeAgent`, `dropAgent`) and names `@ahpd/agent-acp` in the file. A bot read whose `preset` names an agent the host does not serve merges `state: "unavailable"`. `run.ts` folds the records into the load before `createHost`, so a daemon with records only starts, and the empty-agent refusal is on the folded list. `presets` left the manifests of `@ahpd/agent-claude` and `@ahpd/agent-acp`; `presets: { required: true }` would have listed every fresh spec `unconfigured: needs presets`.
+- **Next action:** task 08, the docs. The by-hand check in the Validation is Softov's: start his daemon on this build and start a session on `claude-deepseek-build`.
+- **Files:** `CREATE packages/server/src/agents/migrate.ts`, `CREATE packages/server/test/agents-migrate.test.ts`, `UPDATE packages/server/src/commands/run.ts`, `UPDATE packages/server/src/commands/configure.ts`, `UPDATE packages/server/src/found.ts`, `UPDATE packages/server/src/plugins.ts`, `UPDATE packages/server/src/commands/options.ts` (a stale comment), `UPDATE packages/bot/src/{record,provider,plugin}.ts`, `UPDATE packages/agent-claude/{src/options.ts,src/plugin.ts,package.json}`, `UPDATE packages/agent-acp/{src/plugin.ts,src/presets.ts,package.json}`, and the tests of those packages (`agent-acp/test/{kind,agent-acp-catalog,agent-acp-machine,agent-acp-options,agent-acp-plugin,agent-acp-presets}`, `agent-claude/test/{kind,agent-claude-declarations,agent-claude-options,agent-claude-options-schema,agent-claude-presets,agent-claude-shared-listing}`, `bot/test/bot-provider`, `server/test/{server-configure,server-root-config}`).
+- **Open questions:** `eachPreset` in `packages/sdk/src/plugins/plugins.ts` is exported and tested but no plugin calls it any more. Removing a public export is an SDK break, so it is left for a task that says so.
+- **Departures:**
+  - A preset whose id is not a slug, or whose id another kind planned first, is logged and skipped and stays in the file: it is now the only copy of that agent. The plugin whose options keep it is not the one that dropped it.
+  - The loader is handed the cleaned specs before the records are written, so a write that fails can no longer put the presets back into a plugin's options for that run; the file is still the old one and the next start tries again.
+  - `configure` writes a record during the questions, before the file, the way it already writes the token file first. A setup that stops at a later question therefore leaves a record behind. `configuredAgents` counts a record only when the file names `@ahpd/agent-acp`, so the next run asks about the agent again and adds the plugin, rather than treating an unserved record as configured.
+  - A file that cannot be read is reported without the parser's own words, because a parser quotes the text it choked on and the file may hold a key. Such a file has no entry to plan from, so the run's own specs are planned and written - they are the only copy of those agents - and the file is left as it is.
+  - `server-root-config.test.ts` lost the two masking cases written on claude `presets` (the option is gone); they now use cofold's nested search-provider keys, which are the same shape.
+  - The daemon's `machineNeeds` answers `undefined` only when no agent has a provider, so it is an existence test; the bot asks it through `host.machineNeeds`. The bot test harness now hands `pluginHost` the live `agents` list, as `run.ts` does.
 - **Watch out for:** a status, error or log must never carry a key or a secret value.

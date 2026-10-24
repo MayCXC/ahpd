@@ -14,6 +14,7 @@ import type { AutomationStore } from './automations.js';
 import type { EnablementStore } from '../plugins/enablement.js';
 import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
 import type { ConnectorRef, ServedAdapter } from './connectors.js';
+import type { AgentOwner, ServedAgentKind } from './agents.js';
 import type { ConnectorsChannel } from '../connectors/channel.js';
 import type { SessionStore } from './sessions.js';
 import type { ComputerPort } from './computers.js';
@@ -151,6 +152,27 @@ export interface HostOptions {
    * adapter is not here cannot be opened.
    */
   adapters?: Record<string, ServedAdapter>;
+  /**
+   * The agent kinds the plugins offer, by name.
+   *
+   * The fold fills this from `registerAgentKind`, and one name is one kind: a
+   * second plugin registering it is reported and loses that kind alone. A
+   * stored record whose `kind` is not here is served as `unavailable`.
+   */
+  agentKinds?: Record<string, ServedAgentKind>;
+  /**
+   * Whose each agent is, by its id, as the last read of its record found it.
+   *
+   * An id with no entry is not a record: the daemon's own agent, or one a
+   * plugin registered, and so a host agent. Read through a function because
+   * the records are listed while the host runs, and through the daemon's
+   * channel because it is the one that reads them.
+   *
+   * A caller is told only the agents it may use, decided from this - a host
+   * agent takes `session:write`, a team's agent a membership of that team, and
+   * a person's agent that person. Left out, every agent is the daemon's own.
+   */
+  agentOwners?: () => ReadonlyMap<string, AgentOwner | undefined>;
   /**
    * The connectors this host serves, as a session's bindings are checked.
    *

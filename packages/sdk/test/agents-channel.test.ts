@@ -1,0 +1,761 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, expect, it } from 'vitest';
+import { agentsChannel } from '../src/agents/channel.js';
+import { createHost } from '../src/host.js';
+import { fileUsers } from '../src/access/users.js';
+import { fileResources } from '../src/resources/resources.js';
+import { memoryRecords } from '../src/resources/records.js';
+import { servedRecords } from '../src/resources/recordschannel.js';
+import { echo } from '../../../examples/echo/agent.js';
+import type { Agent } from '../src/types/agent.js';
+import type { AgentKind, AgentView, ServedAgentKind } from '../src/types/agents.js';
+import type { HostOptions, Users } from '../src/types/index.js';
+import type { RecordCollection } from '../src/types/records.js';
+import type { Vault } from '../src/types/vault.js';
+
+/*
+ * The agents channel over a store in memory and a vault that is a map.
+ *
+ * The host is in this process, over a real users file, so the grant a caller
+ * holds is the one the daemon would see: `agent:list` opens the channel and
+ * reads the caller's own agents, their teams' and the host's, `agent:put` and
+ * `agent:remove` make and remove one beside that owner's own rule, and a host
+ * record takes `agent:host` on top.
+ *
+ * The kind's `open` hands back an agent that reads the record's values through
+ * the view it was given, which is how a test tells an edit from a rebuild.
+ */
+
+const URI = 'x-ahpd-agents://';
+const ROOT = 'ahp-root://';
+
+type Bag = Record<string, any>;
+
+/**
+ * The kind's schema: what a person fills in, one secret, one field only the
+ * host may set, and the `env` a key variable is set in.
+ */
+const SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    target: { type: 'string' },
+    secret: { type: 'string', writeOnly: true },
+    command: { type: 'string' },
+    env: { type: 'object' },
+  },
+  required: ['target'],
+};
+
+/**
+ * The subset of JSON Schema this kind's form uses, as the daemon's checker
+ * reads it: a value of the named type, the required fields, and no field the
+ * schema does not describe.
+ */
+const check = (value: unknown, schema: Bag, label: string): void => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error(`${label} must be an object`);
+  const given = value as Bag;
+  const properties = (schema['properties'] ?? {}) as Bag;
+  for (const name of (schema['required'] ?? []) as string[]) {
+    if (given[name] === undefined) throw new Error(`${label}.${name} is required`);
+  }
+  for (const [name, one] of Object.entries(properties) as [string, Bag][]) {
+    if (given[name] === undefined) continue;
+    if (one['type'] === 'string' && typeof given[name] !== 'string') throw new Error(`${label}.${name} must be text`);
+    if (one['type'] === 'boolean' && typeof given[name] !== 'boolean') throw new Error(`${label}.${name} must be true or false`);
+  }
+  for (const name of Object.keys(given)) {
+    if (!(name in properties)) throw new Error(`${label}.${name} is not a field`);
+  }
+};
+
+/** A vault that is a map, and says what is in it. */
+const made = (): Vault & { held: Map<string, string> } => {
+  const held = new Map<string, string>();
+  return {
+    held,
+    get: async (name) => held.get(name),
+    set: async (name, value) => { held.set(name, value); },
+    delete: async (name) => held.delete(name),
+    list: async () => [...held.keys()].sort(),
+  };
+};
+
+let home: string;
+let usersFile: string;
+beforeEach(() => {
+  home = mkdtempSync(join(tmpdir(), 'ahpd-agents-'));
+  usersFile = join(home, 'users.json');
+  writeFileSync(usersFile, JSON.stringify({
+    teams: [{ id: 'backend' }],
+    roles: {
+      lister: ['agent:list'],
+      writer: ['agent:list', 'agent:put', 'agent:remove', 'session:create'],
+      teamer: ['agent:list', 'agent:put', 'agent:remove', 'session:create'],
+      reader: ['agent:list'],
+      'host-maker': ['agent:list', 'agent:put', 'agent:remove', 'agent:host', 'session:create'],
+      all: ['agent:list', 'agent:put', 'agent:remove', 'agent:host', 'session:create'],
+      'all-agents': ['agent:all'],
+      'config-writer': ['config:write'],
+      // What it takes to start on a host agent, which is what a removal must
+      // not hand to somebody the record never named.
+      starter: ['session:write', 'session:create'],
+    },
+    users: [
+      { id: 'ana', roles: ['lister'] },
+      { id: 'bo', roles: [] },
+      { id: 'cy', roles: ['writer'] },
+      { id: 'di', roles: ['teamer'], memberships: ['backend'] },
+      { id: 'el', roles: ['reader'], memberships: ['backend'] },
+      { id: 'fa', roles: ['host-maker'] },
+      { id: 'gi', roles: ['all'] },
+      { id: 'ja', roles: ['all-agents'] },
+      { id: 'ha', roles: ['config-writer'] },
+      { id: 'ka', roles: ['starter'] },
+    ],
+  }));
+});
+afterEach(() => {
+  rmSync(home, { recursive: true, force: true });
+});
+
+type Host = ReturnType<typeof createHost>;
+
+/** One record as `open` was handed it, kept to tell a rebuild from an edit. */
+type Opened = AgentView;
+
+/**
+ * One kind of agent, over the echo backend.
+ *
+ * `probe` is built only for the `prober` kind: the host asks a fresh agent what
+ * it offers, and an answer moves the root list a second time, so a case about
+ * one `root/agentsChanged` is served a kind that answers nothing.
+ */
+const kindOf = (name: string, opened: Opened[], probing: boolean): AgentKind => ({
+  name,
+  title: 'Checker',
+  description: 'Answers what it is told.',
+  schema: SCHEMA,
+  hostOnly: ['command'],
+  keyVariables: ['API_KEY'],
+  open: (record: AgentView): Agent => {
+    opened.push(record);
+    const base = echo({ path: home, pace: 0 });
+    // The echo backend has a probe of its own, and a probe that answers moves
+    // the root list again: a kind that says nothing offers none.
+    delete base.probe;
+    return {
+      ...base,
+      provider: record.id,
+      displayName: record.name,
+      schema: () => SCHEMA,
+      ...(probing
+        ? {
+            probe: async () => {
+              if (record.config['target'] === 'broken') throw new Error('no answer from the target');
+              return { models: [], customizations: [], commands: [] };
+            },
+          }
+        : {}),
+    };
+  },
+});
+
+/**
+ * A kind whose backend serves another id: a record may not be one of these,
+ * because a client names a record by its id and the fold keys on the backend's.
+ */
+const misnamed = (opened: Opened[]): ServedAgentKind => {
+  const kind = kindOf('misnamed', opened, false);
+  return {
+    ...kind,
+    by: 'test',
+    open: (record: AgentView) => ({ ...kind.open(record), provider: 'not-the-id' }),
+  };
+};
+
+/**
+ * A host serving the agents channel over one kind, the `checker` one.
+ *
+ * `fold` is called with each agent list before the host takes it, so a case
+ * can ask something of the host while a fold is in flight.
+ */
+async function served(options: { register?: boolean; fold?: (agents: Agent[]) => Promise<void> } = {}) {
+  const register = options.register ?? true;
+  const collection: RecordCollection = await memoryRecords().collection('agents', { format: 'json' });
+  const opened: Opened[] = [];
+  const problems: string[] = [];
+  const ended: string[] = [];
+  const vault = made();
+  const kinds: Record<string, ServedAgentKind> = register
+    ? {
+        checker: { ...kindOf('checker', opened, false), by: 'test' },
+        prober: { ...kindOf('prober', opened, true), by: 'test' },
+        misnamed: misnamed(opened),
+      }
+    : {};
+  // What serves an id the records do not hold: the daemon's own backend, and
+  // one a plugin would have brought.
+  const holders = new Map([['base', 'the daemon'], ['preset', 'plugin agent-claude']]);
+  const users = fileUsers({ path: usersFile });
+  // One store for every fold: a port the host was built over cannot move.
+  const resources = fileResources();
+  const baseAgent = { ...echo({ path: home, pace: 0 }), provider: 'base', displayName: 'Base' };
+  let host: Host | undefined;
+  let wire: ReturnType<typeof servedRecords>;
+  /** The options the host is built over, with the records' agents beside the base. */
+  const hostOptions = (agents: Agent[]): HostOptions => ({
+    path: home,
+    agents: [baseAgent, ...agents],
+    resources,
+    channels: wire.channels,
+    methods: wire.methods,
+    users,
+    // Whose each record is, as the daemon hands it over: the list a caller is
+    // sent holds the agents it may use, so `cy` reads the one it owns.
+    agentOwners: () => lists.owners(),
+  });
+  const lists = agentsChannel({
+    collection,
+    kinds: () => kinds,
+    vault: () => vault,
+    check,
+    refold: async (agents) => {
+      if (host === undefined) throw new Error('the channel folded before there was a host');
+      await options.fold?.(agents);
+      const refused = host.replace(hostOptions(agents));
+      if (refused !== undefined) throw new Error(refused);
+      return new Set(agents.map((one) => one.provider));
+    },
+    endSessionsOf: async (id) => {
+      ended.push(id);
+      await host?.endSessionsOf(id);
+    },
+    holderOf: (id) => holders.get(id),
+    onProblem: (line) => { problems.push(line); },
+  });
+  wire = servedRecords('ahpd', [lists.channel], lists.methods);
+  host = createHost(hostOptions([]));
+  await lists.openAll();
+  return { host, users, collection, lists, kinds, opened, ended, problems, vault, close: async () => { await host?.close(); } };
+}
+
+/** A client signed in as `id`, whose channel actions are kept. */
+const as = async (host: Host, users: Users, id: string) => {
+  const token = await users.mint(id);
+  const seen: { method: string; params: Bag }[] = [];
+  const client = host.accept({
+    send: () => {}, request: async () => ({}), answered: () => {}, close: () => {},
+    notify: (method, params) => { seen.push({ method, params: params as Bag }); },
+  });
+  const ready = await client.handle({
+    method: 'initialize', params: { clientId: id, protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] },
+  }) as Bag;
+  await client.handle({ method: 'authenticate', params: { channel: ROOT, resource: users.resource.resource, token } });
+  const call = async (method: string, params: Bag) => client.handle({ method, params }).then(
+    (result) => ({ result: result as Bag }),
+    (error: { code: number; message: string }) => ({ code: error.code, message: error.message }),
+  );
+  /** Every row a subscribe to `channel` answered, by id. */
+  const rows = async (channel = URI): Promise<Record<string, Bag>> => {
+    const answer = await call('subscribe', { channel }) as Bag;
+    if (answer['result'] === undefined) throw new Error(`subscribe refused: ${JSON.stringify(answer)}`);
+    const records = (answer['result'] as Bag)['snapshot'].state.records as { id: string; record: Bag }[];
+    return Object.fromEntries(records.map((one) => [one.id, one.record]));
+  };
+  /** The `agents` the root state holds now, by provider. */
+  const agents = async (): Promise<string[]> => {
+    const answer = await call('subscribe', { channel: ROOT }) as Bag;
+    if (answer['result'] === undefined) throw new Error(`root refused: ${JSON.stringify(answer)}`);
+    return ((answer['result'] as Bag)['snapshot'].state.agents as { provider: string }[]).map((one) => one.provider);
+  };
+  /** Every action of one type this client was sent, in the order it arrived. */
+  const actions = (type: string): Bag[] => seen
+    .filter((one) => one.method === 'action' && (one.params as Bag)['action']?.type === type)
+    .map((one) => (one.params as Bag)['action'] as Bag);
+  return { call, rows, agents, actions, ready, seen, close: () => { client.close(); } };
+};
+
+/** Wait until `check` holds, or give up: an action may land after the answer. */
+const until = async (check: () => boolean, times = 400): Promise<void> => {
+  for (let i = 0; i < times; i++) {
+    if (check()) return;
+    await new Promise((done) => { setTimeout(done, 5); });
+  }
+};
+
+it('puts a record, lists it ready, and answers with no config of another kind', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+
+  const answer = await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  expect(answer).toMatchObject({ result: { id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', state: 'ready' } });
+  expect(await cy.agents()).toContain('mine');
+  expect((await cy.rows())['mine']).toMatchObject({ name: 'Mine', state: 'ready' });
+  await close();
+});
+
+it('edits a record on the view open was handed, without opening it again', async () => {
+  const { host, users, opened, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  expect(opened).toHaveLength(1);
+
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine, renamed', description: 'One line', config: { target: 'b' },
+  });
+  // The same view, updated: a session holding the backend reads the new record.
+  expect(opened).toHaveLength(1);
+  expect(opened[0]?.name).toBe('Mine, renamed');
+  expect(opened[0]?.description).toBe('One line');
+  expect(opened[0]?.config).toEqual({ target: 'b' });
+  expect((await cy.rows())['mine']).toMatchObject({ name: 'Mine, renamed', description: 'One line' });
+  await close();
+});
+
+it('sends one root/agentsChanged with the new agent', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const before = cy.actions('root/agentsChanged').length;
+
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  await until(() => cy.actions('root/agentsChanged').length > before);
+  await new Promise((done) => { setTimeout(done, 20); });
+
+  const sent = cy.actions('root/agentsChanged').slice(before);
+  expect(sent).toHaveLength(1);
+  expect((sent[0]?.['agents'] as { provider: string }[]).map((one) => one.provider)).toContain('mine');
+  await close();
+});
+
+it('keeps a key out of every row, answer and log, and puts it in the vault', async () => {
+  const { host, users, collection, problems, vault, close } = await served();
+  const cy = await as(host, users, 'cy');
+
+  const put = await cy.call('x-ahpd/agents/put', {
+    id: 'mine',
+    kind: 'checker',
+    owner: 'user:cy',
+    name: 'Mine',
+    config: { target: 'a', secret: 'sk-agent-1', env: { API_KEY: 'sk-env-2' } },
+  });
+  const rows = await cy.rows();
+  const check = await cy.call('x-ahpd/agents/check', { id: 'mine' });
+  const shown = JSON.stringify([put, rows, check, problems]);
+  expect(shown).not.toContain('sk-agent-1');
+  expect(shown).not.toContain('sk-env-2');
+
+  // The record keeps references, and the vault keeps the values.
+  const kept = await collection.get('mine');
+  expect(kept?.config).toEqual({
+    target: 'a',
+    secret: { $secret: 'user:cy/agent/mine/secret' },
+    env: { API_KEY: { $secret: 'user:cy/agent/mine/env.API_KEY' } },
+  });
+  expect(vault.held.get('user:cy/agent/mine/secret')).toBe('sk-agent-1');
+  expect(vault.held.get('user:cy/agent/mine/env.API_KEY')).toBe('sk-env-2');
+  // And what `open` was handed is the value, which is what a session uses.
+  expect(rows['mine']).toMatchObject({ state: 'ready' });
+  await close();
+});
+
+it('keeps a secret a client sent empty, and never asks it to send one back', async () => {
+  const { host, users, vault, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: 'sk-agent-1' },
+  });
+  // A client that read the row has no value to send, so it sends the field empty.
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'b', secret: '' },
+  });
+  expect(vault.held.get('user:cy/agent/mine/secret')).toBe('sk-agent-1');
+  // A field left out drops the secret, which is what a record written whole says.
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'c' },
+  });
+  expect(vault.held.has('user:cy/agent/mine/secret')).toBe(false);
+  await close();
+});
+
+it('refuses a kind this host does not serve', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'gone', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  })).toMatchObject({ code: -32602, message: 'gone is not an agent kind this host serves' });
+  await close();
+});
+
+it('lists a record of a kind nobody serves as unavailable, and keeps it on disk', async () => {
+  const { host, users, collection, lists, close } = await served({ register: false });
+  // Written by hand, as an older daemon's folder would hold one.
+  await collection.put({ id: 'old', kind: 'checker', owner: 'user:cy', name: 'Old', config: { target: 'a' } });
+  await lists.openAll();
+  const cy = await as(host, users, 'cy');
+  expect((await cy.rows())['old']).toMatchObject({ state: 'unavailable' });
+  expect(await collection.get('old')).toMatchObject({ id: 'old' });
+  expect(await cy.agents()).not.toContain('old');
+  await close();
+});
+
+it('refuses an id another owner holds, and one written by hand', async () => {
+  const { host, users, collection, close } = await served();
+  const fa = await as(host, users, 'fa');
+  const cy = await as(host, users, 'cy');
+  await fa.call('x-ahpd/agents/put', {
+    id: 'shared', kind: 'checker', owner: 'host', name: 'Shared', config: { target: 'a' },
+  });
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'shared', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  })).toMatchObject({ code: -32009, message: "shared is host's, and an agent id is unique" });
+
+  await collection.put({ id: 'odd', kind: 'checker', name: 'Odd', config: { target: 'a' } });
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'odd', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  })).toMatchObject({ code: -32009, message: 'odd is a record written by hand, and an agent id is unique' });
+  await close();
+});
+
+it("refuses a host-only field on a team's record", async () => {
+  const { host, users, close } = await served();
+  const di = await as(host, users, 'di');
+  expect(await di.call('x-ahpd/agents/put', {
+    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a', command: 'rm -rf /' },
+  })).toMatchObject({ code: -32602, message: 'command is a host-only field of checker, so only a host agent may set it' });
+  // The host's own record may.
+  const fa = await as(host, users, 'fa');
+  expect(await fa.call('x-ahpd/agents/put', {
+    id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a', command: 'true' },
+  })).toMatchObject({ result: { state: 'ready' } });
+  await close();
+});
+
+it('refuses an env variable outside the kind key variables, and keeps one inside', async () => {
+  const { host, users, vault, close } = await served();
+  const di = await as(host, users, 'di');
+  expect(await di.call('x-ahpd/agents/put', {
+    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a', env: { NODE_OPTIONS: '--require ./x.js' } },
+  })).toMatchObject({ code: -32602, message: 'NODE_OPTIONS is not a key variable of checker, so only a host agent may set it' });
+
+  expect(await di.call('x-ahpd/agents/put', {
+    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a', env: { API_KEY: 'sk-team-1' } },
+  })).toMatchObject({ result: { state: 'ready' } });
+  expect(vault.held.get('team:backend/agent/ours/env.API_KEY')).toBe('sk-team-1');
+  await close();
+});
+
+it("refuses fromEnv on a person's record, and reads it for the host's", async () => {
+  const { host, users, opened, close } = await served();
+  const cy = await as(host, users, 'cy');
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: { fromEnv: 'HOME' } },
+  })).toMatchObject({ code: -32602, message: "An agent's secret may read the daemon's environment only for a host agent" });
+
+  process.env['AHPD_TEST_AGENT_KEY'] = 'sk-from-env';
+  try {
+    const fa = await as(host, users, 'fa');
+    expect(await fa.call('x-ahpd/agents/put', {
+      id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a', secret: { fromEnv: 'AHPD_TEST_AGENT_KEY' } },
+    })).toMatchObject({ result: { state: 'ready' } });
+    // What `open` was handed is the value, never the reference.
+    expect(opened.at(-1)?.config['secret']).toBe('sk-from-env');
+  } finally {
+    delete process.env['AHPD_TEST_AGENT_KEY'];
+  }
+  await close();
+});
+
+it('reads the agents each caller may use, and refuses one with no grant', async () => {
+  const { host, users, close } = await served();
+  const fa = await as(host, users, 'fa');
+  const di = await as(host, users, 'di');
+  const cy = await as(host, users, 'cy');
+  await fa.call('x-ahpd/agents/put', {
+    id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a' },
+  });
+  await di.call('x-ahpd/agents/put', {
+    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
+  });
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+
+  // A person reads their own agents, their teams' and the host's, and no one else's.
+  expect(Object.keys(await cy.rows()).sort()).toEqual(['mine', 'theirs']);
+  // A team member reads the team's and the host's.
+  const el = await as(host, users, 'el');
+  expect(Object.keys(await el.rows()).sort()).toEqual(['ours', 'theirs']);
+  // A caller with no grant reads nothing, its own included.
+  const bo = await as(host, users, 'bo');
+  expect(await bo.call('subscribe', { channel: URI })).toMatchObject({ code: -32009 });
+  expect(await bo.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:bo', name: 'Mine', config: { target: 'a' },
+  })).toMatchObject({ code: -32009 });
+  await close();
+});
+
+it('requires agent:host for the host record and the same person for a user record', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const gi = await as(host, users, 'gi');
+  // `cy` may make its own, and may not make the host's.
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  })).toMatchObject({ result: { state: 'ready' } });
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a' },
+  })).toMatchObject({ code: -32009 });
+
+  // Even every grant does not make another person's record this caller's.
+  expect(await gi.call('x-ahpd/agents/remove', { id: 'mine' })).toMatchObject({ code: -32009 });
+  expect(Object.keys(await gi.rows())).toEqual([]);
+  // `cy` removes its own.
+  expect(await cy.call('x-ahpd/agents/remove', { id: 'mine' })).toMatchObject({ result: {} });
+  await close();
+});
+
+it("removes a record's secrets, and takes the agent out of the list", async () => {
+  const { host, users, collection, vault, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: 'sk-agent-1' },
+  });
+  expect(vault.held.size).toBe(1);
+  expect(await cy.call('x-ahpd/agents/remove', { id: 'mine' })).toMatchObject({ result: {} });
+  expect(await collection.get('mine')).toBeUndefined();
+  expect(vault.held.size).toBe(0);
+  expect(await cy.agents()).not.toContain('mine');
+  expect(await cy.rows()).toEqual({});
+  await close();
+});
+
+it('ends the sessions of a removed agent', async () => {
+  const { host, users, ended, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  const uri = 'ahp-session:/on-mine';
+  await cy.call('createSession', { channel: uri, provider: 'mine' });
+  await cy.call('subscribe', { channel: uri });
+
+  await cy.call('x-ahpd/agents/remove', { id: 'mine' });
+  // The removal is a root method, not a root action: what a client reads as a
+  // row going is `root/sessionRemoved`.
+  const removed = () => cy.seen.filter((one) => one.method === 'root/sessionRemoved');
+  await until(() => removed().length > 0);
+  expect(ended).toContain('mine');
+  expect(JSON.stringify(removed())).toContain('on-mine');
+  await close();
+});
+
+it('refuses a start on an agent while it is being removed', async () => {
+  // Ask while the removal's fold is in flight: the record is out of the store
+  // and the host still serves the agent, which is the moment the id is neither
+  // the owner's nor anybody else's.
+  let armed = false;
+  let during: { owner: Bag; other: Bag } | undefined;
+  const { host, users, close } = await served({
+    fold: async (agents) => {
+      if (!armed || agents.some((one) => one.provider === 'mine')) return;
+      during = {
+        owner: await ownerAgain.call('createSession', { channel: 'ahp-session:/owner-again', provider: 'mine' }),
+        other: await ka.call('createSession', { channel: 'ahp-session:/other', provider: 'mine' }),
+      };
+    },
+  });
+  const cy = await as(host, users, 'cy');
+  // The same person on a second connection: the removal has the first one busy.
+  const ownerAgain = await as(host, users, 'cy');
+  // Holds `session:write`, which is what a host agent takes and a person's own
+  // agent does not.
+  const ka = await as(host, users, 'ka');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+
+  // Before the removal: `cy` starts on its own, and `ka` does not.
+  expect(await ownerAgain.call('createSession', { channel: 'ahp-session:/before', provider: 'mine' }))
+    .toHaveProperty('result');
+  expect(await ka.call('createSession', { channel: 'ahp-session:/elsewhere', provider: 'mine' }))
+    .toEqual({ code: -32002, message: 'No provider called mine' });
+
+  armed = true;
+  expect(await cy.call('x-ahpd/agents/remove', { id: 'mine' })).toMatchObject({ result: {} });
+  // During the removal: refused to the owner, because the agent is going out,
+  // and to `ka`, who would otherwise take an unowned id for a host agent.
+  expect(during).toEqual({
+    owner: { code: -32002, message: 'No provider called mine' },
+    other: { code: -32002, message: 'No provider called mine' },
+  });
+  await close();
+});
+
+it('checks an agent and answers its health, and says when the probe throws', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'prober', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  expect(await cy.call('x-ahpd/agents/check', { id: 'mine' })).toMatchObject({
+    result: { id: 'mine', health: { result: 'ok' } },
+  });
+  await cy.call('x-ahpd/agents/put', {
+    id: 'broken', kind: 'prober', owner: 'user:cy', name: 'Broken', config: { target: 'broken' },
+  });
+  expect(await cy.call('x-ahpd/agents/check', { id: 'broken' })).toMatchObject({
+    result: { id: 'broken', health: { result: 'failed', message: 'no answer from the target' } },
+  });
+  // And a record of a kind nobody serves says so, rather than answering `ok`.
+  expect(await cy.call('x-ahpd/agents/check', { id: 'gone' })).toMatchObject({ code: -32602 });
+  await close();
+});
+
+it('answers a row with the config the kind describes, and refuses one it does not', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', extra: 'x' },
+  })).toMatchObject({ code: -32602, message: 'agent mine.extra is not a field' });
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: {},
+  })).toMatchObject({ code: -32602, message: 'agent mine.target is required' });
+  await close();
+});
+
+it('lets agent:all read every agent and remove one however it is owned', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const di = await as(host, users, 'di');
+  const fa = await as(host, users, 'fa');
+
+  // Holds `agent:all` alone: no `agent:list`, and an empty store still opens.
+  const ja = await as(host, users, 'ja');
+  expect(await ja.rows()).toEqual({});
+
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  await di.call('x-ahpd/agents/put', {
+    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
+  });
+  await fa.call('x-ahpd/agents/put', {
+    id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a' },
+  });
+
+  // Every row, the other person's and another team's included.
+  expect(Object.keys(await ja.rows()).sort()).toEqual(['mine', 'ours', 'theirs']);
+  // And the remove of another person's agent is allowed, which `agent:remove`
+  // alone would have refused.
+  expect(await ja.call('x-ahpd/agents/remove', { id: 'mine' })).toMatchObject({ result: {} });
+  expect(Object.keys(await cy.rows())).toEqual(['theirs']);
+  await close();
+});
+
+it('refuses an agent whose backend serves another id, and does not serve it', async () => {
+  const { host, users, collection, lists, problems, close } = await served();
+  const cy = await as(host, users, 'cy');
+
+  // A put says why, and nothing is written: the id is still free.
+  const answer = await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'misnamed', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  expect(answer).toMatchObject({ code: -32603, message: expect.stringContaining('not-the-id') });
+  expect(await collection.get('mine')).toBeUndefined();
+  expect(problems.some((line) => line.includes('mine') && line.includes('not-the-id'))).toBe(true);
+
+  // A record written by hand is said and left out of the list, and its row says why.
+  await collection.put({ id: 'odd', kind: 'misnamed', owner: 'user:cy', name: 'Odd', config: { target: 'a' } });
+  await lists.openAll();
+  expect(problems.some((line) => line.includes('odd') && line.includes('not-the-id'))).toBe(true);
+  expect(await cy.agents()).not.toContain('odd');
+  expect((await cy.rows())['odd']).toMatchObject({ state: 'invalid' });
+  await close();
+});
+
+it('opens a record again when the plugin that registered its kind is reloaded', async () => {
+  const { host, users, lists, kinds, opened, ended, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  expect(opened.filter((one) => one.kind === 'checker')).toHaveLength(1);
+
+  // A reload imports the module again: the same name, a new kind object.
+  kinds['checker'] = { ...kindOf('checker', opened, false), by: 'test' };
+  await lists.openAll();
+  expect(opened.filter((one) => one.kind === 'checker')).toHaveLength(2);
+  // The backend the old module built goes, and its sessions with it.
+  expect(ended).toContain('mine');
+  expect((await cy.rows())['mine']).toMatchObject({ state: 'ready' });
+  await close();
+});
+
+it('refuses an id the daemon or a plugin already serves, before writing the record', async () => {
+  const { host, users, collection, close } = await served();
+  const cy = await as(host, users, 'cy');
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'base', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  })).toMatchObject({ code: -32009, message: 'base is served by the daemon, and an agent id is unique' });
+  expect(await cy.call('x-ahpd/agents/put', {
+    id: 'preset', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  })).toMatchObject({ code: -32009, message: 'preset is served by plugin agent-claude, and an agent id is unique' });
+  expect(await collection.get('base')).toBeUndefined();
+  expect(await collection.get('preset')).toBeUndefined();
+  await close();
+});
+
+it('keeps an open record and its agent when its secret cannot be read', async () => {
+  const { host, users, lists, opened, ended, problems, vault, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: 'sk-agent-1' },
+  });
+  const openedBefore = opened.length;
+
+  const reading = vault.get;
+  vault.get = async () => { throw new Error('the vault is unreachable'); };
+  try {
+    await lists.openAll();
+  } finally {
+    vault.get = reading;
+  }
+
+  expect(problems.some((line) => line.includes('mine') && line.includes('the vault is unreachable'))).toBe(true);
+  // A vault hiccup is not the record going: the backend and its sessions stay.
+  expect(ended).not.toContain('mine');
+  expect(opened).toHaveLength(openedBefore);
+  expect(await cy.agents()).toContain('mine');
+  expect((await cy.rows())['mine']).toMatchObject({ state: 'ready' });
+  await close();
+});
+
+it('runs the commands one at a time, so two owners cannot both take an id', async () => {
+  const { host, users, collection, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const di = await as(host, users, 'di');
+
+  const answers = await Promise.all([
+    cy.call('x-ahpd/agents/put', {
+      id: 'shared', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    }),
+    di.call('x-ahpd/agents/put', {
+      id: 'shared', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
+    }),
+  ]);
+
+  // One put made the record, and the other arrived to find it taken.
+  expect(answers.filter((one) => 'result' in one)).toHaveLength(1);
+  expect(answers.filter((one) => 'code' in one && one.code === -32009)).toHaveLength(1);
+  // The record the last answer left is the one owner's, not both.
+  expect(['user:cy', 'team:backend']).toContain((await collection.get('shared'))?.owner);
+  await close();
+});

@@ -72,6 +72,15 @@ export interface ClaudeSessionOptions extends SessionOptions {
    * the session on what it always ran on.
    */
   preset?: Bag;
+  /**
+   * The declared options read live from a record, at the start of each turn.
+   *
+   * An agent made from an agent record is edited while the daemon runs, so its
+   * values are read through this rather than copied into `preset`: a turn that
+   * finds them changed restarts the CLI on the same conversation. Absent for a
+   * preset, which nothing edits while the daemon runs.
+   */
+  presetOf?: () => Bag;
   /** The list the CLI reports, as the harness offers it; absent is the CLI's. */
   offerModels?: (cli: { id: string; name: string }[]) => Promise<{ id: string; name: string }[]>;
   /**
@@ -266,6 +275,23 @@ export interface SessionContext extends Omit<Config, 'methods'>, Omit<ClientTool
    * was left on, which no field of the schema carries any more.
    */
   values: Bag;
+  /**
+   * Those values, built from a preset, which is the one way they are built.
+   *
+   * The defaults under everything, the preset over them, and the one thing the
+   * session's own store has a say in - a `sandboxEnabled` it was left on - under
+   * a preset that does not turn the sandbox off. A record's values are read
+   * through this again when it is edited.
+   */
+  valuesOf: (preset: Bag) => Bag;
+  /**
+   * The values the running CLI was built from, as a comparison string.
+   *
+   * A turn compares the record's values now with what the CLI was started with,
+   * and restarts it only when the two differ. Set at every `startQuery`, so the
+   * question is always about the CLI that is answering.
+   */
+  startedWith: string;
   /** The config in force, by key. What `session/configChanged` merges into. */
   /*
    * What this session was told to run as.

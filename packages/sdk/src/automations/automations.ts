@@ -3,8 +3,11 @@
 import { randomUUID } from 'node:crypto';
 import type { AutomationTriggerDefinition, ConfigPropertySchema, ConfigSchema, JsonPrimitive } from '@microsoft/agent-host-protocol';
 import { localPath } from '../resources/fileuri.js';
+import { mayUseAgentFor, ownershipOf } from '../agents/usable.js';
+import type { Acting } from '../agents/usable.js';
 import { durationMs } from './triggers.js';
 import { WATCH_PRESETS } from './triggerpresets.js';
+import type { AgentOwner } from '../types/agents.js';
 import type { Automation, AutomationEntry, AutomationRun, AutomationStore, StartSession } from '../types/automations.js';
 import type { Bag } from '../types/common.js';
 import type { ConnectorOwner, ConnectorRef } from '../types/connectors.js';
@@ -56,6 +59,26 @@ export interface AutomationsOptions {
    * registers gets.
    */
   connectors?: () => readonly ConnectorRef[];
+  /**
+   * Whose each stored agent is, read at each save.
+   *
+   * A template naming an agent this map holds must be one the automation's
+   * owner may use - the same rule that decides who may start a session on it,
+   * asked here so a definition is refused while the person who wrote it can
+   * still fix it. Absent on an embedder with no agents channel, which checks no
+   * agent - the same answer a host with no users directory gets.
+   */
+  agents?: () => ReadonlyMap<string, AgentOwner | undefined>;
+  /**
+   * Whether this host has a users directory, read at each save.
+   *
+   * The owner of an automation is a name; whether there is anybody to tell
+   * apart is the host's answer, and an embedder with no directory records no
+   * owner at all. Absent means none, so a template naming an agent is not
+   * checked - and an automation nobody owns is host work, which reaches the
+   * host's agents and not a person's or a team's.
+   */
+  hasUsers?: () => boolean;
 }
 
 /**
@@ -318,13 +341,37 @@ export const wrongIn = (value: Bag, schema: ConfigSchema, at = ''): string | und
  * Read when the store is created, and again by a store that keeps files before
  * a client's write reaches it - a definition restored from a file is the host's
  * own record and is not checked here: the connector may be loaded after it.
+ *
+ * A template that names an agent is checked by the same rule a session start
+ * uses, against the automation's owner: a person's automation cannot be pointed
+ * at another person's agent, and a team's at one outside the team. An
+ * automation nobody owns is nobody's work, so it may name the host's agents and
+ * no person's or team's. The run checks it again, so a record edited by hand or
+ * written before its agent existed is still refused when it fires.
+ *
+ * Whether there is anybody to tell apart is the host's answer, not the
+ * record's: `hasUsers` says the host has a users directory, and a record with
+ * no owner on one is nobody's rather than the daemon's.
  */
 export const checkReferences = (
   definition: Bag,
   owner: Owner | undefined,
   types: readonly AutomationTriggerDefinition[],
   connectors: (() => readonly ConnectorRef[]) | undefined,
+  agents?: () => ReadonlyMap<string, AgentOwner | undefined>,
+  hasUsers?: () => boolean,
 ): void => {
+  if (agents !== undefined) {
+    const session = bag(definition.session);
+    const provider = session.provider;
+    if (typeof provider === 'string' && provider !== '') {
+      const agent = ownershipOf(agents(), provider);
+      const acting: Acting = owner === undefined ? {} : { owner };
+      if (!mayUseAgentFor(acting, agent, { hasDirectory: hasUsers?.() === true })) {
+        throw new Error(`session.provider names ${provider}, which belongs to ${agent.owner ?? 'nobody'}, so this automation cannot run on it`);
+      }
+    }
+  }
   if (connectors === undefined) return;
   const served = connectors();
   for (const raw of Array.isArray(definition.triggers) ? definition.triggers : []) {
@@ -635,7 +682,7 @@ export function memoryAutomations(options: AutomationsOptions = {}): AutomationS
 
     create: (resource, definition, owner, runCount, customizations) => {
       checkTriggers(definition, types());
-      checkReferences(definition, owner, types(), options.connectors);
+      checkReferences(definition, owner, types(), options.connectors, options.agents, options.hasUsers);
       checkWake(definition);
       const at = now();
       const made: Automation = {
@@ -665,7 +712,13 @@ export function memoryAutomations(options: AutomationsOptions = {}): AutomationS
       if (changes.triggers !== undefined) checkTriggers(changes, types());
       // A patch never moves the owner, so the reference is judged against the
       // automation's own rather than against whoever edited it last.
-      if (changes.triggers !== undefined) checkReferences(changes, found.owner, types(), options.connectors);
+      if (changes.triggers !== undefined) checkReferences(changes, found.owner, types(), options.connectors, options.agents, options.hasUsers);
+      // A patch that names a session template is checked like a write: the
+      // provider it names is one the automation's own owner must be able to
+      // start on, and not the editor.
+      if (changes.session !== undefined) {
+        checkReferences({ session: changes.session }, found.owner, types(), options.connectors, options.agents, options.hasUsers);
+      }
       // The waking settings are read together - what a run does about another
       // one is a question about both - so a patch touching either of them is
       // judged on what the definition would then say rather than on the patch.

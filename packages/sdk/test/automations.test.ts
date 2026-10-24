@@ -11,6 +11,7 @@ import { localPath } from '../src/resources/fileuri.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { Agent, Start } from '../src/types/agent.js';
+import type { AgentOwner } from '../src/types/agents.js';
 import type { AutomationRun, AutomationStore, StartSession } from '../src/types/automations.js';
 import type { Principal, Users } from '../src/types/users.js';
 import type { Chosen, MessageFrom, Session } from '../src/types/session.js';
@@ -1625,4 +1626,109 @@ it('takes the owner from the connection that made it, and a run is that person\'
   const plainState = await runState(client, plainRun.resource);
   expect(plainState._meta).toBeUndefined();
   expect('owner' in plainState).toBe(false);
+});
+
+/*
+ * The agent an automation's template names.
+ *
+ * A template's `session.provider` is an agent of this host, and a run starts a
+ * session on it as the automation's owner. So the owner must be one who may
+ * use it: the save is refused while the person who wrote it can still choose
+ * another, and the run asks again, because what a store holds is not what the
+ * agents channel serves at nine in the morning.
+ */
+
+it('refuses an automation naming an agent its owner may not use, when written and when patched', () => {
+  const owners = new Map<string, AgentOwner>([
+    ['echo', 'user:cy'],
+    ['mine', 'user:ana'],
+    ['hosted', 'host'],
+  ]);
+  const store = memoryAutomations({ agents: () => owners, hasUsers: () => true });
+  const provider = (id: string): Record<string, unknown> => ({ session: { provider: id } });
+
+  // Another person's agent, refused with the id and the owner it belongs to.
+  expect(() => store.create(ONE, { ...DEFINITION, ...provider('echo') }, 'user:ana'))
+    .toThrow('session.provider names echo, which belongs to user:cy, so this automation cannot run on it');
+  // The person's own agent, and the host's, are theirs to name.
+  expect(store.create(ONE, { ...DEFINITION, ...provider('mine') }, 'user:ana')).toBeTruthy();
+  expect(store.create(PLAIN, { ...DEFINITION, ...provider('hosted') }, 'user:ana')).toBeTruthy();
+  // Host work reaches the host's agents alone, so a person's is not for it.
+  expect(() => store.create('ahp-automation:/guest', { ...DEFINITION, ...provider('mine') }, 'project:books'))
+    .toThrow('session.provider names mine, which belongs to user:ana');
+
+  // A patch that replaces the template is checked the same way, against the
+  // automation's own owner.
+  expect(() => store.update(ONE, provider('echo'))).toThrow('session.provider names echo');
+  // A host agent is nobody's, so the same patch on another automation is taken.
+  expect(store.update(PLAIN, provider('hosted'))).toBeTruthy();
+});
+
+it('refuses a run of an automation whose agent has become somebody else\'s', async () => {
+  const owners = new Map<string, AgentOwner>();
+  const store = memoryAutomations();
+  const host = createHost({
+    path: DIR,
+    agents: [echo({ path: DIR, pace: 0 })],
+    automations: store,
+    users: people(),
+    agentOwners: () => owners,
+  });
+  const client = host.accept(peer(), ana);
+  await client.handle({
+    method: 'initialize',
+    params: { clientId: 'a', protocolVersions: ['0.9.0'], initialSubscriptions: ['ahp-root://'] },
+  });
+  await write(client, DEFINITION);
+  expect((await entries(client)).map((one) => one.resource)).toEqual([ONE]);
+
+  // The record now says the agent is another person's. The store it was written
+  // to checks nothing, so this is the run's own check: the owner the run acts
+  // for may not use it, and the run fails with the sentence a start is refused
+  // with rather than reaching the backend.
+  owners.set('echo', 'user:cy');
+  const run = await client.handle({
+    method: 'runAutomation', params: { channel: AUTOMATIONS, automation: ONE, requestId: 'req-1' },
+  }) as { resource: string };
+  const state = await runState(client, run.resource);
+  expect(state.lifecycle).toMatchObject({ status: 'failed', error: { message: 'No provider called echo' } });
+  expect(state.sessions).toEqual([]);
+});
+
+it("refuses a signed-in client's patch that names another person's agent, on an automation nobody owns", async () => {
+  /*
+   * A record written by hand has no owner, and the client that may edit it is
+   * whoever can see it. Whose directory the host is serving is what says
+   * whether that is nobody's work or the daemon's: on a host with users, an
+   * automation nobody owns is nobody's, and a person's agent is not for it.
+   */
+  const owners = new Map<string, AgentOwner>([['echo', 'user:cy']]);
+  const store = memoryAutomations({ agents: () => owners, hasUsers: () => true });
+  const host = createHost({
+    path: DIR,
+    agents: [echo({ path: DIR, pace: 0 })],
+    automations: store,
+    users: people(),
+    agentOwners: () => owners,
+  });
+  const p = peer();
+  const client = host.accept(p, ana);
+  await client.handle({
+    method: 'initialize',
+    params: { clientId: 'a', protocolVersions: ['0.9.0'], initialSubscriptions: ['ahp-root://'] },
+  });
+  await client.handle({ method: 'subscribe', params: { channel: AUTOMATIONS } });
+  store.create(PLAIN, { ...DEFINITION, session: { workingDirectories: [`file://${DIR}`] } });
+
+  // The write is refused, so the client is answered with the sentence rather
+  // than with a catalogue that dropped the change.
+  await expect(client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: AUTOMATIONS,
+      action: { type: 'automation/updateRequested', resource: PLAIN, changes: { session: { provider: 'echo' } } },
+    },
+  })).rejects.toThrow('session.provider names echo, which belongs to user:cy, so this automation cannot run on it');
+  // And the record keeps the template it had.
+  expect(store.get(PLAIN)?.definition.session).not.toMatchObject({ provider: 'echo' });
 });

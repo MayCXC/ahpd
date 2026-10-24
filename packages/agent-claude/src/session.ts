@@ -44,6 +44,20 @@ export type { Published } from './session/customizations.js';
 export function createSession(options: ClaudeSessionOptions): Session {
   const { uri, chatUri, cwd, emit } = options;
 
+  /*
+   * The declared values, from the preset or from the record live.
+   *
+   * A record is edited while this session runs, so its values are read at each
+   * turn and the CLI is restarted when they changed; a preset cannot change
+   * under a running daemon and is read once.
+   */
+  const live = (): Bag => options.presetOf?.() ?? options.preset ?? {};
+  const valuesOf = (preset: Bag): Bag => ({
+    ...optionDefaults(),
+    ...preset,
+    ...(preset['sandbox'] === 'off' ? {} : storedSandbox(options.settings)),
+  });
+
   const ctx = {
     options,
     emit,
@@ -81,13 +95,12 @@ export function createSession(options: ClaudeSessionOptions): Session {
      * never runs a session less sandboxed than it was. A preset saying `off`
      * is somebody asking for no sandbox, and it is the value that has to win:
      * otherwise a variant built to run unsandboxed runs sandboxed on every
-     * session whose sandbox was once turned on.
+     * session whose sandbox was once turned on. `valuesOf` is where that rule
+     * lives, because a record's values are built there again on every turn.
      */
-    values: {
-      ...optionDefaults(),
-      ...options.preset,
-      ...(options.preset?.['sandbox'] === 'off' ? {} : storedSandbox(options.settings)),
-    } as Bag,
+    values: valuesOf(live()),
+    valuesOf,
+    startedWith: '',
     draft: undefined as Bag | undefined,
     beginning: undefined as string | undefined,
     turns: [...(options.seed ?? [])] as Bag[],

@@ -865,7 +865,7 @@ export function scheduledAutomations(options: ScheduledOptions): AutomationStore
       // here is a file and a resource with no usable id is one nothing could
       // name that file after.
       idFor(resource);
-      checkReferences(definition, owner, types(), options.store?.connectors);
+      checkReferences(definition, owner, types(), options.store?.connectors, options.store?.agents, options.store?.hasUsers);
       const made = inner.create(resource, definition, owner, runCount, customizations);
       stamps.set(resource, { createdAt: made.createdAt, modifiedAt: made.modifiedAt });
       // `onChanged` above has already rearmed and written; the stamp is set
@@ -875,11 +875,16 @@ export function scheduledAutomations(options: ScheduledOptions): AutomationStore
     },
 
     update: (resource, changes, customizations) => {
-      // A patch never moves the owner, so a trigger it writes is judged against
-      // the automation's own owner rather than the editor's.
-      if (changes.triggers !== undefined) {
+      // A patch never moves the owner, so a trigger or a session template it
+      // writes is judged against the automation's own owner rather than the
+      // editor's.
+      if (changes.triggers !== undefined || changes.session !== undefined) {
         const held = inner.get(resource);
-        checkReferences(changes, ownerOf((held?._meta as Bag | undefined)?.['ahpd.owner']), types(), options.store?.connectors);
+        const owner = ownerOf((held?._meta as Bag | undefined)?.['ahpd.owner']);
+        if (changes.triggers !== undefined) checkReferences(changes, owner, types(), options.store?.connectors, options.store?.agents, options.store?.hasUsers);
+        if (changes.session !== undefined) {
+          checkReferences({ session: changes.session }, owner, types(), options.store?.connectors, options.store?.agents, options.store?.hasUsers);
+        }
       }
       const after = inner.update(resource, changes, customizations);
       if (!after) return undefined;

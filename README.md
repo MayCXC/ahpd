@@ -328,13 +328,13 @@ The same list goes in the configuration, where an entry can carry options:
     "@ahpd/agent-claude",
     {
       "name": "@ahpd/agent-acp",
-      "options": { "presets": { "copilot": {} } }
+      "options": { "toolsChanged": "list" }
     }
   ]
 }
 ```
 
-What each one is and the options it takes live with the package. `@ahpd/agent-acp` registers one agent per key of its `presets` map, so `copilot --acp`, `codex-acp` and `gemini --acp` are three keys rather than three packages.
+What each one is and the options it takes live with the package. An agent is a record of a kind, made with `x-ahpd/agents/put` or moved from a file's `presets` at the first start. `@ahpd/agent-acp` registers the kind `acp`, so `copilot --acp`, `codex-acp` and `gemini --acp` are three records rather than three packages.
 
 A custom agent implements the same `Agent` interface and is named the same way as the four above. A client speaks only AHP and depends on no agent SDK.
 

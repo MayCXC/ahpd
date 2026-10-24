@@ -30,7 +30,7 @@ import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { checkIcons, foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
-import type { Agent, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, AgentOwner, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { fetchIcons, resolveIcons } from './icons.js';
 import { satisfies } from './compat.js';
 
@@ -522,6 +522,13 @@ export interface LoadOneOptions {
    * and a machine is made long after both have applied.
    */
   agents?: () => Agent[];
+  /**
+   * Whose each stored agent is, read when a plugin asks.
+   *
+   * Handed through from the host's options, because a plugin that keeps a
+   * record naming an agent - a bot's `preset` - asks who may use it.
+   */
+  agentOwners?: () => ReadonlyMap<string, AgentOwner | undefined>;
   /**
    * What this host is called, for the work a plugin charges to `root:<host>`.
    *
@@ -1085,6 +1092,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
 
   const { host, contribution, seal } = pluginHost(name, context, {
     ...(options.agents === undefined ? {} : { agents: options.agents }),
+    ...(options.agentOwners === undefined ? {} : { agentOwners: options.agentOwners }),
     ...(options.usage === undefined ? {} : { usage: options.usage }),
     ...(options.vault === undefined ? {} : { vault: options.vault }),
     problem: (line) => { if (answered) options.log(line); else told.push(line); },
@@ -1333,8 +1341,14 @@ export interface PluginSet {
   contributions(): Contribution[];
   /** The plugins that did not load, by id, with the line that says why. */
   failures(): Record<string, string>;
-  /** Fold the base with every contribution. */
-  fold(): FoldedOptions;
+  /**
+   * Fold the base with every contribution, and the agents made from records.
+   *
+   * `records` is what the agents channel opened from its stored records. It is
+   * passed on every fold rather than kept, because a record made or removed
+   * while the daemon runs is a new list.
+   */
+  fold(records?: Agent[]): FoldedOptions;
   /**
    * Answer what a plugin waiting on `sessions()` or `records()` reads.
    *
@@ -1359,7 +1373,7 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
   const failed = new Map<string, string>();
   /** How many times each plugin has been imported again, by id. */
   const counts = new Map<string, number>();
-  /*
+  /**
    * Every agent this host has, filled as plugins load and emptied as they go.
    *
    * The machine-making plugin asks this at create time rather than at load, so
@@ -1367,6 +1381,15 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
    * registers an agent is allowed to load after one that makes machines.
    */
   const known: Agent[] = [...options.base.agents];
+  /**
+   * The agents the stored records opened, as the last fold served them.
+   *
+   * A record is an agent like any other to a plugin asking what a provider
+   * needs, and a plugin asks through this list because the host it ends up in
+   * does not exist while it applies. The fold answers which records it took, so
+   * one whose id a plugin already serves is not answered for here either.
+   */
+  let served: Agent[] = [];
 
   /*
    * The host this set ends up folded into, which a usage record is written to.
@@ -1457,7 +1480,8 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
       configDir: options.configDir,
       log: options.log,
       ...(options.say === undefined ? {} : { say: options.say }),
-      agents: () => known,
+      agents: () => [...known, ...served],
+      ...(options.base.agentOwners === undefined ? {} : { agentOwners: options.base.agentOwners }),
       ...(options.base.hostName === undefined ? {} : { hostName: options.base.hostName }),
       ...(options.hostId === undefined ? {} : { hostId: options.hostId }),
       ...(options.base.users === undefined ? {} : { users: true }),
@@ -1544,7 +1568,23 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
     loaded: () => [...kept.values()].map((one) => one.loaded),
     contributions,
     failures: () => Object.fromEntries([...failed].map(([id, line]) => [id, line])),
-    fold: () => foldHostOptions(options.base, contributions()),
+    /*
+     * Fold what is loaded, and the records the host has opened.
+     *
+     * A fold with no records folds the ones the last fold served, so a caller
+     * asking for the options again after the records opened does not put the
+     * host back to the plugin agents alone. The agents kept for `machineNeeds`
+     * are the ones this fold took, not the ones it was handed: a record whose
+     * id a plugin already serves is not an agent of this host.
+     */
+    fold: (records?: Agent[]) => {
+      const folded = foldHostOptions(options.base, contributions(), records ?? served);
+      if (records !== undefined) {
+        const took = new Set(folded.records);
+        served = records.filter((agent) => took.has(agent.provider));
+      }
+      return folded;
+    },
     settle: (host) => { reached = host; settled(host); },
   };
 };

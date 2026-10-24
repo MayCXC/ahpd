@@ -8,9 +8,11 @@ import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { uriOf } from '@ahpd/sdk';
 import type { Agent, Bag, Emit, McpServer, Session, Start } from '@ahpd/sdk';
 import { DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../../sdk/src/tools/clientcalls.js';
+import { loadPlugins } from '../../server/src/plugins.js';
+import { echo } from '../../../examples/echo/agent.js';
 import { acpAgent, watchSession } from '../src/index.js';
 import { mapUpdate } from '../src/mapping.js';
-import { MACHINE_KEYS, optionsSchema } from '../src/plugin.js';
+import { MACHINE_KEYS } from '../src/plugin.js';
 import { toolsReachable } from '../src/session/opening.js';
 import type { AcpOptions, AcpTurn } from '../src/types.js';
 
@@ -1538,12 +1540,21 @@ it('never writes a bare timing key on a call', async () => {
   expect(watch.actions.every((one) => bare.every((key) => metaOf(one.action)[key] === undefined))).toBe(true);
 });
 
-it('declares every field a preset machine takes as a property of the machine schema', () => {
-  const machine = optionsSchema.properties.presets.additionalProperties.properties.machine;
-  const properties = machine.properties as Record<string, Record<string, unknown>>;
+it('declares every field a record machine takes as a property of the machine schema', async () => {
+  const repo = join(import.meta.dirname, '../../..');
+  const { options } = await loadPlugins([{ name: './packages/agent-acp/src/index.ts', options: {} }], {
+    base: { path: '/tmp/ahpd-acp-catalog', agents: [echo({ path: '/tmp/ahpd-acp-catalog' })] },
+    configDir: repo,
+    cwd: repo,
+    log: () => {},
+  });
+  const kind = options.agentKinds?.['acp'];
+  if (kind === undefined) throw new Error('no acp kind was registered');
+  const fields = (kind.schema as Bag)['properties'] as Bag;
+  const machine = fields['machine'] as { properties: Record<string, Record<string, unknown>>; description: string };
   for (const key of MACHINE_KEYS) {
-    expect(properties, key).toHaveProperty(key);
-    expect(typeof properties[key]?.description, key).toBe('string');
+    expect(machine.properties, key).toHaveProperty(key);
+    expect(typeof machine.properties[key]?.description, key).toBe('string');
     expect(machine.description, key).toContain(key);
   }
 });

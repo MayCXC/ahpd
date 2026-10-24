@@ -1,5 +1,7 @@
 import { expect, it } from 'vitest';
+import { AGENT_SECRETS, resolved } from '../../sdk/src/channels/owners.js';
 import { modelsProblem, offeredModels, ownModels } from '../src/models.js';
+import type { ModelEntry } from '../src/models.js';
 
 /*
  * The models a Claude harness offers when its operator names them: written by
@@ -40,6 +42,21 @@ it('fetches an endpoint list and keeps the ids its pattern covers, with the key 
     .toEqual(['Space Bunny', 'anthropic/fable-5', 'openai/gpt-5']);
 });
 
+it('sends the key a record resolved to text, whether it was fromEnv or a secret', async () => {
+  process.env.AHPD_MODELS_KEY = 'sk-from-the-environment';
+  const { get, seen } = endpoint([{ id: 'deepseek/deepseek-chat' }]);
+  // The record holds `{ fromEnv }`, and the channel resolves a record's config
+  // before the kind opens it, so the models entry the kind is handed carries
+  // the key's text.
+  const record = { models: [{ fetch: 'https://models.test/v1/models', key: { fromEnv: 'AHPD_MODELS_KEY' } }] };
+  const view = await resolved(record, 'host', undefined, AGENT_SECRETS);
+  const models = await ownModels(view['models'] as ModelEntry[], () => {}, get);
+  delete process.env.AHPD_MODELS_KEY;
+
+  expect(models).toEqual([{ id: 'deepseek/deepseek-chat', name: 'deepseek/deepseek-chat' }]);
+  expect(seen).toEqual([{ url: 'https://models.test/v1/models', auth: 'Bearer sk-from-the-environment' }]);
+});
+
 it('says so and offers the written models when a fetch fails', async () => {
   const said: string[] = [];
   const { get } = endpoint([], 503);
@@ -58,8 +75,12 @@ it('replaces the CLI list, adds to it with keepCliModels, and is the CLI list wi
 it('names what is wrong with a models option', () => {
   expect(modelsProblem(undefined)).toBeUndefined();
   expect(modelsProblem(['a/b', { id: 'c/d', name: 'D' }, { fetch: 'https://x', match: 'a/*', key: { fromEnv: 'K' } }])).toBeUndefined();
+  // A record's key is the text the channel resolved, and a preset's is the
+  // variable it is read from: both are keys.
+  expect(modelsProblem([{ fetch: 'https://x', key: 'a-token' }])).toBeUndefined();
   expect(modelsProblem('a/b')).toBe('options.models is not a list');
   expect(modelsProblem([''])).toBe('options.models[0] is an empty id');
   expect(modelsProblem([{ name: 'x' }])).toBe('options.models[0] has neither an id nor a fetch');
-  expect(modelsProblem([{ fetch: 'https://x', key: 'K' }])).toBe('options.models[0].key is not { fromEnv }');
+  expect(modelsProblem([{ fetch: 'https://x', key: 5 }])).toBe('options.models[0].key is not a string or { fromEnv }');
+  expect(modelsProblem([{ fetch: 'https://x', key: {} }])).toBe('options.models[0].key is not a string or { fromEnv }');
 });

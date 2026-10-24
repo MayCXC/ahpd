@@ -15,6 +15,7 @@
 import type { AutomationTriggerDefinition, ChatOrigin, ChatSummary, Icon } from '@microsoft/agent-host-protocol';
 
 import type { Agent } from './agent.js';
+import type { AgentKind, AgentOwner, ServedAgentKind } from './agents.js';
 import type { StartSession } from './automations.js';
 import type { SessionConfigAnswerer } from './completions.js';
 import type { Adapter, ConnectorOwner, ServedAdapter } from './connectors.js';
@@ -760,6 +761,18 @@ export interface PluginHost extends PluginContext {
    */
   machineNeeds(provider: string): Record<string, MachineNeed> | undefined;
   /**
+   * Whose each stored agent is, read when called rather than at load.
+   *
+   * The agents channel's map: an id a record holds answers its owner, and an id
+   * no record holds is absent - the daemon's own agent or one a plugin
+   * registered. Read live for the reason `machineNeeds` is: the records are
+   * folded while the daemon runs, and a plugin that keeps a record naming an
+   * agent - a bot's `preset` - has to ask at each use rather than once.
+   *
+   * Empty on a host with no agents channel, where every agent is the daemon's.
+   */
+  agentOwners(): ReadonlyMap<string, AgentOwner | undefined>;
+  /**
    * Keep one usage record, in the host's `usage` port.
    *
    * The way a plugin says what it cost: a computer records the time it spent
@@ -1163,6 +1176,16 @@ export interface PluginHost extends PluginContext {
    */
   registerAdapter(adapter: Adapter): void;
   /**
+   * Offer one kind of agent a person can make agents from.
+   *
+   * The name is a slug and is what a stored record carries, so a kind is
+   * registered once: a name this plugin already used is refused here, and one
+   * another plugin took is reported by the fold. The schema is the form a
+   * client draws for a record's own fields, and `open` builds a backend each
+   * time a record of the kind is made or the daemon starts with one stored.
+   */
+  registerAgentKind(kind: AgentKind): void;
+  /**
    * Subscribe to one of the host's own moments.
    *
    * The one method not named `register*`, because it contributes nothing to
@@ -1185,10 +1208,10 @@ export interface PluginLink {
  * The registrations a plugin declares, by kind.
  *
  * A key is the plural of the register method of that kind - `agents`, `tools`,
- * `channels`, `methods`, `routes`, `triggerTypes`, `adapters` - and its
- * entries are the names the method may be called with. `ports` holds the
- * singleton ports a plugin sets, such as `vault`. A registration its contracts
- * do not list is refused.
+ * `channels`, `methods`, `routes`, `triggerTypes`, `adapters`, `agentKinds` -
+ * and its entries are the names the method may be called with. `ports` holds
+ * the singleton ports a plugin sets, such as `vault`. A registration its
+ * contracts do not list is refused.
  */
 export type PluginContracts = Record<string, string[]>;
 
@@ -1345,6 +1368,14 @@ export interface Contribution {
    * plugin up again.
    */
   adapters: Record<string, ServedAdapter>;
+  /**
+   * The agent kinds this plugin offers, keyed by name.
+   *
+   * Each entry carries the plugin that registered it, as an adapter does, so
+   * the fold can report a name two plugins both took. Absent when the plugin
+   * registered none.
+   */
+  agentKinds?: Record<string, ServedAgentKind>;
   /** The commands this plugin serves, keyed by name. */
   methods: Record<string, ServedMethod>;
   /**

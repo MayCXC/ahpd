@@ -42,6 +42,15 @@ export interface SessionContext extends TurnAgent, Runs, Pauses, Turns {
   settings: Record<string, unknown>;
   touch: () => void;
   /**
+   * Read the record again, for a backend opened from one.
+   *
+   * Puts what the record says now on `options`, which the turn that follows
+   * builds from, and answers a sentence when the record can no longer be used.
+   * A backend an embedder built from its own options has nothing to read and
+   * answers nothing.
+   */
+  refreshOptions: () => string | undefined;
+  /**
    * The tools the model is offered.
    *
    * Mutable because a client announces what it provides after the session is

@@ -64,21 +64,26 @@ it('asks one operation where the table gives one, and both where it gives both',
    * A role of one act and one read: it may say something in a chat and it may
    * not close the session the chat is in, which is the whole point of an
    * operation over a verb - under `session:write` both came together.
+   *
+   * `session:write` is beside them because the daemon's own agent takes it to
+   * be started on, as any agent with no record of its own does.
    */
-  const opener = await holding(made, 'o', ['session:read', 'session:create', 'chat:create']);
+  const opener = await holding(made, 'o', ['session:write', 'session:read', 'session:create', 'chat:create']);
   expect(await call(opener.client, 'createSession', { channel: 'ahp-session:/one', provider: 'claude' })).toHaveProperty('result');
   expect(await call(opener.client, 'createChat', { channel: 'ahp-session:/one', chat: 'ahp-chat:/one' })).toHaveProperty('result');
 
-  const talker = await holding(made, 't', ['session:read', 'chat:send']);
+  const talker = await holding(made, 't', ['session:read', 'chat:send', 'chat:create']);
   await talker.send('ahp-session:/one', { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hello' } });
   expect(talker.refused()).toEqual([]);
   expect((await call(talker.client, 'disposeSession', { channel: 'ahp-session:/one' })) as { message: string })
     .toMatchObject({ code: -32009, message: 't may not session:dispose here' });
-  // Forking is its own operation, so a role that may only start a chat may not
-  // fork one - and `session:write` is not a way round it either.
-  expect((await call(opener.client, 'createChat', {
+  // Forking is its own operation, so a role that may start and speak in a chat
+  // may not fork one. Asked of `talker` rather than `opener` because the opener
+  // holds `session:write` for the daemon's own agent, and a chat's groups are
+  // the session's - so that one grant does cover forking, by the table's own rule.
+  expect((await call(talker.client, 'createChat', {
     channel: 'ahp-session:/one', chat: 'ahp-chat:/fork', source: { kind: 'fork', chat: 'ahp-chat:/one' },
-  })) as { message: string }).toMatchObject({ code: -32009, message: 'o may not chat:fork here' });
+  })) as { message: string }).toMatchObject({ code: -32009, message: 't may not chat:fork here' });
 
   // The automations are the same shape: editing one is not running it.
   const editor = await holding(made, 'e', ['automation:read', 'automation:update']);

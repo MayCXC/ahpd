@@ -4,7 +4,7 @@ import { machineAsked, machinePathOf } from '@ahpd/sdk';
 import type { Spawn, Start, ToolsEndpoint } from '@ahpd/sdk';
 import { watchSession } from '../catalog.js';
 import { connectAcp } from '../connection.js';
-import type { AcpConnection } from '../types.js';
+import type { AcpConnection, AcpOptions } from '../types.js';
 import { messageOf } from './common.js';
 import type { SessionContext } from './context.js';
 
@@ -12,6 +12,14 @@ import type { SessionContext } from './context.js';
 export interface Opening {
   open(): Promise<{ connection: AcpConnection; sessionId: string }>;
   signInFailure(why: unknown): { errorType: string; message: string } | undefined;
+  /**
+   * Read the record again, and put a new server behind the conversation when
+   * what it spawns with changed.
+   *
+   * Called at the start of every turn. Answers a sentence when the record can
+   * no longer be used, which is the turn's own refusal, and nothing otherwise.
+   */
+  refreshOptions(): string | undefined;
   /**
    * The host's own tools endpoint, once a turn has opened it.
    *
@@ -22,6 +30,29 @@ export interface Opening {
    */
   toolsEndpoint(): ToolsEndpoint | undefined;
 }
+
+/**
+ * The options a spawned server is built from, which an edit is compared on.
+ *
+ * A model is not here: ACP carries the model choice as a session config the
+ * server owns, and the value reaches a turn through the agent's defaults rather
+ * than through the spawn. A provider, a name and a description are the record's
+ * own row, which a running session does not get to change.
+ */
+const SPAWN_KEYS = [
+  'command', 'args', 'env', 'cwd', 'authenticate', 'authenticateInMachine',
+  'hostTools', 'honoursTrust', 'toolsChanged', 'machine',
+] as const;
+
+/** Every field a record may change, which a fresh read puts on the options a session holds. */
+const LIVE_KEYS = [
+  'command', 'args', 'env', 'cwd', 'provider', 'displayName', 'description', 'model',
+  'authenticate', 'authenticateInMachine', 'hostTools', 'honoursTrust', 'toolsChanged', 'machine', 'variant',
+] as const;
+
+/** What a spawned server is built from, as one string to compare an edit by. */
+const spawnOf = (one: AcpOptions): string =>
+  JSON.stringify(SPAWN_KEYS.map((key) => [key, (one as unknown as Record<string, unknown>)[key]]));
 
 /**
  * Whether the handshake advertised something ACP writes as an empty object.
@@ -596,5 +627,56 @@ export function createOpening(ctx: SessionContext): Opening {
     return pending;
   };
 
-  return { open, signInFailure, toolsEndpoint: () => endpoint };
+  /**
+   * Read the record again, and put a new server behind the conversation when
+   * what it spawns with changed.
+   *
+   * An edit applies at the next turn, which is the whole of the promise: the
+   * turn already running finishes on the server it started on, and the turn
+   * that begins after the edit is answered by a server built from what the
+   * record says now. Nothing to do for a preset, whose values no running daemon
+   * can edit.
+   *
+   * The conversation is kept by leaving `acpSessionId` where it is and letting
+   * the old server go, so `open` reopens it the way it reopens one that died -
+   * a resume where the server advertised that it can take one back without
+   * replaying, and a load otherwise. The first turn settles what the server was
+   * opened with, because a record can be edited between the open and that turn.
+   *
+   * A record that can no longer be used is the turn's own refusal rather than a
+   * session that died, which is why it comes back as a sentence.
+   */
+  const refreshOptions = (): string | undefined => {
+    const live = options.presetOf;
+    if (live === undefined) return undefined;
+    let now: AcpOptions;
+    try {
+      now = live();
+    }
+    catch (error: unknown) {
+      return `${provider}: the record cannot be used: ${messageOf(error)}`;
+    }
+    const holding = options as unknown as Record<string, unknown>;
+    for (const key of LIVE_KEYS) {
+      const value = (now as unknown as Record<string, unknown>)[key];
+      if (value === undefined) delete holding[key];
+      else holding[key] = value;
+    }
+    const said = spawnOf(now);
+    if (ctx.startedWith === '' || said === ctx.startedWith) {
+      ctx.startedWith = said;
+      return undefined;
+    }
+    ctx.startedWith = said;
+    const was = ctx.live;
+    ctx.live = undefined;
+    ctx.opening = undefined;
+    // The conversation is kept by `acpSessionId`, so the old server is only
+    // stopped: awaiting that close here would hold the turn on a process that
+    // is no longer answering for it.
+    void was?.close().catch(() => {});
+    return undefined;
+  };
+
+  return { open, refreshOptions, signInFailure, toolsEndpoint: () => endpoint };
 }

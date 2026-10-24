@@ -182,6 +182,12 @@ export const OPERATIONS: Record<string, SubjectOperations> = {
     operations: ['list', 'all', 'put', 'remove', 'host'],
     groups: { read: ['list', 'all'], write: ['put', 'remove', 'host'] },
   },
+  agent: {
+    title: 'Agents',
+    description: 'The agent kinds plugins register, and the agents made from records of them.',
+    operations: ['list', 'all', 'put', 'remove', 'host'],
+    groups: { read: ['list', 'all'], write: ['put', 'remove', 'host'] },
+  },
   diagnostics: {
     title: 'Diagnostics',
     description: 'Logs and network details for troubleshooting.',

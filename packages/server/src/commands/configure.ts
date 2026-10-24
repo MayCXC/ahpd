@@ -24,12 +24,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { output } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
-import { isRecord } from '@ahpd/sdk';
+import { isRecord, knownAgents } from '@ahpd/sdk';
+import type { RecordCollection } from '@ahpd/sdk';
 import { ask, answering, confirm, here, type Term } from '../ask.js';
 import { asSpec, configDir, configPath } from '../config.js';
-import { AGENT_PLUGIN, agentLines, alsoLines, findAgents, findAlso, findRuntimes, missingLines, runtimeLines } from '../found.js';
+import { AGENT_PLUGIN, agentLines, alsoLines, configuredAgents, findAgents, findAlso, findRuntimes, missingLines, runtimeLines } from '../found.js';
 import { installPlugins, readEntry, run as runProgram, writeEntry, type Runner } from '../install.js';
 import { isNamed, nameOf, pluginIdOf } from '../plugins.js';
+import { fileRecords } from '../records.js';
 import type { Fetch } from '../update.js';
 import { version } from '../version.js';
 import { serverFields, stop, type Options } from './options.js';
@@ -54,8 +56,8 @@ const FIRST = '@ahpd/agent-claude';
 /**
  * The native pi backend.
  *
- * The ACP preset `pi` registers the same agent name, so a file that names both
- * is a file where one of the two is dropped at the next start.
+ * The ACP agent `pi` serves the same name, so a host with both is one where one
+ * of the two is dropped at the next start.
  */
 const PI = '@ahpd/agent-pi';
 
@@ -152,40 +154,52 @@ const enabledIn = (list: unknown[], name: string): boolean => {
 };
 
 /**
- * The `@ahpd/agent-acp` entry with one preset switched on, and nothing else changed.
+ * The plugin list with the plugin every ACP agent runs through named in it.
  *
- * A string entry becomes an object because a preset is an option, and an option
- * needs a place to sit. Every other option the entry holds is kept, as is every
- * other preset: taking one agent is not a reason to drop the arguments somebody
- * wrote for another. The first agent taken on a first run makes the entry.
+ * The record is what serves the agent, and the package is what registers the
+ * kind the record runs on, so taking an agent without the package would leave a
+ * record nobody can open. An entry already there is left as it is, whichever
+ * way it was written and whether or not it is switched off.
  */
-const takePreset = (list: unknown[], id: string): unknown[] => {
-  const at = list.findIndex((entry) => {
+const withAgentPlugin = (list: unknown[]): unknown[] => {
+  const present = list.some((entry) => {
     const spec = asSpec(entry);
     return spec !== undefined && isNamed(spec, AGENT_PLUGIN);
   });
-  const preset = { [id]: {} };
-  if (at === -1) return [...list, { name: AGENT_PLUGIN, options: { presets: preset } }];
-  const spec = asSpec(list[at]);
-  if (spec === undefined) return list;
-  const entry: Record<string, unknown> = typeof spec === 'string'
-    ? { name: spec }
-    : { ...list[at] as Record<string, unknown>, name: spec.name };
-  const options = isRecord(entry.options) ? entry.options : {};
-  const presets = isRecord(options['presets']) ? options['presets'] : {};
-  const next = [...list];
-  next[at] = { ...entry, options: { ...options, presets: { ...presets, ...preset } } };
-  return next;
+  return present ? list : [...list, AGENT_PLUGIN];
+};
+
+/** One agent taken here, written as the host record the agents channel serves. */
+const takeAgent = async (agents: RecordCollection, id: string): Promise<void> => {
+  if (await agents.get(id) !== undefined) return;
+  await agents.put({
+    id,
+    kind: 'acp',
+    // The host owned the agents a preset registered, and it owns the records
+    // they become: a record with no readable owner is served to nobody.
+    owner: 'host',
+    name: knownAgents[id]?.name ?? id,
+    config: {},
+  });
+};
+
+/** The agent record of one id taken out, when it is one an ACP agent runs as. */
+const dropAgent = async (agents: RecordCollection, id: string): Promise<boolean> => {
+  const held = await agents.get(id);
+  if (held === undefined || held['kind'] !== 'acp') return false;
+  return agents.remove(id);
 };
 
 /**
- * The `@ahpd/agent-acp` entry with one preset taken out, and nothing else changed.
+ * The `@ahpd/agent-acp` entry with a preset the file still holds taken out.
  *
- * The entry stays, because its other presets and its options are not what is
- * being dropped. A file with no such entry, a string one, or one that does not
- * name the preset is left as it is.
+ * A file written before records is moved at the next start, and until then its
+ * presets are the only copy of its agents. This drops one from the file as
+ * well, so the agent does not come back with the next migration. A file with no
+ * such entry, a string one, or one that does not name the preset is left as it
+ * is.
  */
-const dropPreset = (list: unknown[], id: string): unknown[] => {
+const withoutPreset = (list: unknown[], id: string): unknown[] => {
   const at = list.findIndex((entry) => {
     const spec = asSpec(entry);
     return spec !== undefined && isNamed(spec, AGENT_PLUGIN);
@@ -203,18 +217,6 @@ const dropPreset = (list: unknown[], id: string): unknown[] => {
   return next;
 };
 
-/** Whether the `@ahpd/agent-acp` entry in this list names a preset for that id. */
-const hasPreset = (list: unknown[], id: string): boolean => {
-  for (const entry of list) {
-    const spec = asSpec(entry);
-    if (spec === undefined || !isNamed(spec, AGENT_PLUGIN)) continue;
-    if (typeof spec === 'string') return false;
-    const presets = spec.options?.['presets'];
-    return isRecord(presets) && Object.hasOwn(presets, id);
-  }
-  return false;
-};
-
 /**
  * Ask every question, write the file, and install what was asked for.
  *
@@ -225,6 +227,13 @@ const hasPreset = (list: unknown[], id: string): boolean => {
 export async function configure(options: ConfigureOptions): Promise<Configured> {
   const held = readEntry(options.configFile);
   const installed = named(held);
+  /*
+   * The agent records, which is where an agent taken here is written.
+   *
+   * The same folder and format the daemon opens at its start, so the agent is
+   * one the next start serves rather than a preset it has to move first.
+   */
+  const agentRecords = await fileRecords(options.configDir).collection('agents', { format: 'json' });
   // A file that is not there yet is the run that offers what a first install
   // wants; a later run asks with the file's own answer in front of the person.
   const firstRun = !existsSync(options.configFile);
@@ -272,15 +281,16 @@ export async function configure(options: ConfigureOptions): Promise<Configured> 
    * runtime ahpd will use and which agent commands are there before deciding
    * anything. An agent that is not installed is not a question: it is listed
    * after the questions with the vendor's line for this system, and nothing
-   * more is said about it. A found agent the file already names is shown as
-   * configured and not asked about again.
+   * more is said about it. A found agent this host already has a record for is
+   * shown as configured and not asked about again.
    */
   const platform = process.platform;
   const path = options.path ?? process.env.PATH ?? '';
   const runtimes = await findRuntimes({ run: options.run, path, platform });
   for (const line of runtimeLines(runtimes)) options.say(line);
 
-  const found = await findAgents({ run: options.run, path, platform }, held.plugins);
+  const configured = configuredAgents(held.plugins, await agentRecords.list());
+  const found = await findAgents({ run: options.run, path, platform }, configured);
   const taken: string[] = [];
   if (answering(options.term)) {
     for (const line of agentLines(found.agents)) options.say(line);
@@ -289,10 +299,10 @@ export async function configure(options: ConfigureOptions): Promise<Configured> 
   if (answering(options.term)) {
     for (const one of found.agents) {
       /*
-       * The native backend and the ACP preset both register the agent `pi`, and
-       * the daemon keeps only the first. Taking the native one is taken to
-       * mean the ACP one, so it is not offered, and a person who wants the
-       * preset answers No to the native question instead.
+       * The native backend and the ACP agent `pi` serve the same name, and the
+       * daemon keeps only the first. Taking the native one is taken to mean the
+       * ACP one, so it is not offered, and a person who wants the ACP agent
+       * answers No to the native question instead.
        */
       if (nativePi && one.agent.id === 'pi') {
         options.say(`${one.agent.command}: not asked, the pi backend runs pi`);
@@ -301,14 +311,26 @@ export async function configure(options: ConfigureOptions): Promise<Configured> 
       if (one.configured) continue;
       if (!await confirm(`${one.agent.name}?`, true, options.term)) continue;
       taken.push(one.agent.id);
-      plugins = takePreset(plugins, one.agent.id);
+      plugins = withAgentPlugin(plugins);
+      try {
+        await takeAgent(agentRecords, one.agent.id);
+      }
+      catch (error) {
+        stop(`The agent ${one.agent.id} could not be written as a record: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
-    // A file that already names both was written before this question existed,
+    // A host that already has both was configured before this question existed,
     // and one of the two is dropped at the next start, so this is the run that
     // can keep only the backend.
-    if (nativePi && hasPreset(plugins, 'pi')
-      && await confirm('Remove the ACP pi preset? It clashes with the pi backend.', true, options.term)) {
-      plugins = dropPreset(plugins, 'pi');
+    if (nativePi && configured.has('pi')
+      && await confirm('Remove the ACP pi agent? It clashes with the pi backend.', true, options.term)) {
+      plugins = withoutPreset(plugins, 'pi');
+      try {
+        await dropAgent(agentRecords, 'pi');
+      }
+      catch (error) {
+        stop(`The agent record pi could not be removed: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
   for (const line of missingLines(found.missing, platform)) options.say(line);

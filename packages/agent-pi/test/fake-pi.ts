@@ -117,6 +117,11 @@ export function fakePi() {
     },
     rename: (title) => { asked.push({ kind: 'rename', title }); },
     rewind: async (entryId) => { asked.push({ kind: 'rewind', entryId }); return moves; },
+    /*
+     * The record's variables, as the session hands them to pi's runtime before
+     * each turn. Recorded so a case can read which record a turn was built for.
+     */
+    useEnv: async (env) => { asked.push({ kind: 'useEnv', env: { ...env } }); },
     leaf: () => leaf,
     close: () => { asked.push({ kind: 'close' }); },
   };

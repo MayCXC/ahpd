@@ -62,6 +62,7 @@ edit -> live record updated -> the session reads it at its next turn
 | Agents have their own channel, `x-ahpd-agents`, built on the connector code | Softov, 2026-10-24: "I think we could use x-ahpd-agents." | 01 |
 | An agent's owner is `host`, `team:<id>` or `user:<id>` | (defaulted: the connector owners; Softov asked whether a person can have one) | 01 |
 | The grants are `agent:list`, `agent:put`, `agent:remove` and `agent:host`, with the connector owner rules. `admin` has them all, and `member` has none | Softov, 2026-10-24: "Copy the connector grants" | 01 |
+| `agent:all` reads every agent and removes any agent, whoever owns it. `admin` has it | Softov, 2026-10-24: "Add agent:all" | 01 |
 | A key field is write-only. The vault holds it, and no client, session or log gets the value | Softov, 2026-10-24: "Never, like connectors" | 01 |
 | The channel owns `name`, `description`, `icon` and `model` on every agent. A kind's schema adds only its own fields | Softov, 2026-10-24: "Name, description, icon, model" | 01 |
 | An agent id is unique across all owners, and a `put` with an id another owner holds is refused | (defaulted: a client names an agent by its id) | 01 |
@@ -90,14 +91,14 @@ edit -> live record updated -> the session reads it at its next turn
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The agents channel](task-01-the-agents-channel.md) | todo | - |
-| [02 - A caller sees only the agents it may use](task-02-a-caller-sees-its-agents.md) | todo | 01 |
-| [03 - agent-claude registers a kind](task-03-agent-claude-registers-a-kind.md) | todo | 01 |
-| [04 - agent-acp registers a kind](task-04-agent-acp-registers-a-kind.md) | todo | 01 |
-| [05 - agent-cofold registers a kind](task-05-agent-cofold-registers-a-kind.md) | todo | 01 |
-| [06 - agent-pi registers a kind](task-06-agent-pi-registers-a-kind.md) | todo | 01 |
-| [07 - Presets become records at the first start](task-07-presets-become-records.md) | todo | 03, 04, 05, 06 |
-| [08 - The docs describe agent records](task-08-docs-describe-agent-records.md) | todo | 07 |
+| [01 - The agents channel](task-01-the-agents-channel.md) | implemented | - |
+| [02 - A caller sees only the agents it may use](task-02-a-caller-sees-its-agents.md) | implemented | 01 |
+| [03 - agent-claude registers a kind](task-03-agent-claude-registers-a-kind.md) | implemented | 01 |
+| [04 - agent-acp registers a kind](task-04-agent-acp-registers-a-kind.md) | implemented | 01 |
+| [05 - agent-cofold registers a kind](task-05-agent-cofold-registers-a-kind.md) | implemented | 01 |
+| [06 - agent-pi registers a kind](task-06-agent-pi-registers-a-kind.md) | implemented | 01 |
+| [07 - Presets become records at the first start](task-07-presets-become-records.md) | implemented | 03, 04, 05, 06 |
+| [08 - The docs describe agent records](task-08-docs-describe-agent-records.md) | implemented | 07 |
 
 ## Risks and tradeoffs
 
@@ -107,8 +108,8 @@ edit -> live record updated -> the session reads it at its next turn
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** task 01.
+- **Done so far:** task 01, the agents channel, with its tests; the connectors channel and its tests are unchanged. Task 02, the caller's own agent list, with its tests. Task 03, the `claude` kind in agent-claude, with an edit applying at the next turn. Task 04, the `acp` kind in agent-acp, with the shipped rows as templates, an edit applying at the next turn by another server on the same conversation. Task 05, the `cofold` kind in agent-cofold, with one store folder per record, a record's keyed search providers refused because the channel vaults top-level fields only. Task 06, the `pi` kind in agent-pi, with a record's variables resolved to pi's runtime key per provider each turn and never written to `process.env`, a record's model taking effect at the next turn; a variable pi uses as request headers rather than a key, `ANTHROPIC_AUTH_TOKEN`, is the one thing a record cannot set. Task 07, the migration: `config.json`'s presets and per-agent options become `owner: "host"` records at the first start, before any plugin loads, with a backup and a temp-file rename of the file and one line of ids; `ahpd configure` writes records; a bot whose agent is not served reads `unavailable`; the daemon starts on records alone; `presets` is gone from the plugins and their manifests. Task 08, the docs: PLUGINS.md registers `registerAgentKind`, documents every `AgentKind` field, and describes `x-ahpd-agents` with its grants, owners and vault names; the four agent READMEs state their kind, templates, host-only fields and key variables and carry record examples; both worked examples are off `presets`.
+- **Next action:** Softov's by-hand checks in the final verification checklist, and `plans/index.md` updated. A follow-up should clear the `presets` references left in `docs/plugins/COMPUTERS.md`, `docs/server/PLUGINS.md`, `docs/server/CONFIGURE.md` and `docs/sdk/AHP.md`, which name options that are gone and are outside task 08's Files.
 - **Open questions:** none.
 - **Watch out for:** Softov's build sessions run on the agent `claude-deepseek-build`. A daemon with this plan must still offer it after the first start, with the same id.
 

@@ -5,25 +5,26 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it, vi } from 'vitest';
 import { machinePathOf } from '@ahpd/sdk';
-import type { Agent, Bag, MachineNeed, OpenedTerminal, OpenTerminal, PluginHost, Session, SpawnOptions, Vault } from '@ahpd/sdk';
+import type { AgentKind, AgentView, Bag, MachineNeed, OpenedTerminal, OpenTerminal, Session, SpawnOptions, Vault } from '@ahpd/sdk';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { fileResources } from '../../sdk/src/resources/resources.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { acpAgent } from '../src/agent.js';
-import { name, optionsOf } from '../src/plugin.js';
+import { name } from '../src/plugin.js';
 import { presets } from '../src/presets.js';
 import { readParts } from '../../computer/src/parts.js';
 
 /*
- * What a preset says its machine needs.
+ * What a record says its machine needs.
  *
- * A preset's `machine` is the variant's own: its `env` becomes one environment
- * need per variable and its `copy` one copy need per entry, named after the
- * preset, and the host asks each variant's `machine()` for itself. A `fromEnv`
- * value is read from the daemon's environment when the load runs; a `$secret`
- * is handed through as written and read by the computer plugin when a machine
- * is made, for that machine's owner. A preset whose `machine` cannot be
- * resolved is skipped with one line naming it, and the others register.
+ * A record's `machine` is its own, laid over the shipped row's: its `env`
+ * becomes one environment need per variable and its `copy` one copy need per
+ * entry, named after the record, and the host asks each record's `machine()`
+ * for itself. A `fromEnv` value is read from the daemon's environment when the
+ * record opens; a `$secret` is handed through as written and read by the
+ * computer plugin when a machine is made, for that machine's owner. A record
+ * whose `machine` cannot be resolved refuses its own open, with one line naming
+ * the field, and the other records of the host are untouched.
  */
 
 const REPO = join(import.meta.dirname, '../../..');
@@ -57,7 +58,7 @@ const heldVault = (held: Record<string, string>): Vault => ({
   list: async () => Object.keys(held).sort(),
 });
 
-/** The plugin's own load, with what it registered and every line it said. */
+/** The plugin's own load, with the kind it registered and every line it said. */
 const load = async (options: Record<string, unknown>) => {
   const lines: string[] = [];
   const { loaded, problems, options: served } = await loadPlugins([{ name: SOURCE, options }], {
@@ -66,16 +67,26 @@ const load = async (options: Record<string, unknown>) => {
     cwd: REPO,
     log: (line: string) => { lines.push(line); },
   });
-  const agents = (served.agents ?? []).slice(1);
-  return { loaded, problems, agents, lines };
+  const kind = served.agentKinds?.['acp'];
+  if (kind === undefined) throw new Error('no acp kind was registered');
+  return { loaded, problems, kind, lines };
 };
 
-/** The lines one load said about the presets it would not register. */
-const skippedOf = (problems: string[]): string[] => problems.filter((line) => line.startsWith(`${name}: `));
+/** One record, as a kind is handed it: every field read at each call. */
+const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
+  id,
+  kind: 'acp',
+  owner: 'host',
+  name,
+  description: undefined,
+  icon: undefined,
+  model: undefined,
+  get config() { return held(); },
+});
 
-/** One registered agent's needs, by provider. */
-const needsOf = (agents: Agent[], provider: string): Record<string, MachineNeed> | undefined =>
-  agents.find((one) => one.provider === provider)?.machine?.();
+/** One record's needs, opened from the kind. */
+const needsOf = (kind: AgentKind, id: string, held: () => Bag = () => ({})): Record<string, MachineNeed> | undefined =>
+  kind.open(viewOf(id, held)).machine?.();
 
 const CODEX_MACHINE = {
   env: {
@@ -86,12 +97,12 @@ const CODEX_MACHINE = {
   copy: [{ source: '~/.codex/config.toml', target: '/ahpd/codex/config.toml' }],
 };
 
-it('answers one env need per variable and one copy need per entry, named after the preset', async () => {
+it('answers one env need per variable and one copy need per entry, named after the record', async () => {
   process.env.AHPD_TEST_CODEX_KEY = 'from-the-daemon';
-  const { problems, agents } = await load({ presets: { codex: { machine: CODEX_MACHINE } } });
+  const { problems, kind } = await load({});
   expect(problems).toEqual([]);
 
-  expect(needsOf(agents, 'codex')).toEqual({
+  expect(needsOf(kind, 'codex', () => ({ machine: CODEX_MACHINE }))).toEqual({
     'codex.CODEX_HOME': expect.objectContaining({ name: 'CODEX_HOME', default: '/ahpd/codex', required: false }),
     // Read from the daemon's environment at load, so it follows process.env.
     'codex.CODEX_API_KEY': expect.objectContaining({ name: 'CODEX_API_KEY', default: 'from-the-daemon', required: false }),
@@ -99,101 +110,84 @@ it('answers one env need per variable and one copy need per entry, named after t
     // is made, for that machine's owner.
     'codex.OPENAI_API_KEY': expect.objectContaining({ name: 'OPENAI_API_KEY', default: { $secret: 'host:codex' }, required: false }),
     'codex.copy.0': expect.objectContaining({ source: '~/.codex/config.toml', target: '/ahpd/codex/config.toml' }),
-    // The shipped row's part and state, under the preset's own block.
+    // The shipped row's part and state, under the record's own block.
     'codex.part': expect.objectContaining({ part: 'codex' }),
     'codex.state': expect.objectContaining({ state: '/ahpd/codex' }),
   });
 });
 
-it('has no machine() for a preset that takes no row and writes no machine', async () => {
-  const { agents } = await load({ presets: { mine: { command: 'mine-acp' } } });
-  expect(agents.find((one) => one.provider === 'mine')?.machine).toBeUndefined();
+it('has no machine() for a record that takes no row and writes no machine', async () => {
+  const { kind } = await load({});
+  expect(kind.open(viewOf('mine', () => ({ command: 'mine-acp' }))).machine).toBeUndefined();
 });
 
-it('answers each preset its own needs', async () => {
-  const { problems, agents } = await load({
-    presets: {
-      codex: { machine: { env: { CODEX_HOME: '/ahpd/codex' } } },
-      copilot: { machine: { env: { COPILOT_HOME: '/ahpd/copilot' } } },
-    },
-  });
+it('answers each record its own needs', async () => {
+  const { problems, kind } = await load({});
   expect(problems).toEqual([]);
-  expect(Object.keys(needsOf(agents, 'codex') ?? {})).toEqual(['codex.CODEX_HOME', 'codex.part', 'codex.state']);
-  expect(Object.keys(needsOf(agents, 'copilot') ?? {})).toEqual(['copilot.COPILOT_HOME', 'copilot.part', 'copilot.state']);
+  expect(Object.keys(needsOf(kind, 'codex', () => ({ machine: { env: { CODEX_HOME: '/ahpd/codex' } } })) ?? {}))
+    .toEqual(['codex.CODEX_HOME', 'codex.part', 'codex.state']);
+  expect(Object.keys(needsOf(kind, 'copilot', () => ({ machine: { env: { COPILOT_HOME: '/ahpd/copilot' } } })) ?? {}))
+    .toEqual(['copilot.COPILOT_HOME', 'copilot.part', 'copilot.state']);
 });
 
-it('skips only a preset whose fromEnv names a variable the daemon does not have, naming the preset and the variable', async () => {
+it('refuses a record whose fromEnv names a variable the daemon does not have, naming the record and the variable', async () => {
   delete process.env.AHPD_TEST_CODEX_KEY;
-  const { loaded, problems, agents, lines } = await load({
-    presets: { codex: { machine: CODEX_MACHINE }, copilot: { machine: { env: { COPILOT_HOME: '/ahpd/copilot' } } } },
-  });
+  const { loaded, problems, kind } = await load({});
   expect(loaded.map((one) => one.name)).toEqual([name]);
-  expect(agents.map((one) => one.provider)).toEqual(['copilot']);
-  expect(skippedOf(problems)).toEqual([
-    `${name}: options.presets.codex.machine.env.CODEX_API_KEY reads AHPD_TEST_CODEX_KEY, which the daemon's environment does not have`,
-  ]);
-  expect(lines.filter((line) => line.includes('options.presets.codex'))).toEqual(skippedOf(problems));
+  expect(problems).toEqual([]);
+  expect(() => kind.open(viewOf('codex', () => ({ machine: CODEX_MACHINE })))).toThrow(
+    "codex.machine.env.CODEX_API_KEY reads AHPD_TEST_CODEX_KEY, which the daemon's environment does not have",
+  );
+  // The other record is untouched: one record's open is its own.
+  expect(Object.keys(needsOf(kind, 'copilot', () => ({ machine: { env: { COPILOT_HOME: '/ahpd/copilot' } } })) ?? {}))
+    .toEqual(['copilot.COPILOT_HOME', 'copilot.part', 'copilot.state']);
 });
 
-it('skips only a preset whose machine is wrongly written, naming the field', async () => {
+it('refuses a record whose machine is wrongly written, naming the field', async () => {
+  const { problems, kind } = await load({});
+  expect(problems).toEqual([]);
   for (const [machine, said] of [
-    ['x', 'options.presets.codex.machine is not an object'],
-    [{ volume: 'x' }, 'options.presets.codex.machine.volume is not a field; a machine takes env, copy, part, state and seed'],
-    [{ env: [] }, 'options.presets.codex.machine.env is not an object'],
-    [{ env: { A: 1 } }, 'options.presets.codex.machine.env.A is not a string, { fromEnv } or { $secret }'],
-    [{ env: { A: { fromEnv: '' } } }, 'options.presets.codex.machine.env.A is not a string, { fromEnv } or { $secret }'],
-    [{ copy: {} }, 'options.presets.codex.machine.copy is not a list'],
-    [{ copy: [{ source: '/a' }] }, 'options.presets.codex.machine.copy[0] needs a source and a target'],
-    [{ copy: [{ source: '/a', target: 'rel' }] }, 'options.presets.codex.machine.copy[0].target is not an absolute path'],
-    [{ part: '../x' }, 'options.presets.codex.machine.part is not a part id'],
-    [{ state: 'rel' }, 'options.presets.codex.machine.state is not an absolute path'],
-    [{ seed: {} }, 'options.presets.codex.machine.seed is not a list'],
-    [{ seed: [{ target: 'a' }] }, 'options.presets.codex.machine.seed[0] needs a source'],
-    [{ seed: [{ source: '/a', keep: 'x' }] }, 'options.presets.codex.machine.seed[0].keep is not a list of strings'],
+    ['x', 'codex.machine is not an object'],
+    [{ volume: 'x' }, 'codex.machine.volume is not a field; a machine takes env, copy, part, state and seed'],
+    [{ env: [] }, 'codex.machine.env is not an object'],
+    [{ env: { A: 1 } }, 'codex.machine.env.A is not a string, { fromEnv } or { $secret }'],
+    [{ env: { A: { fromEnv: '' } } }, 'codex.machine.env.A is not a string, { fromEnv } or { $secret }'],
+    [{ copy: {} }, 'codex.machine.copy is not a list'],
+    [{ copy: [{ source: '/a' }] }, 'codex.machine.copy[0] needs a source and a target'],
+    [{ copy: [{ source: '/a', target: 'rel' }] }, 'codex.machine.copy[0].target is not an absolute path'],
+    [{ part: '../x' }, 'codex.machine.part is not a part id'],
+    [{ state: 'rel' }, 'codex.machine.state is not an absolute path'],
+    [{ seed: {} }, 'codex.machine.seed is not a list'],
+    [{ seed: [{ target: 'a' }] }, 'codex.machine.seed[0] needs a source'],
+    [{ seed: [{ source: '/a', keep: 'x' }] }, 'codex.machine.seed[0].keep is not a list of strings'],
   ] as const) {
-    const { problems, agents } = await load({
-      presets: { codex: { machine }, copilot: { machine: { env: { COPILOT_HOME: '/ahpd/copilot' } } } },
-    });
-    expect(agents.map((one) => one.provider)).toEqual(['copilot']);
-    expect(skippedOf(problems)).toEqual([`${name}: ${said}`]);
+    expect(() => kind.open(viewOf('codex', () => ({ machine })))).toThrow(said);
+    // And the other record still opens, with the row it names.
+    expect(needsOf(kind, 'copilot', () => ({ machine: { env: { COPILOT_HOME: '/ahpd/copilot' } } }))).toBeDefined();
   }
 });
 
-it('never reads a $secret at load, and never says a value in a skip line', async () => {
+it('never reads a $secret at load, and never says a value in the line that refuses one', async () => {
   process.env.AHPD_TEST_CODEX_KEY = 'daemon-key-value';
-  const asked: string[] = [];
-  const said: string[] = [];
-  const host = {
-    log: (line: string) => { said.push(line); },
-    problem: (line: string) => { said.push(line); },
-    secret: async (one: string) => { asked.push(one); return 'vault-value'; },
-  } as unknown as PluginHost;
-  const held = await optionsOf(host, {
-    presets: {
-      codex: { machine: CODEX_MACHINE },
-      // Skipped for its copy, beside a value that was read: the line names the
-      // field and never the value.
-      broken: { command: 'x', machine: { env: { KEY: { fromEnv: 'AHPD_TEST_CODEX_KEY' } }, copy: 'x' } },
-    },
-  });
-  expect(asked).toEqual([]);
-  expect(held.map((one) => one.provider)).toEqual(['codex']);
-  expect(held[0]?.machine?.env?.OPENAI_API_KEY).toEqual({ $secret: 'host:codex' });
-  // And none of it is an environment variable of the host's own spawn.
-  expect(held[0]?.env ?? {}).not.toHaveProperty('CODEX_HOME');
-  expect(said).toEqual([`${name}: options.presets.broken.machine.copy is not a list`, `${name}: options.presets.broken.machine.copy is not a list`]);
-  expect(said.join('\n')).not.toContain('daemon-key-value');
-});
+  const { kind } = await load({});
+  const codex = kind.open(viewOf('codex', () => ({ machine: CODEX_MACHINE })));
+  expect(codex.machine?.()['codex.OPENAI_API_KEY']).toMatchObject({ default: { $secret: 'host:codex' } });
 
-it('refuses a top-level machine, which is written per preset', async () => {
-  const { loaded, problems } = await load({ presets: { codex: {} }, machine: { env: {} } });
-  expect(loaded).toEqual([]);
-  expect(problems.join('\n')).toMatch(/options\.machine is written per preset, as presets\.<id>\.machine$/u);
+  // The record that is refused carries a value that was read beside a field
+  // that is wrong: the line names the field and never the value.
+  let thrown: Error | undefined;
+  try {
+    kind.open(viewOf('broken', () => ({ command: 'x', machine: { env: { KEY: { fromEnv: 'AHPD_TEST_CODEX_KEY' } }, copy: 'x' } })));
+  } catch (error) {
+    thrown = error as Error;
+  }
+  expect(thrown?.message).toBe('broken.machine.copy is not a list');
+  expect(thrown?.message).not.toContain('daemon-key-value');
 });
 
 /*
- * A session that runs on this host is the preset's own command with the
- * preset's own `env`: a machine's variables are given to a machine, by the
+ * A session that runs on this host is the record's own command with the
+ * record's own `env`: a machine's variables are given to a machine, by the
  * plugin that makes it, and never reach a spawn on this host or the command a
  * session hands a machine's port.
  */
@@ -263,11 +257,11 @@ it('hands a machine port none of the machine env with the command it runs there'
 });
 
 /*
- * The whole path: a preset's machine block, registered as the variant's
- * `machine()`, read by the computer plugin when it makes a disposable machine
- * for a session of that variant. The plain variable is given when the machine
- * is made; the `$secret` is read for the session's owner, never given at
- * create, and passed by name on each command run in the machine.
+ * The whole path: a record's machine block, opened as the record's `machine()`,
+ * read by the computer plugin when it makes a disposable machine for a session
+ * of that record. The plain variable is given when the machine is made; the
+ * `$secret` is read for the session's owner, never given at create, and passed
+ * by name on each command run in the machine.
  */
 it('reaches a disposable machine: plain values at create, a $secret by name on each command', async () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
@@ -275,8 +269,10 @@ it('reaches a disposable machine: plain values at create, a $secret by name on e
   const state = join(dir, 'docker.json');
   process.env.AHPD_TEST_CODEX_KEY = 'daemon-codex-key';
   const lines: string[] = [];
+  const { kind } = await load({});
+  const codex = kind.open(viewOf('codex', () => ({ machine: CODEX_MACHINE })));
+  const copilot = kind.open(viewOf('copilot', () => ({ machine: { env: { COPILOT_HOME: '/ahpd/copilot' } } })));
   const { problems, options } = await loadPlugins([
-    { name: SOURCE, options: { presets: { codex: { machine: CODEX_MACHINE }, copilot: { machine: { env: { COPILOT_HOME: '/ahpd/copilot' } } } } } },
     {
       name: COMPUTER,
       options: {
@@ -288,18 +284,17 @@ it('reaches a disposable machine: plain values at create, a $secret by name on e
       },
     },
   ], {
-    base: { path: dir, agents: [], resources: fileResources(), vault: heldVault({ 'host:codex': 'vault-codex-key' }) },
+    base: { path: dir, agents: [codex, copilot], resources: fileResources(), vault: heldVault({ 'host:codex': 'vault-codex-key' }) },
     configDir: dir,
     cwd: REPO,
     log: (line: string) => { lines.push(line); },
   });
   expect(problems).toEqual([]);
 
-  const agents = options.agents ?? [];
   const create = options.computers?.create as NonNullable<NonNullable<typeof options.computers>['create']>;
   // The copy's source is this host's file, which the test does not have, so
-  // the machine is made from the variant's env needs.
-  const needs = Object.fromEntries(Object.entries(needsOf(agents, 'codex') ?? {}).filter(([key]) => !key.includes('.copy.')));
+  // the machine is made from the record's env needs.
+  const needs = Object.fromEntries(Object.entries(codex.machine?.() ?? {}).filter(([key]) => !key.includes('.copy.')));
   const id = String(await create({ source: 'disposable:codex', session: 'ahp-session:/one', provider: 'codex', owner: 'user:ada', needs }));
 
   const held = JSON.parse(readFileSync(state, 'utf8')) as { machines: { env?: Record<string, string> }[]; calls: string[][] };
@@ -322,7 +317,7 @@ it('reaches a disposable machine: plain values at create, a $secret by name on e
   expect(readFileSync(join(dir, 'computers.json'), 'utf8')).not.toContain('vault-codex-key');
   expect(lines.join('\n')).not.toMatch(/vault-codex-key|daemon-codex-key/u);
 
-  // The other preset's machine gets its own env, and nothing of codex's.
+  // The other record's machine gets its own env, and nothing of codex's.
   const other = String(await create({ source: 'disposable:codex', session: 'ahp-session:/two', provider: 'copilot', owner: 'user:ada' }));
   const again = JSON.parse(readFileSync(state, 'utf8')) as { machines: { name: string; env?: Record<string, string> }[] };
   expect(again.machines.find((one) => one.name === other)?.env).toEqual({
@@ -339,9 +334,9 @@ it('reaches a disposable machine: plain values at create, a $secret by name on e
 }, 20_000);
 
 /*
- * A shipped row's sign-in counts a variable the preset gives its machine, for
- * a session placed in that machine and for no other: a session on this host
- * has only the daemon's environment and the preset's own `env`.
+ * A shipped row's sign-in counts a variable the record gives its machine, for a
+ * session placed in that machine and for no other: a session on this host has
+ * only the daemon's environment and the record's own `env`.
  */
 const SERVER = fileURLToPath(new URL('./fixtures/acp-server.mjs', import.meta.url));
 
@@ -352,22 +347,13 @@ const signedIn = async (placed: boolean) => {
   const log = join(scratch(), 'requests.jsonl');
   const said: string[] = [];
   const argv: string[] = [];
-  const host = {
-    log: (line: string) => { said.push(line); },
-    problem: (line: string) => { said.push(line); },
-    secret: async () => { throw new Error('not asked'); },
-  } as unknown as PluginHost;
-  const [options] = await optionsOf(host, {
-    presets: {
-      codex: {
-        command: process.execPath,
-        args: [SERVER, '--signin'],
-        env: { ACP_LOG: log },
-        machine: { env: { CODEX_API_KEY: 'machine-key-value' } },
-      },
-    },
-  });
-  const agent = acpAgent(options as NonNullable<typeof options>);
+  const { kind } = await load({});
+  const agent = kind.open(viewOf('codex', () => ({
+    command: process.execPath,
+    args: [SERVER, '--signin'],
+    env: { ACP_LOG: log },
+    machine: { env: { CODEX_API_KEY: 'machine-key-value' } },
+  })));
   const ended: string[] = [];
   // A folder that is there and that no case removes: a server on this host runs in it.
   const folder = join(REPO, 'packages', 'agent-acp');
@@ -402,7 +388,7 @@ const signedIn = async (placed: boolean) => {
   return { ended, said, argv, requests, folder, raw: readFileSync(log, 'utf8') };
 };
 
-it("sends a row's sign-in for a session in the machine its preset gives the variable to", async () => {
+it("sends a row's sign-in for a session in the machine the record gives the variable to", async () => {
   const { ended, requests, said, argv, raw } = await signedIn(true);
   expect(requests.find((one) => one.method === 'authenticate')).toMatchObject({ params: { methodId: 'api-key' } });
   expect(ended).toEqual(['chat/turnComplete']);
@@ -531,14 +517,14 @@ it('keeps a terminal of a session on this host on the host, without asking the p
 /*
  * A shipped row carries its machine: the part its CLI comes from, the variable
  * that points its configuration at a state directory, and that directory with
- * the host files it is seeded from. A preset's own block is laid over it by
- * key, and a key is the person's to fill in their own preset.
+ * the host files it is seeded from. A record's own block is laid over it by
+ * key, and a key is the person's to fill in their own record.
  */
 
-it('answers a shipped preset its part, its config dir variable and its state', async () => {
-  const { problems, agents } = await load({ presets: { gemini: {} } });
+it('answers a shipped row its part, its config dir variable and its state', async () => {
+  const { problems, kind } = await load({});
   expect(problems).toEqual([]);
-  const needs = needsOf(agents, 'gemini') ?? {};
+  const needs = needsOf(kind, 'gemini') ?? {};
   expect(needs['gemini.part']).toMatchObject({ part: 'gemini', required: true });
   expect(needs['gemini.GEMINI_CLI_HOME']).toMatchObject({ name: 'GEMINI_CLI_HOME', default: '/ahpd/gemini' });
   expect(needs['gemini.state']).toMatchObject({
@@ -552,13 +538,13 @@ it('answers a shipped preset its part, its config dir variable and its state', a
   expect(Object.keys(needs).sort()).toEqual(['gemini.GEMINI_CLI_HOME', 'gemini.part', 'gemini.state']);
 });
 
-it('lays a preset\'s own machine over its row by key, a key among them', async () => {
+it('lays a record\'s own machine over its row by key, a key among them', async () => {
   process.env.AHPD_TEST_CODEX_KEY = 'gemini-key';
-  const { problems, agents } = await load({
-    presets: { gemini: { machine: { env: { GEMINI_API_KEY: { fromEnv: 'AHPD_TEST_CODEX_KEY' } }, part: 'gemini-next' } } },
-  });
+  const { problems, kind } = await load({});
   expect(problems).toEqual([]);
-  const needs = needsOf(agents, 'gemini') ?? {};
+  const needs = needsOf(kind, 'gemini', () => ({
+    machine: { env: { GEMINI_API_KEY: { fromEnv: 'AHPD_TEST_CODEX_KEY' } }, part: 'gemini-next' },
+  })) ?? {};
   expect(needs['gemini.GEMINI_API_KEY']).toMatchObject({ name: 'GEMINI_API_KEY', default: 'gemini-key' });
   expect(needs['gemini.GEMINI_CLI_HOME']).toMatchObject({ default: '/ahpd/gemini' });
   expect(needs['gemini.part']).toMatchObject({ part: 'gemini-next' });
@@ -566,22 +552,39 @@ it('lays a preset\'s own machine over its row by key, a key among them', async (
 });
 
 it('keeps the row\'s machine variables out of a host spawn', async () => {
-  const host = { log: () => {}, problem: () => {}, secret: async () => '' } as unknown as PluginHost;
-  const [gemini] = await optionsOf(host, { presets: { gemini: {} } });
-  expect(gemini?.env?.GEMINI_CLI_HOME).toBeUndefined();
-  expect(gemini?.machine?.env?.GEMINI_CLI_HOME).toBe('/ahpd/gemini');
+  const out = join(scratch(), 'env.json');
+  const script = `require('node:fs').writeFileSync(${JSON.stringify(out)}, JSON.stringify(process.env))`;
+  const { kind } = await load({});
+  const agent = kind.open(viewOf('gemini', () => ({ command: process.execPath, args: ['-e', script] })));
+  const ended: string[] = [];
+  const session = agent.create({
+    uri: 'ahp-session:/row-host',
+    chatUri: 'ahp-chat:/row-host',
+    settings: {},
+    trusted: () => true,
+    schema: () => ({ type: 'object', properties: {} }),
+    emit: (_channel: string, action: Bag) => {
+      if (action.type === 'chat/error' || action.type === 'chat/turnComplete') ended.push(String(action.type));
+    },
+  } as never);
+  started.push(session);
+  session.begin('t1', 'hi');
+  for (let i = 0; i < 3000 && ended.length === 0; i++) await new Promise((resolve) => { setTimeout(resolve, 1); });
+
+  const env = JSON.parse(readFileSync(out, 'utf8')) as Record<string, string>;
+  expect(env.GEMINI_CLI_HOME).toBeUndefined();
+  // While the record's machine still has it, for the machine it names.
+  expect(agent.machine?.()['gemini.GEMINI_CLI_HOME']).toMatchObject({ name: 'GEMINI_CLI_HOME', default: '/ahpd/gemini' });
 });
 
 it('ships a part and a state directory for every row, each seeded from the agent\'s own host files', async () => {
-  const { problems, agents } = await load({
-    presets: Object.fromEntries(['codex', 'gemini', 'copilot', 'opencode', 'kilo', 'goose', 'pi', 'dsh', 'devin', 'cursor', 'amp', 'qwen'].map((id) => [id, {}])),
-  });
+  const { problems, kind } = await load({});
   expect(problems).toEqual([]);
-  const rows = Object.fromEntries(agents.map((one) => {
-    const needs = one.machine?.() ?? {};
-    const state = needs[`${one.provider}.state`] as { state: string; seed: { source: string }[] } | undefined;
-    return [one.provider, {
-      part: (needs[`${one.provider}.part`] as { part: string }).part,
+  const rows = Object.fromEntries(['codex', 'gemini', 'copilot', 'opencode', 'kilo', 'goose', 'pi', 'dsh', 'devin', 'cursor', 'amp', 'qwen'].map((id) => {
+    const needs = kind.open(viewOf(id, () => ({}))).machine?.() ?? {};
+    const state = needs[`${id}.state`] as { state: string; seed: { source: string }[] } | undefined;
+    return [id, {
+      part: (needs[`${id}.part`] as { part: string }).part,
       env: Object.values(needs).flatMap((need) => ('name' in need ? [`${need.name}=${String(need.default)}`] : [])),
       ...(state === undefined ? {} : { state: state.state, seed: state.seed.map((seed) => seed.source) }),
     }];
@@ -621,16 +624,16 @@ it('ships a part and a state directory for every row, each seeded from the agent
     qwen: { part: 'qwen', env: ['QWEN_HOME=/ahpd/qwen'], state: '/ahpd/qwen', seed: ['~/.qwen/settings.json'] },
   });
   // No seed is a login or token file.
-  const seeds = JSON.stringify(agents.map((one) => one.machine?.()));
+  const seeds = JSON.stringify(rows);
   for (const login of ['auth.json', '.copilot/config.json', 'credentials', 'oauth']) expect(seeds).not.toContain(login);
 });
 
 /*
- * A shipped preset's machine runs what its part ships: the command it starts,
+ * A shipped row's machine runs what its part ships: the command it starts,
  * and any binary a `*_CLI_PATH` variable points its server at, are each a
  * launcher in that part's `bin`, so a machine with nothing installed runs it.
  */
-it('runs only commands its part ships, for every shipped preset with a part', () => {
+it('runs only commands its part ships, for every shipped row with a part', () => {
   const parts = new Map(readParts().map((one) => [one.id, one.bin]));
   const missing: string[] = [];
   for (const [id, preset] of Object.entries(presets)) {

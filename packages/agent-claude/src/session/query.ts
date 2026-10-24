@@ -56,6 +56,12 @@ export interface Query {
   take: (id: string) => Promise<string | undefined>;
   /** Move this session's CLI onto the agent a message picked, if it is not already there. */
   switchAgent: (uri: string | undefined) => string | undefined;
+  /**
+   * Read a record's values again, and move the CLI onto them when they changed.
+   *
+   * Nothing for a preset. A refusal is a sentence for the turn that asked.
+   */
+  refreshPreset: () => string | undefined;
   /** Read one CLI's frames until it ends. */
   consume: () => Promise<void>;
   /**
@@ -73,8 +79,11 @@ export function createQuery(ctx: SessionContext): Query {
   /**
    * The `query()` options the declared values become. A pushed credential is
    * laid over their `env`, so a preset never replaces a signed-in token.
+   *
+   * Asked rather than held, because a record's values are read again at each
+   * turn and the CLI is restarted onto whatever they say now.
    */
-  const fromPreset = queryOptionsOf(ctx.values);
+  const fromPreset = (): Bag => queryOptionsOf(ctx.values);
 
   /**
    * Whatever the host holds the list, the query is built the same way.
@@ -163,7 +172,7 @@ export function createQuery(ctx: SessionContext): Query {
   const taskToolsEnv = (): Bag => {
     if (ctx.values['enableTasks'] === false || hostHoldsTasks(ctx.values, ctx.offering)) return {};
     const env = ctx.options.spawn === undefined
-      ? { ...(fromPreset.env as Bag | undefined ?? process.env), ...ctx.options.env }
+      ? { ...(fromPreset().env as Bag | undefined ?? process.env), ...ctx.options.env }
       : inMachine();
     if (env.CLAUDE_CODE_ENABLE_TASKS !== undefined) return {};
     return { env: { ...env, CLAUDE_CODE_ENABLE_TASKS: '1' } };
@@ -252,7 +261,7 @@ export function createQuery(ctx: SessionContext): Query {
    * The timer is cleared by whichever answer comes, and a query this host has
    * since put away fails nothing: it is not the CLI this session is reading.
    *
-   * The query comes back out, so `startQuery` reads as what it always was: the
+   * The query comes back out, so the builder reads as what it always was: the
    * bound is put on the way through and not built into anything.
    */
   const bounded = (handle: ReturnType<typeof query>): ReturnType<typeof query> => {
@@ -290,7 +299,7 @@ export function createQuery(ctx: SessionContext): Query {
    * Every query built here goes out with the bound on its handshake, which is
    * this one place rather than the two a session starts one from.
    */
-  const startQuery = (agent: string | undefined, first: boolean): ReturnType<typeof query> => bounded(query({
+  const buildQuery = (agent: string | undefined, first: boolean): ReturnType<typeof query> => bounded(query({
     prompt: input(),
     options: {
       cwd: ctx.options.cwd,
@@ -382,7 +391,7 @@ export function createQuery(ctx: SessionContext): Query {
        * the subprocess simply inherits, which is how every session worked
        * before this and how an automation's still does.
        */
-      ...fromPreset,
+      ...fromPreset(),
       /*
        * The servers of a plugin that a client switched off, which the CLI is
        * told not to run.
@@ -396,11 +405,11 @@ export function createQuery(ctx: SessionContext): Query {
        */
       ...(denied.length === 0 ? {} : {
         settings: {
-          ...bag(fromPreset.settings),
+          ...bag(fromPreset().settings),
           deniedMcpServers: denied.map((serverName) => ({ serverName })),
         },
       }),
-      ...(ctx.options.env ? { env: { ...(fromPreset.env as Bag | undefined ?? process.env), ...ctx.options.env } } : {}),
+      ...(ctx.options.env ? { env: { ...(fromPreset().env as Bag | undefined ?? process.env), ...ctx.options.env } } : {}),
       // In a machine, the env above is replaced by the variant's own alone.
       ...(ctx.options.spawn === undefined ? {} : { env: inMachine() }),
       // The switch for the task tools Claude keeps to itself.
@@ -513,6 +522,18 @@ export function createQuery(ctx: SessionContext): Query {
       canUseTool: ctx.canUseTool,
     },
   } as Parameters<typeof query>[0]));
+
+  /**
+   * A query for this session, and what it was built from.
+   *
+   * The values are recorded here rather than at each call site, because every
+   * query a session builds is one of these: `begin` is where the record is read
+   * again, and it compares against what the CLI answering now was started with.
+   */
+  const startQuery = (agent: string | undefined, first: boolean): ReturnType<typeof query> => {
+    ctx.startedWith = JSON.stringify(ctx.values);
+    return buildQuery(agent, first);
+  };
 
   /**
    * The turns whose own transcript id has been said, by this host's turn id.
@@ -887,5 +908,40 @@ export function createQuery(ctx: SessionContext): Query {
     ctx.gone ??= 'The agent stopped';
     ctx.touch();
   };
-  return { waiting, startQuery, ends, take, switchAgent, consume, stopped, keepStopped, giveHostInstructions };
+
+  /**
+   * Read a record's values again, and put a new CLI on the conversation when
+   * they changed.
+   *
+   * An edit applies at the next turn, which is the whole of the promise: the
+   * turn already running finishes on the CLI it started on, and the turn that
+   * begins after the edit is answered by a CLI built from what the record says
+   * now. Nothing to do for a preset, which no running daemon can edit - the
+   * values were read once and are what they were.
+   *
+   * The conversation moves as a `switchAgent` restart moves it: the new query
+   * resumes the id the CLI gave this session, so the transcript, the model and
+   * everything the SDK said are still there. A CLI that will not stop is the
+   * turn's own refusal rather than a session that died, which is why it comes
+   * back as a sentence.
+   */
+  const refreshPreset = (): string | undefined => {
+    const live = ctx.options.presetOf;
+    if (live === undefined) return undefined;
+    const now = ctx.valuesOf(live());
+    const said = JSON.stringify(now);
+    if (said === ctx.startedWith) return undefined;
+    const was = ctx.handle;
+    try { was.close(); }
+    catch (error: unknown) {
+      return `The harness would not stop for the record: ${error instanceof Error ? error.message : String(error)}`;
+    }
+    ctx.values = now;
+    ctx.gone = undefined;
+    ctx.handle = startQuery(ctx.running, false);
+    void consume();
+    return undefined;
+  };
+
+  return { waiting, startQuery, ends, take, switchAgent, consume, refreshPreset, stopped, keepStopped, giveHostInstructions };
 }

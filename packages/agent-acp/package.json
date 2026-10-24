@@ -78,12 +78,10 @@
       { "src": "./icon-dark.svg", "theme": "dark" }
     ],
     "contracts": {
-      "agents": ["*"]
+      "agents": ["*"],
+      "agentKinds": ["acp"]
     },
     "options": {
-      "presets": {
-        "required": true
-      },
       "hostTools": {
         "required": false
       }
