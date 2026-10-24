@@ -395,7 +395,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [55 - The connectors channel opens to a list reader, and a receive capability names its path](plugin/55-connectors-open-to-a-list-reader/plan.md) | medium | planned 2026-10-22; three tasks, all implemented, awaiting review | plugin 53, plugin 54 | - |
 | [56 - A steered bot chat message is its own turn](plugin/56-a-steered-bot-message-is-its-own-turn/plan.md) | high | planned 2026-10-22; one task, implemented | - | - |
 | [57 - A cofold transcript skips a run that a rewind dropped while it reads](plugin/57-a-transcript-skips-a-run-a-rewind-dropped/plan.md) | medium | planned 2026-10-23; one task, implemented | - | - |
-| [58 - Plugins and adapters carry icons](plugin/58-plugins-and-adapters-carry-icons/plan.md) | medium | active 2026-10-23; three tasks, all implemented, awaiting review | - | - |
+| [58 - Plugins and adapters carry icons](plugin/58-plugins-and-adapters-carry-icons/plan.md) | medium | active 2026-10-23; tasks 01-03 merged in #80; reopened with 04 (fetch https icons) and 05 (our plugins ship an icon), todo | - | - |
 | [59 - A plugin loads, unloads and reloads while the daemon runs](plugin/59-a-plugin-loads-and-unloads-live/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | - |
 
 Next free number in `plugin`: `60`.

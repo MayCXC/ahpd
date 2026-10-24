@@ -66,7 +66,10 @@ activepieces apply -> piece logoUrl -> one fetch, cached on disk -> Adapter.icon
 | The Activepieces plugin fetches each piece's `logoUrl` once at load, caches it on disk, and sends it as `data:`. A failed fetch means no icon | Softov, 2026-10-23 | 03 |
 | A client draws an icon as an image (`<img>` or a native image view), never inline. The host adds no sanitizer | Softov, 2026-10-23 | 02 |
 | One icon file is at most 32 KB | Softov, 2026-10-23 | 02, 03 |
-| A `src` that is already an `https:` URL or a `data:` URI goes out as it is. A `data:` URI over 32 KB is refused | (defaulted: from the brief's shape) | 02 |
+| A `data:` URI goes out as it is. A `data:` URI over 32 KB is refused | (defaulted: from the brief's shape) | 02 |
+| The host fetches an `https:` icon at load and sends it as `data:`, under the rules of a file. A client never contacts the plugin's server | Softov, 2026-10-23 | 04 |
+| An icon problem goes to the daemon log only | Softov, 2026-10-23 | 02, 04 |
+| Each plugin in this repository ships an SVG in its own package folder. Candidates come from Lucide or the vendor's mark, and Softov curates each one | Softov, 2026-10-23 | 05 |
 | A path that resolves outside the package is refused, as for an entry | (defaulted: from the brief's shape) | 02 |
 | `contentType` comes from the extension (`.svg`, `.png`, `.jpg`, `.jpeg`, `.webp`) unless the manifest gives one. Another extension with no `contentType` is refused | (defaulted: the brief names the extension as the source) | 02 |
 | `theme` and `sizes` from the manifest are kept. An SVG with no `sizes` gets `["any"]` | (defaulted: the brief's example) | 02 |
@@ -89,6 +92,8 @@ activepieces apply -> piece logoUrl -> one fetch, cached on disk -> Adapter.icon
 | [01 - The sdk carries icons](task-01-the-sdk-carries-icons.md) | implemented | - |
 | [02 - The host sends a package icon as data](task-02-the-host-sends-a-package-icon.md) | implemented | 01 |
 | [03 - An Activepieces piece has its logo](task-03-a-piece-has-its-logo.md) | implemented | 02 |
+| [04 - The host fetches an https icon](task-04-the-host-fetches-an-https-icon.md) | todo | 02 |
+| [05 - Our plugins ship an icon](task-05-our-plugins-ship-an-icon.md) | todo | 02 |
 
 ## Risks and tradeoffs
 
@@ -99,7 +104,8 @@ activepieces apply -> piece logoUrl -> one fetch, cached on disk -> Adapter.icon
 ## Resume state
 
 - **Done so far:** all three tasks are implemented. The sdk types carry `icons?: Icon[]` with AHP's `Icon`, `checkIcons` checks the shape and the adapters channel row sends the list. `packages/server/src/icons.ts` turns a package file, an `https:` URL or a `data:` URI into a `data:` icon. It drops a file whose real path is outside the package. The loader resolves a manifest's icons, and each adapter's icons, against the plugin's package. The Activepieces plugin fetches each piece's `logoUrl` once, and caches it at `<configDir>/activepieces/icons/<piece>.<extension>`, with the type in the name. The adapter gets the logo as a `data:` icon. The docs have an Icons section in `PLUGINS.md` and a logo section in `activepieces.md`.
-- **Next action:** the final verification checklist below, which needs a client (ahpapp) to draw the icons. The worktree changes are left uncommitted.
+- **Reopened:** no plugin declared an icon, so tasks 04 and 05 were added. Tasks 01 to 03 are merged in #80.
+- **Next action:** build task 04, then task 05, which stops for Softov to curate each SVG.
 - **Open questions:** none.
 - **Watch out for:** an adapter icon path is relative to the package of the plugin that registered it. It is not relative to the daemon's working folder.
 
@@ -107,5 +113,7 @@ activepieces apply -> piece logoUrl -> one fetch, cached on disk -> Adapter.icon
 
 - [ ] A package with `ahpd.icons: [{ "src": "./icon.svg" }]` shows a `data:image/svg+xml` icon in the plugins channel row.
 - [ ] A connector of an Activepieces piece shows its logo in ahpapp.
+- [ ] A plugin with an `https:` icon shows a `data:` icon in the plugins channel row.
+- [ ] Each plugin in this repository shows its curated icon in ahpw.
 - [ ] A path outside the package and a file over 32 KB each give a problem line, and the plugin still loads.
 - [ ] `plans/index.md` updated.
