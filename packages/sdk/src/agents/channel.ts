@@ -5,7 +5,7 @@
  * as it is kept and a `state`: `ready`, `invalid` when its config no longer
  * fits the kind's schema or its kind refused to open it, or `unavailable` when
  * no plugin registers its kind any more. The kinds themselves are listed on
- * `x-ahpd-agent-kinds`.
+ * `x-ahpd-agent-kinds`, built in `agents/kinds.ts`.
  *
  * Where a kind's schema marks a field `writeOnly`, or names an `env` variable
  * in `keyVariables`, the value is a secret. A put moves it to the vault under

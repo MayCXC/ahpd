@@ -62,7 +62,7 @@ plugin registerAgentKind -> fold agentKinds -> kinds channel reads agentKinds() 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The agent kinds channel](task-01-the-agent-kinds-channel.md) | todo | - |
+| [01 - The agent kinds channel](task-01-the-agent-kinds-channel.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -70,8 +70,8 @@ plugin registerAgentKind -> fold agentKinds -> kinds channel reads agentKinds() 
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-agent-kinds-channel.md](task-01-the-agent-kinds-channel.md).
+- **Done so far:** task 01 is implemented and waits for review.
+- **Next action:** review task 01, then close the plan.
 - **Open questions:** none.
 - **Watch out for:** a row never carries `open`. A function does not serialize.
 

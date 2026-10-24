@@ -250,7 +250,7 @@ Reference: [00-host.md](host/00-host.md)
 | [119 - A row counts the work while a turn runs](host/119-a-row-counts-the-work-while-a-turn-runs/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #74 | - | - |
 | [120 - A bot session starts with its actions](host/120-a-bot-session-starts-with-its-actions/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #78 | host 118 | - |
 | [122 - Agents are records on their own channel](host/122-agents-are-records-on-their-own-channel/plan.md) | high | active 2026-10-24; merged in #89, waits on the check by hand | - | - |
-| [123 - Agent kinds on their own channel](host/123-agent-kinds-on-their-own-channel/plan.md) | high | planned 2026-10-24 | host 122 | ahpw plugins 08 |
+| [123 - Agent kinds on their own channel](host/123-agent-kinds-on-their-own-channel/plan.md) | high | implemented 2026-10-24 | host 122 | ahpw plugins 08 |
 
 Next free number in `host`: `121`.
 

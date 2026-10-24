@@ -1289,6 +1289,10 @@ The daemon keeps its own connectors in the JSON collection `connectors`, so one
 is `<configDir>/connectors/<id>.json`. The `@ahpd/webhook` plugin registers the
 first kind; [WEBHOOKS.md](WEBHOOKS.md) says what an endpoint is.
 
+### `x-ahpd-agent-kinds`
+
+A read-only channel. One row for each agent kind the loaded plugins register, keyed by the kind's name, holding `name`, `title`, `description`, `schema` and the `plugin` that registered it, and `icons`, `templates`, `hostOnly` and `keyVariables` when the kind has them. Nothing on it is an agent: the records made from a kind are on `x-ahpd-agents`. A row shows as soon as the plugin registers the kind, before any record of it exists. Reading the channel needs `agent:list`.
+
 ### `x-ahpd-agents`
 
 One row for each agent, keyed by its id. A row is the record - `id`, `kind`,

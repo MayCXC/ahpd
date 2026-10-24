@@ -1,6 +1,6 @@
 ---
 title: The agent kinds channel
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server, docs"
 refs:
@@ -43,3 +43,7 @@ refs:
 
 ## Resume
 
+`agentKindsChannel` is in `packages/sdk/src/agents/kinds.ts` and `run.ts` serves it after the adapters channel.
+`pnpm typecheck` passes, and the four channel tests pass.
+The full `pnpm test` fails eight docker and agent-acp tests on timeouts; the same files time out on main.
+A daemon from this tree lists `claude` and `cofold` on `x-ahpd-agent-kinds://`.
