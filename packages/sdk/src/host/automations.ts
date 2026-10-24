@@ -208,6 +208,19 @@ export interface Automations {
    * `chat:create` that has to hold before anything is started.
    */
   startForPluginChat(session: string, wanted: ChatRequest): Promise<string>;
+  /**
+   * Set every plugin trigger's `deliver` and `run` on the entry it closes over.
+   *
+   * Run at start and again from `replace`, because a plugin a live fold brings
+   * has no function on it until this runs.
+   */
+  wireTriggerTypes(): void;
+  /**
+   * Set every plugin's `start`, `startChat` and `opens` on the entry it holds.
+   *
+   * Run at start and again from `replace`, for the same reason.
+   */
+  wirePluginStarts(): void;
   /** The clock, wired to the only thing that can act on it. */
   due(event: { automation: string; origin: Bag }): void;
 }
@@ -1409,11 +1422,28 @@ export function createAutomations(ctx: HostContext): Automations {
    * whose name was taken by another plugin was left out of the list the fold
    * built - so what it fires reaches nothing, which is what losing the name
    * meant.
+   *
+   * Called again by `replace`, because a plugin a live fold brings is an entry
+   * nobody has set these on yet, and it fires the moment it applies.
    */
-  for (const one of options.pluginTriggers ?? []) {
-    one.deliver = (type, event, data, owner) => { fired(one.by, type, event, data, owner); };
-    one.run = (automation, data, owner) => { runOne(one.by, automation, data, owner); };
-  }
+  const wireTriggerTypes = (): void => {
+    for (const one of options.pluginTriggers ?? []) {
+      one.deliver = (type, event, data, owner) => { fired(one.by, type, event, data, owner); };
+      one.run = (automation, data, owner) => { runOne(one.by, automation, data, owner); };
+    }
+    /*
+     * Every saved automation is read again, because a type's arrival is what
+     * makes a trigger on it watchable: one saved for a type that was not loaded
+     * then has no rule and no definition, and is watched from here on. A type
+     * that went with its plugin leaves the same way - read as a trigger nothing
+     * answers for, which is what `watchFor` does with it.
+     *
+     * The first pass is the one beside `stopMoving`, which runs before a store
+     * says what it missed while the daemon was down. This one is for a fold.
+     */
+    for (const one of options.automations?.list() ?? []) watchFor(one.resource);
+  };
+  wireTriggerTypes();
 
   /*
    * Every plugin's sessions are started here.
@@ -1425,15 +1455,21 @@ export function createAutomations(ctx: HostContext): Automations {
    * - an embedder that never asked for one - leaves every `start` absent, which
    * is a plugin asking into nothing rather than a session started somewhere
    * else.
+   *
+   * Called again by `replace`, for the same reason as `wireTriggerTypes`: a
+   * plugin enabled while the daemon runs starts its sessions through these.
    */
-  for (const one of options.pluginStarts ?? []) {
-    // The entry itself is handed over rather than its name: what it grants is
-    // set on this same object by the plugin host, and a request that asks for
-    // a trusted folder is answered from it.
-    one.start = (wanted, named) => startForPlugin(wanted, one, named);
-    one.startChat = (session, wanted) => startForPluginChat(session, wanted);
-    one.opens = (uri) => opensSession(uri);
-  }
+  const wirePluginStarts = (): void => {
+    for (const one of options.pluginStarts ?? []) {
+      // The entry itself is handed over rather than its name: what it grants is
+      // set on this same object by the plugin host, and a request that asks for
+      // a trusted folder is answered from it.
+      one.start = (wanted, named) => startForPlugin(wanted, one, named);
+      one.startChat = (session, wanted) => startForPluginChat(session, wanted);
+      one.opens = (uri) => opensSession(uri);
+    }
+  };
+  wirePluginStarts();
 
   /**
    * The clock, wired to the only thing that can act on it.
@@ -1457,6 +1493,7 @@ export function createAutomations(ctx: HostContext): Automations {
 
   return {
     linked, settleRun, cancelRun, gone, stop, changed, beginAutomation, startForAutomation, startForPlugin, startForPluginChat, due,
+    wireTriggerTypes, wirePluginStarts,
   };
 }
 

@@ -240,7 +240,7 @@ node_version() {
   printf '%s\n' "${value#v}"
 }
 
-# Node 22.1 is the floors of `engines.node` in packages/server/package.json and
+# Node 22.18 is the floor of `engines.node` in packages/server/package.json and
 # in the workspace root.
 node_fits() {
   local value major minor rest
@@ -255,7 +255,7 @@ node_fits() {
     ''|*[!0-9]*) minor=0 ;;
   esac
   if [ "$major" -gt 22 ]; then return 0; fi
-  if [ "$major" -eq 22 ] && [ "$minor" -ge 1 ]; then return 0; fi
+  if [ "$major" -eq 22 ] && [ "$minor" -ge 18 ]; then return 0; fi
   return 1
 }
 
@@ -378,7 +378,7 @@ runtime_line() {
       if node_fits "$path"; then
         printf 'Node %s (runs ahpd)\n' "$version"
       else
-        printf 'Node %s (ahpd does not run on it; it needs Node 22.1 or newer)\n' "$version"
+        printf 'Node %s (ahpd does not run on it; it needs Node 22.18 or newer)\n' "$version"
       fi
       ;;
     deno) printf 'Deno %s (runs ahpd; each plugin it loads needs an npm: spec)\n' "$version" ;;
@@ -418,7 +418,7 @@ find_node() {
 }
 
 node_hint() {
-  printf 'Node 22.1 or later is required. Install it with nvm:\n' >&2
+  printf 'Node 22.18 or later is required. Install it with nvm:\n' >&2
   printf '  curl -o- %s | bash\n' "$NVM_INSTALL_URL" >&2
   printf '  nvm install 22\n' >&2
 }
@@ -429,7 +429,7 @@ ensure_node() {
     NODE="$found"
   else
     if [ "$DRY_RUN" -eq 1 ]; then
-      say "Node 22.1 or later is not on the PATH. It would be installed with nvm:"
+      say "Node 22.18 or later is not on the PATH. It would be installed with nvm:"
       printf '  curl -o- %s | bash\n' "$NVM_INSTALL_URL"
       printf '  nvm install 22\n'
       exit 0
@@ -438,7 +438,7 @@ ensure_node() {
       node_hint
       exit 1
     fi
-    if ! ask_yes 'Node 22.1 or later is needed. Install it with nvm now?'; then
+    if ! ask_yes 'Node 22.18 or later is needed. Install it with nvm now?'; then
       node_hint
       exit 1
     fi
@@ -452,7 +452,7 @@ ensure_node() {
     . "$NVM_DIR/nvm.sh"
     run_cmd nvm install 22
     if ! found="$(find_node)"; then
-      fail 1 "Node 22.1 or later is still not on the PATH after the install."
+      fail 1 "Node 22.18 or later is still not on the PATH after the install."
     fi
     NODE="$found"
   fi
@@ -826,7 +826,7 @@ do_uninstall() {
     run_cmd "$bun" remove -g "$target"
   else
     if [ -z "${NPM:-}" ]; then
-      fail 1 'npm was not found. Install Node 22.1 or later, then run this again.'
+      fail 1 'npm was not found. Install Node 22.18 or later, then run this again.'
     fi
     run_cmd "$NPM" uninstall -g "$target"
   fi

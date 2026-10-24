@@ -78,7 +78,7 @@ function makeBox(options: { node?: string; ahpd?: boolean } = {}): Box {
       AHPD_HELP: '',
       AHPD_UNINSTALL: '',
       AHPD_PURGE: '',
-      STUB_NODE_VERSION: options.node ?? '22.1.0',
+      STUB_NODE_VERSION: options.node ?? '22.18.0',
       STUB_NPM_VERSION: '11.16.0',
       STUB_NPM_PREFIX: folder,
       STUB_NPM_VIEW_VERSION: '0.13.0',
@@ -260,7 +260,7 @@ describe.skipIf(!canRun)('install.ps1', () => {
 
     expect(result.code).toBe(0);
     const lines = result.stdout.split(/\r?\n/);
-    const node = lines.indexOf('Node v22.1.0 (runs ahpd)');
+    const node = lines.indexOf('Node v22.18.0 (runs ahpd)');
     const bun = lines.indexOf('Bun 1.3.0 (runs ahpd)');
     const deno = lines.indexOf('Deno 2.0.0 (runs ahpd; each plugin it loads needs an npm: spec)');
     expect(node).toBeGreaterThanOrEqual(0);
@@ -276,13 +276,13 @@ describe.skipIf(!canRun)('install.ps1', () => {
     expect(result.stdout).toContain('Deno not found');
   });
 
-  it('says Node below 22.1 is too old, and names the floor', () => {
-    const box = makeBox({ node: '20.19.0' });
+  it('says Node below 22.18 is too old, and names the floor', () => {
+    const box = makeBox({ node: '22.17.0' });
 
     const result = run(box, { AHPD_NO_ONBOARD: '1' });
 
     expect(result.code).not.toBe(0);
-    expect(result.stdout).toContain('Node v20.19.0 (ahpd does not run on it; it needs Node 22.1 or newer)');
+    expect(result.stdout).toContain('Node v22.17.0 (ahpd does not run on it; it needs Node 22.18 or newer)');
   });
 
   it('prints the runtime lines under -DryRun', () => {
@@ -292,7 +292,7 @@ describe.skipIf(!canRun)('install.ps1', () => {
     const result = run(box, { AHPD_DRY_RUN: '1', AHPD_NO_ONBOARD: '1' });
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('Node v22.1.0 (runs ahpd)');
+    expect(result.stdout).toContain('Node v22.18.0 (runs ahpd)');
     expect(result.stdout).toContain('Bun 1.3.0 (runs ahpd)');
     expect(result.stdout).toContain('Deno 2.0.0 (runs ahpd; each plugin it loads needs an npm: spec)');
   });

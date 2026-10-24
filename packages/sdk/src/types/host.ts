@@ -1271,6 +1271,38 @@ export interface Host {
    */
   setTools(tools: HostTool[]): void;
   /**
+   * Take a new fold of the options, keeping every open session.
+   *
+   * The options a host is built over are what a daemon folds its plugins into,
+   * and a plugin that loads, unloads or changes its options while the daemon
+   * runs is a new fold of the same base. This is how that fold reaches a
+   * running host: the options are changed in place, so every area that read
+   * one reads the new value, every open session is retooled, and one
+   * `root/agentsChanged` says the agent list moved.
+   *
+   * A port or a resource scheme is not swapped live. A store is one the host
+   * was built over, and a scheme names URIs a client has already been handed,
+   * so a fold that differs in either is refused whole and the host keeps the
+   * options it has. The answer is why the fold was refused, or `undefined` when
+   * it was taken.
+   *
+   * An agent the fold drops but that still has an open session is kept, so no
+   * session is left running on nothing. Ending those sessions first is the
+   * caller's to do, with `endSessionsOf`.
+   */
+  replace(folded: HostOptions): string | undefined;
+  /**
+   * End every session running on one agent, as a disposal ends one.
+   *
+   * What an embedder does before it unloads the plugin that brought the agent:
+   * a backend gone from the host with sessions still on it is a session that
+   * can never turn again. Each one is removed the way `session/disposeSession`
+   * removes it - its chats closed, its directory told, every client sent
+   * `root/sessionRemoved` - and one that could not be removed is logged rather
+   * than stopping the rest.
+   */
+  endSessionsOf(agent: Agent | string): Promise<void>;
+  /**
    * Say that a restart is what puts the configuration in force.
    *
    * From here on every root state carries `_meta["ahpd.restartNeeded"]`: for

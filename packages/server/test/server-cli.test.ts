@@ -63,7 +63,7 @@ describe('a failure under --json', () => {
     expect(said.stdout).toBe('');
     expect(said.stderr.trim().split('\n')).toHaveLength(1);
     expect(JSON.parse(said.stderr)).toEqual({
-      message: 'plugin takes list, update, config, install, remove, enable or disable.',
+      message: 'plugin takes list, update, apply, reload, config, install, remove, enable or disable.',
       kind: 'argument',
       exitCode: 2,
     });

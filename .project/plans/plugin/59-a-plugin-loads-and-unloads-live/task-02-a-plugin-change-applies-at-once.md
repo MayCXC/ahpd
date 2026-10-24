@@ -1,6 +1,6 @@
 ---
 title: A plugin change applies at once
-status: todo
+status: implemented
 depends: [task-01-the-host-takes-a-new-fold.md]
 layer: "server, docs"
 refs:
@@ -58,3 +58,9 @@ A plugin with a port or a URI provider still answers `restart: true`.
 
 ## Resume
 
+- **Done so far:** `loadPlugins` in `plugins.ts` is a thin loader over `pluginSet(options)`. The set holds the base, the loaded plugins with their contributions, and the agent list. Its `plan`, `load`, `unload`, `fold` and `settle` are what a change calls. `load` applies one plugin and keeps it. `unload` runs its closers, then drops its contribution. `applyPlugins` in `applyplugins.ts` reads the list from the file. It unloads what the file dropped, loads what it added, and applies again what changed its options. It folds every contribution from the same base and gives the fold to `host.replace`. It answers `restart: true` only for a plugin with a port or a URI scheme, a refused fold, or a `--no-plugins` daemon. `pluginsChannel` runs the apply inside the same `oneAtATime` turn as the write, adds `x-ahpd/plugins/apply`, and answers the apply's `restart`. Root config calls the apply after a `plugins.` key. The daemon in `run.ts` holds the set and re-reads the fold for adapters, trigger types and connects. It refreshes the plugin, adapter and connector lists, and serves routes from the live map. The terminal asks a running daemon to apply after each write: `install`, `remove`, `update`, `enable`, `disable` and `config set`. It prints the restart line only when the daemon answers `restart: true`. `ahpd plugin apply` applies without writing. `plugin-live.test.ts` has the five cases below, and `docs/plugins/PLUGINS.md` has a section named `A change while the daemon runs`.
+- **Next action:** [task-03-an-agent-unload-ends-its-sessions.md](task-03-an-agent-unload-ends-its-sessions.md).
+- **Files:** `packages/server/src/plugins.ts`, `packages/server/src/applyplugins.ts`, `packages/server/src/commands/run.ts`, `packages/server/src/commands/plugin.ts`, `packages/server/src/commands/served.ts`, `packages/server/src/pluginschannel.ts`, `packages/server/src/rootconfig.ts`, `packages/server/test/plugin-live.test.ts`, `docs/plugins/PLUGINS.md`, this task file, the plan and the index. The session cannot commit, so they are left in the worktree.
+- **Open questions:** none.
+- **Departures:** The server package has no AHP client. The terminal reaches a running daemon at `POST /api/plugin/apply`, and an AHP client calls `x-ahpd/plugins/apply`. A daemon started with `--no-plugins` answers `restart: true` to every apply. A daemon started with `--plugin` applies the file's list, because the apply reads the file. A fold or a `replace` the host refuses keeps the set loaded, reports the problem and answers `restart: true`. A plugin that loads and then holds a port is unloaded again before the fold, so its closers run. The `ctx.actionTools` gap from task-01 stays: a live adapter change leaves the old adapter tools until a restart.
+- **Watch out for:** `applyPlugins` must not take `oneAtATime`, because every caller already holds it and a second turn would wait on itself. The host's options are not the fold the daemon built, because `createHost` spreads it, so the live fold is read from the set again.

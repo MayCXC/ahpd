@@ -60,7 +60,8 @@ import { API_PREFIX, apiHandler, json, listenApi, plainRequests, pluginRoutes, w
 import { servedRegistry, type ServedFacts } from './served.js';
 import { updateMethod } from './update.js';
 import { proxyHandler } from '../proxy/listener.js';
-import { loadPlugins } from '../plugins.js';
+import { loadPlugins, pluginSet, type LoadOptions } from '../plugins.js';
+import { applyPlugins, type Applied } from '../applyplugins.js';
 import { pluginsChannel } from '../pluginschannel.js';
 import { fileRecords } from '../records.js';
 import { fileVault } from '../vault.js';
@@ -501,6 +502,19 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     vault: () => held,
     automations: () => kept,
     restart: (argv, force) => restart(argv, force),
+    /*
+     * The live apply, for a served command that writes the plugin list itself.
+     *
+     * An install, a remove, an update, an option write, an enable and a disable
+     * all write the file through the same turn, and each asks this before it
+     * answers, so a client is told whether the change needed a restart rather
+     * than being told to restart for every one of them. A reload names the
+     * plugins to import again, which is the one change the file does not show.
+     */
+    apply: async (reload?: string[]) => {
+      const answer = await applyNow(reload);
+      return { restart: answer.restart, changed: answer.changed };
+    },
     // The Windows update's own way down: the helper it started runs npm once
     // this process is gone, so there is no successor to start from here.
     down: () => { wayDown?.(); },
@@ -664,12 +678,33 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * `createHost`, and a command that writes calls this through the closure.
    */
   let markRestart: () => void = () => {};
+  /*
+   * The file a plugin is configured in, which the channel edits and the live
+   * apply reads back: one path for both, so a change and the load that answers
+   * it are about the same list.
+   */
+  const pluginFile = options.configFile ?? configPath();
+  /*
+   * What loads, unloads or reconfigures the plugins once the file has changed.
+   *
+   * Assigned once the base options and the set exist, below. Until then a
+   * request cannot arrive: the listener is bound after the host is built.
+   */
+  let applyNow: (reload?: string[]) => Promise<Applied> = async () => ({
+    restart: true,
+    changed: false,
+    problems: [`${pluginFile} changed before this daemon finished starting; restart it to load the plugins`],
+    loaded: [],
+    failures: {},
+    routes: {},
+  });
   const pluginLists = pluginsChannel({
-    configFile: options.configFile ?? configPath(),
+    configFile: pluginFile,
     where: { configDir: configDir(), cwd: process.cwd() },
     loaded: () => loaded,
     failures: () => failures,
     restartNeeded: () => markRestart(),
+    apply: (reload) => applyNow(reload),
     onProblem: listProblem,
   });
   /*
@@ -965,7 +1000,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * `config:write` can send it back. The port knows the file and the flags;
      * the host only shows what it is given and hands writes on.
      */
-    rootConfig: daemonRootConfig(options, typed, openWire, (servers) => { mcpServers = servers as typeof mcpServers; }),
+    rootConfig: daemonRootConfig(options, typed, openWire, (servers) => { mcpServers = servers as typeof mcpServers; }, async () => (await applyNow()).restart),
     /*
      * What this host adds on top of a backend, kept between restarts.
      *
@@ -1142,7 +1177,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * what their daemon is missing before it says it started.
    */
   stamp('start: plugins');
-  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, failures: didFail } = await loadPlugins(options.plugins, {
+  const holding: LoadOptions = {
     base,
     paths: options.paths,
     configDir: configDir(),
@@ -1157,10 +1192,53 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       if (one === '' || announced) return;
       said.push(one);
     },
-  });
+  };
+  /*
+   * The set this daemon keeps for as long as it runs.
+   *
+   * A plugin enabled later joins the agent list and the vault the first load
+   * used rather than a second set built beside it, which is why the set is made
+   * here and handed to the load rather than made inside it.
+   */
+  const pluginHoldings = pluginSet(holding);
+  /*
+   * The routes the plugins registered, kept here because they change: a plugin
+   * loaded later has a route, and both the listener below and the routes of its
+   * own read this through a closure on each request.
+   */
+  let liveRoutes: Record<string, Route> = {};
+  applyNow = async (reload?: string[]) => {
+    const answer = await applyPlugins({
+      set: pluginHoldings,
+      configFile: pluginFile,
+      noPlugins: options.noPlugins,
+      host: () => host,
+      log: stamp,
+      ...(reload === undefined ? {} : { reload }),
+    });
+    const now = pluginHoldings.fold().options;
+    // The channels read these through closures, so a load or unload reaches a
+    // listing, the adapters and the routes without anything being rebuilt.
+    loaded = answer.loaded;
+    failures = answer.failures;
+    adapters = now.adapters ?? {};
+    pluginTypes = pluginTriggerTypes(now.pluginTriggers);
+    liveRoutes = answer.routes;
+    // A plugin loaded later acts on the host as its own client, as one loaded
+    // at start does, and it can only be handed the host once the host exists.
+    for (const one of now.pluginConnects ?? []) one.host = host;
+    for (const line of answer.problems) stamp(line);
+    await pluginLists.refresh();
+    await adapterLists.refresh();
+    await connectorLists.refresh();
+    if (answer.restart) markRestart();
+    return answer;
+  };
+  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, failures: didFail } = await loadPlugins(options.plugins, { ...holding, set: pluginHoldings });
   // The channel built above starts answering manifests from here.
   loaded = didLoad;
   failures = didFail;
+  liveRoutes = registered;
   // And the two channels start answering adapters, which is what a stored
   // connector is checked against when it opens below.
   adapters = folded.adapters ?? {};
@@ -1200,7 +1278,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   pluginRequests = pluginRoutes({
     // With a port of their own, the routes are not on this listener, and a
     // path under `/plugins/` here is told there is nothing there.
-    routes: () => (routesPort === undefined ? registered : {}),
+    routes: () => (routesPort === undefined ? liveRoutes : {}),
     authorities: () => [...apiOrigins(apiHost, options.resource, boundPort, options.origins).authorities, ...announcedNames(said)],
     onProblem: stamp,
     otherwise: below,
@@ -1217,7 +1295,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const routesListener: ApiListener | undefined = routesPort === undefined
     ? undefined
     : await listenApi(pluginRoutes({
-      routes: () => registered,
+      routes: () => liveRoutes,
       authorities: () => apiOrigins(routesHost, options.resource, routesBoundPort, options.origins).authorities,
       onProblem: stamp,
       otherwise: (request) => Promise.resolve(json(404, { message: `No plugin route at ${new URL(request.url).pathname}` })),
@@ -1485,7 +1563,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
        * connection left open past it is one still watching a session nothing
        * will ever mention again.
        */
-      for (const one of folded.pluginConnects ?? []) one.close();
+      // Every plugin the daemon holds now, not only the ones it started with:
+      // a plugin loaded while it ran opened a connection too.
+      for (const one of pluginHoldings.contributions()) one.connects.close();
       // The control before the listeners, so a stop that arrives as the daemon
       // goes down reaches no handler and is answered by the record alone.
       await controlListener?.close();

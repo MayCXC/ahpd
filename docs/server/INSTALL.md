@@ -14,7 +14,7 @@ irm https://ahpio.com/ahpd/install.ps1 | iex
 
 :::
 
-The script checks for Node 22.1 or newer, installs `@ahpd/server` without sudo, adds `ahpd` to your PATH, and runs `ahpd configure` when a terminal is open. That asks for the backends and the web UI, and installs what you answer for. Read [install.sh](https://ahpio.com/ahpd/install.sh) or [install.ps1](https://ahpio.com/ahpd/install.ps1) before you pipe it.
+The script checks for Node 22.18 or newer, installs `@ahpd/server` without sudo, adds `ahpd` to your PATH, and runs `ahpd configure` when a terminal is open. That asks for the backends and the web UI, and installs what you answer for. Read [install.sh](https://ahpio.com/ahpd/install.sh) or [install.ps1](https://ahpio.com/ahpd/install.ps1) before you pipe it.
 
 The script looks for an installed `ahpd` first. When it finds one, it prints the version and the folder it is in, and asks before it updates it there. The update goes into the npm prefix that holds that `ahpd`, and a folder that is not writable stops it. An `ahpd` that is already the newest version is left alone. After the update, the script fails unless `ahpd --version` prints the new version. An old `ahpd` earlier on the PATH is what made an install look done. Without a terminal, pass `--yes` (`-Yes` on PowerShell, `AHPD_YES=1`) to update, since there is nobody to ask.
 

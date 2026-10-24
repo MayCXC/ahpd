@@ -23,6 +23,13 @@ export interface Facts {
   readFacts(dir: string): Promise<boolean>;
   refreshFacts(dir: string): void;
   sessionMetaChanged(uri: string): void;
+  /**
+   * Set every plugin's `changed` on the entry it closes over.
+   *
+   * Run at start and again from `replace`, because a plugin a live fold brings
+   * has no way to say that its key moved until this runs.
+   */
+  wireSessionMeta(): void;
 }
 
 export function createFacts(ctx: HostContext): Facts {
@@ -595,14 +602,22 @@ export function createFacts(ctx: HostContext): Facts {
     dispatch(uri, { type: 'session/metaChanged', ...(meta ? { _meta: meta } : {}) });
     ctx.summaryMoved(uri);
   };
-  // A plugin announces a change through the host it was applied to, which is
-  // built after it and not before: `apply` returns a contribution and the
-  // daemon folds it.
-  for (const served of options.sessionMeta ?? []) served.changed = sessionMetaChanged;
+  /*
+   * A plugin announces a change through the host it was applied to, which is
+   * built after it and not before: `apply` returns a contribution and the
+   * daemon folds it.
+   *
+   * Run again by `replace`, because a plugin a live fold brings holds an entry
+   * nothing has set this on yet.
+   */
+  const wireSessionMeta = (): void => {
+    for (const served of options.sessionMeta ?? []) served.changed = sessionMetaChanged;
+  };
+  wireSessionMeta();
 
   return {
     describes, setArtifacts, captureBaseline, recordPullRequest, metaMoved, dirOfFile, wroteThrough,
     refreshWatched, startWatchingDir, stopUnwatched, refreshPullRequests, readFacts, refreshFacts,
-    sessionMetaChanged,
+    sessionMetaChanged, wireSessionMeta,
   };
 }

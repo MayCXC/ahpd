@@ -98,6 +98,13 @@ export interface Spawn {
     askedInstructions?: string[],
     own?: { agent: Agent; config: Record<string, unknown> },
   ): Session;
+  /**
+   * Set every plugin plan's `changed` on the entry it closes over.
+   *
+   * Run at start and again from `replace`, because a plugin a live fold brings
+   * holds an entry nothing has set this on yet.
+   */
+  wirePlan(): void;
 }
 
 /**
@@ -723,14 +730,23 @@ export function createSpawn(ctx: HostContext): Spawn {
     }
   };
 
-  if (options.plan !== undefined) {
+  /*
+   * A plugin's plan is drawn by this host, which is built after the plugin
+   * applied, so the entry is given the way to ask for the draw.
+   *
+   * Run again by `replace`, because a plugin a live fold brings holds an entry
+   * nothing has set this on yet, and its plan would never be drawn.
+   */
+  const wirePlan = (): void => {
+    if (options.plan === undefined) return;
     options.plan.changed = (uri) => {
       const drawn = drawPlan(uri);
       planDraws.add(drawn);
       void drawn.then(() => { planDraws.delete(drawn); }, () => { planDraws.delete(drawn); });
       return drawn;
     };
-  }
+  };
+  wirePlan();
 
   const spawn = (
     agent: Agent,
@@ -1763,6 +1779,6 @@ export function createSpawn(ctx: HostContext): Spawn {
     absorb, unstamped, withWorkerUri, stampedCalls, withSender, asSentChat,
     sendSubagent, describedSub, endedWorkers,
     openSubagent, formerChatUri, titleOf, keepTitle, keepProvider,
-    spawn,
+    spawn, wirePlan,
   };
 }

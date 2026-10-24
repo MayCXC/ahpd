@@ -30,7 +30,7 @@ import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { checkIcons, foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
-import type { Agent, Contribution, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { resolveIcons } from './icons.js';
 import { satisfies } from './compat.js';
 
@@ -585,6 +585,13 @@ export interface LoadOneOptions {
    * loader applies so that no two open the same one.
    */
   collections?: Map<string, string>;
+  /**
+   * How many times this daemon has imported the plugin again since it started.
+   *
+   * Above zero the import names a URL of its own, so the runtime hands back the
+   * code as it is now rather than the module it already holds.
+   */
+  reload?: number;
 }
 
 /** What one `loadOne` managed: a plugin, or the reasons it is not one. */
@@ -829,14 +836,26 @@ export type Named = { refused: string } | {
  *
  * The manifest is read and the range checked first, as for a load, so a
  * plugin this SDK refuses is never imported.
+ *
+ * `reload` is how many times this daemon has imported the plugin again since it
+ * started. Above zero the import names a URL of its own, `<url>?reload=<count>`,
+ * because a second `import()` of one URL answers the module the runtime already
+ * holds. The old module stays in memory until the daemon restarts: the runtime
+ * never lets go of an imported URL, which is the price of loading new code with
+ * no restart - and the docs say so.
+ *
+ * The parameter is not `v`: a test runner that sits on Vite reads `?v=` as its
+ * own cache hash for an optimised dependency and drops it, which would hand
+ * back the module it already had. Any other word is a URL of its own to both.
  */
-export async function namePlugin(resolved: Resolved, version: string): Promise<Named> {
+export async function namePlugin(resolved: Resolved, version: string, reload = 0): Promise<Named> {
   const found = locate(resolved, version);
   if ('refused' in found) return found;
   const provisional = provisionalOf(resolved.spec, found);
   const started = Date.now();
+  const at = reload === 0 ? found.url : `${found.url}${found.url.includes('?') ? '&' : '?'}reload=${String(reload)}`;
   try {
-    const module: unknown = await import(found.url);
+    const module: unknown = await import(at);
     const declared = typeof module === 'object' && module !== null ? (module as Record<string, unknown>).name : undefined;
     const id = typeof declared === 'string' && declared.trim() !== '' ? declared : provisional;
     return { found, id, provisional, module, took: Date.now() - started };
@@ -881,7 +900,7 @@ export async function pluginIdsOf(specs: readonly PluginSpec[], where: { configD
 export async function loadOne(resolved: Resolved, options: LoadOneOptions, imported?: Named): Promise<OneResult> {
   const spec = resolved.spec;
   const said = nameOf(spec);
-  const ready = imported ?? await namePlugin(resolved, options.version);
+  const ready = imported ?? await namePlugin(resolved, options.version, options.reload ?? 0);
   if ('refused' in ready) return { problems: [ready.refused] };
   const { manifest, target, url } = ready.found;
   const problems = [...ready.found.problems];
@@ -1163,6 +1182,15 @@ export interface LoadOptions {
    * nothing with a daemon and matches every daemon that also labels nothing.
    */
   hostId?: string;
+  /**
+   * The set to load into, when the caller keeps one to change later.
+   *
+   * A daemon keeps the set it started with, so a plugin enabled while it runs
+   * loads into the same agent list and the same vault the first load used. A
+   * caller with nothing to change afterwards leaves this out and gets a set of
+   * its own.
+   */
+  set?: PluginSet;
 }
 
 /** One host's worth of options, and what happened on the way to them. */
@@ -1193,24 +1221,125 @@ export interface LoadedPlugins {
   routes: Record<string, Route>;
 }
 
+/** One spec resolved and named, before it is applied. */
+export interface Planned {
+  /** The spec as the configuration named it. */
+  spec: PluginSpec;
+  /** The id the module and the manifest agree on, or the spec as written. */
+  id: string;
+  /** Where the module is, when the spec resolved. */
+  resolved?: Resolved;
+  /** The module and its id, when it was imported. */
+  named?: Named;
+  /** Why it never became a plugin, when it did not resolve. */
+  unresolved?: string;
+  /** Whether the entry itself says it is switched off. */
+  disabled: boolean;
+}
+
+/** One plugin this daemon holds, as a later change reads it. */
+export interface HeldPlugin {
+  /** The plugin that loaded, as a listing shows it. */
+  loaded: Loaded;
+  /** What it registered, for the fold. */
+  contribution: Contribution;
+}
+
+/** What one plugin's load produced. */
+export interface StagedPlugin {
+  /** The id it is held under. */
+  id: string;
+  /** Set when the module imported, applied and contributed. */
+  loaded?: Loaded;
+  /** What it registered, for the fold. */
+  contribution?: Contribution;
+  /** Everything that went wrong, in the order it was found. */
+  problems: string[];
+}
+
+/** One plugin held, with what a reload of it needs. */
+interface Kept extends HeldPlugin {
+  /** The spec as resolved when it loaded, which a reload imports again. */
+  resolved: Resolved;
+  /** The module and its id, before `apply` ran. */
+  named: Named;
+}
+
 /**
- * Load every spec, in the order it was configured.
+ * The plugins one daemon holds, and the operations that change them.
  *
- * Nothing here throws and nothing here exits: a spec that fails is a problem
- * and the next one is still tried, so one bad plugin costs itself and not the
- * daemon. The agent `provider` collisions the plan asks this to scan for are
- * the fold's, which sees every contribution at once and reports one problem
- * per collision naming both parties.
+ * One set lives as long as the host does: the agent list a plugin asks about,
+ * the vault its options resolve against and the collection each plugin opened
+ * are all facts about the plugins loaded together, so a plugin loaded later
+ * joins the same set rather than a second one built beside it. `loadPlugins`
+ * builds a set of its own for a caller with nothing to change afterwards; a
+ * daemon that changes plugins while it runs keeps the one it started with.
  */
-export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Promise<LoadedPlugins> {
+export interface PluginSet {
+  /**
+   * Resolve and name every spec, in the order it was configured.
+   *
+   * Every entry is imported and named before any applies, a switched-off one
+   * too, so that each one's id is known: root config keys an entry by it,
+   * enabled or not. An id that repeats is one plugin configured twice, which
+   * is a problem naming it, and only the first entry is answered.
+   */
+  plan(specs: PluginSpec[]): Promise<{ entries: Planned[]; problems: string[] }>;
+  /** Import and apply one planned plugin, and hold what it contributed. */
+  load(entry: Planned): Promise<StagedPlugin>;
+  /**
+   * Import one plugin again from a URL of its own, so new code runs.
+   *
+   * Follows an unload of the same id: the caller closes the plugin first, and
+   * this imports the code as it is now and applies it with the entry's options.
+   * The module the daemon held before stays in memory, because the runtime
+   * never drops an imported URL, so each reload keeps one copy until a restart.
+   */
+  reload(entry: Planned): Promise<StagedPlugin>;
+  /**
+   * Close one plugin and forget it.
+   *
+   * Its connections are closed, its closers run in registration order, and its
+   * contribution stops being folded in. One problem per closer that threw, and
+   * nothing else: a plugin that cannot close still costs only itself.
+   */
+  unload(id: string): Promise<string[]>;
+  /** One plugin this set holds, by its id. */
+  held(id: string): HeldPlugin | undefined;
+  /** Every plugin that loaded, in load order. */
+  loaded(): Loaded[];
+  /** Every contribution, in load order. */
+  contributions(): Contribution[];
+  /** The plugins that did not load, by id, with the line that says why. */
+  failures(): Record<string, string>;
+  /** Fold the base with every contribution. */
+  fold(): FoldedOptions;
+  /**
+   * Answer what a plugin waiting on `sessions()` or `records()` reads.
+   *
+   * Called once the fold has run, which is the only moment the daemon knows
+   * which store the host was built over.
+   */
+  settle(host: HostOptions): void;
+}
+
+/**
+ * A set of plugins, loaded against one base and changed independently after.
+ *
+ * The base is read and never written: every fold is a new object built from
+ * the same base's property descriptors, so a live value such as `mcpServers`
+ * stays live in each one.
+ */
+export const pluginSet = (options: LoadOptions): PluginSet => {
   const paths = options.paths ?? [options.base.path];
   const version = options.version ?? sdkVersion();
-  const contributions: Contribution[] = [];
-  const problems: string[] = [];
-  const loaded: Loaded[] = [];
-  const failures: Record<string, string> = {};
+  const where = { configDir: options.configDir, cwd: options.cwd };
+  const kept = new Map<string, Kept>();
+  const failed = new Map<string, string>();
+  /** How many times each plugin has been imported again, by id. */
+  const counts = new Map<string, number>();
   /*
-   * Every agent this host will have, filled as plugins load.
+   * Every agent this host has, filled as plugins load and emptied as they go.
    *
    * The machine-making plugin asks this at create time rather than at load, so
    * the list may be incomplete while any one plugin applies - a plugin that
@@ -1219,7 +1348,7 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
   const known: Agent[] = [...options.base.agents];
 
   /*
-   * The host this daemon ends up with, which a usage record is written to.
+   * The host this set ends up folded into, which a usage record is written to.
    *
    * Assigned once the fold has run and read at write time rather than now,
    * because the fold may have replaced the daemon's store with a plugin's, and
@@ -1236,8 +1365,8 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
   const hosted = new Promise<HostOptions>((resolve) => { settled = resolve; });
 
   /*
-   * The vault a load resolves against: the daemon's own, unless a plugin listed
-   * earlier has taken the port over.
+   * The vault a load resolves against: the daemon's own, unless a plugin in
+   * this set has taken the port over.
    *
    * Read from the contributions rather than from the fold, because the fold has
    * not run yet and a plugin that registered a vault is meant to be serving the
@@ -1249,54 +1378,56 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
   let owner: string | undefined = options.base.vault === undefined ? undefined : 'the daemon';
   const vaultInForce = (): Vault | undefined => standing ?? options.base.vault;
 
-  // Which plugin opened each collection, one map for every plugin loaded here.
+  // Which plugin opened each collection, one map for every plugin in this set.
   const collections = new Map<string, string>();
 
-  /*
-   * Every entry is imported and named before any applies, a switched-off one
-   * too, so that each one's id is known: root config keys an entry by it,
-   * enabled or not.
-   */
-  const where = { configDir: options.configDir, cwd: options.cwd };
-  const entries: { spec: PluginSpec; id: string; resolved?: Resolved; named?: Named; unresolved?: string }[] = [];
-  for (const spec of specs) {
-    let resolved: Resolved;
-    try {
-      resolved = resolvePlugin(spec, where);
+  const plan = async (specs: PluginSpec[]): Promise<{ entries: Planned[]; problems: string[] }> => {
+    const found: Planned[] = [];
+    for (const spec of specs) {
+      const disabled = typeof spec !== 'string' && spec.enabled === false;
+      let resolved: Resolved;
+      try {
+        resolved = resolvePlugin(spec, where);
+      }
+      catch (error) {
+        found.push({ spec, id: nameOf(spec), unresolved: reason(error), disabled });
+        continue;
+      }
+      const named = await namePlugin(resolved, version);
+      const id = 'refused' in named ? nameOf(spec) : named.id;
+      ids.set(nameOf(spec), id);
+      found.push({ spec, id, resolved, named, disabled });
     }
-    catch (error) {
-      entries.push({ spec, id: nameOf(spec), unresolved: reason(error) });
-      continue;
-    }
-    const named = await namePlugin(resolved, version);
-    const id = 'refused' in named ? nameOf(spec) : named.id;
-    ids.set(nameOf(spec), id);
-    entries.push({ spec, id, resolved, named });
-  }
 
-  /*
-   * An id that repeats is one plugin configured twice, which refuses: a plugin is
-   * loaded once and its options are what make its variants, so the second and
-   * later entries of an id are problems naming it. A switched-off entry still
-   * counts, since root config would key it the same.
-   */
-  const specsOf = new Map<string, string[]>();
-  for (const { spec, id } of entries) specsOf.set(id, [...(specsOf.get(id) ?? []), nameOf(spec)]);
-  const taken = new Set<string>();
-
-  for (const { spec, id, resolved, named, unresolved } of entries) {
-    if (taken.has(id)) {
-      const all = specsOf.get(id) ?? [];
-      problems.push(`plugin ${id} is named ${String(all.length)} times, by ${all.join(' and ')}; write it once and use its options for variants`);
-      continue;
+    /*
+     * An id that repeats is one plugin configured twice, which refuses: a plugin
+     * is loaded once and its options are what make its variants, so the second
+     * and later entries of an id are problems naming it. A switched-off entry
+     * still counts, since root config would key it the same.
+     */
+    const specsOf = new Map<string, string[]>();
+    for (const { spec, id } of found) specsOf.set(id, [...(specsOf.get(id) ?? []), nameOf(spec)]);
+    const problems: string[] = [];
+    const taken = new Set<string>();
+    const entries: Planned[] = [];
+    for (const entry of found) {
+      if (taken.has(entry.id)) {
+        const all = specsOf.get(entry.id) ?? [];
+        problems.push(`plugin ${entry.id} is named ${String(all.length)} times, by ${all.join(' and ')}; write it once and use its options for variants`);
+        continue;
+      }
+      taken.add(entry.id);
+      entries.push(entry);
     }
-    taken.add(id);
-    if (typeof spec !== 'string' && spec.enabled === false) continue;
+    return { entries, problems };
+  };
+
+  const load = async (entry: Planned): Promise<StagedPlugin> => {
+    const { spec, id, resolved, named, unresolved } = entry;
     if (resolved === undefined || named === undefined) {
       const line = unresolved ?? `plugin ${id} did not resolve`;
-      problems.push(line);
-      failures[id] = line;
-      continue;
+      failed.set(id, line);
+      return { id, problems: [line] };
     }
     const one = await loadOne(resolved, {
       path: options.base.path,
@@ -1314,37 +1445,111 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
       sessions: () => hosted.then((host) => host.sessions),
       records: () => hosted.then((host) => host.records),
       collections,
-    }, named);
-    problems.push(...one.problems);
-    if (one.loaded !== undefined) {
-      loaded.push(one.loaded);
-      // A copy: the schema answers for a key a client edits, so it is the
-      // host's to hold and not one a plugin may reach back into.
-      if (one.loaded.plugin.optionsSchema !== undefined) {
-        schemas.set(id, frozenCopy(one.loaded.plugin.optionsSchema));
-      }
-    }
-    else {
+      reload: counts.get(id) ?? 0,
+    }, (counts.get(id) ?? 0) > 0 ? undefined : named);
+    if (one.loaded === undefined || one.contribution === undefined) {
       // The last line is the one that says why this plugin is not running.
       const line = one.problems.at(-1);
-      if (line !== undefined) failures[id] = line;
+      if (line !== undefined) failed.set(id, line);
+      return { id, problems: one.problems };
     }
-    if (one.contribution !== undefined) {
-      contributions.push(one.contribution);
-      known.push(...one.contribution.agents);
-      const entry = one.contribution.ports.vault;
-      if (entry !== undefined && (owner === undefined || entry.replace)) {
-        standing = entry.value as Vault;
-        owner = one.contribution.by;
+    kept.set(id, { loaded: one.loaded, contribution: one.contribution, resolved, named });
+    failed.delete(id);
+    known.push(...one.contribution.agents);
+    // A copy: the schema answers for a key a client edits, so it is the host's
+    // to hold and not one a plugin may reach back into.
+    if (one.loaded.plugin.optionsSchema === undefined) schemas.delete(id);
+    else schemas.set(id, frozenCopy(one.loaded.plugin.optionsSchema));
+    const port = one.contribution.ports.vault;
+    if (port !== undefined && (owner === undefined || port.replace)) {
+      standing = port.value as Vault;
+      owner = one.contribution.by;
+    }
+    return { id, loaded: one.loaded, contribution: one.contribution, problems: one.problems };
+  };
+
+  const reload = (entry: Planned): Promise<StagedPlugin> => {
+    counts.set(entry.id, (counts.get(entry.id) ?? 0) + 1);
+    return load(entry);
+  };
+
+  const unload = async (id: string): Promise<string[]> => {
+    const one = kept.get(id);
+    if (one === undefined) return [];
+    const problems: string[] = [];
+    // The plugin's own connections first: a closer that tells somebody about
+    // the ending needs the connection it tells them over.
+    one.contribution.connects.close();
+    for (const close of one.contribution.closers) {
+      try {
+        await close();
+      }
+      catch (error) {
+        problems.push(`plugin ${id}: a closer failed: ${reason(error)}`);
       }
     }
-  }
+    kept.delete(id);
+    failed.delete(id);
+    schemas.delete(id);
+    for (const agent of one.contribution.agents) {
+      const at = known.findIndex((each) => each.provider === agent.provider);
+      if (at !== -1) known.splice(at, 1);
+    }
+    // A vault this plugin held goes back to the daemon's own, or to whichever
+    // plugin still holds one.
+    if (owner === one.contribution.by) {
+      standing = undefined;
+      owner = options.base.vault === undefined ? undefined : 'the daemon';
+      for (const other of kept.values()) {
+        const port = other.contribution.ports.vault;
+        if (port !== undefined && (owner === undefined || port.replace)) {
+          standing = port.value as Vault;
+          owner = other.contribution.by;
+        }
+      }
+    }
+    return problems;
+  };
 
-  const folded = foldHostOptions(options.base, contributions);
+  const contributions = (): Contribution[] => [...kept.values()].map((one) => one.contribution);
+
+  return {
+    plan,
+    load,
+    reload,
+    unload,
+    held: (id) => kept.get(id),
+    loaded: () => [...kept.values()].map((one) => one.loaded),
+    contributions,
+    failures: () => Object.fromEntries([...failed].map(([id, line]) => [id, line])),
+    fold: () => foldHostOptions(options.base, contributions()),
+    settle: (host) => { reached = host; settled(host); },
+  };
+};
+
+/**
+ * Load every spec, in the order it was configured.
+ *
+ * Nothing here throws and nothing here exits: a spec that fails is a problem
+ * and the next one is still tried, so one bad plugin costs itself and not the
+ * daemon. The agent `provider` collisions the plan asks this to scan for are
+ * the fold's, which sees every contribution at once and reports one problem
+ * per collision naming both parties.
+ */
+export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Promise<LoadedPlugins> {
+  const set = options.set ?? pluginSet(options);
+  const problems: string[] = [];
+  const planned = await set.plan(specs);
+  problems.push(...planned.problems);
+  for (const entry of planned.entries) {
+    if (entry.disabled) continue;
+    const one = await set.load(entry);
+    problems.push(...one.problems);
+  }
+  const folded = set.fold();
   problems.push(...folded.problems);
-  reached = folded.options;
-  settled(folded.options);
-  return { options: folded.options, contributions, problems, loaded, routes: folded.routes, failures };
+  set.settle(folded.options);
+  return { options: folded.options, contributions: set.contributions(), problems, loaded: set.loaded(), routes: folded.routes, failures: set.failures() };
 }
 
 /**

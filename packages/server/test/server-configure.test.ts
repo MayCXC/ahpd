@@ -388,9 +388,9 @@ describe('what is on PATH', () => {
   });
 
   it('says ahpd does not run on Node 20', async () => {
-    stub('node', 'v20.11.0');
+    stub('node', 'v22.17.0');
     const { said } = await asked('', '', '', '', '', '', '', '');
-    expect(said).toContain('Node v20.11.0 (ahpd does not run on it; it needs Node 22.1 or newer)');
+    expect(said).toContain('Node v22.17.0 (ahpd does not run on it; it needs Node 22.18 or newer)');
   });
 
   it('shows the version the runner gave for the agent it found', async () => {

@@ -12,6 +12,7 @@ import type { Command, CommandContext, JsonSchema, Output, Registry } from '@cof
 import { scopeOf, secretRef } from '@ahpd/sdk';
 import { configDir, configPath } from '../config.js';
 import { running } from '../daemon.js';
+import { API_PREFIX } from '../http.js';
 import {
   NpmFailure, installPlugins, oneAtATime, pluginEntry, removePlugins, run as runProgram, setPluginEnabled, setPluginOption, specsIn, updatePlugins,
 } from '../install.js';
@@ -20,10 +21,34 @@ import { describePlugin, nameOf, optionsSchemaOf, pluginIdOf, pluginIdsOf, plugi
 import { version } from '../version.js';
 import { keyed, maskOption, schemasFor, withoutSpecSecrets, withoutUserinfoIn } from './config.js';
 import { namedOptionsFrom, pluginWriteFields, flagFields, serverFields, servedPluginWriteFields, splitPluginOption, stop, typedValue } from './options.js';
+import { reachable } from './paths.js';
 import type { ServedFacts } from './served.js';
 
-/** What a change to the plugins says, since only a restart loads it. */
+/** What a change to the plugins says when only a restart loads it: a plugin with a port, or no daemon to ask. */
 const RESTART = 'Restart the daemon to load the change: ahpd restart';
+
+/**
+ * How long the terminal waits for the daemon it asks to load a change.
+ *
+ * The same wait `commands/paths.ts` gives the same daemon for the same reason:
+ * a plugin applies in memory, and one that has not answered by now is not one a
+ * person should be left holding a terminal for.
+ */
+const APPLY_WAIT_MS = 10_000;
+
+/**
+ * The token a recorded daemon's connect URL carries, read as `commands/paths.ts`
+ * reads it. A record an older daemon wrote has none, and the call is made
+ * without one: the refusal is then the daemon's own.
+ */
+const tokenIn = (connectUrl: string): string | undefined => {
+  try {
+    return new URL(connectUrl).searchParams.get('tkn') ?? undefined;
+  }
+  catch {
+    return undefined;
+  }
+};
 
 /**
  * What a set says when the running daemon's recorded line already sets that
@@ -115,6 +140,83 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
     return error instanceof Error ? error.message : String(error);
   };
 
+  /**
+   * Ask the daemon that is up to load what the file now names, and answer
+   * whether it must restart for the change to take.
+   *
+   * Served, the daemon answering is the one whose set changes: its own `apply`
+   * answers, and its answer is the truth about the plugin that was changed.
+   *
+   * At the terminal the command has already written the file, and only a daemon
+   * on this machine reading that same file has anything to load, so the request
+   * goes to the recorded daemon's API. Nothing when no daemon is recorded or the
+   * one recorded did not answer: the caller then says what a restart does.
+   *
+   * `reload` names the plugins to import again, and goes to the reload endpoint
+   * instead: the file did not change, so a load that read it would find nothing
+   * to do.
+   */
+  const askToApply = async (reload?: string[]): Promise<boolean | undefined> => {
+    if (served !== undefined) return (await served.apply?.(reload))?.restart;
+    const held = running();
+    if (held?.api === undefined) return undefined;
+    const token = tokenIn(held.connectUrl);
+    const at = reload === undefined ? 'apply' : 'reload';
+    let answer: Response;
+    try {
+      answer = await fetch(`${reachable(held.api)}${API_PREFIX}/plugin/${at}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json',
+          ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
+        },
+        body: reload === undefined ? '{}' : JSON.stringify({ name: reload }),
+        signal: AbortSignal.timeout(APPLY_WAIT_MS),
+      });
+    }
+    catch {
+      // Nothing listening, or nothing answering in time: the file holds the
+      // change and nothing has loaded it, which is what the restart line says.
+      return true;
+    }
+    const body: unknown = await answer.json().catch(() => undefined);
+    const said = body as { restart?: unknown } | undefined;
+    // A refusal is the daemon's, and the file is already written: either way
+    // nothing has loaded the change.
+    if (!answer.ok) return true;
+    return said?.restart === true;
+  };
+
+  /**
+   * Whether a change just written needs a restart, and say so when it does.
+   *
+   * The daemon's own answer when it gave one; a restart when one is recorded and
+   * did not answer; and none when no daemon runs, because the next start loads
+   * what the file says. A command given another `--config-file` does not ask:
+   * the running daemon reads its own file.
+   */
+  const saidSo = async (say: (line: string) => void, named?: string): Promise<boolean> => {
+    const answered = named === undefined ? await askToApply() : undefined;
+    const restart = answered ?? (served !== undefined || running() !== undefined);
+    if (restart) say(RESTART);
+    return restart;
+  };
+
+  /**
+   * Whether importing the named plugins again needs a restart, and say so when
+   * it does.
+   *
+   * The same answer `saidSo` gives for a change to the file, asked the other
+   * way: the file is as it was, and the code it names moved.
+   */
+  const saidToReload = async (say: (line: string) => void, names: string[]): Promise<boolean> => {
+    const answered = await askToApply(names);
+    const restart = answered ?? (served !== undefined || running() !== undefined);
+    if (restart) say(RESTART);
+    return restart;
+  };
+
   const write = (sub: 'install' | 'remove') => registry.action({
     id: `plugin.${sub}`,
     summary: sub === 'install'
@@ -135,7 +237,8 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
     run: (context) => oneAtATime(async () => {
       const names = context.list<string>('name');
       // Served, the file edited is the daemon's, whatever the request names.
-      const configFile = served === undefined ? context.optional<string>('configFile') : served.configFile;
+      const namedFile = served === undefined ? context.optional<string>('configFile') : undefined;
+      const configFile = served === undefined ? namedFile : served.configFile;
       /*
        * Each line is written when it is said, so a step that throws has still
        * shown what it did. With a payload asked for, the lines are diagnostics
@@ -164,12 +267,11 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
         stop(failure(error));
       }
       /*
-       * The list a running daemon serves is the one it started with, and a
-       * served install is that same daemon's own file, so the change is loaded
-       * only by a restart. At the terminal a record is what says one is up.
+       * The daemon that is up loads the change before this answers, unless it
+       * is one that cannot: a plugin with a port or a URI scheme, or a daemon
+       * that did not answer at all.
        */
-      const restart = served !== undefined || running() !== undefined;
-      if (restart) say(RESTART);
+      const restart = await saidSo(say, namedFile);
       return output({ plugins: names, ...(restart ? { restart: true } : {}) }, '');
     }),
   });
@@ -210,17 +312,95 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
       catch (error) {
         stop(failure(error));
       }
-      const restart = moved.length > 0 && (served !== undefined || running() !== undefined);
-      if (restart) say(RESTART);
+      /*
+       * An update moves a package's code, not the entry that points at it, so
+       * each package that moved is imported again. The file is as it was, and
+       * reading it would find nothing to do.
+       */
+      const restart = moved.length > 0 ? await saidToReload(say, moved.map((one) => one.name)) : false;
       return output({ plugins: moved, ...(restart ? { restart: true } : {}) }, '');
+    }),
+  });
+
+  /*
+   * `plugin apply`: load what the configuration file now names.
+   *
+   * Served, this is the daemon that loads, and it is what every other command
+   * here asks after it writes. At the terminal the same request goes to the
+   * recorded daemon, which is how a file edited by hand is loaded without a
+   * restart.
+   */
+  const apply = registry.action({
+    id: 'plugin.apply',
+    summary: 'Load what the plugin configuration now names',
+    description: 'Loads, unloads or reconfigures the plugins to match the file. Answers `restart: true` only when a plugin with a port or a URI scheme is in the way. With no daemon running there is nothing to load: the next start reads the file.',
+    surfaces: { cli: { pattern: ['plugin', 'apply'] }, http: { method: 'POST', path: '/plugin/apply' } },
+    // The plugins the file names are loaded or unloaded; the file is not written.
+    effect: 'change',
+    resource: { kind: 'plugin' },
+    scopes: ['config:write'],
+    run: (context) => oneAtATime(async () => {
+      const payload = context.globals['json'] === true || context.globals['quiet'] === true;
+      const say = (line: string): void => {
+        if (payload) context.error(line);
+        else context.write(`${line}\n`);
+      };
+      const restart = await askToApply();
+      if (restart === undefined) {
+        // Served, the daemon is this one and it has no set yet; at the terminal
+        // there is no daemon reading the file this command was given.
+        if (served !== undefined) {
+          say(RESTART);
+          return output({ restart: true }, '');
+        }
+        stop('No daemon is answering to load the change; ahpd start loads what the file names.');
+      }
+      if (restart) say(RESTART);
+      else say('Loaded what the file names.');
+      return output({ restart }, '');
+    }),
+  });
+
+  /*
+   * `plugin reload`: import a plugin again, because the code it points at moved.
+   *
+   * The file is not touched, and reading it would find nothing to do: the entry
+   * and its options are as they were. This names the plugin whose module
+   * changed, so the daemon runs the code that is on disk now.
+   */
+  const reload = registry.action({
+    id: 'plugin.reload',
+    summary: 'Import a plugin again, because the code it points at changed',
+    description: 'Runs the plugin\'s closers, then loads it from its module as it is now. Nothing in the configuration changed, so the file is not read for a difference. A plugin with a port or a URI scheme answers `restart: true`, because the host cannot take a new one while it runs.',
+    surfaces: { cli: { pattern: ['plugin', 'reload', ':name...'] }, http: { method: 'POST', path: '/plugin/reload' } },
+    // One module is read again; what the file names does not move.
+    effect: 'change',
+    resource: { kind: 'plugin', key: 'name' },
+    input: { name: { type: 'array', items: { type: 'string' }, description: 'The plugin, by its id or as plugins names it. One or more.' } },
+    scopes: ['plugin:reload'],
+    run: (context) => oneAtATime(async () => {
+      const names = context.list<string>('name');
+      const payload = context.globals['json'] === true || context.globals['quiet'] === true;
+      const say = (line: string): void => {
+        if (payload) context.error(line);
+        else context.write(`${line}\n`);
+      };
+      const restart = await askToApply(names);
+      if (restart === undefined) {
+        if (served !== undefined) {
+          say(RESTART);
+          return output({ plugins: names, restart: true }, '');
+        }
+        stop('No daemon is answering to import the plugin again; ahpd start loads the code as it is now.');
+      }
+      if (restart) say(RESTART);
+      else say('Imported the plugin again.');
+      return output({ plugins: names, ...(restart ? { restart: true } : {}) }, '');
     }),
   });
 
   /** The file a command edits: the daemon's own when served, whatever the request names. */
   const fileOf = (named: string | undefined): string => (served === undefined ? named : served.configFile) ?? configPath();
-
-  /** Whether a change is said to need a restart: always served, and at the terminal when a record says one is up. */
-  const restarting = (): boolean => served !== undefined || running() !== undefined;
 
   /*
    * `plugin config` shows a plugin's options, `plugin config set` writes one
@@ -240,7 +420,8 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
     if (name === undefined) stop('Say which plugin: ahpd plugin config <name>.');
     const key = context.optional<string>('key');
     const typed = doing === 'set' ? context.value<string>('value') : undefined;
-    const file = fileOf(context.optional<string>('configFile'));
+    const namedFile = served === undefined ? context.optional<string>('configFile') : undefined;
+    const file = fileOf(namedFile);
     const payload = context.globals['json'] === true || context.globals['quiet'] === true;
     const say = (line: string): void => {
       if (payload) context.error(line);
@@ -321,16 +502,15 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
       say(`Set ${name} ${option}.`);
     }
     /*
-     * The record of the daemon that is up, read once: what says a restart is
-     * needed, and the line a restart would start again. A daemon that recorded
-     * no line, such as one an older ahpd started or one run in the foreground,
-     * has no flag to override anything with.
+     * The record of the daemon that is up, read once: the line a restart would
+     * start again. A daemon that recorded no line, such as one an older ahpd
+     * started or one run in the foreground, has no flag to override anything
+     * with.
      */
     const record = running();
-    const restart = served !== undefined || record !== undefined;
     const override = record?.argv !== undefined && recordedOverride(record.argv, [nameOf(entry), id], option);
     if (override) say(overridden(name, option));
-    if (restart) say(RESTART);
+    const restart = await saidSo(say, namedFile);
     return output({
       name,
       key: option,
@@ -375,7 +555,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
   const unset = registry.action({
     id: 'plugin.config.unset',
     summary: 'Remove one of a plugin\'s options',
-    description: 'The option is taken out of the entry, so `plugin config <name>` no longer shows it. The daemon is restarted for the plugin to load without it.',
+    description: 'The option is taken out of the entry, so `plugin config <name>` no longer shows it. A running daemon applies it at once, unless the plugin holds a port or a URI scheme.',
     surfaces: {
       cli: { pattern: ['plugin', 'config', 'unset', ':name', ':key'] },
       http: { method: 'POST', path: '/plugin/config/unset' },
@@ -408,7 +588,8 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
     run: (context) => oneAtATime(async () => {
       const name = context.optional<string>('name');
       if (name === undefined) stop(`Say which plugin: ahpd plugin ${sub} <name>.`);
-      const file = fileOf(context.optional<string>('configFile'));
+      const namedFile = served === undefined ? context.optional<string>('configFile') : undefined;
+      const file = fileOf(namedFile);
       if (served === undefined) await pluginIdsOf(specsIn(file), { configDir: configDir(), cwd: process.cwd() });
       const payload = context.globals['json'] === true || context.globals['quiet'] === true;
       const say = (line: string): void => {
@@ -422,11 +603,10 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
         stop(error instanceof Error ? error.message : String(error));
       }
       say(`${sub === 'enable' ? 'Enabled' : 'Disabled'} ${name}.`);
-      const restart = restarting();
-      if (restart) say(RESTART);
+      const restart = await saidSo(say, namedFile);
       return output({ name, enabled: sub === 'enable', ...(restart ? { restart: true } : {}) }, '');
     }),
   });
 
-  return [list, write('install'), write('remove'), update, config, set, unset, toggle('enable'), toggle('disable')];
+  return [list, write('install'), write('remove'), update, apply, reload, config, set, unset, toggle('enable'), toggle('disable')];
 };
