@@ -107,7 +107,7 @@ ahpd plugin config orders apiKey '{"$secret":"host:stripe"}'
 
 ```bash
 ahpd --plugin @ahpd/agent-cofold --plugin ./my-plugin
-ahpd --plugin-option agent-claude.presets.x.model=haiku
+ahpd --plugin-option agent-claude.workerStop=session
 ```
 
 A spec is a package name or a path. A path is tried from the working directory, then from the configuration directory.

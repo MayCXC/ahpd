@@ -7,6 +7,7 @@ covers:
   - packages/server/src/compat.ts
   - packages/server/src/commands/plugin.ts
   - packages/server/src/commands/scopes.ts
+  - packages/server/src/agents/migrate.ts
 decisions:
   - decisions/the-daemon-installs-its-own-sdk-beside-the-plugins.md
 refs:
@@ -28,7 +29,8 @@ refs:
   - "[code://packages/server/src/commands/options.ts#L250-L375](../../packages/server/src/commands/options.ts#L250-L375) - how a `--plugin-option` path is split and set"
   - "[code://packages/server/src/rootconfig.ts#L247-L280](../../packages/server/src/rootconfig.ts#L247-L280) - the `plugins.<id>` keys in root config"
   - "[code://packages/server/src/rootconfig.ts#L320-L392](../../packages/server/src/rootconfig.ts#L320-L392) - a write to a plugin key"
-  - "[code://packages/agent-claude/src/plugin.ts#L106-L160](../../packages/agent-claude/src/plugin.ts#L106-L160) - `variantsOf`, one agent per preset"
+  - "[code://packages/agent-claude/src/plugin.ts#L114-L146](../../packages/agent-claude/src/plugin.ts#L114-L146) - `kindOf` and `apply`, the `claude` kind one load registers"
+  - "[code://packages/server/src/agents/migrate.ts#L345-L465](../../packages/server/src/agents/migrate.ts#L345-L465) - `planPresets`, a file's presets read as the records to write"
   - git://d9d4f950^ - the deleted decisions this spec was written from: a-plugin-loads-once-and-each-preset-is-a-variant, a-plugin-loads-the-daemons-sdk, a-plugin-option-is-given-by-repeating-plugin-option, a-plugin-uses-the-sdk-npm-installs-beside-it, a-plugins-id-is-its-modules-name, a-repeated-plugin-is-keyed-by-its-provider, installing-a-plugin-over-http-is-root-only, plugin-compat-is-checked-before-import, plugin-configuration-travels-in-root-config, plugin-install-also-names-the-plugin, plugin-manifest-is-package-json, plugin-packages-are-named-ahpd-name, plugin-update-takes-all-or-names, plugins-upgrade-through-their-own-command
 ---
 
@@ -119,19 +121,40 @@ THEN the plugins apply in the order of the configuration.
 
 The daemon imports and names every entry before any plugin applies.
 
-### One load serves many presets
+### One load serves many agents
+
+An agent is a record of a kind, made with `agent:put` or moved from a file's per-agent options at the first start.
+
+WHEN a configuration file's entry for `@ahpd/agent-claude` or `@ahpd/agent-acp` holds `presets`
+THEN the start writes each valid preset as a record of that kind, owned by `host`
+AND takes it out of the file once the record holds it
+AND a preset that was not written stays in the file.
+
+WHEN the entry is `@ahpd/agent-claude` and holds `presets`
+THEN the built-in `claude` record is written as well, unless `presets.claude` is `false`.
+
+WHEN a claude entry holds no `presets`
+THEN the first start writes the built-in `claude` record once.
+
+WHEN a configuration file's entry for `@ahpd/agent-cofold` or `@ahpd/agent-pi` names `provider`
+THEN the start writes one record of that kind, owned by `host`, with that id
+AND takes `provider`, `displayName` and `description` out of the file once the record holds it.
+
+A record that already holds the id is left as it is, and the preset for it is still taken out.
 
 WHEN `@ahpd/agent-claude` loads
-THEN it registers the built-in `claude` agent unless `presets.claude` is `false`
-AND each other key of `presets` registers its own agent, with that key as its provider.
+THEN it registers the agent kind `claude`
+AND one load serves every record of that kind, each with its own id as its provider.
 
 WHEN its options name `provider`, `displayName`, `models` or `keepCliModels` at the top level
-THEN the load is refused, because these are written per preset as `presets.<id>.<key>`.
+THEN the loader reports each as an option the plugin does not know
+AND the plugin loads: the first two are the channel's, and the last two are a record's `config`.
 
-WHEN one preset is not valid
-THEN that preset is a problem line, and the other presets register.
+WHEN one record of the kind does not fit the kind's schema
+THEN that record is written and shown as `invalid` with one line saying why
+AND every other record of the kind serves.
 
-`@ahpd/agent-acp` takes the same `presets` map, so one load serves many ACP servers.
+`@ahpd/agent-acp` registers the kind `acp`, so one load serves many ACP servers.
 
 ### A plugin is installed
 

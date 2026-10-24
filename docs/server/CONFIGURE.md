@@ -8,7 +8,7 @@ ahpd configure
 
 It asks for the backends and the web UI, then prints what it found on the machine. That is one line each for `node`, `bun` and `deno`, with the first line of their `--version`. It also prints a table of the agents on PATH. `ahpd` needs Node 22.18 or newer; Deno runs it, and each plugin Deno loads needs an `npm:` spec.
 
-The agent table names each agent's version and whether your configuration already has a preset for it under `@ahpd/agent-acp`. It asks `<name>?` for each agent that is not configured, and Enter adds `presets.<id>: {}` to that entry, keeping the options and presets already there. An agent already configured is shown as configured and not asked about again. A preset you wrote keeps its own `command`, `install` and `page`, and those win over the shipped row. Agents that are not on PATH are listed after the questions with the vendor's install line for your system. When the row has no line for that system, its page is shown instead. Nothing is asked about them. A `claude` or `pi` on PATH is listed under "Also found" and changes none of the backend questions.
+The agent table names each agent's version and whether this host already has an `acp` record for it. A `presets` entry a file still holds counts until the next start moves it to a record. It asks `<name>?` for each agent that is not configured, and Enter writes an `agents/<id>.json` record of the kind `acp`, owned by `host`, and names `@ahpd/agent-acp` in `plugins` and installs it when it is not there. An agent already configured is shown as configured and not asked about again. A record you wrote keeps its own `command`, `install` and `page`, and those win over the shipped row. Agents that are not on PATH are listed after the questions with the vendor's install line for your system. When the row has no line for that system, its page is shown instead. Nothing is asked about them. A `claude` or `pi` on PATH is listed under "Also found" and changes none of the backend questions.
 
 Enter takes the web UI on a first run, and a later run keeps the answer the file holds.
 
@@ -20,7 +20,7 @@ Then it asks for the host, port, token and folders. Each question shows the curr
 | No to a backend you have | `enabled: false`, options kept |
 | Yes to the web UI | Installs `@ahpd/web` and adds it to `plugins` |
 | No to a web UI you have | `enabled: false`, options kept |
-| Yes to a found agent | `presets.<id>: {}` under `@ahpd/agent-acp`, and that package is installed when it is not there |
+| Yes to a found agent | An `agents/<id>.json` record of the kind `acp`, and `@ahpd/agent-acp` named in `plugins` and installed when it is not there |
 | No to a found agent | Nothing for that agent |
 | An agent that is not on PATH | Its install line or page in the output; no question |
 | Enter at the token | A new token in `connection-token`, mode 0600 |
