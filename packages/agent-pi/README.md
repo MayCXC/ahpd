@@ -61,7 +61,7 @@ With `sessionDir` left alone, `pi` run by hand in the same directory lists the s
 
 ### A record
 
-A record of the kind holds what one pi agent runs on, and the channel owns its id, name, description and model:
+A record of the kind holds what one pi agent runs on, and the channel owns its id, name, description and model. A new record starts from the kind's one template, pi with nothing set, which runs on pi's own agent directory and credentials.
 
 | Field | What it does |
 | --- | --- |
@@ -71,6 +71,25 @@ A record of the kind holds what one pi agent runs on, and the channel owns its i
 | `env` | Variables pi is given, by name |
 
 A variable in `env` is a key of this agent's own when pi takes a key from it, such as `ANTHROPIC_API_KEY` or `DEEPSEEK_API_KEY`: it is kept in the vault, a client is told it is set and never what it is, and a team's or a person's record may set it. Any other variable is the host's to set, because a free environment can run a program. The record's variables go on pi's own runtime each turn, over the daemon's environment and over `auth.json`, and they are never written to `process.env` where the daemon's other agents would see them.
+
+The kind's key variables are the ones pi's own provider list reads - `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_OAUTH_TOKEN`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY` and the rest of pi's list - so any owner may set one. Every other variable in `env` is host-only, and so is `sessionDir`.
+
+A record that names its own provider key, with the model the channel owns:
+
+```json
+{
+  "id": "pi-deepseek",
+  "kind": "pi",
+  "owner": "host",
+  "name": "pi on DeepSeek",
+  "model": "deepseek/deepseek-chat",
+  "config": { "env": { "DEEPSEEK_API_KEY": { "$secret": "host:deepseek" } } }
+}
+```
+
+A client puts the key's value, and the channel moves it to the vault under `host:agent/<id>/env.DEEPSEEK_API_KEY` and keeps a `{ "$secret": "<name>" }` in its place, so no client is shown the value again. The record above names `host:deepseek`, the form a record written by hand on disk uses; `ahpd vault set host:deepseek` keeps that entry from standard input.
+
+A client makes one with `x-ahpd/agents/put`, and the daemon keeps it at `agents/<id>.json` in its configuration folder. A record whose `config` no longer fits, or whose `$secret` the vault cannot answer, is written and shown as `invalid` with one line naming it, and no value; a record whose kind no plugin registers any more is kept and shown as `unavailable`.
 
 No option of this plugin holds a credential, so it needs no `ahpd vault`. A key for a record belongs in the record's `env`, which the channel vaults; a key for a machine is the `@ahpd/computer` profile's, as below.
 

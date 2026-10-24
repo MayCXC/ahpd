@@ -158,6 +158,7 @@ against its contract before it is recorded.
 | Method | Operation | What it becomes |
 | --- | --- | --- |
 | `registerAgent(agent)` | append | A backend a client names in `createSession` |
+| `registerAgentKind(kind)` | register, open key | One agent kind, whose records are the agents a client makes on `x-ahpd-agents` |
 | `registerTool(tool)` | append | A server tool offered to every session's model |
 | `registerSessionConfig(key, schema, completions?)` | register, open key | One setting a client draws on every session, merged into the backend's own schema. With a third argument, the key becomes a picker every client can draw |
 | `registerResources(store)` | set | `list`, `read`, `resolve`, `complete`, and the optional write half |
@@ -555,7 +556,7 @@ host.registerAdapter({
   writes the value to the vault under the owner's scope and keeps
   `{ "$secret": "<name>" }` in the record, so no record, snapshot, answer or log
   holds it. A client sends an empty value for a field it is never shown, and the
-  connector keeps the secret it has. A `writeOnly` field of a host connector may also hold `{ "fromEnv": "<NAME>" }`, the form a preset's `env` already uses: the host reads that variable of its own environment when it opens the connector, and keeps the name in the record, which is not a secret. A team's or a person's connector that names a variable is refused, on a put and again when the record is opened, because the daemon's environment is nobody's own and a person's connector that read it could send any variable to an endpoint they choose.
+  connector keeps the secret it has. A `writeOnly` field of a host connector may also hold `{ "fromEnv": "<NAME>" }`, the form an agent record's `env` already uses: the host reads that variable of its own environment when it opens the connector, and keeps the name in the record, which is not a secret. A team's or a person's connector that names a variable is refused, on a put and again when the record is opened, because the daemon's environment is nobody's own and a person's connector that read it could send any variable to an endpoint they choose.
 - A field marked `x-ahpd-connector` with `{ "adapter": "<name>" }` names a
   connector of that adapter. It is checked when the automation whose trigger
   holds it is saved: the host refuses an id it serves no such connector for, and
@@ -615,6 +616,64 @@ The `@ahpd/activepieces` plugin makes one adapter for each Activepieces piece it
 The schema can change between versions, and nothing migrates a stored
 connector: one whose config no longer fits shows as `invalid`, and one whose
 adapter no plugin registers shows as `unavailable`. Neither is opened.
+
+### An agent kind of your own
+
+A plugin may register an agent kind: the form a person fills in, the fields only
+the host may set, and the `open` that builds a backend for one record. The host
+keeps each agent as a JSON record, and `open` is called when one is put and when
+the daemon starts with one stored. A backend that serves many agents - one per
+endpoint, one per key - is a kind rather than a registration for each; the four
+`@ahpd/agent-*` packages in this repository are kinds.
+
+```ts
+host.registerAgentKind({
+  name: 'claude',
+  title: 'Claude Code',
+  description: 'Claude Code, one record per configuration.',
+  schema: { type: 'object', properties: { /* the kind's own fields */ } },
+  templates: [{ name: 'Claude Code', config: {} }],
+  hostOnly: ['extraArgs'],
+  keyVariables: ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'],
+  open(record) {
+    return claude({ provider: record.id, displayName: record.name });
+  },
+});
+```
+
+- `name` is a slug, and is the `kind` every record of it carries. Two plugins
+  cannot register one name: the later one is dropped with a problem line.
+- `title` is what a client prints for the kind, and `description` is one
+  sentence on what an agent of it is.
+- `icons` is what a client draws beside the kind's title.
+- `schema` is the JSON Schema a client draws a record's own fields from, and
+  what a put checks `config` against, before the record is written. The channel
+  owns `name`, `description`, `icon` and `model` on every kind, so the schema
+  holds only that kind's fields. A field it marks `writeOnly` is a secret, as
+  is each variable in `keyVariables`: the channel keeps the value in the vault
+  under `agent/<id>/<field>` in the record's owner scope, and the record holds
+  `{ "$secret": "<name>" }`.
+- `templates` is what a new record starts from, each with a `name` and
+  optionally a `description`, an `icon`, a `model` and a `config`. A template's
+  `config` may leave a key variable empty, for the record to fill in.
+- `hostOnly` names the fields only a `host` record may set. A team's or a
+  person's record that sets one is refused, because a field a dangerous setting
+  lives in - a command a backend runs, a directory it writes - is the daemon's
+  to give rather than an owner's.
+- `keyVariables` names the `env` variables any owner may set, once the kind has
+  a key a person would hold. Every other `env` variable is host-only, because a
+  free environment can run a program, and `NODE_OPTIONS` is enough.
+- `open(record)` builds the backend for one record and answers an `Agent`. The
+  record is a live view rather than a copy: `id`, `kind`, `owner`, `name`,
+  `description`, `icon`, `model` and `config` are read at each call, so an edit
+  reaches a running session at its next turn. `config` is the kind's own values
+  with each secret read back from the vault. The backend's `provider` must be
+  the record's id, because a client names the agent by its id alone.
+
+A record whose `config` no longer fits shows as `invalid`, and one whose kind no
+plugin registers shows as `unavailable`; neither is opened, and neither is
+removed. A put of a kind this host does not serve is refused before anything is
+written.
 
 ### An action offered as a tool
 
@@ -1101,6 +1160,7 @@ that method may be called with:
 | Key | The method it names |
 | --- | --- |
 | `agents` | `registerAgent(agent)`, by `provider` |
+| `agentKinds` | `registerAgentKind(kind)`, by the kind's name |
 | `tools` | `registerTool(tool)`, by the tool's `name` |
 | `sessionConfigs` | `registerSessionConfig(key, ...)`, by key |
 | `resourceProviders` | `registerResourceProvider(scheme, provider)`, by scheme |
@@ -1133,9 +1193,10 @@ have always done, and the plugin channel marks it `undeclared`.
 
 ## What a client sees
 
-The daemon serves three `x-ahpd-` channels, so a client shows what a plugin adds
+The daemon serves four `x-ahpd-` channels, so a client shows what a plugin adds
 before a person uses it: one lists the plugins the configuration names, one the
-adapters the plugins register, and one the connectors made from them.
+adapters the plugins register, one the connectors made from them, and one the
+agents made from the kinds they register.
 
 ### `x-ahpd-plugins`
 
@@ -1227,6 +1288,70 @@ holds, because a client is never shown one to send back. The vault names are
 The daemon keeps its own connectors in the JSON collection `connectors`, so one
 is `<configDir>/connectors/<id>.json`. The `@ahpd/webhook` plugin registers the
 first kind; [WEBHOOKS.md](WEBHOOKS.md) says what an endpoint is.
+
+### `x-ahpd-agents`
+
+One row for each agent, keyed by its id. A row is the record - `id`, `kind`,
+`owner`, `name`, `description`, `icon`, `model` and `config` - with a `state`:
+
+| `state` | What it says |
+| --- | --- |
+| `ready` | The kind opened it and the host serves it |
+| `invalid` | Its config no longer fits the kind's schema, the kind refused to open it, or a `$secret` in it was not in the vault |
+| `unavailable` | No loaded plugin registers its kind, so it cannot be opened |
+
+A row also carries a `health` when a check was run and none when it was not:
+`health.result` is `ok`, `unreachable` or `failed`, with `message` where the
+agent gave one and `at` as an ISO time. Health is kept in memory only, so a
+restart clears it.
+
+`agent:list` opens the channel, and reads the host's agents, their teams' and
+the caller's own, and no other person's. `agent:all` reads every row, and is
+admitted without `agent:list`. A caller with neither grant reads no agent, its
+own included, and is refused the subscription. A subscribe also takes
+`?owner=me`, which narrows the listing to the caller's own agents: a `host`
+agent belongs to everyone and to nobody, so it is left out.
+
+Three commands serve an agent:
+
+| Method | Grant | What it does |
+| --- | --- | --- |
+| `x-ahpd/agents/put` | `agent:put`, and the owner's | Makes or changes `{ id, kind, owner, name, description?, icon?, model?, config }`, checks `config` against the kind's schema, moves each secret to the vault, writes the record, calls the kind's `open` and folds the new agent list into the running host. Answers the row |
+| `x-ahpd/agents/remove` | `agent:remove`, and the owner's | Ends the sessions that run on `{ id }`, takes its secrets out of the vault and takes the record out |
+| `x-ahpd/agents/check` | `agent:put`, and the owner's | Builds `{ id }` again, asks its probe and answers the row with its health. A probe that has not answered in 10 seconds is `unreachable` |
+
+The owner narrows the grant, as it does for a connector. A `host` agent needs
+`agent:put` or `agent:remove` and `agent:host` beside either. A `team:<team>`
+agent needs a membership of that team, and a `user:<id>` agent needs the caller
+to be that person. `agent:all` is the one grant that widens the rule: it reads
+every agent and removes any, whoever owns it, which is what an operator's role
+is given.
+
+An agent's id is unique across every owner, because a client names an agent by
+its id alone: a put never takes an id another record holds, and it never takes
+the id of a backend the daemon or a plugin already serves. A put under a new
+owner needs what a remove by the old owner needs, and keeps nothing of the old
+record's secrets. A secret field sent empty keeps the value the record holds,
+because a client is never shown one to send back. The vault names are
+`host:agent/<id>/<field>`, `team:<team>/agent/<id>/<field>` and
+`user:<id>/agent/<id>/<field>`, and a variable in `env` is a field named
+`env.<VARIABLE>`, so a key is `host:agent/build/env.ANTHROPIC_API_KEY`.
+
+A put moves a `writeOnly` field and each `env` variable the kind names in
+`keyVariables` to the vault, and keeps `{ "$secret": "<name>" }` in the record.
+A host record's field may hold `{ "fromEnv": "<NAME>" }` instead, which the host
+reads from its own environment when it opens the record; a team's or a person's
+record that names one is refused. A record with a `$secret` the vault cannot
+answer stays written and shows as `invalid`, so a key a person adds later is
+picked up at the next start.
+
+An edit keeps the agent and its sessions: the view `open` was handed is updated
+in place, so a running session reads the new record at its next turn. A record
+whose kind no plugin registers any more stays on disk and shows as
+`unavailable`, because a plugin turned off keeps its agents.
+
+The daemon keeps the agents in the JSON collection `agents`, so one is
+`<configDir>/agents/<id>.json`.
 
 ## Naming a plugin
 
@@ -1341,18 +1466,18 @@ A plugin's entry is imported by URL. A `.ts` entry therefore needs Node 22.18 or
 ## A worked example: `@ahpd/agent-cofold`
 
 The repository ships a real backend as a plugin. `@ahpd/agent-cofold` wraps the
-cofold agent runtime as provider `cofold`, so every model an OpenAI-compatible
-endpoint serves is a model inside one provider rather than a package of its
-own. It is the same package an embedder imports and the same one the daemon
-loads when it is named, which is the point: a plugin is not a second kind of
-backend.
+cofold agent runtime as the agent kind `cofold`, so every model an
+OpenAI-compatible endpoint serves is a model inside one agent rather than a
+package of its own. It is the same package an embedder imports and the same one
+the daemon loads when it is named, which is the point: a plugin is not a second
+kind of backend.
 
 ```bash
 ahpd --plugin @ahpd/agent-cofold
 ```
 
-Or in the configuration file, with the backend's own options as defaults for
-every session it serves:
+Or in the configuration file, with the backend's own options as the defaults
+every record of the kind starts from:
 
 ```json
 {
@@ -1360,8 +1485,6 @@ every session it serves:
     {
       "name": "@ahpd/agent-cofold",
       "options": {
-        "provider": "cofold",
-        "displayName": "Cofold",
         "model": "deepseek-chat",
         "baseUrl": "https://api.deepseek.com/v1",
         "store": "/var/lib/ahpd/cofold"
@@ -1371,22 +1494,29 @@ every session it serves:
 }
 ```
 
+Each agent is a record on `x-ahpd-agents`, and a record's id, name, description
+and model belong to the channel, so none of them is an option here. The plugin
+registers the kind with `registerAgentKind`, and its `open` builds one backend
+per record with that record's values over these defaults.
+
 | Option | |
 | --- | --- |
-| `provider` | The AHP provider id, `cofold` when absent. Two specs with two providers are two backends |
-| `displayName` | What a client draws, `Cofold` when absent |
-| `description` | One line about the backend |
-| `model` | The model id a session that names none runs on |
-| `baseUrl` | The OpenAI-compatible endpoint a session that names none uses |
-| `instructions` | The system prompt the agent is created with |
-| `store` | Where the cofold file store lives: `$XDG_DATA_HOME/ahpd/cofold`, or `~/.local/share/ahpd/cofold` when that is unset. This is session data and not configuration; the harness config is read from `~/.config/cofold/config.json` |
-| `memory` | `true` to hold the store in memory, for a test |
+| `model` | The model id a record that names none runs on |
+| `baseUrl` | The OpenAI-compatible endpoint a record that names none uses |
+| `instructions` | The system prompt a record that names none is created with |
+| `store` | The folder each record's cofold file store lives under, one folder per record: `$XDG_DATA_HOME/ahpd/cofold`, or `~/.local/share/ahpd/cofold` when that is unset. This is session data and not configuration; the harness config is read from `~/.config/cofold/config.json` |
+| `memory` | `true` to hold each record's store in memory, for a test |
 | `tools` | Which of the four cofold capabilities a session runs, and where `web_search` gets its providers. All four are on when it is absent |
-| `apiKey` | The daemon's own key, or a function asked once per request so an expired one is not cached |
+| `apiKey` | The daemon's own key, for a record that names none: `{ "$secret": "host:<name>" }` is read from the vault, or a function asked once per request so an expired one is not cached |
 | `resource` | The protected resource a client authenticates against; the endpoint's origin when it is `https`, a constant otherwise |
 | `adapter` | A cofold `ModelAdapter` used instead of the HTTP one, for an embedder or a test |
 | `autoCompactTokens` | The estimated history size at which a session compacts, never above 80% of the model's listed context, or of 32000 when the list gave none. That 80% when absent |
 | `policy` | The run-level policy a pause comes from, cofold's own default when absent |
+
+`adapter` and `strictTools` are the plugin's alone: neither is a field of a
+record. A record may name `duckduckgo` alone among the search providers,
+because the channel vaults a record's top-level key fields only and a key
+nested under `tools.web.search` would stay in the record.
 
 ### The tools a session runs
 
@@ -1404,7 +1534,7 @@ An approval offers Allow once, Allow the tool for this session, and Deny; the se
 A shell call is drawn as a terminal with its bare command, and a call that is declined or cut short never leaves a file held as changing.
 A session opened with no working directory keeps its tools and works in the daemon's current directory.
 
-A turn with no model in the session settings, the plugin options or the cofold configuration file fails with a sentence that says to add `"model"`, as `"<provider>/<model>"`, to `$XDG_CONFIG_HOME/cofold/config.json` or `~/.config/cofold/config.json`.
+A turn with no model in the session settings, the record, the plugin options or the cofold configuration file fails with a sentence that says to add `"model"`, as `"<provider>/<model>"`, to `$XDG_CONFIG_HOME/cofold/config.json` or `~/.config/cofold/config.json`.
 
 `tools` turns one off by naming it `false`, and gives `web_search` its providers:
 
@@ -1428,7 +1558,7 @@ A turn with no model in the session settings, the plugin options or the cofold c
 The named providers are tried in the order the configuration lists them, and a failing one is skipped.
 Name none of them and the session has `web_fetch` alone, with no `web_search` to offer.
 
-Memory is files under `<store>/memory/<workspace slug>/`, where `<store>` is the plugin's own `store` when it named one and `$XDG_DATA_HOME/ahpd/cofold` otherwise, so a session's memory sits beside its sessions and can be read and edited by hand.
+Memory is files under `<store>/memory/<workspace slug>/`, where `<store>` is the folder of the record the session runs on - the plugin's `store` under the record's id, or the record's own `store` when it names one - and `$XDG_DATA_HOME/ahpd/cofold/<id>` when the plugin named no store either, so a session's memory sits beside its sessions and can be read and edited by hand.
 Memory is per workspace and shared by the sessions in it, so what one session writes there reaches the next.
 A session whose store is held in memory (`memory: true`) has no directory for memory files, so it gets the other three.
 
@@ -1509,15 +1639,16 @@ Where a value comes from, highest first:
 | Source | |
 | --- | --- |
 | A session setting | `model`, `baseUrl`, `instructions` chosen for one session |
-| The plugin's `options` | The same keys, as defaults for every session |
+| The record | The same keys, as they are written for one agent |
+| The plugin's `options` | The same keys, as defaults for every record |
 | The harness file | The provider and model the harness was configured with |
 | The built-in default | `http://127.0.0.1:1234/v1`, a local endpoint |
 
 A token a client lent with `authenticate` beats every key above it; then the
-plugin's own `apiKey`, then the named provider's key from the file, then the
-first provider's. A missing harness file is not an error, so a machine that has
-never run the harness reads an empty one and the plugin options are the only
-source.
+record's own `apiKey`, then the plugin's, then the named provider's key from the
+file, then the first provider's. A missing harness file is not an error, so a
+machine that has never run the harness reads an empty one and the record and the
+plugin options are the only source.
 
 ### The models a session can run on
 
@@ -1555,94 +1686,100 @@ ahpd --plugin @ahpd/agent-acp
 ```
 
 The command is an option rather than a flag, because a plugin is named on the
-command line and configured in the file. One entry serves every ACP server,
-through a `presets` map whose each key registers an agent of its own:
+command line and configured in the file. One entry serves every ACP server, and
+each agent is a record of the kind `acp`:
 
 ```json
 {
   "plugins": [
-    {
-      "name": "@ahpd/agent-acp",
-      "options": {
-        "presets": {
-          "copilot": {},
-          "codex": {}
-        }
-      }
-    }
+    { "name": "@ahpd/agent-acp", "options": { "hostTools": true } }
   ]
 }
 ```
 
 | Option | |
 | --- | --- |
-| `presets` | **Required**: the agents this one load registers, by the id clients name. A key that names a shipped preset takes it, and a key that names none writes a `command` of its own |
-| `hostTools` | Offer the host's own tools to each session as an MCP server, on by default. A preset may set its own |
+| `hostTools` | Offer the host's own tools to each session as an MCP server, on by default. A record may set its own |
+| `toolsChanged` | How each session's agent hears that the tools it listed have moved, over each record's own. `notify` by default |
 
-Under `presets.<id>`:
+A record of the kind, as `x-ahpd/agents/put` takes it:
 
-| Option | |
+| Field | |
 | --- | --- |
-| `base` | The shipped preset this one takes, for a key that is not itself one |
-| `name` | What a client draws. The preset's own name, else the key |
-| `command` | The program to spawn. **Required** for a key that names no shipped preset and no `base` |
-| `args` | Its arguments, replacing the preset's own |
-| `env` | Environment variables merged over the daemon's own, by variable name. A value written `{ "$secret": "host:<name>" }` is read from the vault when the daemon loads |
-| `cwd` | The directory it starts in, when a session names none |
-| `description` | One line about the agent |
-| `model` | The model id a session that names none runs on |
+| `base` | The shipped row this record takes, for an id that is not itself one. **Host records only** |
+| `command` | The program to spawn. **Required** for a record that names no row and no `base`. **Host records only** |
+| `args` | Its arguments, replacing the row's own. **Host records only** |
+| `env` | Environment variables merged over the daemon's own, by variable name. A value written `{ "$secret": "host:<name>" }` is read from the vault |
+| `cwd` | The directory it starts in, when a session names none. **Host records only** |
 | `authenticate` | The sign-in to send after the handshake, as `{"methodId": "api-key"}` for Codex with a key |
 | `hostTools` | Whether this agent's sessions are offered the host's own tools, over the plugin-wide setting |
 | `honoursTrust` | Whether this agent asks before it loads a project's own settings and hooks. Absent, a session of it in a folder the host did not vouch for is refused rather than started, because ACP carries no trust field |
-| `toolsChanged` | How this agent hears that the tools it listed have moved, over the plugin-wide setting: `notify` holds a stream open and sends `notifications/tools/list_changed` down it, and `list` says nothing. The default is `notify` |
-| `machine` | What a machine needs to run this agent: `env`, variables set only inside the machine, and `copy`, host paths copied in. See below |
+| `toolsChanged` | How this agent hears that the tools it listed have moved, over the plugin-wide setting: `notify` holds a stream open and sends `notifications/tools/list_changed` down it, and `list` says nothing |
+| `install` | How to install this agent, by system, as the vendor's own docs give it. **Host records only** |
+| `page` | The vendor's install page, for a system the install lines do not cover |
+| `machine` | What a machine needs to run this agent: `env`, variables set only inside the machine, and `copy`, host paths copied in. See below. **Host records only** |
 
-Each key is an agent of its own, so `copilot` and `codex` are two entries in the
-picker out of one package rather than two specs of one name. A per-agent option
-written at the top level fails the load and says where it goes now. A preset
-that cannot be resolved - a `base` naming no shipped preset, no `command` where
-one is needed, an `authenticate` with no `methodId`, a `$secret` the vault
-does not hold, or a `machine` that is wrongly written or reads a variable the
-daemon does not have - is skipped with one line naming it, and the rest register.
+The record's id is the provider a client names, and its `name`, `description`,
+`icon` and `model` belong to the channel, so they are not fields here. The kind
+is registered with `registerAgentKind`, and it carries a template for each
+shipped row: each template holds its row's command, arguments, sign-in, trust
+rule and machine, and the vendor's key variables set empty, so a record made
+from `codex` starts as Codex and a record made from `copilot` starts as Copilot.
+A record that writes its own `command` names a server nobody has heard of, and
+is an agent like any other.
 
-A preset's `machine` says what a [machine](COMPUTERS.md) needs to run it, and it reaches only a machine: a session on this host is spawned without any of it.
+An edit applies at the next turn: the plugin reads the record again at the start
+of each turn, and starts the child again on the same conversation through
+`session/resume` or `session/load` when the program or its settings changed. A
+record that cannot be built - a `base` naming no shipped row, no `command` where
+one is needed, an `authenticate` with no `methodId`, a `$secret` the vault does
+not hold, or a `machine` that is wrongly written or reads a variable the daemon
+does not have - is stored and shown as `invalid` with one line naming it.
+
+A record's `machine` says what a [machine](COMPUTERS.md) needs to run it, and it
+reaches only a machine: a session on this host is spawned without any of it.
 
 ```json
 {
-  "presets": {
-    "codex": {
-      "machine": {
-        "env": {
-          "CODEX_HOME": "/ahpd/codex",
-          "CODEX_API_KEY": { "fromEnv": "CODEX_API_KEY" }
-        },
-        "copy": [{ "source": "~/.codex/config.toml", "target": "/ahpd/codex/config.toml" }]
-      }
+  "id": "codex",
+  "kind": "acp",
+  "owner": "host",
+  "name": "Codex",
+  "config": {
+    "machine": {
+      "env": {
+        "CODEX_HOME": "/ahpd/codex",
+        "CODEX_API_KEY": { "fromEnv": "CODEX_API_KEY" }
+      },
+      "copy": [{ "source": "~/.codex/config.toml", "target": "/ahpd/codex/config.toml" }]
     }
   }
 }
 ```
 
-Each `env` variable is a machine need named `<preset>.<VARIABLE>`, here `codex.CODEX_HOME`, and each `copy` entry one named `<preset>.copy.<n>`, so a computer profile's `needs` can give any of them another value. A `{ "fromEnv": "NAME" }` value is the daemon's `NAME` when the plugin loads. A value written `{ "$secret": "<scope>:<name>" }` is read from the [vault](../server/VAULT.md) when the machine is made, for the machine's owner, and is passed by name on each command rather than given when the machine is made; one the vault cannot answer refuses that machine alone.
+Each `env` variable is a machine need named `<record>.<VARIABLE>`, here
+`codex.CODEX_HOME`, and each `copy` entry one named `<record>.copy.<n>`, so a
+computer profile's `needs` can give any of them another value. A
+`{ "fromEnv": "NAME" }` value is the daemon's `NAME` when the record opens. A
+value written `{ "$secret": "<scope>:<name>" }` is read from the
+[vault](../server/VAULT.md) when the machine is made, for the machine's owner,
+and is passed by name on each command rather than given when the machine is
+made; one the vault cannot answer refuses that machine alone.
 
-A session in a machine is offered the host's tools only where the machine can reach the daemon: for now, where the endpoint's address is neither loopback nor a wildcard bind such as `0.0.0.0` or `::`. Otherwise they are left out and the log says `host tools: computer://box cannot reach the daemon at 127.0.0.1:8080, so they were left out`.
+A session in a machine is offered the host's tools only where the machine can
+reach the daemon: for now, where the endpoint's address is neither loopback nor
+a wildcard bind such as `0.0.0.0` or `::`. Otherwise they are left out and the
+log says `host tools: computer://box cannot reach the daemon at 127.0.0.1:8080,
+so they were left out`.
 
-The shipped presets are `codex`, `gemini`, `copilot`, `opencode`, `kilo`,
-`goose`, `pi`, `dsh`, `devin`, `cursor`, `amp`, `qwen`, `cline` and `omp`, so
-`gemini --acp`, `codex-acp` and `@deepseek-ai/dsh-acp` are three keys and not
-three packages.
-Only a key that is written registers: an ACP agent's binary may not be installed
-on this host, and no shipped row is a backend anybody did not ask for. A row
-that names a key in `fromEnv` sends that sign-in only when the daemon's
-environment or the preset's `env` has the variable, and for a session placed in
-a machine also when the preset's `machine.env` sets it.
-
-Each shipped preset is described for a form: its entry under
-`presets.properties` carries the agent's `title`, `links` to its own site and to
-the company behind it, and one `env` field per variable its vendor documents. A
-secret variable is drawn without its value, and any other shows the value, so a
-model or a folder can be checked. `env` still takes a name the vendor does not
-document.
+The shipped rows are `codex`, `gemini`, `copilot`, `opencode`, `kilo`, `goose`,
+`pi`, `dsh`, `devin`, `cursor`, `amp`, `qwen`, `cline` and `omp`, so
+`gemini --acp`, `codex-acp` and `@deepseek-ai/dsh-acp` are three records and not
+three packages. Only a record that is written is served, so an ACP agent's
+binary that is not installed costs nothing until somebody makes one. A row that
+names a variable in `fromEnv` sends that sign-in only when the daemon's
+environment or the record's `env` has the variable, and for a session placed in
+a machine also when the record's `machine.env` sets it.
 
 The `codex` CLI has no ACP mode of its own; `codex-acp` is Codex behind an
 adapter, installed with `npm i -g @agentclientprotocol/codex-acp`. The

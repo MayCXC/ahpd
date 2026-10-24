@@ -24,13 +24,7 @@ const VALID: Record<string, unknown> = { hostTools: false, toolsChanged: 'notify
 /** The option names the schema declares. */
 const declared = (): string[] => Object.keys((optionsSchema as { properties: Record<string, unknown> }).properties);
 
-/**
- * The option names the first options table in the README lists, less `presets`.
- *
- * The README still describes a `presets` map, which this change replaced with
- * the agents channel's records. The table is not this file's to rewrite, so the
- * removed row is dropped here and what is left is still held to the schema.
- */
+/** The option names the first options table in the README lists. */
 const documented = (): string[] => {
   const lines = readFileSync(join(import.meta.dirname, '../README.md'), 'utf8').split('\n');
   const start = lines.findIndex((line) => /^\| option \|/iu.test(line));
@@ -38,7 +32,7 @@ const documented = (): string[] => {
   for (const line of lines.slice(start + 2)) {
     if (!line.startsWith('|')) break;
     const found = /^\| `([^`]+)` \|/u.exec(line);
-    if (found?.[1] !== undefined && found[1] !== 'presets') names.push(found[1]);
+    if (found?.[1] !== undefined) names.push(found[1]);
   }
   return names;
 };

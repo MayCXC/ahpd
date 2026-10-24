@@ -85,6 +85,32 @@ The providers `web_search` asks, in the order they are written. A failing one is
 | `tavily` | none | Tavily, as `{ "apiKey": "..." }` |
 | `duckduckgo` | `false` | `true` scrapes DuckDuckGo's results page, with no key |
 
+## A record of the kind
+
+An agent is a record on `x-ahpd-agents`: `{ id, kind, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model`, so `config` holds the cofold fields above, and a new record starts from the kind's one template, which sets nothing and runs on cofold's own configuration file.
+
+`computerConfigDir`, `store` and `memory` are host-only: a team's or a person's record that sets one is refused. `adapter` and `strictTools` are not fields of a record at all, and neither is a keyed search provider, for the reason the `tools.web.search` table gives. The kind names no key variable, because cofold's key is not an environment variable: a record's `apiKey` is a `writeOnly` field of its own, so the channel keeps it in the vault under `host:agent/<id>/apiKey` for a host record, and no client, session or log gets the value.
+
+A record that names its own endpoint and key, with the model the channel owns:
+
+```json
+{
+  "id": "cofold-deepseek",
+  "kind": "cofold",
+  "owner": "host",
+  "name": "Cofold on DeepSeek",
+  "model": "deepseek-chat",
+  "config": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "apiKey": { "$secret": "host:deepseek" }
+  }
+}
+```
+
+A client puts the key's value, and the channel moves it to the vault under `host:agent/<id>/apiKey` and keeps a `{ "$secret": "<name>" }` in its place, so no client is shown the value again. The record above names `host:deepseek`, the form a record written by hand on disk uses; `ahpd vault set host:deepseek` keeps that entry from standard input.
+
+A client makes one with `x-ahpd/agents/put`, and the daemon keeps it at `agents/<id>.json` in its configuration folder. A record whose `config` no longer fits, or whose `$secret` the vault cannot answer, is written and shown as `invalid` with one line naming it, and no value; a record whose kind no plugin registers any more is kept and shown as `unavailable`.
+
 ## In your own host
 
 ```bash

@@ -28,7 +28,7 @@ const VALID: Record<string, unknown> = {};
 /** The option names the schema declares. */
 const declared = (): string[] => Object.keys((optionsSchema as { properties: Record<string, unknown> }).properties);
 
-/** The option names the first options table in the README lists, without the ones a record carries now. */
+/** The option names the first options table in the README lists. */
 const documented = (): string[] => {
   const lines = readFileSync(join(import.meta.dirname, '../README.md'), 'utf8').split('\n');
   const start = lines.findIndex((line) => /^\| option \|/iu.test(line));
@@ -38,10 +38,7 @@ const documented = (): string[] => {
     const found = /^\| `([^`]+)` \|/u.exec(line);
     if (found?.[1] !== undefined) names.push(found[1]);
   }
-  // `presets` is still in the table and is no longer an option: the plugin
-  // serves records of one kind now, so the row belongs to the README's own
-  // update rather than this comparison.
-  return names.filter((one) => one !== 'presets');
+  return names;
 };
 
 const load = (options: Record<string, unknown>) => loadPlugins([{ name: SOURCE, options }], {

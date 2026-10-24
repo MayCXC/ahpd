@@ -8,7 +8,9 @@
 
 An [Agent Client Protocol](https://agentclientprotocol.com) backend for [`@ahpd/sdk`](https://www.npmjs.com/package/@ahpd/sdk), and a plugin for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon.
 
-Any program that speaks ACP over its stdio is one configured command, not a package of its own, so `copilot --acp`, `codex-acp`, `gemini --acp` and `@deepseek-ai/dsh-acp` all run through this one package.
+The plugin registers the agent kind `acp`: every ACP server is a record on the agents channel, `x-ahpd-agents`, and one load serves all of them. A record's id is the provider a client names, and its `config` holds the program and what that one agent runs on.
+
+Any program that speaks ACP over its stdio is one record, not a package of its own, so `copilot --acp`, `codex-acp`, `gemini --acp` and `@deepseek-ai/dsh-acp` all run through this one package.
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/agent-acp`](https://github.com/softov/ahpd/tree/main/packages/agent-acp).
 
@@ -29,72 +31,96 @@ Update, remove and one-run flags such as `--plugin` are in [Plugins](https://git
 
 ## Options
 
-Add one entry to `plugins` in the daemon's `config.json`, and one key per ACP server under its `presets`:
+The plugin's own options are its answers for every agent it serves:
 
 ```json
 {
   "plugins": [
     {
       "name": "@ahpd/agent-acp",
-      "options": {
-        "presets": {
-          "copilot": {},
-          "codex": {},
-          "my-agent": { "name": "My agent", "command": "my-agent", "args": ["--acp"], "env": { "MY_AGENT_KEY": { "$secret": "host:my-agent" } } }
-        },
-        "hostTools": true,
-        "toolsChanged": "notify"
-      }
+      "options": { "hostTools": true, "toolsChanged": "notify" }
     }
   ]
 }
 ```
 
-Each key registers an agent of its own, under that key as the provider id, so `copilot`, `codex` and `my-agent` are three entries in the picker out of one load.
-
-The shipped presets are `codex`, `gemini`, `copilot`, `opencode`, `kilo`, `goose`, `pi`, `dsh`, `devin`, `cursor`, `amp`, `qwen`, `cline` and `omp`. A key that names none of them writes a `command` of its own, and a key that names one takes its command, its arguments and its environment.
-
-Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs.
+`{ "plugins": ["@ahpd/agent-acp"] }` is enough when the defaults suit. Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. What one agent runs on is its record's `config`, below, and a record wins over the plugin for what it sets.
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `presets` | required | The agents this load registers, by the id clients name. A key that names a shipped preset takes it; a key that names none writes a `command` of its own |
-| `hostTools` | `true` | Offer the host's own tools to each session as an MCP server. A preset may set its own |
-| `toolsChanged` | `notify` | How a session's agent hears that the tools it listed have moved: `notify` sends `notifications/tools/list_changed` down a stream the host holds open, `list` sends nothing. A preset may set its own |
+| `hostTools` | `true` | Offer the host's own tools to each session as an MCP server. A record may set its own |
+| `toolsChanged` | `notify` | How a session's agent hears that the tools it listed have moved: `notify` sends `notifications/tools/list_changed` down a stream the host holds open, `list` sends nothing. A record may set its own |
 
-### `presets.<id>`
+### A record of the kind
 
-| Option | Default | What it does |
+An agent is a record on `x-ahpd-agents`: `{ id, kind, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model` on every kind, so a record of this kind declares only the fields below, and a new record starts from one of the kind's templates - one per shipped row, carrying that row's command, arguments, sign-in, trust, machine and key variables set empty.
+
+The shipped rows are `codex`, `gemini`, `copilot`, `opencode`, `kilo`, `goose`, `pi`, `dsh`, `devin`, `cursor`, `amp`, `qwen`, `cline` and `omp`. A record whose id names one of them takes that row's values, and wins over the row wherever it writes its own; a record that names none writes a `command` of its own, so a server nobody has heard of is an agent like any other.
+
+| Field | Default | What it does |
 | --- | --- | --- |
-| `base` | the key, when it names a shipped preset | The shipped preset this one takes, for a key that is not itself one |
-| `name` | the shipped preset's name, then the key | What a client reads instead of the id |
-| `command` | the shipped preset's | The program to spawn as the ACP server. Required for a key that names no shipped preset and no `base` |
-| `args` | the shipped preset's | The arguments to give it, replacing the preset's own |
-| `env` | none | Environment variables merged over the daemon's own for the child, by variable name. A value written `{ "$secret": "host:<name>" }` is read from the vault when the daemon loads |
-| `cwd` | the session's working directory | The directory the server runs in |
-| `description` | none | One line about what this agent is |
-| `model` | the server's own | The model a session that names none runs on |
-| `authenticate` | none | `{ "methodId": "<id>" }`, the sign-in to send after the handshake, for a server that refuses a session until one has happened |
+| `base` | the row the id names | The shipped row this record takes, for a record id that is not itself one. **Host records only** |
+| `command` | the row's | The program to spawn as the ACP server. Required for a record that names no row and no `base`. **Host records only** |
+| `args` | the row's | The arguments to give it, replacing the row's own. **Host records only** |
+| `env` | none | Environment variables merged over the daemon's own for the child, by variable name. A value written `{ "$secret": "host:<name>" }` is read from the vault |
+| `cwd` | the session's working directory | The directory the server runs in. **Host records only** |
+| `authenticate` | the row's | `{ "methodId": "<id>" }`, the sign-in to send after the handshake, for a server that refuses a session until one has happened |
 | `hostTools` | the plugin-wide `hostTools` | Whether this agent's sessions are offered the host's own tools |
-| `honoursTrust` | the shipped preset's, else `false` | Whether this agent asks before it loads a project's own settings and hooks. Absent, a session in a folder the host did not vouch for is refused, because ACP carries no trust field |
+| `honoursTrust` | the row's, else `false` | Whether this agent asks before it loads a project's own settings and hooks. Absent, a session in a folder the host did not vouch for is refused, because ACP carries no trust field |
 | `toolsChanged` | the plugin-wide `toolsChanged` | How this agent hears that the tools it listed have moved |
-| `machine` | the shipped preset's | What a machine needs to run this agent, laid over the shipped preset's by key |
+| `install` | the row's | How to install this agent, by system, as the vendor's own docs give it. **Host records only** |
+| `page` | the row's | The vendor's install page, for a system the install lines do not cover |
+| `machine` | the row's | What a machine needs to run this agent, laid over the row's by key. **Host records only** |
 
-### `presets.<id>.machine`
+`base`, `command`, `args`, `cwd`, `machine` and `install` are host-only: a team's or a person's record that sets one is refused, because a command is where a program would come from. The kind's key variables are the vendors' own - `AMP_API_KEY`, `CLINE_API_KEY`, `CODEX_API_KEY`, `COPILOT_GITHUB_TOKEN`, `CURSOR_API_KEY`, `DEEPSEEK_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `GOOSE_PROVIDER__API_KEY`, `KILO_API_KEY`, `OMP_AUTH_BROKER_TOKEN`, `OPENAI_API_KEY` and `WINDSURF_API_KEY` - so any owner may set them in `env`; every other `env` variable is the host's alone, because a free environment can run a program.
 
-| Option | Default | What it does |
+A record whose `command` is missing, whose `base` names no shipped row, or whose `$secret` the vault cannot answer is written and shown as `invalid` with one line naming it, and no value. A record whose kind no plugin registers any more is kept and shown as `unavailable`.
+
+### `machine`
+
+| Field | Default | What it does |
 | --- | --- | --- |
-| `env` | the shipped preset's | Variables set only inside the machine: a string, `{ "fromEnv": "NAME" }` read when the daemon loads, or `{ "$secret": "<scope>:<name>" }` read when the machine is made. Laid over the preset's by variable |
+| `env` | the row's | Variables set only inside the machine: a string, `{ "fromEnv": "NAME" }` read when the record opens, or `{ "$secret": "<scope>:<name>" }` read when the machine is made. Laid over the row's by variable |
 | `copy` | none | Host paths copied into the machine, each `{ "source", "target" }`, with `target` an absolute path |
-| `part` | the shipped preset's | The part the CLI comes from |
-| `state` | `/ahpd/<id>` for a shipped preset | The absolute directory the agent keeps its configuration in, as a state volume |
+| `part` | the row's | The part the CLI comes from |
+| `state` | `/ahpd/<id>` for a record from a shipped row | The absolute directory the agent keeps its configuration in, as a state volume |
 | `seed` | the agent's own host files | The host files `state` is seeded from, each `{ "source", "target", "keep", "drop" }` |
 
-Each shipped preset that names a part brings a `machine`. It holds the CLI's part and a state directory at `/ahpd/<id>`, seeded from the agent's own host files and never its login file. It also holds the variables that point the CLI there. So a preset in a machine runs from its part on any glibc image, and signs in with the key a person adds in `machine.env`. A vault-filled key reaches only this agent's commands in the machine. `cline` and `omp` came with a row, a command and arguments but no part, so they carry no `machine`. See [ACP agents in a machine](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#acp-agents-in-a-machine).
+Each shipped row that names a part brings a `machine`. It holds the CLI's part and a state directory at `/ahpd/<id>`, seeded from the agent's own host files and never its login file. It also holds the variables that point the CLI there. So a record made from one runs from its part on any glibc image, and signs in with the key a person adds in `machine.env`. A vault-filled key reaches only this agent's commands in the machine. `cline` and `omp` came with a row, a command and arguments but no part, so their templates carry no `machine`. See [ACP agents in a machine](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#acp-agents-in-a-machine).
 
-A per-agent option written at the top level fails the load and says where it goes now. A preset that cannot be resolved is skipped with one line naming it, and the rest register: a `base` naming no shipped preset, no `command` where one is needed, an `authenticate` with no `methodId`, a `$secret` the vault does not hold, or a `machine` that is wrongly written or reads a variable the daemon does not have. A row whose sign-in depends on a variable sends it only when the daemon's own environment or that preset's `env` has the variable, and for a session placed in a machine also when the preset's `machine.env` sets it.
+A row whose sign-in depends on a variable sends it only when the daemon's own environment or the record's `env` has the variable, and for a session placed in a machine also when the record's `machine.env` sets it.
 
-`ahpd vault set host:<name>` keeps the credential a preset's `env` reads with `{ "$secret": "host:<name>" }`, from standard input. See [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md#naming-a-secret-instead-of-holding-one) for a `$secret`.
+`ahpd vault set host:<name>` keeps the credential a record's `env` reads with `{ "$secret": "host:<name>" }`, from standard input. See [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md#naming-a-secret-instead-of-holding-one) for a `$secret`.
+
+### A record, written out
+
+A record that names its own program:
+
+```json
+{
+  "id": "my-agent",
+  "kind": "acp",
+  "owner": "host",
+  "name": "My agent",
+  "config": { "command": "my-agent", "args": ["--acp"] }
+}
+```
+
+A record made from a shipped row is shorter still, because the row already names the command, the arguments and the sign-in:
+
+```json
+{
+  "id": "gemini",
+  "kind": "acp",
+  "owner": "host",
+  "name": "Gemini",
+  "config": { "env": { "GEMINI_API_KEY": { "$secret": "host:gemini" } } }
+}
+```
+
+A client puts the key's value, and the channel moves it to the vault under `host:agent/<id>/env.GEMINI_API_KEY` and keeps a `{ "$secret": "<name>" }` in its place, so no client is shown the value again. The record above names `host:gemini`, the form a record written by hand on disk uses.
+
+A client makes either with `x-ahpd/agents/put`, and the daemon keeps it at `agents/<id>.json` in its configuration folder.
 
 ## In your own host
 
