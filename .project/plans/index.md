@@ -395,7 +395,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [55 - The connectors channel opens to a list reader, and a receive capability names its path](plugin/55-connectors-open-to-a-list-reader/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #69 | plugin 53, plugin 54 | - |
 | [56 - A steered bot chat message is its own turn](plugin/56-a-steered-bot-message-is-its-own-turn/plan.md) | high | planned 2026-10-22; one task, implemented | - | - |
 | [57 - A cofold transcript skips a run that a rewind dropped while it reads](plugin/57-a-transcript-skips-a-run-a-rewind-dropped/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #70 | - | - |
-| [58 - Plugins and adapters carry icons](plugin/58-plugins-and-adapters-carry-icons/plan.md) | medium | active 2026-10-23; tasks 01-03 merged in #80; 04 and 05 implemented, and 05 waits for icon curation | - | - |
+| [58 - Plugins and adapters carry icons](plugin/58-plugins-and-adapters-carry-icons/plan.md) | medium | active 2026-10-24; tasks 01-05 merged; 06 todo, a shipped SVG for a large piece logo; 05 waits for icon curation | - | - |
 | [59 - A plugin loads, unloads and reloads while the daemon runs](plugin/59-a-plugin-loads-and-unloads-live/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | - |
 | [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | proxy 04 |
 | [61 - A plugin icon has a dark variant](plugin/61-a-plugin-icon-has-a-dark-variant/plan.md) | medium | built 2026-10-24 ([implemented.md](plugin/61-a-plugin-icon-has-a-dark-variant/implemented.md)); merged in #86 | plugin 58 | - |

@@ -77,6 +77,8 @@ activepieces apply -> piece logoUrl -> one fetch, cached on disk -> Adapter.icon
 | A single-file plugin with no package reads its icon paths relative to the file's folder | (defaulted: that folder is what it has in place of a package) | 02 |
 | The cache is `<configDir>/activepieces/icons/<piece>.png`, and a cached file is used without a fetch | (defaulted: "fetches once" means once for each piece) | 03 |
 | A logo fetch has a timeout of 5 seconds | (defaulted: a slow CDN must not hold the load) | 03 |
+| A logo is at most 32 KB, so a piece whose logo is larger gets an SVG shipped in the package, which wins over the cache and the CDN | Softov, 2026-10-24 ("Ship curated SVGs") | 06 |
+| The shipped marks come from Simple Icons, under CC0 1.0, and Softov curates each one | (defaulted: Simple Icons holds all four) | 06 |
 
 ## Proposed architecture
 
@@ -94,6 +96,7 @@ activepieces apply -> piece logoUrl -> one fetch, cached on disk -> Adapter.icon
 | [03 - An Activepieces piece has its logo](task-03-a-piece-has-its-logo.md) | implemented | 02 |
 | [04 - The host fetches an https icon](task-04-the-host-fetches-an-https-icon.md) | implemented | 02 |
 | [05 - Our plugins ship an icon](task-05-our-plugins-ship-an-icon.md) | implemented | 02 |
+| [06 - A piece with a large logo has a shipped SVG](task-06-a-large-logo-has-a-shipped-svg.md) | todo | 03 |
 
 ## Risks and tradeoffs
 
@@ -105,7 +108,8 @@ activepieces apply -> piece logoUrl -> one fetch, cached on disk -> Adapter.icon
 
 - **Done so far:** all five tasks are implemented. The sdk types carry `icons?: Icon[]` with AHP's `Icon`, `checkIcons` checks the shape and the adapters channel row sends the list. `packages/server/src/icons.ts` turns a package file, an `https:` URL or a `data:` URI into a `data:` icon. It drops a file whose real path is outside the package. The loader resolves a manifest's icons, and each adapter's icons, against the plugin's package. An `https:` icon is fetched at load with a 5 second timeout, a 32 KB limit and an `image/` check. The fetcher is injected, so no test reaches the network. The Activepieces plugin fetches each piece's `logoUrl` once, and caches it at `<configDir>/activepieces/icons/<piece>.<extension>`, with the type in the name. The adapter gets the logo as a `data:` icon. Each of the eleven packages ships an `icon.svg`, names it in `ahpd.icons` and lists it in `files`, and the webhook adapter uses the same file. The docs have an Icons section in `PLUGINS.md` and a logo section in `activepieces.md`.
 - **Reopened:** no plugin declared an icon, so tasks 04 and 05 were added. Tasks 01 to 03 are merged in #80.
-- **Next action:** Softov curates each candidate in `.project/pending/plugin-58-icon-curation.md`, then the plan is reviewed and merged.
+- **Reopened again:** the Jira, Linear, Resend and WhatsApp logos are 48 to 77 KB on the CDN, so they show no icon. Task 06 ships an SVG for each.
+- **Next action:** build task 06. Then Softov curates each candidate in `.project/pending/plugin-58-icon-curation.md`, and the plan closes.
 - **Open questions:** which icons Softov keeps, and whether Cofold takes a vendor mark.
 - **Watch out for:** an adapter icon path is relative to the package of the plugin that registered it. It is not relative to the daemon's working folder.
 
