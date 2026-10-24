@@ -96,6 +96,7 @@ beforeEach(() => {
       reader: ['agent:list'],
       'host-maker': ['agent:list', 'agent:put', 'agent:remove', 'agent:host', 'session:create'],
       all: ['agent:list', 'agent:put', 'agent:remove', 'agent:host', 'session:create'],
+      'all-agents': ['agent:all'],
       'config-writer': ['config:write'],
     },
     users: [
@@ -106,6 +107,7 @@ beforeEach(() => {
       { id: 'el', roles: ['reader'], memberships: ['backend'] },
       { id: 'fa', roles: ['host-maker'] },
       { id: 'gi', roles: ['all'] },
+      { id: 'ja', roles: ['all-agents'] },
       { id: 'ha', roles: ['config-writer'] },
     ],
   }));
@@ -571,6 +573,35 @@ it('answers a row with the config the kind describes, and refuses one it does no
   expect(await cy.call('x-ahpd/agents/put', {
     id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: {},
   })).toMatchObject({ code: -32602, message: 'agent mine.target is required' });
+  await close();
+});
+
+it('lets agent:all read every agent and remove one however it is owned', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const di = await as(host, users, 'di');
+  const fa = await as(host, users, 'fa');
+
+  // Holds `agent:all` alone: no `agent:list`, and an empty store still opens.
+  const ja = await as(host, users, 'ja');
+  expect(await ja.rows()).toEqual({});
+
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  });
+  await di.call('x-ahpd/agents/put', {
+    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
+  });
+  await fa.call('x-ahpd/agents/put', {
+    id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a' },
+  });
+
+  // Every row, the other person's and another team's included.
+  expect(Object.keys(await ja.rows()).sort()).toEqual(['mine', 'ours', 'theirs']);
+  // And the remove of another person's agent is allowed, which `agent:remove`
+  // alone would have refused.
+  expect(await ja.call('x-ahpd/agents/remove', { id: 'mine' })).toMatchObject({ result: {} });
+  expect(Object.keys(await cy.rows())).toEqual(['theirs']);
   await close();
 });
 

@@ -361,10 +361,12 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   /**
    * Whether this reader sees this row.
    *
-   * `agent:list` reads the ones the caller owns, the ones their teams own and
-   * the host's. A reader without it sees nothing, its own agent included.
+   * `agent:all` reads every row, whoever owns it. `agent:list` reads the ones
+   * the caller owns, the ones their teams own and the host's. A reader with
+   * neither sees nothing, its own agent included.
    */
   const mayRead = (id: string, reader: Principal): boolean => {
+    if (reader.can('agent:all' as Grant)) return true;
     if (!reader.can('agent:list' as Grant)) return false;
     const owner = owners.get(id);
     if (owner === undefined) return false;
@@ -375,6 +377,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
 
   const channel = recordsChannel(SCHEME, source, {
     grant: 'agent:list' as Grant,
+    alsoGrant: 'agent:all' as Grant,
     mayRead,
     mayReadEveryReader: true,
     /*
@@ -611,6 +614,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     authorize: async (params, reader) => {
       const id = params.id;
       if (typeof id !== 'string') return false;
+      if (reader?.can('agent:all' as Grant) === true) return true;
       const before = await options.collection.get(id);
       return before !== undefined && ownerAllows('agent', asOwner(before.owner), reader, 'remove');
     },
@@ -622,9 +626,13 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       /*
        * A record naming no scope is one written by hand, and only a caller the
        * gate let through with `agent:remove` reaches it; a record that names one
-       * is the owner's, and the gate's grant does not widen that.
+       * is the owner's, and the gate's grant does not widen that. `agent:all`
+       * is the one grant that does: it reads and removes any agent, whoever
+       * owns it, which is what an operator's role is given.
        */
-      if (owner !== undefined) refuseOwner('agent', 'remove', owner, reader, 'remove');
+      if (owner !== undefined && reader?.can('agent:all' as Grant) !== true) {
+        refuseOwner('agent', 'remove', owner, reader, 'remove');
+      }
       /*
        * The sessions go first: `host.replace` keeps a backend that still has a
        * session open, and a record removed beside a live session would come
