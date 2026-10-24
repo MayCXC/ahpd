@@ -311,6 +311,13 @@ export function createTurn(ctx: SessionContext): Turn {
     /** The connection this turn opened, which outlives `live` once it dies. */
     let connection: AcpConnection | undefined;
     try {
+      // Before anything is spawned: a record edited since the last turn is
+      // what this turn runs on, and one that can no longer be used refuses it.
+      const refused = ctx.refreshOptions();
+      if (refused !== undefined) {
+        finish(turnId, 'error', { errorType: 'turnFailed', message: refused });
+        return;
+      }
       const held = await ctx.open();
       connection = held.connection;
       const turn = ctx.active;

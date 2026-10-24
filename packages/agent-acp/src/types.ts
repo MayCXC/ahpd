@@ -155,6 +155,15 @@ export interface AcpOptions {
    * its profile does.
    */
   machine?: AcpMachine;
+  /**
+   * The options a record says now, rebuilt from its live view.
+   *
+   * A record is edited while its sessions run, so the session reads this at the
+   * start of each turn and spawns another server when what it spawns with has
+   * changed. Absent for a preset, which no running daemon can edit: the values
+   * it was registered with are what it keeps.
+   */
+  presetOf?: () => AcpOptions;
 }
 
 /**

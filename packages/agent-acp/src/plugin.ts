@@ -12,12 +12,16 @@
  * names a shipped row takes it and a key that names none writes a spec of its
  * own, so one package serves Copilot, Codex and a server nobody has heard of at
  * once.
+ *
+ * The same load registers the kind `acp`, and each record of it is one agent
+ * whose values come from the record rather than from a preset. The presets
+ * stay until task 07 of host 122 migrates them into host records.
  */
 
-import type { Plugin, PluginHost, SecretRef, Seed, ToolsChanged } from '@ahpd/sdk';
+import type { AgentKind, AgentView, Plugin, PluginHost, SecretRef, Seed, ToolsChanged } from '@ahpd/sdk';
 import { bag, eachPreset, fromEnvRef, knownAgents, readSecrets, secretRef } from '@ahpd/sdk';
 import { acpAgent } from './agent.js';
-import { presets as shipped } from './presets.js';
+import { KEY_VARIABLES, presets as shipped, templates } from './presets.js';
 import type { AcpMachine, AcpOptions } from './types.js';
 
 /** The plugin's id, unique among the plugins one daemon loads. */
@@ -129,6 +133,30 @@ const presetSchemaOf = (id: string): Record<string, unknown> => {
 const shippedSchemas = Object.fromEntries(Object.keys(shipped).map((id) => [id, presetSchemaOf(id)]));
 
 /**
+ * The fields a shipped preset has that a record does not set.
+ *
+ * `base` picks out of the shipped rows, which a record does not: it names its
+ * own command. The other three are the channel's on every agent, so a kind
+ * that spelled one would be a second answer to what an agent's name is.
+ */
+const NOT_A_RECORD = new Set(['base', 'name', 'description', 'model']);
+
+/**
+ * The `acp` kind's schema: one preset's fields, less the ones a record does not
+ * own.
+ *
+ * A record may set `hostTools` and `toolsChanged` as well, overriding the
+ * plugin's own for itself, because those are choices about one agent rather
+ * than about the daemon.
+ */
+const kindSchema = (): Record<string, unknown> => ({
+  type: 'object',
+  properties: Object.fromEntries(
+    Object.entries(presetSchema.properties).filter(([key]) => !NOT_A_RECORD.has(key)),
+  ),
+});
+
+/**
  * The options `apply` receives, as a JSON Schema the daemon checks them against
  * before `apply` runs.
  *
@@ -163,6 +191,30 @@ const changedOf = (value: unknown): ToolsChanged | undefined =>
 
 /** The keys that belong to a preset rather than to the load, and are refused above one. */
 const PER_PRESET = ['command', 'args', 'env', 'cwd', 'provider', 'displayName', 'description', 'model', 'authenticate', 'honoursTrust', 'machine', 'install', 'page'] as const;
+
+/**
+ * What the plugin's own options are for every agent of one load.
+ *
+ * `hostTools` and `toolsChanged` are the daemon's answer for every agent it
+ * serves, which a preset or a record may override for itself. The log is the
+ * daemon's own, so a line from a record is said where a preset's is.
+ */
+interface Shared {
+  log: (line: string) => void;
+  hostTools?: boolean;
+  toolsChanged?: ToolsChanged;
+}
+
+/** The plugin's own options, read out of the values one load was given. */
+const defaultsOf = (host: PluginHost, values: Record<string, unknown>): Shared => {
+  const hostTools = typeof values.hostTools === 'boolean' ? values.hostTools : undefined;
+  const toolsChanged = changedOf(values.toolsChanged);
+  return {
+    log: (line) => host.log(line),
+    ...(hostTools === undefined ? {} : { hostTools }),
+    ...(toolsChanged === undefined ? {} : { toolsChanged }),
+  };
+};
 
 /**
  * One preset's `machine`, with every `{ fromEnv }` read and every `$secret` kept.
@@ -280,7 +332,7 @@ const presetOf = async (
   host: PluginHost,
   id: string,
   said: Record<string, unknown>,
-  shared: Record<string, unknown>,
+  shared: Shared,
 ): Promise<AcpOptions> => {
   const by = `options.presets.${id}`;
   const listed = Object.keys(shipped).join(', ');
@@ -322,12 +374,10 @@ const presetOf = async (
   const cwd = said.cwd;
   const description = said.description;
   const model = said.model;
-  const hostTools = typeof said.hostTools === 'boolean'
-    ? said.hostTools
-    : (typeof shared.hostTools === 'boolean' ? shared.hostTools : undefined);
+  const hostTools = typeof said.hostTools === 'boolean' ? said.hostTools : shared.hostTools;
   // A value the schema refuses never reaches here; one that is neither of the
   // two words is a preset that said nothing about it.
-  const toolsChanged = changedOf(said.toolsChanged) ?? changedOf(shared.toolsChanged);
+  const toolsChanged = changedOf(said.toolsChanged) ?? shared.toolsChanged;
   const honoursTrust = typeof said.honoursTrust === 'boolean' ? said.honoursTrust : taken?.honoursTrust;
   return {
     command: command as string,
@@ -336,7 +386,7 @@ const presetOf = async (
     displayName: (typeof said.name === 'string' ? said.name : taken?.name) ?? id,
     // The log is the daemon's own - the same line `agent-claude` writes its
     // warnings to.
-    log: (line) => host.log(line),
+    log: shared.log,
     ...(Object.keys(env).length === 0 ? {} : { env }),
     ...(args === undefined ? {} : { args: args as string[] }),
     ...(cwd === undefined ? {} : { cwd: cwd as string }),
@@ -367,13 +417,117 @@ export const optionsOf = async (host: PluginHost, values: Record<string, unknown
   for (const key of PER_PRESET) {
     if (values[key] !== undefined) throw new Error(`options.${key} is written per preset, as presets.<id>.${key}`);
   }
+  const shared = defaultsOf(host, values);
   // Each failure is logged as well as said: a start prints the log and the
   // refusal a client reads names the presets rather than the messages.
   return eachPreset(host, name, Object.entries(bag(values.presets)), (id, given) =>
-    presetOf(host, id, bag(given), values), { noun: 'preset', log: true });
+    presetOf(host, id, bag(given), shared), { noun: 'preset', log: true });
 };
 
-/** Register one ACP agent per preset, from the options of this one load. */
+/**
+ * One record's options, out of the values its kind's schema held it to and the
+ * plugin's own.
+ *
+ * The channel owns the record's name, description and model, so those come
+ * from the record rather than from its config; the id is the provider. What is
+ * left is the kind's own fields, each taken as the type its schema declares,
+ * because a record written straight into the collection is not a value that
+ * was checked at the door.
+ *
+ * An empty `env` value is dropped rather than set: a template names its
+ * vendor's key variables as empty fields, and a variable set to nothing is a
+ * variable the server reads as set. A `machine` is read the way a preset's is,
+ * with every `{ fromEnv }` settled and every `$secret` kept; a record's live
+ * view has already had each `{ $secret }` read from the vault.
+ *
+ * Nothing here logs or says a value: the errors name a field, and the env is
+ * only ever handed to the spawn.
+ */
+const optionsOfRecord = (shared: Shared, record: AgentView): AcpOptions => {
+  const config = record.config;
+  const command = config['command'];
+  if (typeof command !== 'string' || command === '') {
+    throw new Error(`${record.id} names no command, and an acp record names the program its sessions run`);
+  }
+  const env: Record<string, string> = {};
+  for (const [variable, value] of Object.entries(bag(config['env']))) {
+    if (typeof value === 'string' && value !== '') env[variable] = value;
+  }
+  const args = Array.isArray(config['args'])
+    ? config['args'].filter((one): one is string => typeof one === 'string')
+    : undefined;
+  const own = config['authenticate'] === undefined ? undefined : bag(config['authenticate']);
+  const authenticate = own !== undefined && typeof own['methodId'] === 'string' && own['methodId'] !== ''
+    ? { methodId: own['methodId'] as string }
+    : undefined;
+  const cwd = typeof config['cwd'] === 'string' && config['cwd'] !== '' ? config['cwd'] : undefined;
+  const hostTools = typeof config['hostTools'] === 'boolean' ? config['hostTools'] : shared.hostTools;
+  const toolsChanged = changedOf(config['toolsChanged']) ?? shared.toolsChanged;
+  const honoursTrust = typeof config['honoursTrust'] === 'boolean' ? config['honoursTrust'] : undefined;
+  const machine = config['machine'] === undefined ? undefined : machineOf(config['machine'], record.id);
+  return {
+    command,
+    provider: record.id,
+    displayName: record.name,
+    log: shared.log,
+    ...(Object.keys(env).length === 0 ? {} : { env }),
+    ...(args === undefined ? {} : { args }),
+    ...(cwd === undefined ? {} : { cwd }),
+    ...(authenticate === undefined ? {} : { authenticate }),
+    ...(hostTools === undefined ? {} : { hostTools }),
+    ...(honoursTrust === undefined ? {} : { honoursTrust }),
+    ...(toolsChanged === undefined ? {} : { toolsChanged }),
+    ...(machine === undefined ? {} : { machine }),
+    ...(record.description === undefined ? {} : { description: record.description }),
+    ...(record.model === undefined ? {} : { model: record.model }),
+  };
+};
+
+/**
+ * The `acp` kind: the form a record of it fills in, the rows a new record
+ * starts from, and the backend each record opens.
+ *
+ * A record names its own program rather than naming a shipped row, so the
+ * command, the arguments, the directory and the machine are its own and are
+ * host-only: a team's or a person's record that set one could run a program of
+ * its choosing. The vendor key variables are key fields, so any owner may
+ * carry its own key in the vault while every other variable stays the host's
+ * to set.
+ *
+ * `open` builds one backend from the record and hands it a `presetOf` that
+ * reads the record again, so a session spawned after an edit is built from
+ * what the record says then.
+ *
+ * The preset agents are still registered beside the kind until task 07 of host
+ * 122 migrates them: the fold refuses a record id a plugin already serves, so
+ * no id is two agents.
+ */
+const kindOf = (host: PluginHost, values: Record<string, unknown>): AgentKind => {
+  const shared = defaultsOf(host, values);
+  return {
+    name: 'acp',
+    title: 'Agent Client Protocol',
+    description: 'An ACP server as an agent, with one record per server: its own command, arguments, sign-in and machine.',
+    schema: kindSchema(),
+    templates: templates(),
+    hostOnly: ['command', 'args', 'cwd', 'machine', 'install'],
+    keyVariables: KEY_VARIABLES,
+    open: (record) => acpAgent({
+      ...optionsOfRecord(shared, record),
+      presetOf: () => optionsOfRecord(shared, record),
+    }),
+  };
+};
+
+/**
+ * Register the `acp` kind, and one ACP agent per preset until task 07 migrates
+ * the presets into host records.
+ *
+ * The presets are resolved before anything is registered, so a load that fails
+ * to resolve one leaves no half-registered plugin behind.
+ */
 export const apply: Plugin['apply'] = async (host, options) => {
-  for (const one of await optionsOf(host, options)) host.registerAgent(acpAgent(one));
+  const agents = await optionsOf(host, options);
+  host.registerAgentKind(kindOf(host, options));
+  for (const one of agents) host.registerAgent(acpAgent(one));
 };

@@ -134,6 +134,7 @@ export function acpSession(options: AcpOptions, start: Start): Session {
     replay: [],
     loading: false,
     opening: undefined,
+    startedWith: '',
     cancelRequested: false,
     closed: false,
     failed: undefined,

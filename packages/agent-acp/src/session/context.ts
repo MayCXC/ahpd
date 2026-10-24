@@ -145,6 +145,15 @@ export interface SessionContext extends Config, Handlers, Opening, Queue, Turn, 
   loading: boolean;
   /** The one opening, shared by every caller, so one server is spawned. */
   opening: Promise<{ connection: AcpConnection; sessionId: string }> | undefined;
+  /**
+   * What the record said when this session's server was last spawned, as one
+   * string to compare.
+   *
+   * Empty until the first turn, which settles it: a record can be edited
+   * between the open and the turn that first uses it, and the values read then
+   * are the ones the first server is built with.
+   */
+  startedWith: string;
   /** Whether a client asked to stop, read when the prompt settles. */
   cancelRequested: boolean;
   closed: boolean;
