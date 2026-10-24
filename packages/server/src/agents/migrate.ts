@@ -18,6 +18,9 @@
  * file as it was and the records already written, and the next start finds the
  * records and writes only the rest.
  *
+ * The built-in claude a file with no presets still describes is written once: a
+ * marker beside the file says so, so a record a person removed stays removed.
+ *
  * The configuration file is the person's own, so it is copied beside itself
  * before it is rewritten, and the new text is written to a temporary name and
  * renamed over the old one. Nothing here logs a value: a record may hold a key,
@@ -25,6 +28,7 @@
  */
 
 import { copyFileSync, existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { bag, isRecord, isRecordSlug, knownAgents, reason, RECORD_SLUG } from '@ahpd/sdk';
 import type { PluginSpec, RecordCollection, ServedAgentKind, StoredRecord, Vault } from '@ahpd/sdk';
 import { nameOf } from '../plugins.js';
@@ -107,16 +111,18 @@ interface Planned {
  * preset keeps its `base`, because a record takes the shipped row it may name
  * the same way. A `$secret` and a `fromEnv` stay as they were written: where a
  * value comes from is not read here, so no key is moved or logged.
+ *
+ * `builtin` is whether the built-in claude is planned when the values do not
+ * name it: true while the spec still holds a `presets` key, and on the first
+ * migration a file with none is found in. A `presets.claude: false` is always
+ * taken as written, so a person who turned it off is answered.
  */
-const plansOf = (spec: PluginSpec, kind: PresetKind): Planned[] => {
+const plansOf = (spec: PluginSpec, kind: PresetKind, builtin: boolean): Planned[] => {
   const values = specOptions(spec);
   if (kind === 'claude') {
     const presets = bag(values['presets']);
     const plans: Planned[] = [];
-    // The built-in claude is registered unless a preset turns it off, which is
-    // what `presets.claude: false` said: an install with no presets at all is
-    // still an install whose Claude Code works.
-    if (presets['claude'] !== false) {
+    if (presets['claude'] !== false && (presets['claude'] !== undefined || builtin)) {
       const given = bag(presets['claude']);
       plans.push({ kind, id: 'claude', name: text(given['name']) ?? 'Claude Code', config: without(given, ['name']) });
     }
@@ -234,6 +240,9 @@ const stripped = (
 /** A moment as a file name carries it: no colon or dot a name cannot hold. */
 const stampOf = (when: Date): string => when.toISOString().replaceAll(/[:.]/g, '-');
 
+/** The file that remembers the presets were made into records once. */
+const markerOf = (configFile: string): string => join(dirname(configFile), 'presets-state.json');
+
 /** What `planPresets` is given. */
 export interface PlanOptions {
   /** The plugins this run loads, as the file and the flags named them. */
@@ -258,6 +267,8 @@ export interface PresetPlan {
   loaded: PresetKind[];
   /** Whether the file could not be read, so no preset can be taken out of it. */
   unreadable: boolean;
+  /** Whether this pass marks the presets as moved, so a removed claude stays removed. */
+  marker: boolean;
 }
 
 /** Read the presets this run was configured with, and say which agents they describe. */
@@ -274,15 +285,24 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
       unreadable = true;
     }
   }
+  // The one thing that makes the built-in claude happen once: a file whose
+  // presets are gone is not a file that asks for it again, and a record a
+  // person removed stays removed.
+  const migrated = existsSync(markerOf(options.configFile));
   const plans: Planned[] = [];
   const named = new Map<string, PresetKind>();
   const loaded: PresetKind[] = [];
+  let marker = false;
   for (const spec of options.plugins) {
     if (typeof spec !== 'string' && spec.enabled === false) continue;
     const kind = kindOfSpec(spec);
     if (kind === undefined) continue;
     if (!loaded.includes(kind)) loaded.push(kind);
-    for (const plan of plansOf(spec, kind)) {
+    // The built-in claude is planned while the spec still holds a `presets`
+    // key; a spec with none is given it only on the first migration.
+    const builtin = kind === 'claude' && (specOptions(spec)['presets'] !== undefined || !migrated);
+    if (builtin) marker = true;
+    for (const plan of plansOf(spec, kind, builtin)) {
       if (!isRecordSlug(plan.id)) {
         options.log(`The ${kind} preset ${plan.id} did not become a record: its id is not a slug: ${RECORD_SLUG}`);
         continue;
@@ -297,7 +317,7 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
     }
   }
   const cleaned = options.plugins.map((spec) => cleanSpec(spec, new Set(loaded)));
-  return { plugins: cleaned, configFile: options.configFile, ...(held === undefined ? {} : { held }), plans, loaded, unreadable };
+  return { plugins: cleaned, configFile: options.configFile, ...(held === undefined ? {} : { held }), plans, loaded, unreadable, marker };
 };
 
 /**
@@ -393,8 +413,8 @@ export interface Applied {
 }
 
 /**
- * Write the planned agents as records, and take them out of the configuration
- * file.
+ * Write the planned agents as records, take them out of the configuration file,
+ * and mark the presets as moved.
  *
  * A failure at any step leaves the file as it was and the records already
  * written, and says so without a value: the next start finds the records it
@@ -405,6 +425,19 @@ export interface Applied {
 export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
   const { plan } = options;
   const clock = options.now ?? (() => new Date());
+  /** Whether every planned agent was settled, so the presets were really moved. */
+  let complete = true;
+
+  /** Mark the presets as moved, so a file with none never re-adds the claude. */
+  const mark = (): void => {
+    if (!plan.marker || !complete) return;
+    try {
+      writeEntry(markerOf(plan.configFile), { version: 1, at: clock().toISOString() });
+    }
+    catch (error) {
+      options.log(`The presets were moved, but ${markerOf(plan.configFile)} could not be written: ${reason(error)}`);
+    }
+  };
 
   let present: Set<string>;
   try {
@@ -423,7 +456,9 @@ export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
     const kind = options.kinds[agent.kind];
     if (kind === undefined) {
       // The kind did not load, so what its schema says is a secret is unknown
-      // and no plugin serves the record: it stays in the file to try again.
+      // and no plugin serves the record: it stays in the file to try again, and
+      // the pass is not one that can say the presets were moved.
+      complete = false;
       options.log(`${agent.id} did not become a record: the kind ${agent.kind} did not load.`);
       continue;
     }
@@ -447,6 +482,7 @@ export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
   }
 
   if (plan.unreadable) {
+    mark();
     options.log(`The presets were not taken out of ${plan.configFile}: it could not be read, and is as it was.`);
     return { written };
   }
@@ -469,6 +505,8 @@ export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
       }
     }
   }
+
+  mark();
 
   const kept = backup === undefined ? '' : ` ${backup} holds the file as it was.`;
   if (written.length > 0) {

@@ -21,7 +21,8 @@ import { applyPresets, planPresets } from '../src/agents/migrate.js';
  * The secret a preset wrote in plaintext is a case of its own: a record may hold
  * no value a listing would serve, so it is moved to the vault under the record's
  * own name, as a put of the agents channel moves one, and the record keeps a
- * reference.
+ * reference. A file with no presets is given its built-in claude once, which is
+ * what keeps a record a person removed removed.
  *
  * Every case is in a folder of its own under the system's temporary folder, and
  * the records are a store in memory: nothing here reads or writes a person's own
@@ -384,5 +385,23 @@ it('moves a plaintext key into the vault, and keeps no value in the record, a li
   expect(JSON.stringify(await records.list())).not.toContain('sk-a-key');
   expect(readFileSync(configFile, 'utf8')).not.toContain('sk-a-key');
   expect(said.join('\n')).not.toContain('sk-a-key');
+});
+
+it('gives a file with no presets its built-in claude once, and leaves a removed one removed', async () => {
+  written([{ name: '@ahpd/agent-claude' }]);
+
+  const first = await migrate(filed());
+  expect(first.written).toEqual(['claude']);
+  expect(existsSync(join(dir, 'presets-state.json'))).toBe(true);
+
+  // A person removes the record. The file still names the plugin and holds no
+  // presets, so nothing asks for it again.
+  await records.remove('claude');
+  said.length = 0;
+
+  const again = await migrate(filed());
+  expect(again.written).toEqual([]);
+  expect(await held()).toEqual(new Map());
+  expect(said).toEqual([]);
 });
 
