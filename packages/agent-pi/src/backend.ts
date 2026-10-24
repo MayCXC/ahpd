@@ -23,7 +23,7 @@ import type {
   ToolCallEventResult,
   ToolDefinition,
 } from '@earendil-works/pi-coding-agent';
-import type { ImageContent } from '@earendil-works/pi-ai';
+import type { ImageContent, Provider } from '@earendil-works/pi-ai';
 import type { PiModel } from './models.js';
 import { idOf, modelFor, THINKING_KEY } from './models.js';
 import { loadPi } from './pi.js';
@@ -69,6 +69,18 @@ export interface PiBackend {
   choose(id: string, config?: Record<string, unknown>): Promise<boolean>;
   /** Give the conversation a name pi will keep. */
   rename(title: string): void;
+  /**
+   * Put a record's variables on pi's own runtime, before a turn runs.
+   *
+   * pi resolves a provider's key when a request is prepared, from its stored
+   * credential and the process environment, and it has no way to be handed a
+   * session's own environment. The runtime's key override is the seam it does
+   * have: a key set here beats `auth.json` and is what the model availability
+   * list is built from, so a record's own key makes its provider available and
+   * is what its requests carry. What the variables do not name is left as it
+   * was, which is the daemon's own pi.
+   */
+  useEnv(env: Record<string, string>): Promise<void>;
   /**
    * Move the leaf back to an entry, dropping what came after it.
    *
@@ -263,11 +275,53 @@ export const runtimeModels: RuntimeModels = async () => {
  */
 const INPUT_SOURCE = 'rpc' as const;
 
+/**
+ * A signal that never aborts.
+ *
+ * A provider's `resolve` takes one, and the answer here is wanted whatever else
+ * a turn is doing: the variables are this session's own, and a turn's stop has
+ * no reason to cancel a lookup that already happened.
+ */
+const STILL = new AbortController().signal;
+
 /** The narrow surface, over the session pi built. */
 function wrap(sdk: Pi, session: AgentSession): PiBackend {
   const models = async (): Promise<PiModel[]> => {
     const available = await session.modelRuntime.getAvailable();
     return available as unknown as PiModel[];
+  };
+
+  /*
+   * The keys this backend has put on pi's runtime, by provider.
+   *
+   * Held so a turn whose record did not change costs nothing: setting a key
+   * makes pi recompose the provider and refresh its whole availability list,
+   * which is the right price once and the wrong one on every turn.
+   */
+  const keyed = new Map<string, string>();
+
+  /**
+   * The key pi's own provider takes from a set of variables, or nothing.
+   *
+   * The provider's `resolve` is the question pi asks itself, asked here against
+   * a context that has these variables and no file of the daemon's, so a
+   * provider that answers needs nothing else and one that does is left to its
+   * own configuration. A resolve that throws answers nothing, for the same
+   * reason: it is a provider this record says nothing usable about.
+   */
+  const keyOf = async (provider: Provider, env: Record<string, string>): Promise<string | undefined> => {
+    const resolve = provider.auth.apiKey?.resolve;
+    if (resolve === undefined) return undefined;
+    try {
+      const auth = await resolve({
+        ctx: { env: async (name: string) => env[name], fileExists: async () => false },
+        signal: STILL,
+      });
+      return auth?.auth.apiKey;
+    }
+    catch {
+      return undefined;
+    }
   };
 
   return {
@@ -326,6 +380,35 @@ function wrap(sdk: Pi, session: AgentSession): PiBackend {
       return true;
     },
     rename: (title) => { session.setSessionName(title); },
+    /*
+     * A record's variables, as pi's runtime takes them.
+     *
+     * Not `process.env`: the daemon serves several agents at once, and a
+     * variable written there would reach every one of them, every child process
+     * they start, and outlive the turn. The runtime's own overrides are per
+     * session and are never written to disk.
+     *
+     * A provider whose key the variables no longer name is put back to what
+     * pi's own configuration says, so an edit that dropped a key drops it here
+     * too rather than leaving the turn before's key in place.
+     */
+    useEnv: async (env) => {
+      const wanted = new Map<string, string>();
+      for (const provider of session.modelRuntime.getProviders()) {
+        const key = await keyOf(provider, env);
+        if (key !== undefined && key !== '') wanted.set(provider.id, key);
+      }
+      for (const [id, key] of wanted) {
+        if (keyed.get(id) === key) continue;
+        await session.modelRuntime.setRuntimeApiKey(id, key);
+        keyed.set(id, key);
+      }
+      for (const id of [...keyed.keys()]) {
+        if (wanted.has(id)) continue;
+        await session.modelRuntime.removeRuntimeApiKey(id);
+        keyed.delete(id);
+      }
+    },
     rewind: async (entryId) => {
       const moved = await session.navigateTree(entryId);
       return !moved.cancelled;

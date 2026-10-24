@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import type { Agent, Bag, PluginHost, Start } from '../../sdk/src/types/index.js';
+import type { AgentKind } from '../../sdk/src/types/index.js';
+import type { Bag, PluginHost, Start } from '../../sdk/src/types/index.js';
 
 /*
  * The plugin loads without importing pi.
@@ -27,7 +28,7 @@ vi.mock('@earendil-works/pi-coding-agent', async () => {
   const session = {
     sessionId: 'pi-lazy-1',
     sessionManager: { getSessionFile: () => '/tmp/pi/pi-lazy-1.jsonl', getLeafId: () => 'entry-1' },
-    modelRuntime: { getAvailable: async () => [] },
+    modelRuntime: { getAvailable: async () => [], getProviders: () => [] },
     subscribe: (one: (event: Bag) => void) => { listener = one; return () => { listener = undefined; }; },
     prompt: async () => { listener?.({ type: 'agent_settled', aborted: false }); },
     steer: async () => {},
@@ -83,10 +84,26 @@ it('applies without waiting for pi, imports it once for the first list and sessi
   expect(entry).not.toBe('timed out');
   if (entry === 'timed out') return;
 
-  const agents: Agent[] = [];
-  const host = { paths: [root], registerAgent: (agent: Agent) => { agents.push(agent); } } as unknown as PluginHost;
+  // The plugin registers the kind `pi`, and the agent a case drives is one
+  // record of it: nothing is registered as an agent by the load.
+  const kinds: Record<string, AgentKind> = {};
+  const host = {
+    paths: [root],
+    registerAgentKind: (kind: AgentKind) => { kinds[kind.name] = kind; },
+  } as unknown as PluginHost;
   expect(await within(Promise.resolve(entry.apply(host, {})), 500)).not.toBe('timed out');
-  const agent = agents[0]!;
+  const kind = kinds['pi'];
+  if (kind === undefined) throw new Error('no pi kind was registered');
+  const agent = kind.open({
+    id: 'pi-lazy',
+    kind: 'pi',
+    owner: 'host',
+    name: 'pi',
+    description: undefined,
+    icon: undefined,
+    model: undefined,
+    config: {},
+  });
 
   // Held: pi has not loaded, so the file pi keeps is not known yet.
   expect(agent.stateFile?.('pi-lazy-1', root)).toBeUndefined();

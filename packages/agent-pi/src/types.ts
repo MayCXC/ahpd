@@ -6,6 +6,7 @@
  */
 
 import type { Bag } from '@ahpd/sdk';
+import type { BackendOptions, PiBackend } from './backend.js';
 
 /**
  * The title a pi conversation carries until something better is known.
@@ -103,6 +104,31 @@ export interface PiOptions {
    * hand looks - so a session started here is one they can open there.
    */
   sessionDir?: string;
+  /**
+   * Variables the record names, by name, as pi's runtime takes them.
+   *
+   * A record's key is here, read back from the vault by the channel. The
+   * session puts these on pi's own runtime at each turn, so what a record names
+   * wins over the daemon's environment and what it does not name is left as it
+   * is.
+   */
+  env?: Record<string, string>;
+  /**
+   * A reader for the record this backend was opened for, or nothing for one
+   * that was not.
+   *
+   * The session calls it at the start of each turn, which is how an edit of a
+   * running agent's record applies at the next turn rather than at a restart.
+   */
+  recordOf?: () => PiOptions;
+  /**
+   * How a session opens pi: the embedded one by default, or a caller's own.
+   *
+   * Only an embedder or a test passes one - a function is not something a
+   * configuration file carries - and it is what lets a suite drive a whole
+   * turn lifecycle without a model provider.
+   */
+  open?: (options: BackendOptions) => Promise<PiBackend>;
 }
 
 /** One tool call inside a running turn, as far as the wire cares. */

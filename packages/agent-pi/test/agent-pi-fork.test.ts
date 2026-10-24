@@ -57,6 +57,7 @@ function fakePi() {
     choose: async () => true,
     rename: () => {},
     rewind: async () => true,
+    useEnv: async () => {},
     close: () => {},
   };
   return {

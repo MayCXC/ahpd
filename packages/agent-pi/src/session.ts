@@ -53,6 +53,17 @@ const UNICODE_SPACES = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
 const EDITS = new Set(['edit', 'write']);
 
 /**
+ * The fields of a record a turn reads again, copied onto the turn's options.
+ *
+ * `sessionDir` is not here: it is where a conversation is written, and moving
+ * it under a running session would start a second file rather than continue
+ * this one. `model` and `env` apply at the turn itself; `projectTrust` is read
+ * where pi opens, which is when a project's resources are loaded, so an edit of
+ * it applies at the next open and not to one already running.
+ */
+const LIVE_KEYS = ['model', 'env', 'projectTrust'] as const;
+
+/**
  * How pi is opened for a session.
  *
  * The default opens the embedded pi this package ships; a caller may pass its
@@ -109,6 +120,37 @@ export function piSession(
   const provider = options.provider ?? 'pi';
   const emit = start.emit;
   const where = start.workingDirectory ?? process.cwd();
+
+  /**
+   * Read the record again, when this backend was opened for one.
+   *
+   * The view the kind was handed is live: an edit replaces what `config`
+   * answers, so this is what makes it the next turn's rather than the turn
+   * before's. `sessionDir` and `open` are not copied - see `LIVE_KEYS`.
+   *
+   * A record's key is in `env` here, already read from the vault by the
+   * channel. It goes to pi's runtime and nowhere else: nothing in this package
+   * writes the options, or an error about them, anywhere a person reads.
+   */
+  const refreshOptions = (): void => {
+    const now = options.recordOf?.();
+    if (now === undefined) return;
+    const holding = options as unknown as Record<string, unknown>;
+    const read = now as unknown as Record<string, unknown>;
+    for (const key of LIVE_KEYS) {
+      if (read[key] === undefined) delete holding[key];
+      else holding[key] = read[key];
+    }
+  };
+
+  /**
+   * The model the record named as of the turn before.
+   *
+   * What tells an edit from the model pi is already on: a record's model is the
+   * one the session runs on when nobody chooses, so a change of it moves pi at
+   * the next turn, and the same value said again is not a second move.
+   */
+  let recordedModel = options.model;
 
   const settings: Record<string, unknown> = { ...start.settings };
   /**
@@ -818,6 +860,12 @@ export function piSession(
       directory: where,
       turns: watchedTurns,
     });
+    /*
+     * The record's variables before the list, because one of them is what makes
+     * its provider available: a list built before them would offer a client
+     * every model but the ones the record was made for.
+     */
+    await backend.useEnv(options.env ?? {});
     // The model list is held for `Session.models()`, which the host reads for
     // a client; pi only knows it once its runtime exists.
     const available = await backend.models();
@@ -922,12 +970,23 @@ export function piSession(
     answered = undefined;
     spent = undefined;
     const startedAt = new Date().toISOString();
+    // The record as it is now: what this turn runs on is the record's, and the
+    // turn before's options are not what a person who just edited it asked for.
+    refreshOptions();
+    /*
+     * Whether the record's model changed since the turn before, which is when
+     * pi is moved to it. A record names the model the session runs on when
+     * nobody chooses, so a new one is a move at this turn; saying the same
+     * model again is not.
+     */
+    const moved = options.model !== recordedModel;
+    recordedModel = options.model;
     /*
      * The model this turn runs on, so a client that reopens the chat can show
-     * the one it used. A turn's own choice wins, then the model the session is
-     * already on, then the one the configuration names.
+     * the one it used. A turn's own choice wins, then a model the record moved
+     * to, then the model the session is already on, then the record's default.
      */
-    const ran = model?.id ?? live?.chosen()?.id ?? options.model;
+    const ran = model?.id ?? (moved ? options.model : undefined) ?? live?.chosen()?.id ?? options.model;
     const message: Bag = {
       text,
       ...(from?.origin !== undefined ? { origin: from.origin } : { origin: { kind: 'user' } }),
@@ -990,15 +1049,23 @@ export function piSession(
         // pi fixes its custom tools when it is built, so a change made since
         // means a rebuilt pi on the same file before this turn runs.
         if (stale) backend = await reopen(backend);
-        if (model !== undefined) {
+        /*
+         * The record's variables, before the choice and the prompt: the keys
+         * are what a provider is available by, and a key edited between two
+         * turns is the one this turn's request carries.
+         */
+        await backend.useEnv(options.env ?? {});
+        const wanted = model?.id ?? (moved ? options.model : undefined);
+        if (wanted !== undefined) {
           /*
-           * A turn that named a model pi does not have is not answered by
-           * whatever the session was on before: it asked for that model, and
-           * the model is left where it was for the next turn. The catch below
-           * turns this into the turn's error, before anything is prompted.
+           * A model pi does not have is not answered by whatever the session
+           * was on before: a turn that named one asked for it, and a record
+           * that named one is the agent's own answer to which model it runs.
+           * Either way the catch below turns this into the turn's error, before
+           * anything is prompted.
            */
-          if (!await backend.choose(model.id, model.config)) {
-            throw new Error(`pi has no model ${model.id}`);
+          if (!await backend.choose(wanted, model?.config)) {
+            throw new Error(`pi has no model ${wanted}`);
           }
         }
         const asked = await promptFor(text, attachments, backend.takesImages());

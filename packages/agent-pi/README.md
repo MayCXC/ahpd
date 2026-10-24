@@ -25,9 +25,13 @@ Update, remove and one-run flags such as `--plugin` are in [Plugins](https://git
 
 - At least one model provider set up in pi's own settings. pi reads its model providers and credentials from its own settings, so nothing here needs configuring. Running `pi` by hand in the same directory is the quickest check.
 
-## Options
+## Agents
 
-In the configuration file, with the options a person sets most often:
+This plugin registers the agent kind `pi`, and every pi agent is a record of that kind on the agents channel. The plugin's own options are the defaults each record starts from; a record names its own model, project trust, session directory and variables, and an edit of one applies at the session's next turn.
+
+### Options
+
+The options below are the plugin's, in the configuration file:
 
 ```json
 {
@@ -39,16 +43,13 @@ In the configuration file, with the options a person sets most often:
 
 `{ "plugins": ["@ahpd/agent-pi"] }` is enough when pi's own settings already name a model.
 
-Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs.
+Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. A record that names one wins over it.
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `provider` | `pi` | The id a client names in `createSession` |
-| `displayName` | `pi` | What a person reads instead of the id |
-| `description` | `The pi coding agent, embedded in this host` | One line about this backend |
-| `model` | pi's own default | The model a new session runs on, as `provider/modelId`; a turn may choose another, and a resumed or forked session keeps its own |
-| `projectTrust` | `trust` | Whether a project's own pi extensions, skills and prompts are loaded |
-| `sessionDir` | pi's own | Where pi keeps its sessions |
+| `model` | pi's own default | The model a record that names none runs on, as `provider/modelId`; a turn may choose another, and a resumed or forked session keeps its own |
+| `projectTrust` | `trust` | Whether a record that names none loads a project's own pi extensions, skills and prompts |
+| `sessionDir` | pi's own | Where a record that names none keeps its pi sessions |
 
 `projectTrust` is `trust` or `deny`. pi's third answer, `ask`, is not offered, because a daemon has nobody at a terminal to answer it. `trust` loads the project's pi resources, which runs its code.
 
@@ -56,7 +57,22 @@ The host's own answer about the folder is asked as well, and both have to say ye
 
 With `sessionDir` left alone, `pi` run by hand in the same directory lists the sessions started here, and the other way round.
 
-No option of this plugin holds a credential, so it needs no `ahpd vault`. A key for a machine is the `@ahpd/computer` profile's, as below.
+`provider`, `displayName` and `description` are not options: they are the record's id, name and description.
+
+### A record
+
+A record of the kind holds what one pi agent runs on, and the channel owns its id, name, description and model:
+
+| Field | What it does |
+| --- | --- |
+| `model` | The model this agent runs on, as `provider/modelId` |
+| `projectTrust` | `trust` or `deny`, as above |
+| `sessionDir` | Where this agent's pi sessions live. Host records only |
+| `env` | Variables pi is given, by name |
+
+A variable in `env` is a key of this agent's own when pi takes a key from it, such as `ANTHROPIC_API_KEY` or `DEEPSEEK_API_KEY`: it is kept in the vault, a client is told it is set and never what it is, and a team's or a person's record may set it. Any other variable is the host's to set, because a free environment can run a program. The record's variables go on pi's own runtime each turn, over the daemon's environment and over `auth.json`, and they are never written to `process.env` where the daemon's other agents would see them.
+
+No option of this plugin holds a credential, so it needs no `ahpd vault`. A key for a record belongs in the record's `env`, which the channel vaults; a key for a machine is the `@ahpd/computer` profile's, as below.
 
 ## In your own host
 

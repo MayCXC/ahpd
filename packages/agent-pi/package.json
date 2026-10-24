@@ -70,13 +70,12 @@
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
     "icons": [{ "src": "./icon.svg" }],
     "contracts": {
-      "agents": ["*"]
+      "agentKinds": ["pi"]
     },
     "options": {
-      "provider": { "required": false },
-      "displayName": { "required": false },
       "model": { "required": false },
-      "projectTrust": { "required": false }
+      "projectTrust": { "required": false },
+      "sessionDir": { "required": false }
     }
   }
 }

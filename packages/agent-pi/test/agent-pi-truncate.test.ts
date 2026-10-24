@@ -60,6 +60,7 @@ function fakePi() {
       if (refuses > 0) { refuses -= 1; return false; }
       return true;
     },
+    useEnv: async () => {},
     close: () => {},
   };
   return {
