@@ -62,6 +62,7 @@ edit -> live record updated -> the session reads it at its next turn
 | Agents have their own channel, `x-ahpd-agents`, built on the connector code | Softov, 2026-10-24: "I think we could use x-ahpd-agents." | 01 |
 | An agent's owner is `host`, `team:<id>` or `user:<id>` | (defaulted: the connector owners; Softov asked whether a person can have one) | 01 |
 | The grants are `agent:list`, `agent:put`, `agent:remove` and `agent:host`, with the connector owner rules. `admin` has them all, and `member` has none | Softov, 2026-10-24: "Copy the connector grants" | 01 |
+| `agent:all` reads every agent and removes any agent, whoever owns it. `admin` has it | Softov, 2026-10-24: "Add agent:all" | 01 |
 | A key field is write-only. The vault holds it, and no client, session or log gets the value | Softov, 2026-10-24: "Never, like connectors" | 01 |
 | The channel owns `name`, `description`, `icon` and `model` on every agent. A kind's schema adds only its own fields | Softov, 2026-10-24: "Name, description, icon, model" | 01 |
 | An agent id is unique across all owners, and a `put` with an id another owner holds is refused | (defaulted: a client names an agent by its id) | 01 |
