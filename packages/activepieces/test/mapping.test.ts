@@ -84,6 +84,23 @@ describe('a piece becomes an adapter', () => {
     expect(mapped.notes[0]).toContain('ap-oauth');
   });
 
+  it('puts the icon on the adapter when the piece has one', () => {
+    const icon = { src: 'data:image/png;base64,AAAA', contentType: 'image/png' };
+    const mapped = adapterOf(
+      piece({ auth: { type: 'SECRET_TEXT', displayName: 'API Key' } }),
+      undefined,
+      icon,
+    );
+
+    expect(mapped.adapter?.icons).toEqual([icon]);
+  });
+
+  it('leaves the icons key off an adapter with no logo', () => {
+    const mapped = adapterOf(piece({ auth: { type: 'SECRET_TEXT', displayName: 'API Key' } }));
+
+    expect(mapped.adapter).not.toHaveProperty('icons');
+  });
+
   it('maps each prop type, and leaves out a MARKDOWN prop and an optional file', () => {
     const props: Record<string, PropDescription> = {
       short: { type: 'SHORT_TEXT', displayName: 'Short', required: false },

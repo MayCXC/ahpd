@@ -985,11 +985,11 @@ in a moment is one event.
 ## The manifest
 
 A plugin declares its manifest before it runs: a description, the categories a
-client files it under, the links a person may follow, and the contracts that say
-what it may register. A package writes it in the `ahpd` field of its
-`package.json`, and a plugin loaded from a single file exports it as
-`manifest`. A plugin that has both is read from `package.json`. There is no
-`manifest.json`.
+client files it under, the links a person may follow, the contracts that say
+what it may register, and the icons a client draws beside it. A package writes
+it in the `ahpd` field of its `package.json`, and a plugin loaded from a single
+file exports it as `manifest`. A plugin that has both is read from
+`package.json`. There is no `manifest.json`.
 
 ```json
 {
@@ -1004,7 +1004,8 @@ what it may register. A package writes it in the `ahpd` field of its
     "description": "A backend that runs my model.",
     "categories": ["agent"],
     "links": [{ "title": "Docs", "url": "https://example.com/mine" }],
-    "contracts": { "agents": ["mine"], "tools": ["mine-*"] }
+    "contracts": { "agents": ["mine"], "tools": ["mine-*"] },
+    "icons": [{ "src": "./icon.svg" }]
   }
 }
 ```
@@ -1028,6 +1029,7 @@ export const manifest = {
 | `ahpd.categories` | The groups a client files the plugin under, such as `agent` or `connector` |
 | `ahpd.links` | Where a person reads more, each a `{ "title", "url" }` |
 | `ahpd.contracts` | The names each kind of registration may use. See [the contracts](#the-contracts) |
+| `ahpd.icons` | What a client draws beside the plugin's name and each adapter's title. See [icons](#icons) |
 | `ahpd.options` | A required option the configuration must set before the plugin is `ready`. `true` or `{ "required": true }` means required. It is only reported by `ahpd plugin list`, which reads it from the manifest and calls no `apply`; a load holds the options to the module's `optionsSchema` instead |
 | `peerDependencies["@ahpd/sdk"]` | The compatibility range, checked **before** the module is imported. It states the oldest `@ahpd/sdk` the plugin needs |
 
@@ -1040,6 +1042,25 @@ absent is not incompatible.
 The module is still the contract: `entry` says what to import, `apply` says what
 it is. The manifest is kept on the contribution, so the plugin channel lists it
 without importing the module again.
+
+### Icons
+
+A plugin, and each adapter it registers, may carry icons in the `Icon` shape the Agent Host Protocol defines. An icon has a `src`, and optionally a `contentType`, `sizes` and a `theme` of `light` or `dark`.
+
+```json
+"icons": [
+  { "src": "./icon.svg" },
+  { "src": "./icon-dark.png", "theme": "dark" }
+]
+```
+
+A `src` that is a relative path is a file in the plugin's package. An adapter's path is relative to the package of the plugin that registered it. The host reads each file once, at load, and sends it to a client as a `data:image/svg+xml;base64,...` or `data:image/png;base64,...` URI. An `https:` URL or a `data:` URI is sent as it is.
+
+`contentType` is taken from the manifest when it gives one, and otherwise from the extension: `.svg`, `.png`, `.jpg`, `.jpeg` or `.webp`. An icon with another extension and no `contentType` is dropped. An SVG with no `sizes` is sent with `["any"]`.
+
+One icon is at most 32 KB, and a larger file or `data:` URI is dropped. So is a path that resolves outside the package, and a file that is not there. A dropped file costs the icon and one line in the daemon's log, and the plugin still loads. An icon of the wrong shape refuses the manifest instead, because the field is checked before the plugin loads.
+
+A client draws an icon as an image, an `<img>` or a native image view, and never inline in the document. The host does not sanitize one: an SVG can carry a script, and drawing it as an image runs none.
 
 ### The contracts
 

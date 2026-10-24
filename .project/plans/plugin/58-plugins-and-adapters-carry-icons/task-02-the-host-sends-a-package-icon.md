@@ -1,6 +1,6 @@
 ---
 title: The host sends a package icon as data
-status: todo
+status: implemented
 depends: [task-01-the-sdk-carries-icons.md]
 layer: "server, docs"
 refs:
@@ -53,4 +53,11 @@ A bad icon is dropped with a problem line, and the plugin still loads.
 - `npm run typecheck` passes.
 
 ## Resume
+
+- **Done so far:** `packages/server/src/icons.ts` is new. `resolveIcons(icons, base, by, problem)` passes an `https:` source through, passes a `data:` URI of at most 32 KB through and drops a larger one, and reads any other `src` against `base`. It refuses a path that resolves outside the base with the same containment test the entries use, and then compares the real path of the file with the real path of the base, so a symlink inside the package that points outside it is refused too; a path whose real path cannot be read is dropped. A missing file, a file over `ICON_LIMIT` (32 KB) and an unknown extension with no `contentType` are each dropped with a `${by}: the icon <src> ...` line. The content type comes from `contentType` or from `.svg`, `.png`, `.jpg`, `.jpeg` or `.webp`; the file is encoded as `data:<contentType>;base64,...`; `theme` and `sizes` are kept, and an SVG with no `sizes` gets `["any"]`. `readManifest` resolves `ahpd.icons` against the package folder and keeps the problem lines on `Manifest.iconProblems`, which `loadOne` adds to `problems`, so the plugin still loads. `checkField` gained an `icons` branch that calls `checkIcons` from the sdk and turns a refusal into one problem line, and `checkFields` now checks `icons` too; `manifestFields` lists it. In `loadOne`, the loader resolves the icons of a module manifest and then the icons of each adapter it collects, against `resolved.packageDir`, or the folder of the file for a single-file plugin. An adapter whose icons all drop loses the key. `packages/server/test/plugin-icons.test.ts` is new, with fourteen cases in temporary packages. They cover a relative SVG, a relative PNG, an `https:` URL, a small `data:` URI, a large `data:` URI, a path outside the package, a symlink inside the package that points outside it, a missing file, a large file, an unknown extension, a bad manifest shape, a good adapter icon, a bad adapter icon and a single-file plugin. Fourteen tests pass.
+- **Next action:** none; task 03 builds on this.
+- **Files:** `packages/server/src/icons.ts`, `packages/server/src/plugins.ts`, `packages/server/test/plugin-icons.test.ts`, `docs/plugins/PLUGINS.md`, this task file.
+- **Open questions:** none.
+- **Departures:** `CHANGELOG.md` is left alone, as asked. The docs say a client draws an icon as an image, so the SVGs that a plugin ships run no script.
+- **Watch out for:** the adapter icons are resolved after `apply` returns, from the adapters the plugin registered during it, so the base folder is the plugin's package and not the daemon's working folder. An `https:` or `data:` source passes through untouched, so an adapter that sets one keeps it whether or not a file read happened.
 

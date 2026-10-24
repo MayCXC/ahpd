@@ -45,6 +45,7 @@ const MAIL: ServedAdapter = {
   by: 'mail',
   schema: { type: 'object', properties: {}, additionalProperties: false },
   capabilities: [],
+  icons: [{ src: 'https://example.com/mail.svg', contentType: 'image/svg+xml', sizes: ['any'], theme: 'light' }],
   open: () => {},
 };
 
@@ -167,6 +168,53 @@ it('refuses a path that does not start with /', () => {
   };
 
   expect(() => host.registerAdapter(adapter)).toThrow('path');
+});
+
+it('sends an adapter its icons, and leaves the key out where it has none', async () => {
+  const { host, users, close } = await served();
+  const ana = await as(host, users, 'ana');
+
+  const rows = await ana.rows();
+  expect(rows['mail']?.['icons']).toEqual([
+    { src: 'https://example.com/mail.svg', contentType: 'image/svg+xml', sizes: ['any'], theme: 'light' },
+  ]);
+  // An adapter with no icon carries no key rather than an empty list.
+  expect(rows['webhook']).not.toHaveProperty('icons');
+  await close();
+});
+
+it('accepts an icon of the AHP shape, and a list of them', () => {
+  const { host } = pluginHost('webhook', CONTEXT);
+  const adapter: Adapter = {
+    ...WEBHOOK,
+    icons: [
+      { src: './icon.svg', contentType: 'image/svg+xml', sizes: ['any'], theme: 'dark' },
+      { src: 'data:image/png;base64,AAAA' },
+    ],
+  };
+
+  expect(() => host.registerAdapter(adapter)).not.toThrow();
+});
+
+it('refuses an icon with no src', () => {
+  const { host } = pluginHost('webhook', CONTEXT);
+  const adapter = { ...WEBHOOK, icons: [{ contentType: 'image/svg+xml' }] } as unknown as Adapter;
+
+  expect(() => host.registerAdapter(adapter)).toThrow('src');
+});
+
+it('refuses an icon whose theme is neither light nor dark', () => {
+  const { host } = pluginHost('webhook', CONTEXT);
+  const adapter = { ...WEBHOOK, icons: [{ src: './icon.svg', theme: 'sepia' }] } as unknown as Adapter;
+
+  expect(() => host.registerAdapter(adapter)).toThrow('theme');
+});
+
+it('refuses an icons member that is not a list', () => {
+  const { host } = pluginHost('webhook', CONTEXT);
+  const adapter = { ...WEBHOOK, icons: './icon.svg' } as unknown as Adapter;
+
+  expect(() => host.registerAdapter(adapter)).toThrow('icons');
 });
 
 it('refuses a role without connector:list, config:read included', async () => {

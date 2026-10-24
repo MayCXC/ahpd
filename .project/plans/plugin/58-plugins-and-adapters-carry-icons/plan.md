@@ -1,7 +1,7 @@
 ---
 title: Plugins and adapters carry icons
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-23
 revalidated: 2026-10-23
@@ -86,9 +86,9 @@ activepieces apply -> piece logoUrl -> one fetch, cached on disk -> Adapter.icon
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The sdk carries icons](task-01-the-sdk-carries-icons.md) | todo | - |
-| [02 - The host sends a package icon as data](task-02-the-host-sends-a-package-icon.md) | todo | 01 |
-| [03 - An Activepieces piece has its logo](task-03-a-piece-has-its-logo.md) | todo | 02 |
+| [01 - The sdk carries icons](task-01-the-sdk-carries-icons.md) | implemented | - |
+| [02 - The host sends a package icon as data](task-02-the-host-sends-a-package-icon.md) | implemented | 01 |
+| [03 - An Activepieces piece has its logo](task-03-a-piece-has-its-logo.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -98,8 +98,8 @@ activepieces apply -> piece logoUrl -> one fetch, cached on disk -> Adapter.icon
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-sdk-carries-icons.md](task-01-the-sdk-carries-icons.md).
+- **Done so far:** all three tasks are implemented. The sdk types carry `icons?: Icon[]` with AHP's `Icon`, `checkIcons` checks the shape and the adapters channel row sends the list. `packages/server/src/icons.ts` turns a package file, an `https:` URL or a `data:` URI into a `data:` icon. It drops a file whose real path is outside the package. The loader resolves a manifest's icons, and each adapter's icons, against the plugin's package. The Activepieces plugin fetches each piece's `logoUrl` once, and caches it at `<configDir>/activepieces/icons/<piece>.<extension>`, with the type in the name. The adapter gets the logo as a `data:` icon. The docs have an Icons section in `PLUGINS.md` and a logo section in `activepieces.md`.
+- **Next action:** the final verification checklist below, which needs a client (ahpapp) to draw the icons. The worktree changes are left uncommitted.
 - **Open questions:** none.
 - **Watch out for:** an adapter icon path is relative to the package of the plugin that registered it. It is not relative to the daemon's working folder.
 

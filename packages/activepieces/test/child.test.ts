@@ -74,6 +74,7 @@ describe('a child asks for pieces', () => {
     expect(answer.pieces).toEqual([{
       package: fixture('piece-simple.mjs'),
       displayName: 'Simple',
+      logoUrl: 'https://example.com/simple.svg',
       auth: {
         type: 'SECRET_TEXT',
         displayName: 'API Key',

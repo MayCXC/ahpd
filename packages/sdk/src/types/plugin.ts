@@ -12,7 +12,7 @@
  * composes several contributions into one option object.
  */
 
-import type { AutomationTriggerDefinition, ChatOrigin, ChatSummary } from '@microsoft/agent-host-protocol';
+import type { AutomationTriggerDefinition, ChatOrigin, ChatSummary, Icon } from '@microsoft/agent-host-protocol';
 
 import type { Agent } from './agent.js';
 import type { StartSession } from './automations.js';
@@ -1196,10 +1196,10 @@ export type PluginContracts = Record<string, string[]>;
  * What a plugin says about itself before a person uses it.
  *
  * The fields a client draws: a description, the categories it files the plugin
- * under, the links a person can follow, and the contracts that say what the
- * plugin registers. An npm plugin writes them in the `ahpd` field of its
- * package.json, and a file plugin exports this as `manifest`; a plugin that
- * does both is read from its package.json.
+ * under, the links a person can follow, the contracts that say what the plugin
+ * registers, and the icons drawn beside its name. An npm plugin writes them in
+ * the `ahpd` field of its package.json, and a file plugin exports this as
+ * `manifest`; a plugin that does both is read from its package.json.
  */
 export interface PluginManifest {
   /** One sentence on what the plugin does. */
@@ -1210,6 +1210,14 @@ export interface PluginManifest {
   links?: PluginLink[];
   /** The names each kind of registration may use. */
   contracts?: PluginContracts;
+  /**
+   * What a client draws beside the plugin's name.
+   *
+   * An `src` that is a path is relative to the plugin's package, and the host
+   * reads the file and sends it as a `data:` URI, at most 32 KB. An `https:`
+   * URL or a `data:` URI is sent as it is.
+   */
+  icons?: Icon[];
 }
 
 /**

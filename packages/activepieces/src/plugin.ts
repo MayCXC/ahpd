@@ -1,8 +1,10 @@
 import { fork } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { adapterOf } from './mapping.js';
+import { logoOf } from './logos.js';
+import { adapterOf, nameOf } from './mapping.js';
 import { isAnswer } from './wire.js';
 import type { ChildProcess } from 'node:child_process';
+import type { Logo } from './logos.js';
 import type { RunCallArgs } from './mapping.js';
 import type { Answer, Question } from './wire.js';
 import type { Plugin, PluginHost } from '@ahpd/sdk';
@@ -205,8 +207,20 @@ export const apply: Plugin['apply'] = async (host, options) => {
     return;
   }
   for (const error of answer.errors) host.problem(`${name}: ${error}`);
-  for (const piece of answer.pieces) {
-    const mapped = adapterOf(piece, (call) => callAction(channel, piece.package, call));
+  /*
+   * Every logo is asked for at once, so one slow CDN does not hold the others:
+   * a piece whose fetch fails still has its adapter, without the icon. A piece
+   * with no name has no adapter either, and its spec is no file name to cache
+   * under, so it is not fetched.
+   */
+  const logos = await Promise.all(answer.pieces.map((piece): Logo | Promise<Logo> => {
+    const named = nameOf(piece.package);
+    return named === undefined ? {} : logoOf(named, piece.logoUrl, host.configDir);
+  }));
+  for (const [at, piece] of answer.pieces.entries()) {
+    const logo = logos[at];
+    if (logo?.problem !== undefined) host.problem(`${name}: ${logo.problem}`);
+    const mapped = adapterOf(piece, (call) => callAction(channel, piece.package, call), logo?.icon);
     for (const note of mapped.notes) host.problem(`${name}: ${note}`);
     if (mapped.adapter !== undefined) host.registerAdapter(mapped.adapter);
   }

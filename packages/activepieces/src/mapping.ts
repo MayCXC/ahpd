@@ -1,4 +1,4 @@
-import type { Adapter, Capability, Connector } from '@ahpd/sdk';
+import type { Adapter, Capability, Connector, Icon } from '@ahpd/sdk';
 import type { ActionDescription, AuthDescription, PieceDescription, PropDescription } from './wire.js';
 
 /**
@@ -188,7 +188,7 @@ export interface Mapping {
 }
 
 /** The adapter one piece makes, and what was left out of it. */
-export function adapterOf(piece: PieceDescription, run?: RunCall): Mapping {
+export function adapterOf(piece: PieceDescription, run?: RunCall, icon?: Icon): Mapping {
   const name = nameOf(piece.package);
   if (name === undefined) {
     return { notes: [`${piece.package} is not a piece package, so it has no adapter`] };
@@ -222,6 +222,8 @@ export function adapterOf(piece: PieceDescription, run?: RunCall): Mapping {
     description: piece.description ?? `One account of ${piece.displayName}, with its key.`,
     schema,
     capabilities,
+    // The piece's logo, when it published one the host could read.
+    ...(icon === undefined ? {} : { icons: [icon] }),
     // A connector holds no state here: each call brings its own auth.
     open: () => undefined,
   };

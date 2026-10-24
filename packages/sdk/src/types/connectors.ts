@@ -13,6 +13,8 @@
  * secrets - and the input of one call.
  */
 
+import type { Icon } from '@microsoft/agent-host-protocol';
+
 /**
  * What a capability is, as a client files it.
  *
@@ -111,6 +113,15 @@ export interface Adapter {
   schema: Record<string, unknown>;
   /** What a connector of this adapter does, as a client lists it. */
   capabilities: Capability[];
+  /**
+   * What a client draws beside the adapter's title.
+   *
+   * An `src` that is a path is relative to the package of the plugin that
+   * registered the adapter, and the host reads the file and sends it as a
+   * `data:` URI, at most 32 KB. An `https:` URL or a `data:` URI is sent as it
+   * is.
+   */
+  icons?: Icon[];
   /**
    * Start answering for one connector.
    *
