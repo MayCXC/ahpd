@@ -1,6 +1,6 @@
 ---
 title: A caller sees only the agents it may use
-status: implemented
+status: done
 depends: [task-01-the-agents-channel.md]
 layer: "sdk"
 refs:

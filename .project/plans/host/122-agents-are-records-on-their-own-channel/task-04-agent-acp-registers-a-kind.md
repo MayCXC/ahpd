@@ -1,6 +1,6 @@
 ---
 title: agent-acp registers a kind
-status: implemented
+status: done
 depends: [task-01-the-agents-channel.md]
 layer: "agent-acp"
 refs:

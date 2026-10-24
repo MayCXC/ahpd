@@ -1,6 +1,6 @@
 ---
 title: The docs describe agent records
-status: implemented
+status: done
 depends: [task-07-presets-become-records.md]
 layer: "docs"
 refs:

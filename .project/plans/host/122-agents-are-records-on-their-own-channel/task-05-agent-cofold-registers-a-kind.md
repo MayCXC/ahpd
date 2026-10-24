@@ -1,6 +1,6 @@
 ---
 title: agent-cofold registers a kind
-status: implemented
+status: done
 depends: [task-01-the-agents-channel.md]
 layer: "agent-cofold"
 refs:

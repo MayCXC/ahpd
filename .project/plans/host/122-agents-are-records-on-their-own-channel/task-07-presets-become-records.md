@@ -1,6 +1,6 @@
 ---
 title: Presets become records at the first start
-status: implemented
+status: done
 depends: [task-03-agent-claude-registers-a-kind.md, task-04-agent-acp-registers-a-kind.md, task-05-agent-cofold-registers-a-kind.md, task-06-agent-pi-registers-a-kind.md]
 layer: "server, bot"
 refs:
