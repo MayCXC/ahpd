@@ -1,6 +1,6 @@
 ---
 title: A backend feeds an output terminal
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

@@ -1,6 +1,6 @@
 ---
 title: A bot binds its connectors
-status: implemented
+status: done
 depends:
   - task-02-a-session-names-its-connectors.md
 layer: "bot"

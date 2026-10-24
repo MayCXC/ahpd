@@ -1,7 +1,7 @@
 ---
 title: A bot session starts with its actions
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-23
 revalidated: 2026-10-23
@@ -64,8 +64,8 @@ bot wake -> host.startSession -> beginSession names the URI -> spawn -> first to
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host names a plugin's session first](task-01-the-host-names-a-plugins-session-first.md) | implemented | - |
-| [02 - A bot owns its session from the start](task-02-a-bot-owns-its-session-from-the-start.md) | implemented | 01 |
+| [01 - The host names a plugin's session first](task-01-the-host-names-a-plugins-session-first.md) | done | - |
+| [02 - A bot owns its session from the start](task-02-a-bot-owns-its-session-from-the-start.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -75,7 +75,7 @@ bot wake -> host.startSession -> beginSession names the URI -> spawn -> first to
 ## Resume state
 
 - **Done so far:** both tasks implemented. The host calls a `named` door with the session's URI before `isolated`; the bot keeps the URI in `started` from that call, drops it if the start fails, and keeps the post-start write for a host that does not name it. The sdk test proves the first tool list carries the action.
-- **Next action:** none - built. The final verification checklist is for the reviewer.
+- **Next action:** none. The plan is built.
 - **Open questions:** none.
 - **Watch out for:** do not seed `config.connectors` in `sessionFor`. Call the door before `isolated`, because the tree can take seconds and the spawn follows it.
 

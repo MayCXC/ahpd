@@ -1,6 +1,6 @@
 ---
 title: The host answers vscode/stopBackgroundWork
-status: implemented
+status: done
 depends: [task-01-a-backend-reports-a-task-the-host-draws.md]
 layer: sdk
 refs:

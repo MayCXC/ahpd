@@ -1,6 +1,6 @@
 ---
 title: Cline and omp are known agents
-status: implemented
+status: done
 depends: []
 layer: "sdk, agent-acp, docs"
 refs:

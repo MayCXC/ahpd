@@ -1,6 +1,6 @@
 ---
 title: A nested host reports its inner tasks
-status: implemented
+status: done
 depends: [task-01-a-backend-reports-a-task-the-host-draws.md, task-03-the-host-answers-stop-background-work.md]
 layer: sdk
 refs:

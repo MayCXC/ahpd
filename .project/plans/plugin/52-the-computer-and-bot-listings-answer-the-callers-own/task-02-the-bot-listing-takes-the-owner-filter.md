@@ -1,6 +1,6 @@
 ---
 title: The bot listing takes the owner filter
-status: implemented
+status: done
 depends: []
 layer: plugin
 refs:

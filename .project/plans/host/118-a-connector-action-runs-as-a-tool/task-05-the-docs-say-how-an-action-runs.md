@@ -1,6 +1,6 @@
 ---
 title: The docs say how an action runs
-status: implemented
+status: done
 depends:
   - task-03-an-action-is-a-host-tool.md
   - task-04-a-bot-binds-its-connectors.md

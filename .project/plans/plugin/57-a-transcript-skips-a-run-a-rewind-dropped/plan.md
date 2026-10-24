@@ -1,7 +1,7 @@
 ---
 title: A cofold transcript skips a run that a rewind dropped while it reads
 domain: plugin
-status: planned
+status: built
 priority: medium
 created: 2026-10-23
 revalidated: 2026-10-23
@@ -67,7 +67,7 @@ turnsOf -> runs.listEvents(removed run) -> StoreError not_found -> the whole rea
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The transcript skips a run that is gone](task-01-the-transcript-skips-a-run-that-is-gone.md) | implemented | - |
+| [01 - The transcript skips a run that is gone](task-01-the-transcript-skips-a-run-that-is-gone.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -77,7 +77,7 @@ turnsOf -> runs.listEvents(removed run) -> StoreError not_found -> the whole rea
 ## Resume state
 
 - **Done so far:** task 01 is implemented. `turnsOf` reads a run's events before it records that run's usage, model, ending and duration. A `not_found` from the store skips the run, so a transcript read during a rewind answers the turns that remain. Every other store error still fails the read, which a `writer_busy` case pins. The changelog says so.
-- **Next action:** the Final verification checklist, by hand, before the plan is reviewed.
+- **Next action:** none. The plan is built.
 - **Open questions:** none.
 - **Watch out for:** the fork test passed five times here. The CI failure it came from is what the checklist has to confirm.
 

@@ -1,6 +1,6 @@
 ---
 title: An adapter runs an action
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

@@ -1,7 +1,7 @@
 ---
 title: The install script updates the ahpd it finds
 domain: daemon
-status: active
+status: built
 priority: high
 created: 2026-10-20
 revalidated: 2026-10-20
@@ -75,8 +75,8 @@ curl | bash -> do_install -> resolve_prefix (can move to ~/.npm-global) -> insta
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - install.sh updates the ahpd it finds](task-01-install-sh-updates-the-ahpd-it-finds.md) | implemented | - |
-| [02 - install.ps1 updates the ahpd it finds](task-02-install-ps1-updates-the-ahpd-it-finds.md) | implemented | 01 |
+| [01 - install.sh updates the ahpd it finds](task-01-install-sh-updates-the-ahpd-it-finds.md) | done | - |
+| [02 - install.ps1 updates the ahpd it finds](task-02-install-ps1-updates-the-ahpd-it-finds.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -86,6 +86,6 @@ curl | bash -> do_install -> resolve_prefix (can move to ~/.npm-global) -> insta
 ## Resume state
 
 - **Done so far:** [task-01](task-01-install-sh-updates-the-ahpd-it-finds.md) and [task-02](task-02-install-ps1-updates-the-ahpd-it-finds.md) are implemented. Both scripts find the installed ahpd and update it in its own npm prefix after asking. They stop when npm fails, or when the ahpd on the PATH still prints the old version. `install-sh.test.ts` passed 27 of 27, and `install-ps1.test.ts` skipped all 24 cases here because this box has no `pwsh`. From the repository root, `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` passed, and the full suite passed 6471 tests with 29 skipped (387 files passed, 1 skipped).
-- **Next action:** none. The plan is implemented and waits for a review.
+- **Next action:** none. The plan is built.
 - **Open questions:** none.
 - **Watch out for:** the site serves the scripts from the newest `v*` tag. The fix reaches `ahpio.com/ahpd` only after a release and a site deploy.

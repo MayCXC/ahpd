@@ -1,6 +1,6 @@
 ---
 title: The files move to domain folders
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

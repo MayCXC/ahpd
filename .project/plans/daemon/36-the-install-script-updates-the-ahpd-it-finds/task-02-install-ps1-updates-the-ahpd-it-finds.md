@@ -1,6 +1,6 @@
 ---
 title: install.ps1 updates the ahpd it finds
-status: implemented
+status: done
 depends: [task-01-install-sh-updates-the-ahpd-it-finds.md]
 layer: scripts
 refs:

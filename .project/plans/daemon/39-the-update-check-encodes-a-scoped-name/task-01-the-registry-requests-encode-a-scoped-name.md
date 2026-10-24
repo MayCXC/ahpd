@@ -1,6 +1,6 @@
 ---
 title: The registry requests encode a scoped name
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

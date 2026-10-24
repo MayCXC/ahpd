@@ -1,6 +1,6 @@
 ---
 title: A receive capability names its path
-status: implemented
+status: done
 depends: []
 layer: "sdk, webhook"
 refs:

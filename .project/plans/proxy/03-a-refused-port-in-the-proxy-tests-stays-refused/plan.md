@@ -1,7 +1,7 @@
 ---
 title: A refused port in the proxy tests stays refused
 domain: proxy
-status: planned
+status: built
 priority: high
 created: 2026-10-20
 revalidated: 2026-10-20
@@ -54,7 +54,7 @@ fake listens -> fake closes -> proxy listens on a free port, which can be the sa
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The fake closes after the proxy listens](task-01-the-fake-closes-after-the-proxy-listens.md) | implemented | - |
+| [01 - The fake closes after the proxy listens](task-01-the-fake-closes-after-the-proxy-listens.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -63,6 +63,6 @@ fake listens -> fake closes -> proxy listens on a free port, which can be the sa
 ## Resume state
 
 - **Done so far:** [task-01](task-01-the-fake-closes-after-the-proxy-listens.md) is implemented. In each of the three cases, `gone` closes after `proxy` listens. `proxy-forward.test.ts` passed 20 of 20 runs, and `pnpm -s typecheck` passed.
-- **Next action:** none. The plan is implemented and waits for a review.
+- **Next action:** none. The plan is built.
 - **Open questions:** none.
 - **Watch out for:** `fakes.splice` removes the closed fake from the list that `afterEach` closes, so keep that line after the close.

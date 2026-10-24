@@ -1,6 +1,6 @@
 ---
 title: A form draws the variables of a shipped preset
-status: implemented
+status: done
 depends: [task-03-a-known-agent-lists-its-variables.md]
 layer: "agent-acp, docs"
 refs:

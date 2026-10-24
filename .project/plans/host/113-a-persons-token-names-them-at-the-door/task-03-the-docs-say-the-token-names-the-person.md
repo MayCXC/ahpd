@@ -1,6 +1,6 @@
 ---
 title: The docs and the spec say the token names the person
-status: implemented
+status: done
 depends:
   - task-02-the-daemon-has-require-issuer.md
 layer: "docs"

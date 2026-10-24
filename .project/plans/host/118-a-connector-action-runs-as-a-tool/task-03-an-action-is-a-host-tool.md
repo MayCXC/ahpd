@@ -1,6 +1,6 @@
 ---
 title: An action is a host tool
-status: implemented
+status: done
 depends:
   - task-01-an-adapter-runs-an-action.md
   - task-02-a-session-names-its-connectors.md

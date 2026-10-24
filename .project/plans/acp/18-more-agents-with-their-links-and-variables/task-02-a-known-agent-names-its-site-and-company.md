@@ -1,6 +1,6 @@
 ---
 title: A known agent names its site and its company
-status: implemented
+status: done
 depends: [task-01-cline-and-omp-are-known-agents.md]
 layer: "sdk, server"
 refs:

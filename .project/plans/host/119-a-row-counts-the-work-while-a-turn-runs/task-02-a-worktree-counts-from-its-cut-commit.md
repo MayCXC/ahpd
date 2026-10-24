@@ -1,6 +1,6 @@
 ---
 title: A worktree counts from its cut commit
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

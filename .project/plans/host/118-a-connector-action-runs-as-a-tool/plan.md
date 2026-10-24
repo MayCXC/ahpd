@@ -1,7 +1,7 @@
 ---
 title: A connector action runs as a tool
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-23
 revalidated: 2026-10-23
@@ -118,11 +118,11 @@ tool call -> alias -> session config.connectors -> connectors://<adapter>/<id> -
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An adapter runs an action](task-01-an-adapter-runs-an-action.md) | implemented | - |
-| [02 - A session names its connectors](task-02-a-session-names-its-connectors.md) | implemented | - |
-| [03 - An action is a host tool](task-03-an-action-is-a-host-tool.md) | implemented | 01, 02 |
-| [04 - A bot binds its connectors](task-04-a-bot-binds-its-connectors.md) | implemented | 02 |
-| [05 - The docs say how an action runs](task-05-the-docs-say-how-an-action-runs.md) | implemented | 03, 04 |
+| [01 - An adapter runs an action](task-01-an-adapter-runs-an-action.md) | done | - |
+| [02 - A session names its connectors](task-02-a-session-names-its-connectors.md) | done | - |
+| [03 - An action is a host tool](task-03-an-action-is-a-host-tool.md) | done | 01, 02 |
+| [04 - A bot binds its connectors](task-04-a-bot-binds-its-connectors.md) | done | 02 |
+| [05 - The docs say how an action runs](task-05-the-docs-say-how-an-action-runs.md) | done | 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -134,7 +134,7 @@ tool call -> alias -> session config.connectors -> connectors://<adapter>/<id> -
 ## Resume state
 
 - **Done so far:** the plan, 2026-10-23. Every task, 01 to 05, is implemented.
-- **Next action:** the final verification checklist, by hand.
+- **Next action:** none. The plan is built.
 - **Open questions:** a bot's session is not handed the action tools at the list its backend is started with: the session's URI is minted inside `host.startSession`, which spawns before it answers, so the reader cannot know which bot owns the session at that first list. Every list after it has them. Task 04's Resume has the two ways out, and both are forks the Answers table does not settle.
 - **Watch out for:** the three `forSession` readers in `tooling.ts`, for the definitions, the bound tools and the instructions, must all pass the config. And the bot plugin's `filled` read opens each bot's `sessions` collection when the plugin applies, which is the first thing that does.
 

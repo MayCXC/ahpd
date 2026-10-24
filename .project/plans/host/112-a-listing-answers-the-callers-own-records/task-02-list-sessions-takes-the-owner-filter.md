@@ -1,6 +1,6 @@
 ---
 title: listSessions takes the owner filter
-status: implemented
+status: done
 depends: [task-01-one-helper-reads-the-owner-filter.md]
 layer: sdk
 refs:

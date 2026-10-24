@@ -1,6 +1,6 @@
 ---
 title: The counts move at each tool call
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

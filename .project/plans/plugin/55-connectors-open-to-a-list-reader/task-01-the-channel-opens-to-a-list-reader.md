@@ -1,6 +1,6 @@
 ---
 title: The connectors channel opens to a list reader
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

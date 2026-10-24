@@ -1,6 +1,6 @@
 ---
 title: A session names its connectors
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

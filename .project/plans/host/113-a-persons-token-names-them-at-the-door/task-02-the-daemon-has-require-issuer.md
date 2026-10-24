@@ -1,6 +1,6 @@
 ---
 title: The daemon has requireIssuer and no trustToken
-status: implemented
+status: done
 depends:
   - task-01-a-local-token-names-its-person.md
 layer: "server"

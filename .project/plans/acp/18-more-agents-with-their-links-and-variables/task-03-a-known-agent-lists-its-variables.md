@@ -1,6 +1,6 @@
 ---
 title: A known agent lists its variables
-status: implemented
+status: done
 depends: [task-02-a-known-agent-names-its-site-and-company.md]
 layer: "sdk"
 refs:

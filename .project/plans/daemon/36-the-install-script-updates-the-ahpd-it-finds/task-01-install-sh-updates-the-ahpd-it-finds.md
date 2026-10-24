@@ -1,6 +1,6 @@
 ---
 title: install.sh updates the ahpd it finds
-status: implemented
+status: done
 depends: []
 layer: scripts
 refs:

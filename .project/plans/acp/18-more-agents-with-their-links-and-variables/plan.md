@@ -1,7 +1,7 @@
 ---
 title: More agents, with their links and their variables
 domain: acp
-status: active
+status: built
 priority: medium
 created: 2026-10-19
 revalidated: 2026-10-19
@@ -85,11 +85,11 @@ knownAgents row -> found.ts -> ahpd configure prints what is installed and how t
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Cline and omp are known agents](task-01-cline-and-omp-are-known-agents.md) | implemented | - |
-| [02 - A known agent names its site and its company](task-02-a-known-agent-names-its-site-and-company.md) | implemented | 01 |
-| [03 - A known agent lists its variables](task-03-a-known-agent-lists-its-variables.md) | implemented | 02 |
-| [04 - A form draws the variables of a shipped preset](task-04-a-form-draws-the-variables-of-a-preset.md) | implemented | 03 |
-| [05 - The presets match the vendors' docs](task-05-the-presets-match-the-vendors-docs.md) | implemented | 03 |
+| [01 - Cline and omp are known agents](task-01-cline-and-omp-are-known-agents.md) | done | - |
+| [02 - A known agent names its site and its company](task-02-a-known-agent-names-its-site-and-company.md) | done | 01 |
+| [03 - A known agent lists its variables](task-03-a-known-agent-lists-its-variables.md) | done | 02 |
+| [04 - A form draws the variables of a shipped preset](task-04-a-form-draws-the-variables-of-a-preset.md) | done | 03 |
+| [05 - The presets match the vendors' docs](task-05-the-presets-match-the-vendors-docs.md) | done | 03 |
 
 ## Risks and tradeoffs
 
@@ -99,7 +99,7 @@ knownAgents row -> found.ts -> ahpd configure prints what is installed and how t
 ## Resume state
 
 - **Done so far:** tasks 01 to 05 are implemented. `knownAgents` has `cline` and `omp`, and every row has `site`, `company` and `variables`. `missingLines` prints the site as a fallback. `optionsSchema` has an entry per shipped preset, with its title, its links and one `env` field per variable. In task 05, devin sends `devin-browser` when `WINDSURF_API_KEY` is set. Amp skips its update check, the pi row and part install pi 1.3.0, and qwen keeps `--acp` alone.
-- **Next action:** review tasks 01 to 05.
+- **Next action:** none. The plan is built.
 - **Open questions:**
   - `cline` and `omp` are not installed here, so neither handshake was read. The `cline` preset has no `authenticate` until someone reads `authMethods` from `cline --acp` and finds a method for `CLINE_API_KEY`.
   - Kilo is a launcher for a native binary, with no source on this host. Whether it reads `OPENCODE_DISABLE_AUTOUPDATE` is still unconfirmed, so the comment in `presets.ts` stays.

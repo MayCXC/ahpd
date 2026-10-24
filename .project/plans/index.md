@@ -59,10 +59,10 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [33 p8 - The process tests pass on Windows](daemon/33-p8-the-process-tests-pass-on-windows/plan.md) | medium | built 2026-10-20; checked on a Windows VM; [implemented.md](daemon/33-p8-the-process-tests-pass-on-windows/implemented.md), [deferred.md](daemon/33-p8-the-process-tests-pass-on-windows/deferred.md) | 33 p6 | - |
 | [34 - The API and proxy keys get their own names](daemon/34-the-api-and-proxy-keys-get-their-own-names/plan.md) | medium | built 2026-10-19; merged in PR #22; [implemented.md](daemon/34-the-api-and-proxy-keys-get-their-own-names/implemented.md) | - | - |
 | [35 - The daemon updates itself](daemon/35-the-daemon-updates-itself/plan.md) | medium | active 2026-10-19; tasks 01 to 06 implemented, 0 done; checks in [pending/update-checks.md](../pending/update-checks.md) | daemon 09, daemon 13 | - |
-| [36 - The install script updates the ahpd it finds](daemon/36-the-install-script-updates-the-ahpd-it-finds/plan.md) | high | active 2026-10-20; tasks 01 and 02 implemented | daemon 27 | - |
+| [36 - The install script updates the ahpd it finds](daemon/36-the-install-script-updates-the-ahpd-it-finds/plan.md) | high | built 2026-10-21 (implemented.md); merged in #55 | daemon 27 | - |
 | [37 - configure sets up one pi](daemon/37-configure-sets-up-one-pi/plan.md) | medium | active 2026-10-21; task 01 implemented | - | - |
 | [38 - configure offers the web UI](daemon/38-configure-offers-the-web-ui/plan.md) | medium | active 2026-10-21; task 01 implemented | - | - |
-| [39 - The update check encodes a scoped name](daemon/39-the-update-check-encodes-a-scoped-name/plan.md) | high | active 2026-10-21; task 01 implemented | - | - |
+| [39 - The update check encodes a scoped name](daemon/39-the-update-check-encodes-a-scoped-name/plan.md) | high | built 2026-10-21 (implemented.md); merged in #58 | - | - |
 
 Next free number in `daemon`: `40`.
 
@@ -239,16 +239,16 @@ Reference: [00-host.md](host/00-host.md)
 | [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | active 2026-10-20; tasks 01 to 07 implemented; [checks by hand](../pending/host-108-token-checks.md) pending | - | - |
 | [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | active 2026-10-18; task 01 implemented; [Ember check](../pending/host-109-ember-checks.md) pending | - | - |
 | [110 - A gone folder leaves the session summary](host/110-a-gone-folder-leaves-the-session-summary/plan.md) | medium | built 2026-10-19; [implemented.md](host/110-a-gone-folder-leaves-the-session-summary/implemented.md) | - | - |
-| [111 - The sdk files sit in domain folders](host/111-the-sdk-files-sit-in-domain-folders/plan.md) | medium | implemented 2026-10-20 | - | - |
-| [112 - A listing answers the caller's own records](host/112-a-listing-answers-the-callers-own-records/plan.md) | medium | active 2026-10-21; tasks 01 to 04 implemented | - | plugin 52 |
-| [113 - A person's own token names them at the door](host/113-a-persons-token-names-them-at-the-door/plan.md) | high | active 2026-10-21; tasks 01, 02 and 03 implemented | - | - |
+| [111 - The sdk files sit in domain folders](host/111-the-sdk-files-sit-in-domain-folders/plan.md) | medium | built 2026-10-21 (implemented.md); merged in #54 | - | - |
+| [112 - A listing answers the caller's own records](host/112-a-listing-answers-the-callers-own-records/plan.md) | medium | built 2026-10-21 (implemented.md); merged in #56 | - | plugin 52 |
+| [113 - A person's own token names them at the door](host/113-a-persons-token-names-them-at-the-door/plan.md) | high | built 2026-10-21 (implemented.md); merged in #60 | - | - |
 | [114 - A subscribe with no view gets every turn](host/114-a-subscribe-with-no-view-gets-every-turn/plan.md) | medium | draft 2026-10-22 | - | - |
-| [115 - A background task has one shape](host/115-a-background-task-has-one-shape/plan.md) | medium | planned 2026-10-23; 07 of seven implemented, in build | host 47 p2 | - |
+| [115 - A background task has one shape](host/115-a-background-task-has-one-shape/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #72 | host 47 p2 | - |
 | [116 - A plugin opens a canvas on a chat](host/116-a-plugin-opens-a-canvas-on-a-chat/plan.md) | medium | draft 2026-10-22 | - | - |
 | [117 - ahpd speaks AHP 1.1.0](host/117-ahpd-speaks-ahp-1-1-0/plan.md) | medium | draft 2026-10-22; not built until AHP 1.1.0 is released | AHP 1.1.0 | - |
-| [118 - A connector action runs as a tool](host/118-a-connector-action-runs-as-a-tool/plan.md) | medium | active 2026-10-23; all five tasks implemented; open: a bot's first tool list has no action tools, planned in host 120 | plugin 53 | plugin 50 |
-| [119 - A row counts the work while a turn runs](host/119-a-row-counts-the-work-while-a-turn-runs/plan.md) | medium | active 2026-10-23; both tasks implemented | - | - |
-| [120 - A bot session starts with its actions](host/120-a-bot-session-starts-with-its-actions/plan.md) | medium | active 2026-10-23; both tasks implemented | host 118 | - |
+| [118 - A connector action runs as a tool](host/118-a-connector-action-runs-as-a-tool/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #73 | plugin 53 | plugin 50 |
+| [119 - A row counts the work while a turn runs](host/119-a-row-counts-the-work-while-a-turn-runs/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #74 | - | - |
+| [120 - A bot session starts with its actions](host/120-a-bot-session-starts-with-its-actions/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #78 | host 118 | - |
 
 Next free number in `host`: `121`.
 
@@ -389,12 +389,12 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [52 p12 - Claude and ACP write the task list](plugin/52-p12-claude-and-acp-write-the-task-list/plan.md) | medium | active 2026-10-18; tasks 01 to 07 implemented; title answer recorded | 52 p1 | - |
 | [52 p13 - A client sees the task list](plugin/52-p13-a-client-sees-the-task-list/plan.md) | medium | active 2026-10-18; 5 tasks, 01, 02, 03 and 05 implemented; 04 done 2026-10-19 | 52 p1 | - |
 | [52 p14 - A bot session has a Front, Backs and wakes](plugin/52-p14-a-bot-session-has-a-front-and-backs/plan.md) | medium | draft 2026-10-22; merged from 52 p4, p6, p9, p11 and p7's permission mode; tasks not written | 52 p3, host 107 | - |
-| [52 - The computer and bot listings answer the caller's own](plugin/52-the-computer-and-bot-listings-answer-the-callers-own/plan.md) | medium | active 2026-10-21; tasks 01 and 02 implemented | host 112 | - |
+| [52 - The computer and bot listings answer the caller's own](plugin/52-the-computer-and-bot-listings-answer-the-callers-own/plan.md) | medium | built 2026-10-21 (implemented.md); merged in #59 | host 112 | - |
 | [53 - A client sees the plugins and the connectors](plugin/53-a-client-sees-plugins-and-connectors/plan.md) | medium | active 2026-10-22; sixteen tasks, all implemented, awaiting review | plugin 44, plugin 48 | ahpw connectors and plugins pages, the UI component tree, connector actions as tools |
 | [54 - A webhook takes what real senders send](plugin/54-a-webhook-takes-what-real-senders-send/plan.md) | high | planned 2026-10-22; seven tasks, 01 to 07 implemented, awaiting review | plugin 48, plugin 53 | - |
-| [55 - The connectors channel opens to a list reader, and a receive capability names its path](plugin/55-connectors-open-to-a-list-reader/plan.md) | medium | planned 2026-10-22; three tasks, all implemented, awaiting review | plugin 53, plugin 54 | - |
+| [55 - The connectors channel opens to a list reader, and a receive capability names its path](plugin/55-connectors-open-to-a-list-reader/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #69 | plugin 53, plugin 54 | - |
 | [56 - A steered bot chat message is its own turn](plugin/56-a-steered-bot-message-is-its-own-turn/plan.md) | high | planned 2026-10-22; one task, implemented | - | - |
-| [57 - A cofold transcript skips a run that a rewind dropped while it reads](plugin/57-a-transcript-skips-a-run-a-rewind-dropped/plan.md) | medium | planned 2026-10-23; one task, implemented | - | - |
+| [57 - A cofold transcript skips a run that a rewind dropped while it reads](plugin/57-a-transcript-skips-a-run-a-rewind-dropped/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #70 | - | - |
 | [58 - Plugins and adapters carry icons](plugin/58-plugins-and-adapters-carry-icons/plan.md) | medium | active 2026-10-23; tasks 01-03 merged in #80; 04 and 05 implemented, and 05 waits for icon curation | - | - |
 | [59 - A plugin loads, unloads and reloads while the daemon runs](plugin/59-a-plugin-loads-and-unloads-live/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | - |
 | [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | proxy 04 |
@@ -481,7 +481,7 @@ Worked in this order: 01, 02, plugin 18, 03, 04, 05. Then 06, 08, 09 and 10 in a
 | [15 - An ACP question is cancelled and answered in full](acp/15-acp-question-cancelled-and-answered-in-full/plan.md) | medium | built 2026-10-13 ([implemented.md](acp/15-acp-question-cancelled-and-answered-in-full/implemented.md)) | - | - |
 | [16 - agent-acp is on the ACP SDK 1.8.0](acp/16-agent-acp-is-on-acp-sdk-1-8/plan.md) | medium | built 2026-10-16 ([implemented.md](acp/16-agent-acp-is-on-acp-sdk-1-8/implemented.md)) | - | - |
 | [17 - The permission mode a session asks for is sent](acp/17-the-asked-permission-mode-is-sent/plan.md) | medium | built 2026-10-19; [implemented.md](acp/17-the-asked-permission-mode-is-sent/implemented.md) | - | - |
-| [18 - More agents, with their links and their variables](acp/18-more-agents-with-their-links-and-variables/plan.md) | medium | active 2026-10-20; tasks 01 to 05 implemented | - | - |
+| [18 - More agents, with their links and their variables](acp/18-more-agents-with-their-links-and-variables/plan.md) | medium | built 2026-10-20 (implemented.md); merged in #52 | - | - |
 | [19 - A terminal an ACP agent in a machine asks for runs in the machine](acp/19-a-terminal-in-a-machine-runs-in-the-machine/plan.md) | high | active 2026-10-20; tasks 01 and 02 implemented, 0 done | - | the p7 hand check's terminal turns |
 
 Next free number in `acp`: `17`.
@@ -524,7 +524,7 @@ Reference: [00-proxy.md](proxy/00-proxy.md)
 | --- | --- | --- | --- | --- |
 | [01 - The proxy knows its providers and model names](proxy/01-the-proxy-knows-its-providers-and-models/plan.md) | high | built 2026-10-01 ([implemented.md](proxy/01-the-proxy-knows-its-providers-and-models/implemented.md)) | - | proxy 02 |
 | [02 - The proxy serves a person's chat completions and messages, streamed back unchanged](proxy/02-the-proxy-serves-a-persons-model-calls/plan.md) | high | built 2026-10-06 ([implemented.md](proxy/02-the-proxy-serves-a-persons-model-calls/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | proxy 01, policy 01, usage 01, host 35 | container 05 p12 |
-| [03 - A refused port in the proxy tests stays refused](proxy/03-a-refused-port-in-the-proxy-tests-stays-refused/plan.md) | high | implemented 2026-10-20 | - | - |
+| [03 - A refused port in the proxy tests stays refused](proxy/03-a-refused-port-in-the-proxy-tests-stays-refused/plan.md) | high | built 2026-10-21 (implemented.md); merged in #53 | - | - |
 | [04 - A model provider is a connector](proxy/04-providers-are-connectors/plan.md) | high | active 2026-10-24; four tasks, all implemented; icons await curation and `config-dev.json` awaits the move | plugin 60 | - |
 | [05 - A provider's own models are callable, and the proxy answers at the root](proxy/05-a-providers-own-models-are-callable/plan.md) | high | planned 2026-10-24; six tasks, todo | proxy 04 | proxy 06 |
 | [06 - The proxy serves every model endpoint](proxy/06-the-proxy-serves-every-model-endpoint/plan.md) | high | planned 2026-10-24; seven tasks, todo; batches are proxy 07 | proxy 05 | - |

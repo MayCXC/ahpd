@@ -1,6 +1,6 @@
 ---
 title: A bot owns its session from the start
-status: implemented
+status: done
 depends: [task-01-the-host-names-a-plugins-session-first.md]
 layer: "bot"
 refs:

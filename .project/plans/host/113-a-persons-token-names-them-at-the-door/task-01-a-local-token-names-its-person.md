@@ -1,6 +1,6 @@
 ---
 title: A local token names its person unless the issuer is required
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

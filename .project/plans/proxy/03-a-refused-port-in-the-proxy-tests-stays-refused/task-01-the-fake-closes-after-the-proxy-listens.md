@@ -1,6 +1,6 @@
 ---
 title: The fake closes after the proxy listens
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

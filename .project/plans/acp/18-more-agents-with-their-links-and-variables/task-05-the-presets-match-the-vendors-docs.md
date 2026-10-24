@@ -1,6 +1,6 @@
 ---
 title: The presets match the vendors' docs
-status: implemented
+status: done
 depends: [task-03-a-known-agent-lists-its-variables.md]
 layer: "sdk, agent-acp"
 refs:

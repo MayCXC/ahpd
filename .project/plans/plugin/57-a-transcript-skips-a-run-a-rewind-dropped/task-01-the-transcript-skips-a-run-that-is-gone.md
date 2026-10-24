@@ -1,6 +1,6 @@
 ---
 title: The transcript skips a run that is gone
-status: implemented
+status: done
 depends: []
 layer: "agent-cofold"
 refs:

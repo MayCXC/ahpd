@@ -1,6 +1,6 @@
 ---
 title: The computer listing and channel take the owner filter
-status: implemented
+status: done
 depends: []
 layer: plugin
 refs:

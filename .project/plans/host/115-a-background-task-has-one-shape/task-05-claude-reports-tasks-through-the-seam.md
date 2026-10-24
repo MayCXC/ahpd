@@ -1,6 +1,6 @@
 ---
 title: Claude reports tasks through the seam
-status: implemented
+status: done
 depends: [task-01-a-backend-reports-a-task-the-host-draws.md, task-03-the-host-answers-stop-background-work.md]
 layer: agent-claude
 refs:

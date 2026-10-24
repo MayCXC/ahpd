@@ -1,6 +1,6 @@
 ---
 title: The docs say the grant and the path
-status: implemented
+status: done
 depends: [task-01-the-channel-opens-to-a-list-reader.md, task-02-a-receive-capability-names-its-path.md]
 layer: "docs"
 refs:

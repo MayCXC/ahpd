@@ -1,7 +1,7 @@
 ---
 title: The sdk files sit in domain folders
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-20
 revalidated: 2026-10-20
@@ -59,7 +59,7 @@ no change: index.ts exports the same names, from the new paths
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The files move to domain folders](task-01-the-files-move-to-domain-folders.md) | implemented | - |
+| [01 - The files move to domain folders](task-01-the-files-move-to-domain-folders.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -69,6 +69,6 @@ no change: index.ts exports the same names, from the new paths
 ## Resume state
 
 - **Done so far:** task 01 implemented. The 52 files moved to the eight domain folders, every import names the new path, and `.project` and `docs` were rewritten. `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass, and the two-worker suite passed 387 files and 6463 tests.
-- **Next action:** review the move.
+- **Next action:** none. The plan is built.
 - **Open questions:** none.
 - **Watch out for:** a ref to `packages/sdk/src/types/<name>.ts` must not change when `src/<name>.ts` moves.

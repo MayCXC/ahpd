@@ -1,6 +1,6 @@
 ---
 title: One helper reads the owner filter
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

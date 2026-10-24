@@ -1,7 +1,7 @@
 ---
 title: A listing answers the caller's own records
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-21
 revalidated: 2026-10-21
@@ -70,10 +70,10 @@ subscribe ahp-automations://?owner=me -> snapshot of the caller's automations ->
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - One helper reads the owner filter](task-01-one-helper-reads-the-owner-filter.md) | implemented | - |
-| [02 - listSessions takes the owner filter](task-02-list-sessions-takes-the-owner-filter.md) | implemented | 01 |
-| [03 - The automations channel takes the owner filter](task-03-the-automations-channel-takes-the-owner-filter.md) | implemented | 01 |
-| [04 - A records channel takes the owner filter](task-04-a-records-channel-takes-the-owner-filter.md) | implemented | 01 |
+| [01 - One helper reads the owner filter](task-01-one-helper-reads-the-owner-filter.md) | done | - |
+| [02 - listSessions takes the owner filter](task-02-list-sessions-takes-the-owner-filter.md) | done | 01 |
+| [03 - The automations channel takes the owner filter](task-03-the-automations-channel-takes-the-owner-filter.md) | done | 01 |
+| [04 - A records channel takes the owner filter](task-04-a-records-channel-takes-the-owner-filter.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -84,6 +84,6 @@ subscribe ahp-automations://?owner=me -> snapshot of the caller's automations ->
 ## Resume state
 
 - **Done so far:** all four tasks. `ownerFilter` reads the filter, `listSessions` takes it as `_meta['ahpd.owner']`, the automations catalogue narrows its snapshot and its actions, and a records channel narrows with `ownerOf`.
-- **Next action:** review the four tasks, then write `implemented.md`.
+- **Next action:** none. The plan is built.
 - **Open questions:** none.
 - **Watch out for:** the index row stays `implemented`, not `done`.

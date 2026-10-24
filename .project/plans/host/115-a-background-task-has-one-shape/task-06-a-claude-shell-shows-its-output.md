@@ -1,6 +1,6 @@
 ---
 title: A Claude shell shows its output
-status: implemented
+status: done
 depends: [task-02-a-backend-feeds-an-output-terminal.md, task-05-claude-reports-tasks-through-the-seam.md]
 layer: agent-claude
 refs:
