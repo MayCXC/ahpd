@@ -1303,6 +1303,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const planned = planPresets({
     plugins: options.plugins,
     configFile: pluginFile,
+    // The marker that says the presets were moved once belongs beside the
+    // records, not beside a file a `--config-file` may have put anywhere.
+    recordsDir: configDir(),
     log: stamp,
   });
   const holding: LoadOptions = {
@@ -1405,6 +1408,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   await applyPresets({
     plan: planned,
     records: agentRecords,
+    recordsDir: configDir(),
     kinds: agentKinds,
     vault: held,
     log: stamp,

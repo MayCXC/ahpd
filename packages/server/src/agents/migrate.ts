@@ -31,7 +31,7 @@
  */
 
 import { copyFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { bag, isRecord, isRecordSlug, knownAgents, reason, RECORD_SLUG } from '@ahpd/sdk';
 import type { PluginSpec, RecordCollection, ServedAgentKind, StoredRecord, Vault } from '@ahpd/sdk';
 import { nameOf } from '../plugins.js';
@@ -285,8 +285,14 @@ const stripped = (
 /** A moment as a file name carries it: no colon or dot a name cannot hold. */
 const stampOf = (when: Date): string => when.toISOString().replaceAll(/[:.]/g, '-');
 
-/** The file that remembers the presets were made into records once. */
-const markerOf = (configFile: string): string => join(dirname(configFile), 'presets-state.json');
+/**
+ * The file that remembers the presets were made into records once.
+ *
+ * It sits in the folder the agent records are kept in, which is the one thing
+ * that says whether the records were migrated - not the folder of the
+ * configuration file, which a `--config-file` may put anywhere.
+ */
+const markerOf = (recordsDir: string): string => join(recordsDir, 'presets-state.json');
 
 /** What `planPresets` is given. */
 export interface PlanOptions {
@@ -294,6 +300,8 @@ export interface PlanOptions {
   plugins: PluginSpec[];
   /** The configuration file the presets were written in. */
   configFile: string;
+  /** The folder the agent records are kept in, where the marker that they were made once lives. */
+  recordsDir: string;
   /** One line per preset that cannot become a record, naming the id and no value. */
   log(message: string): void;
 }
@@ -350,7 +358,7 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
   // The one thing that makes the built-in claude happen once: a file whose
   // presets are gone is not a file that asks for it again, and a record a
   // person removed stays removed.
-  const migrated = existsSync(markerOf(options.configFile));
+  const migrated = existsSync(markerOf(options.recordsDir));
   const entries: EntryPlan[] = [];
   const loose: Planned[] = [];
   const named = new Map<string, PresetKind>();
@@ -532,6 +540,8 @@ export interface ApplyOptions {
   plan: PresetPlan;
   /** The `agents` collection, where every agent is a record now. */
   records: RecordCollection;
+  /** The folder the agent records are kept in, where the marker that they were made once lives. */
+  recordsDir: string;
   /** The kinds this run loaded, by name, which is what says where a key goes. */
   kinds: Readonly<Record<string, ServedAgentKind>>;
   /** Where a secret is kept; a host with none writes no record that holds one. */
@@ -568,10 +578,10 @@ export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
   const mark = (): void => {
     if (!plan.marker || !complete) return;
     try {
-      writeEntry(markerOf(plan.configFile), { version: 1, at: clock().toISOString() });
+      writeEntry(markerOf(options.recordsDir), { version: 1, at: clock().toISOString() });
     }
     catch (error) {
-      options.log(`The presets were moved, but ${markerOf(plan.configFile)} could not be written: ${reason(error)}`);
+      options.log(`The presets were moved, but ${markerOf(options.recordsDir)} could not be written: ${reason(error)}`);
     }
   };
 

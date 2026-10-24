@@ -131,10 +131,15 @@ const vault = (): Vault => ({
  * One start's migration: the plan the daemon makes before the plugins load,
  * then the write step once the kinds are known.
  */
-const migrate = async (plugins: PluginSpec[], store: RecordCollection = records, keyring: Vault | undefined = vault()) => {
+const migrate = async (
+  plugins: PluginSpec[],
+  store: RecordCollection = records,
+  keyring: Vault | undefined = vault(),
+  recordsDir: string = dir,
+) => {
   const say = (line: string): void => { said.push(line); };
-  const plan = planPresets({ plugins, configFile, log: say });
-  const applied = await applyPresets({ plan, records: store, kinds: KINDS, vault: keyring, log: say, now: () => WHEN });
+  const plan = planPresets({ plugins, configFile, recordsDir, log: say });
+  const applied = await applyPresets({ plan, records: store, recordsDir, kinds: KINDS, vault: keyring, log: say, now: () => WHEN });
   return { plugins: plan.plugins, written: applied.written };
 };
 
@@ -404,6 +409,30 @@ it('gives a file with no presets its built-in claude once, and leaves a removed 
   expect(again.written).toEqual([]);
   expect(await held()).toEqual(new Map());
   expect(said).toEqual([]);
+});
+
+it('keeps a removed claude removed when the records and the file are in different folders', async () => {
+  written([{ name: '@ahpd/agent-claude' }]);
+  // What a `--config-file` in another folder does: the file is here, and the
+  // records and the marker that they were made once are there.
+  const elsewhere = mkdtempSync(join(tmpdir(), 'ahpd-agents-'));
+  try {
+    const first = await migrate(filed(), records, vault(), elsewhere);
+    expect(first.written).toEqual(['claude']);
+    expect(existsSync(join(elsewhere, 'presets-state.json'))).toBe(true);
+    expect(existsSync(join(dir, 'presets-state.json'))).toBe(false);
+
+    await records.remove('claude');
+    said.length = 0;
+
+    const again = await migrate(filed(), records, vault(), elsewhere);
+    expect(again.written).toEqual([]);
+    expect(await held()).toEqual(new Map());
+    expect(said).toEqual([]);
+  }
+  finally {
+    rmSync(elsewhere, { recursive: true, force: true });
+  }
 });
 
 it('keeps a preset that did not become a record in the file', async () => {
