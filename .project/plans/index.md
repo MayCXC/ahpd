@@ -249,6 +249,7 @@ Reference: [00-host.md](host/00-host.md)
 | [118 - A connector action runs as a tool](host/118-a-connector-action-runs-as-a-tool/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #73 | plugin 53 | plugin 50 |
 | [119 - A row counts the work while a turn runs](host/119-a-row-counts-the-work-while-a-turn-runs/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #74 | - | - |
 | [120 - A bot session starts with its actions](host/120-a-bot-session-starts-with-its-actions/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #78 | host 118 | - |
+| [121 - A person picks the connectors a session may use](host/121-a-person-picks-a-sessions-connectors/plan.md) | medium | planned 2026-10-24; four tasks, todo | host 118 | - |
 
 Next free number in `host`: `121`.
 
