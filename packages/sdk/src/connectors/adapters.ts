@@ -55,6 +55,9 @@ const rowOf = (adapter: ServedAdapter): Record<string, unknown> => ({
   schema: adapter.schema,
   capabilities: adapter.capabilities,
   plugin: adapter.by,
+  // An icon is decoration, so an adapter with none carries no key rather than
+  // an empty list a client would have to test.
+  ...(adapter.icons === undefined || adapter.icons.length === 0 ? {} : { icons: adapter.icons }),
 });
 
 export const adaptersChannel = (options: AdaptersChannelOptions): AdaptersChannel => {

@@ -72,6 +72,8 @@ export interface PieceDescription {
   displayName: string;
   /** One line on what the piece is, when the piece says. */
   description?: string;
+  /** Where the piece's logo is, when the piece publishes one. */
+  logoUrl?: string;
   /** The auth the piece takes, one of several, or none. */
   auth?: AuthDescription | AuthDescription[];
   /** The actions the piece offers, in the order it declares them. */

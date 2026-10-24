@@ -568,6 +568,35 @@ export const checkTriggerType = (value: unknown, by: string): void => {
 };
 
 /**
+ * Check a list of icons against `Icon`, the type AHP exports.
+ *
+ * An icon is decoration, so a list that is absent is valid and every check
+ * here is about the shape a client draws: a `src` it can read, and the three
+ * optional members of the one type that says what an icon is. Whether the
+ * `src` can be read at all is the host's question, because only the host knows
+ * the package a path is relative to.
+ */
+export const checkIcons = (value: unknown, by: string): void => {
+  if (value === undefined) return;
+  if (!Array.isArray(value)) {
+    throw new Error(miss(by, 'registerAdapter', 'icons', 'a list of icons, each with a src'));
+  }
+  for (const held of value) {
+    const icon = asObject(held, by, 'registerAdapter', 'an icon');
+    stringy(icon, 'src', by, 'registerAdapter');
+    if (icon.contentType !== undefined && typeof icon.contentType !== 'string') {
+      throw new Error(miss(by, 'registerAdapter', 'contentType', 'a string, the MIME type of the icon, or nothing'));
+    }
+    if (icon.sizes !== undefined && (!Array.isArray(icon.sizes) || icon.sizes.some((one) => typeof one !== 'string'))) {
+      throw new Error(miss(by, 'registerAdapter', 'sizes', 'a list of strings, such as 48x48 or any, or nothing'));
+    }
+    if (icon.theme !== undefined && icon.theme !== 'light' && icon.theme !== 'dark') {
+      throw new Error(miss(by, 'registerAdapter', 'theme', 'light or dark, or nothing'));
+    }
+  }
+};
+
+/**
  * Check one `registerAdapter` value against `Adapter`, and answer its name.
  *
  * The name is a slug and the schema an object, because those are the two the
@@ -613,6 +642,7 @@ export const checkAdapter = (value: unknown, by: string): string => {
   if (typeof object.open !== 'function') {
     throw new Error(miss(by, 'registerAdapter', 'open', 'a function answering how to close the connector, or nothing'));
   }
+  checkIcons(object.icons, by);
   // An adapter that runs an action says how; one that cannot says nothing, and
   // then no action of it is ever offered as a tool.
   if (object.run !== undefined && typeof object.run !== 'function') {

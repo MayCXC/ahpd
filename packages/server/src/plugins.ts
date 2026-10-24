@@ -29,8 +29,9 @@ import { basename, dirname, extname, isAbsolute, join, resolve, sep } from 'node
 import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
-import { foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
-import type { Agent, Contribution, Grant, HostOptions, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import { checkIcons, foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
+import type { Agent, Contribution, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import { resolveIcons } from './icons.js';
 import { satisfies } from './compat.js';
 
 /** One spec, turned into a URL to import. */
@@ -293,6 +294,10 @@ export interface Manifest {
   links?: PluginLink[];
   /** `ahpd.contracts`, the names each kind of registration may use. */
   contracts?: PluginContracts;
+  /** `ahpd.icons`, read and encoded as a client draws them. */
+  icons?: Icon[];
+  /** One line for each `ahpd.icons` entry that could not be read. */
+  iconProblems?: string[];
   /** `peerDependencies["@ahpd/sdk"]`, the range compatibility is checked against. */
   sdkRange?: string;
   /** Set when the file could not be read or parsed, so nothing else is trustworthy. */
@@ -343,6 +348,16 @@ export const readManifest = (packageDir: string): Manifest => {
   }
   if (isLinks(inside?.links)) manifest.links = inside.links.map((one) => ({ title: one.title, url: one.url }));
   if (areContracts(inside?.contracts)) manifest.contracts = inside.contracts;
+  /*
+   * An icon is read here rather than at each subscription, and a file that is
+   * missing or too large costs the icon and not the manifest: the line is kept
+   * for the loader to say beside its own.
+   */
+  if (Array.isArray(inside?.icons)) {
+    const iconProblems: string[] = [];
+    manifest.icons = resolveIcons(inside.icons, packageDir, `plugin ${typeof value.name === 'string' ? value.name : packageDir}`, (line) => iconProblems.push(line));
+    if (iconProblems.length > 0) manifest.iconProblems = iconProblems;
+  }
   if (typeof peer === 'string') manifest.sdkRange = peer;
   return manifest;
 };
@@ -371,6 +386,17 @@ const checkField = (field: string, value: unknown, named: string): string | unde
   }
   if (field === 'links' && !isLinks(value)) return `${named} is not a list of links, each with a title and a url.`;
   if (field === 'contracts' && !areContracts(value)) return `${named} is not an object of lists of names.`;
+  if (field === 'icons') {
+    // The shape is the SDK's to say, so the two sources a manifest comes from
+    // are held to one rule; here it is turned into the one line a reader of the
+    // package.json gets.
+    try {
+      checkIcons(value, named);
+    }
+    catch {
+      return `${named} is not a list of icons, each an object with a string src and an optional contentType, sizes and theme.`;
+    }
+  }
   return undefined;
 };
 
@@ -383,7 +409,7 @@ const checkField = (field: string, value: unknown, named: string): string | unde
  * form from them and a value of the wrong kind would be drawn as nothing.
  */
 const checkFields = (inside: Record<string, unknown>, named: (field: string) => string): string | undefined => {
-  for (const field of ['description', 'categories', 'links', 'contracts']) {
+  for (const field of ['description', 'categories', 'links', 'contracts', 'icons']) {
     const wrong = checkField(field, inside[field], named(field));
     if (wrong !== undefined) return wrong;
   }
@@ -391,7 +417,7 @@ const checkFields = (inside: Record<string, unknown>, named: (field: string) => 
 };
 
 /**
- * The manifest a package.json declares, when it declares any of the four
+ * The manifest a package.json declares, when it declares any of the manifest
  * fields, or `undefined`.
  *
  * A package whose `ahpd` holds only an `entry` and a `title` has no manifest a
@@ -404,6 +430,7 @@ const manifestFields = (manifest: Manifest): PluginManifest | undefined => {
     ...(manifest.categories === undefined ? {} : { categories: manifest.categories }),
     ...(manifest.links === undefined ? {} : { links: manifest.links }),
     ...(manifest.contracts === undefined ? {} : { contracts: manifest.contracts }),
+    ...(manifest.icons === undefined ? {} : { icons: manifest.icons }),
   };
   return Object.keys(fields).length === 0 ? undefined : fields;
 };
@@ -413,7 +440,7 @@ const manifestFields = (manifest: Manifest): PluginManifest | undefined => {
  *
  * The one place names: an `ahpd`
  * that is not an object, an `ahpd.entry` that is not a string or that points
- * outside its own package, one of the four manifest fields that is not the
+ * outside its own package, one of the manifest fields that is not the
  * kind a client draws, and a `@ahpd/sdk` peer that is not a string. A
  * `package.json` that does not parse is the reader's own `problem` and is
  * returned as it stands.
@@ -858,6 +885,12 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   if ('refused' in ready) return { problems: [ready.refused] };
   const { manifest, target, url } = ready.found;
   const problems = [...ready.found.problems];
+  // What a relative icon is resolved against: the package, or the folder of a
+  // single-file plugin, which is what it has in place of one.
+  const base = resolved.packageDir ?? (target === undefined ? undefined : dirname(target));
+  // A manifest icon that could not be read was dropped and said, and the load
+  // says the same line beside its own.
+  if (manifest?.iconProblems !== undefined) problems.push(...manifest.iconProblems);
 
   const provisional = ready.provisional;
   options.log(`plugin ${provisional} loading`);
@@ -884,7 +917,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   const name = ready.id;
   /*
    * The manifest a client draws: the package.json's when it declares any of
-   * the four fields, and the module's `manifest` export otherwise. One source
+   * the manifest fields, and the module's `manifest` export otherwise. One source
    * for each plugin, so a package that has both cannot have a client list the
    * package and the module disagreeing.
    */
@@ -896,6 +929,11 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     const wrongField = checkFields(held.manifest, (field) => `${target ?? url} exports a manifest whose ${field}`);
     if (wrongField !== undefined) return { problems: [...problems, `plugin ${name} skipped: ${wrongField}`] };
     declared = held.manifest as PluginManifest;
+    // A module's own manifest names its icons the way a package's does, against
+    // the folder of its own file in place of a package.
+    if (Array.isArray(declared.icons)) {
+      declared = { ...declared, icons: resolveIcons(declared.icons, base, `plugin ${name}`, (line) => problems.push(line)) };
+    }
   }
   const title = typeof held.title === 'string' ? held.title : manifest?.title;
   const defaults = typeof held.defaults === 'object' && held.defaults !== null && !Array.isArray(held.defaults)
@@ -1046,6 +1084,17 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
    * in the plugin's own name.
    */
   seal();
+  /*
+   * An adapter's icon is relative to the package of the plugin that registered
+   * it, not to the daemon's working folder, so it is read here where that
+   * package is known rather than where the channel reads the adapters.
+   */
+  for (const adapter of Object.values(contribution.adapters)) {
+    if (adapter.icons === undefined) continue;
+    const icons = resolveIcons(adapter.icons, base, `plugin ${name}`, (line) => problems.push(line));
+    if (icons.length === 0) delete adapter.icons;
+    else adapter.icons = icons;
+  }
   /*
    * A vault that read a secret out of its own options is a vault that decided
    * where its own secrets come from, which is the one thing it cannot be asked

@@ -1,6 +1,6 @@
 ---
 title: The sdk carries icons
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -39,4 +39,11 @@ refs:
 - `npm run typecheck` passes.
 
 ## Resume
+
+- **Done so far:** `PluginManifest` in `packages/sdk/src/types/plugin.ts` and `Adapter` in `packages/sdk/src/types/connectors.ts` both carry `icons?: Icon[]`, with `Icon` imported from `@microsoft/agent-host-protocol` and no second type written. `checkIcons(value, by)` is exported from `packages/sdk/src/plugins/validate.ts`: it accepts a list of objects with a string `src`, an optional string `contentType`, a string list `sizes`, and a `theme` of `light` or `dark`. `checkAdapter` calls it after the `open` check. `rowOf` in `packages/sdk/src/connectors/adapters.ts` adds `icons` only when the adapter has at least one. The sdk index re-exports `checkIcons` and the `Icon` type, so the server and the Activepieces plugin use the same type without a new dependency. `packages/sdk/test/adapters-channel.test.ts` has five new cases. The row sends an adapter's icons and leaves the key out where there are none, an icon of the AHP shape is accepted, and a missing `src`, a wrong `theme` and a non-list `icons` are refused. Ten tests pass in that file.
+- **Next action:** none; task 02 builds on this.
+- **Files:** `packages/sdk/src/types/plugin.ts`, `packages/sdk/src/types/connectors.ts`, `packages/sdk/src/plugins/validate.ts`, `packages/sdk/src/connectors/adapters.ts`, `packages/sdk/src/index.ts`, `packages/sdk/test/adapters-channel.test.ts`, this task file.
+- **Open questions:** none.
+- **Departures:** `packages/sdk/src/index.ts` gained the `checkIcons` export and an `Icon` type re-export, which the task did not name. The server needs both to check a manifest with the same function and to use the same type.
+- **Watch out for:** an `icons` list that is empty leaves the key off the row, so a client never sees `icons: []`.
 

@@ -159,6 +159,9 @@ const describePiece = async (spec: string): Promise<PieceDescription> => {
     actions: describeActions(piece['_actions']),
   };
   if (typeof piece['description'] === 'string') one.description = piece['description'];
+  // The logo is a URL a client cannot draw from here: the parent fetches it
+  // once and sends it on as a data: icon.
+  if (typeof piece['logoUrl'] === 'string') one.logoUrl = piece['logoUrl'];
   const auth = describeAuth(piece['auth']);
   if (auth !== undefined) one.auth = auth;
   return one;
