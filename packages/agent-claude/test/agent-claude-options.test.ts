@@ -4,13 +4,13 @@ import { join } from 'node:path';
 import { expect, it, vi } from 'vitest';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { optionsSchema } from '../src/plugin.js';
+import manifest from '../package.json' with { type: 'json' };
 import { claudeExecutablePath } from '../src/claude.js';
 import { resolveNeeds } from '../../sdk/src/machines/machine.js';
 import type { Engine, AgentView, Bag } from '@ahpd/sdk';
 
 /*
- * The plugin's options, held to the schema it exports.
+ * The plugin's options, held to the schema its manifest declares.
  *
  * The loader checks them before `apply`, so a value of the wrong type is
  * reported with the plugin's name and the key, and the plugin is skipped
@@ -21,6 +21,7 @@ import type { Engine, AgentView, Bag } from '@ahpd/sdk';
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/agent-claude/src/index.ts';
 const NAME = 'agent-claude';
+const optionsSchema = manifest.ahpd.optionsSchema;
 
 /** Options that pass, which each case spoils one key of. */
 const VALID: Record<string, unknown> = {};

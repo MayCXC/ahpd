@@ -83,6 +83,58 @@
     ],
     "contracts": {
       "engines": ["cofold"]
+    },
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "model": { "type": "string", "description": "The model id a record that names none runs on." },
+        "baseUrl": { "type": "string", "description": "The OpenAI-compatible endpoint a record that names none uses." },
+        "instructions": { "type": "string", "description": "The system prompt a record that names none is created with." },
+        "computerConfigDir": {
+          "anyOf": [{ "type": "string" }, { "const": false }],
+          "description": "The configuration directory the harness reads inside a machine. /ahpd/cofold by default; false leaves the image's own."
+        },
+        "store": { "type": "string", "description": "The folder each record's cofold file store lives under, one folder per record. The tool's own data directory by default." },
+        "memory": { "type": "boolean", "description": "true to hold each record's store in memory, for a test." },
+        "tools": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": ["boolean", "object"],
+              "properties": { "requireRead": { "type": "boolean" } }
+            },
+            "shell": { "type": "boolean" },
+            "memory": { "type": "boolean" },
+            "web": {
+              "type": ["boolean", "object"],
+              "properties": {
+                "search": {
+                  "type": "object",
+                  "properties": {
+                    "brave": { "type": "object", "properties": { "apiKey": { "type": "string", "writeOnly": true } }, "required": ["apiKey"] },
+                    "tavily": { "type": "object", "properties": { "apiKey": { "type": "string", "writeOnly": true } }, "required": ["apiKey"] },
+                    "duckduckgo": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "description": "Which capabilities a session runs, where web_search gets its providers, and whether a write needs the file read first."
+        },
+        "strictTools": {
+          "type": "boolean",
+          "description": "false holds the tools option to the loose check, so a key the harness does not know is dropped rather than refused."
+        },
+        "apiKey": { "type": "string", "writeOnly": true, "description": "The daemon's own key, for a record that names none." },
+        "resource": { "type": "string", "description": "The protected resource a client authenticates against." },
+        "adapter": { "type": "object", "description": "A cofold ModelAdapter used instead of the HTTP one." },
+        "autoCompactTokens": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The estimated history size at which a session compacts, never above 80% of the model's listed context, or of 32000. That 80% by default."
+        },
+        "policy": { "type": "object", "description": "The run-level policy a pause comes from." }
+      }
     }
   }
 }

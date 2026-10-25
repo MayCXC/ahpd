@@ -633,8 +633,8 @@ const lines = (handle: (line: string) => void): (chunk: string) => void => {
 /** One shell word, quoted so a path with a space or a quote survives. */
 const quote = (word: string): string => `'${word.replace(/'/g, `'\\''`)}'`;
 
-/** What a spec is called, whether it was written as a string or an object. */
-const nameOf = (spec: PluginSpec): string => (typeof spec === 'string' ? spec : spec.name);
+/** The module a spec names, whether it was written as a string or an object. */
+const sourceOf = (spec: PluginSpec): string => (typeof spec === 'string' ? spec : spec.source ?? spec.name);
 
 /**
  * Whether a spec is a package name the container's npm can install.
@@ -644,7 +644,7 @@ const nameOf = (spec: PluginSpec): string => (typeof spec === 'string' ? spec : 
  * launcher's, so only a bare name is one an image installs.
  */
 const isPackageName = (spec: PluginSpec): boolean => {
-  const name = nameOf(spec);
+  const name = sourceOf(spec);
   return !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(name) && !name.startsWith('.') && !name.startsWith('/');
 };
 
@@ -1070,7 +1070,7 @@ export const devContainer = (options: DevContainerOptions = {}): ContainerPort =
          * already in the configuration directory is not asked for, so an image
          * that has them all never reaches the registry.
          */
-        const named = plugins.filter(isPackageName).map(nameOf);
+        const named = plugins.filter(isPackageName).map(sourceOf);
         if (named.length > 0) {
           const installed = await inside(reached, pluginInstallLine(host, named), sink, given);
           if (installed.code !== 0) {

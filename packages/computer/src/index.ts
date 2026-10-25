@@ -1,4 +1,4 @@
-export { apply, defaults, name, optionsSchema, title } from './plugin.js';
+export { apply, defaults, name, title } from './plugin.js';
 export { COMPUTERS_SCHEME, computerCatalogue } from './catalogue.js';
 export { computerMethods, computerProvider } from './provider.js';
 export type { ComputerProvider, ProviderOptions } from './provider.js';

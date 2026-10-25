@@ -239,7 +239,7 @@ A plugin contributes to the host the daemon builds: a backend, one of its ports,
 # A backend, plus the computer plugin that gives it containers to run in
 ahpd --plugin @ahpd/agent-claude --plugin @ahpd/computer
 
-# One of your own, from a directory or a single file
+# One of your own, from a directory or a single file with a plugin.json beside it
 ahpd --plugin @ahpd/agent-claude --plugin ./my-plugin
 ahpd --plugin @ahpd/agent-claude --plugin ./scratch-plugin.mjs
 
@@ -313,7 +313,7 @@ ahpd --plugin @ahpd/agent-claude
 # A directory with a manifest, tried against the working directory first
 ahpd --plugin ./packages/agent-cofold
 
-# A single file
+# A single file, with a plugin.json beside it that names its id and main
 ahpd --plugin ./scratch-agent.mjs
 
 # Several, applied in the order named

@@ -29,8 +29,8 @@ import type { RecordCollection } from '@ahpd/sdk';
 import { ask, answering, confirm, here, type Term } from '../ask.js';
 import { asSpec, configDir, configPath } from '../config.js';
 import { AGENT_PLUGIN, agentLines, alsoLines, configuredAgents, findAgents, findAlso, findRuntimes, missingLines, runtimeLines } from '../found.js';
-import { installPlugins, readEntry, run as runProgram, writeEntry, type Runner } from '../install.js';
-import { isNamed, nameOf, pluginIdOf } from '../plugins.js';
+import { editableEntry, installPlugins, readEntry, run as runProgram, writeEntry, type Runner } from '../install.js';
+import { isNamed, sourceOf, pluginIdOf } from '../plugins.js';
 import { fileRecords } from '../records.js';
 import type { Fetch } from '../update.js';
 import { version } from '../version.js';
@@ -111,7 +111,7 @@ const named = (held: Record<string, unknown>): Set<string> => {
   if (!Array.isArray(held.plugins)) return names;
   for (const entry of held.plugins) {
     const spec = asSpec(entry);
-    if (spec !== undefined) names.add(nameOf(spec)).add(pluginIdOf(spec));
+    if (spec !== undefined) names.add(sourceOf(spec)).add(pluginIdOf(spec));
   }
   return names;
 };
@@ -139,7 +139,7 @@ const switched = (list: unknown[], name: string, enabled: boolean): unknown[] =>
   const spec = asSpec(entry);
   if (spec === undefined || !isNamed(spec, name)) return entry;
   if (enabled && typeof spec === 'string') return entry;
-  const at = typeof spec === 'string' ? { name: spec } : { ...entry as Record<string, unknown>, name: spec.name };
+  const at = typeof spec === 'string' ? { source: spec } : editableEntry(spec, entry);
   return { ...at, enabled };
 });
 
@@ -207,7 +207,7 @@ const withoutPreset = (list: unknown[], id: string): unknown[] => {
   if (at === -1) return list;
   const spec = asSpec(list[at]);
   if (spec === undefined || typeof spec === 'string') return list;
-  const entry: Record<string, unknown> = { ...list[at] as Record<string, unknown>, name: spec.name };
+  const entry: Record<string, unknown> = { ...editableEntry(spec, list[at]) };
   const options = isRecord(entry.options) ? entry.options : {};
   const presets = isRecord(options['presets']) ? options['presets'] : {};
   if (!Object.hasOwn(presets, id)) return list;

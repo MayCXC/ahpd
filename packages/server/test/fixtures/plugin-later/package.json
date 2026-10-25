@@ -1,0 +1,15 @@
+{
+  "name": "plugin-later",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "ahpd": {
+    "entry": "./index.ts",
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "later": { "type": "string", "secretAtUse": true }
+      }
+    }
+  }
+}

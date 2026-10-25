@@ -1,10 +1,14 @@
 /**
  * The plugin entry: what the daemon imports when the package is named.
  *
- * `index.ts` re-exports `name`, `apply` and `optionsSchema` from here, so the
- * module the manifest names is the plugin. There is deliberately no default
- * export: the loader refuses a module without a named `apply` rather than
- * guessing which export is the plugin.
+ * `index.ts` re-exports `name`, `apply` and `title` from here, so the module
+ * the manifest names is the plugin. There is deliberately no default export:
+ * the loader refuses a module without a named `apply` rather than guessing
+ * which export is the plugin.
+ *
+ * The options schema is in this package's package.json, at `ahpd.optionsSchema`,
+ * and is read from there rather than exported: the daemon reads it without
+ * importing the module, so a plugin switched off still has a form.
  *
  * One load serves every ACP agent, and each agent is a record of the engine `acp`:
  * its own program, arguments, sign-in and machine. A record whose id names a
@@ -103,20 +107,12 @@ const kindSchema = (): Record<string, unknown> => ({
  * The options `apply` receives, as a JSON Schema the daemon checks them against
  * before `apply` runs.
  *
- * What is left are the daemon's answers for every agent: the agents themselves
- * are records, and what one record holds is checked by `optionsOfRecord`.
+ * The schema is written in this package's package.json, at `ahpd.optionsSchema`,
+ * so a listing reads it without importing this module and a plugin switched off
+ * still has a form a client draws. What is left are the daemon's answers for
+ * every agent: the agents themselves are records, and what one record holds is
+ * checked by `optionsOfRecord`.
  */
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    hostTools: { type: 'boolean', description: "Offer the host's own tools to each session as an MCP server, on by default." },
-    toolsChanged: {
-      type: 'string',
-      enum: ['notify', 'list'],
-      description: "How each session's agent hears that the tools it listed have moved, over each record's own: notify sends notifications/tools/list_changed down a stream the host holds open, list says nothing and leaves it to the agent's next tools/list. Both serve the current list; defaults to notify.",
-    },
-  },
-};
 
 /** One of the two ways an agent hears its list moved, for a value that says one. */
 const changedOf = (value: unknown): ToolsChanged | undefined =>

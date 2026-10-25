@@ -337,16 +337,15 @@ describe('Adapter.icons', () => {
 });
 
 describe('a single-file plugin', () => {
-  it('reads its manifest icons against the folder of its own file', async () => {
+  it('reads the icons of the entry that names it against the folder of its file', async () => {
     write('single.svg', '<svg/>');
-    write('single.mjs', [
-      "export const name = 'single';",
-      "export const manifest = { description: 'One file.', icons: [{ src: './single.svg' }] };",
-      'export function apply() {}',
-      '',
-    ].join('\n'));
+    write('single.mjs', 'export function apply() {}');
 
-    const { loaded, problems } = await load([join(home, 'single.mjs')]);
+    const { loaded, problems } = await load([{
+      id: 'single',
+      source: join(home, 'single.mjs'),
+      icons: [{ src: './single.svg' }],
+    }]);
 
     expect(problems).toEqual([]);
     expect(loaded[0]?.manifest?.icons).toEqual([{

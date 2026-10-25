@@ -1,0 +1,13 @@
+{
+  "name": "plugin-marker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "ahpd": {
+    "entry": "./index.ts",
+    "optionsSchema": {
+      "type": "object",
+      "properties": { "level": { "type": "integer" } }
+    }
+  }
+}

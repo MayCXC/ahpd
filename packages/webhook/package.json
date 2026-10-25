@@ -75,6 +75,20 @@
       "triggerTypes": ["webhook"],
       "adapters": ["webhook"]
     },
-    "options": {}
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "syncTimeoutSeconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "How long a sync call waits for its turn to end, in seconds."
+        },
+        "maxBodyBytes": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The most of a call body this plugin reads, in bytes. A larger body answers 413."
+        }
+      }
+    }
   }
 }

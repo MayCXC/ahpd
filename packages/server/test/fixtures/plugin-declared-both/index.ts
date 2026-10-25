@@ -1,16 +1,12 @@
-import type { PluginHost, PluginManifest } from '@ahpd/sdk';
+import type { PluginHost } from '@ahpd/sdk';
 
 /**
- * A fixture plugin that declares a manifest in both places.
+ * A fixture plugin whose package.json holds its manifest.
  *
- * The package.json is the source a loader keeps, so what it reads here is
- * never what a client lists.
+ * It used to export one too; the loader reads the declaration now, and a
+ * module that still exports a manifest is refused.
  */
 
 export const name = 'declared-both';
-
-export const manifest: PluginManifest = {
-  description: 'Declares its manifest from the module.',
-};
 
 export function apply(_host: PluginHost): void {}

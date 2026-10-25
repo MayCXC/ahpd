@@ -85,8 +85,19 @@
       "adapters": ["ap-*"],
       "closers": ["the child process that runs the pieces"]
     },
-    "options": {
-      "pieces": { "required": true }
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "pieces": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^@activepieces/piece-[a-z0-9][a-z0-9-]*$"
+          },
+          "description": "The package of each Activepieces piece this plugin offers, such as @activepieces/piece-resend."
+        }
+      },
+      "required": ["pieces"]
     }
   }
 }

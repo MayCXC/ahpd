@@ -98,7 +98,7 @@ describe('plugin config at the terminal', () => {
   it('turns the entry off by the plugin id', async () => {
     put({ plugins: [SECRET] });
     await run('plugin.disable', { name: 'secret' });
-    expect(read().plugins).toEqual([{ name: SECRET, enabled: false }]);
+    expect(read().plugins).toEqual([{ source: SECRET, enabled: false }]);
   });
 
   it('says so when an entry sets nothing', async () => {
@@ -112,7 +112,7 @@ describe('plugin config at the terminal', () => {
     put({ plugins: [SECRET] });
     await run('plugin.config.set', { name: SECRET, key: 'retries', value: '1' });
     await run('plugin.config.set', { name: SECRET, key: 'region', value: 'eu' });
-    expect(read().plugins).toEqual([{ name: SECRET, options: { retries: 1, region: 'eu' } }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { retries: 1, region: 'eu' } }]);
   });
 
   it('refuses a value the plugin\'s schema refuses, naming the option, and writes nothing', async () => {
@@ -127,27 +127,27 @@ describe('plugin config at the terminal', () => {
     // `{"$secret": "host:orders"}` parses as JSON, so the value is a reference
     // rather than a string: it is held to the name rule, not to `type: string`.
     await run('plugin.config.set', { name: SECRET, key: 'apiKey', value: '{"$secret": "host:orders"}' });
-    expect(read().plugins).toEqual([{ name: SECRET, options: { apiKey: { $secret: 'host:orders' } } }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { apiKey: { $secret: 'host:orders' } } }]);
     // And it is answered as written, so the name stays visible.
     expect((await run('plugin.config', { name: SECRET })).output?.data)
       .toEqual({ name: SECRET, options: { apiKey: { $secret: 'host:orders' } } });
 
     await expect(run('plugin.config.set', { name: SECRET, key: 'apiKey', value: '{"$secret": "x"}' }))
       .rejects.toThrow('x is not a secret name');
-    expect(read().plugins).toEqual([{ name: SECRET, options: { apiKey: { $secret: 'host:orders' } } }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { apiKey: { $secret: 'host:orders' } } }]);
   });
 
   it('writes a value for a plugin it cannot import, and says it is checked at the next start', async () => {
     put({ plugins: ['not-installed-anywhere'] });
     const set = await run('plugin.config.set', { name: 'not-installed-anywhere', key: 'mode', value: 'fast' });
-    expect(read().plugins).toEqual([{ name: 'not-installed-anywhere', options: { mode: 'fast' } }]);
+    expect(read().plugins).toEqual([{ source: 'not-installed-anywhere', options: { mode: 'fast' } }]);
     expect(set.said).toContain('checked at the next start');
   });
 
   it('unsets a value', async () => {
     put({ plugins: [{ name: SECRET, options: { apiKey: 'k-1', region: 'eu' } }] });
     await run('plugin.config.unset', { name: SECRET, key: 'apiKey' });
-    expect(read().plugins).toEqual([{ name: SECRET, options: { region: 'eu' } }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { region: 'eu' } }]);
   });
 
   it('leaves the file alone and says so when the option was not set, a string entry included', async () => {
@@ -177,7 +177,7 @@ describe('plugin config at the terminal', () => {
     // option `region` on a plugin called `unset`.
     const ran = await line(['plugin', 'config', 'unset', SECRET, 'region']);
     expect(ran.code).toBe(0);
-    expect(read().plugins).toEqual([{ name: SECRET, options: { apiKey: 'k-1' } }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { apiKey: 'k-1' } }]);
   });
 
   it('refuses a plugin the file does not name', async () => {
@@ -228,7 +228,7 @@ describe('a recorded --plugin-option that overrides a set', () => {
     });
     // The file holds the new value; the recorded flag is what a restart starts
     // from, so the line says the file's value never takes effect.
-    expect(read().plugins).toEqual([{ name: SECRET, options: { region: 'turn' } }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { region: 'turn' } }]);
   });
 
   it('reads both spellings the line may use', async () => {
@@ -247,7 +247,7 @@ describe('a recorded --plugin-option that overrides a set', () => {
       name: SECRET, key: 'region', restart: true,
       overriddenBy: `--plugin-option ${SECRET}.region`, words: overrides('region'),
     });
-    expect(read().plugins).toEqual([{ name: SECRET }]);
+    expect(read().plugins).toEqual([{ source: SECRET }]);
   });
 
   it('names the flag when the line gives one key twice, as a start reads it', async () => {
@@ -328,17 +328,17 @@ describe('plugin enable and disable at the terminal', () => {
   it('turns a string entry off and on', async () => {
     put({ plugins: [SECRET] });
     await run('plugin.disable', { name: SECRET });
-    expect(read().plugins).toEqual([{ name: SECRET, enabled: false }]);
+    expect(read().plugins).toEqual([{ source: SECRET, enabled: false }]);
     await run('plugin.enable', { name: SECRET });
-    expect(read().plugins).toEqual([{ name: SECRET, enabled: true }]);
+    expect(read().plugins).toEqual([{ source: SECRET, enabled: true }]);
   });
 
   it('turns an object entry off and on, keeping its options', async () => {
     put({ plugins: [{ name: SECRET, options: { region: 'eu' } }] });
     await run('plugin.disable', { name: SECRET });
-    expect(read().plugins).toEqual([{ name: SECRET, options: { region: 'eu' }, enabled: false }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { region: 'eu' }, enabled: false }]);
     await run('plugin.enable', { name: SECRET });
-    expect(read().plugins).toEqual([{ name: SECRET, options: { region: 'eu' }, enabled: true }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { region: 'eu' }, enabled: true }]);
   });
 
   it('leaves a string entry that is already on as it is', async () => {
@@ -382,7 +382,7 @@ describe('plugin config, served', () => {
     const removed = await post('/plugin/config/unset', { name: SECRET, key: 'region' });
     expect(removed.status).toBe(200);
     expect(await removed.json()).toEqual({ name: SECRET, key: 'region', restart: true });
-    expect(read().plugins).toEqual([{ name: SECRET, options: { apiKey: 'k-1' } }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { apiKey: 'k-1' } }]);
   });
 
   it('sets a write-only value without answering it, and says to restart', async () => {
@@ -390,7 +390,7 @@ describe('plugin config, served', () => {
     const set = await post('/plugin/config/set', { name: SECRET, key: 'apiKey', value: 'k-2' });
     expect(set.status).toBe(200);
     expect(await set.json()).toEqual({ name: SECRET, key: 'apiKey', value: '<set>', restart: true });
-    expect(read().plugins).toEqual([{ name: SECRET, options: { apiKey: 'k-2' } }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { apiKey: 'k-2' } }]);
   });
 
   it('answers a reference as it is written, and writes one without answering its name', async () => {
@@ -400,7 +400,7 @@ describe('plugin config, served', () => {
     // The option is `writeOnly`, and a reference is a name and not a value, so
     // what is answered is the reference rather than a mask.
     expect(await set.json()).toEqual({ name: SECRET, key: 'apiKey', value: { $secret: 'host:orders' }, restart: true });
-    expect(read().plugins).toEqual([{ name: SECRET, options: { apiKey: { $secret: 'host:orders' } } }]);
+    expect(read().plugins).toEqual([{ source: SECRET, options: { apiKey: { $secret: 'host:orders' } } }]);
     expect(await (await post('/plugin/config', { name: SECRET })).json())
       .toEqual({ name: SECRET, options: { apiKey: { $secret: 'host:orders' } } });
 
@@ -422,7 +422,7 @@ describe('plugin config, served', () => {
     expect(off.status).toBe(200);
     expect(await off.json()).toEqual({ name: SECRET, enabled: false, restart: true });
     expect((await post('/plugin/enable', { name: SECRET })).status).toBe(200);
-    expect(read().plugins).toEqual([{ name: SECRET, enabled: true }]);
+    expect(read().plugins).toEqual([{ source: SECRET, enabled: true }]);
   });
 });
 
@@ -540,7 +540,7 @@ describe('a plugin switched off', () => {
 
       const set = await run('plugin.config.set', { name: MARKER, key: 'level', value: 'not a number' });
       expect(set.said).toContain(`${MARKER} is switched off, so level is written unchecked; it is checked when the plugin is enabled and loads.`);
-      expect(read().plugins).toEqual([{ name: MARKER, options: { level: 'not a number' }, enabled: false }]);
+      expect(read().plugins).toEqual([{ source: MARKER, options: { level: 'not a number' }, enabled: false }]);
       await run('plugin.config', { name: MARKER });
       await run('plugin.config.unset', { name: MARKER, key: 'level' });
       // The terminal imports it to read its id, and applies nothing.

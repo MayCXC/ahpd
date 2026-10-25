@@ -88,9 +88,19 @@
       "plans": ["a session's plan lines"],
       "sessionMeta": ["ahpd.tasks"]
     },
-    "options": {
-      "requireApproval": { "required": false },
-      "sweepAfterDays": { "required": false }
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "requireApproval": {
+          "type": "boolean",
+          "description": "Whether an agent may set a task to doing before somebody approved it. Off by default."
+        },
+        "sweepAfterDays": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many days a done or dropped plan is kept. Absent, a finished plan is kept forever."
+        }
+      }
     }
   }
 }

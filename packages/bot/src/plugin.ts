@@ -68,19 +68,6 @@ export const defaults = {
   mainTurnPostMessageAbsent: 'post',
 } as const;
 
-/** The options `apply` receives, as a JSON Schema the daemon checks them against. */
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    root: { type: 'string', description: "The folder a bot's own workspace is under, as <root>/<slug>." },
-    lastChats: { type: 'integer', minimum: 1, description: 'How many chats a template lists for {{chats}}.' },
-    mainTurnPostMessageAbsent: {
-      type: 'string',
-      description: "What a main turn does when the back session's turn ends without post_message: post (the default), notice, silence or postNotice.",
-    },
-  },
-};
-
 /** What the plugin's connection to the host calls itself, which is how it knows its own frames. */
 const CLIENT = 'ahpd-bot';
 

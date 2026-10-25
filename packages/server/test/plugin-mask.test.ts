@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SET, maskOption, maskValue } from '../src/commands/config.js';
+import computer from '../../computer/package.json' with { type: 'json' };
 
 /*
  * The mask every answer about a plugin's options goes through.
@@ -83,9 +84,8 @@ describe('the computer plugin', () => {
    * holds, so it answers `<set>` wherever it is written: under the plugin's own
    * `needs` and under a profile's.
    */
-  it('answers a need value as set, a reference as written, and a profile field as it is', async () => {
-    const { optionsSchema } = await import('../../computer/src/plugin.js');
-    const schema = optionsSchema as Record<string, unknown>;
+  it('answers a need value as set, a reference as written, and a profile field as it is', () => {
+    const schema = computer.ahpd.optionsSchema as Record<string, unknown>;
     expect(maskOption(schema, 'needs', { anthropicKey: 'sk-1', other: { $secret: 'host:x' } }))
       .toEqual({ anthropicKey: SET, other: { $secret: 'host:x' } });
     expect(maskOption(schema, 'profiles', {

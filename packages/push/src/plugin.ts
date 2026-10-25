@@ -34,22 +34,6 @@ export const title = 'Push';
 export const defaults = {} as const;
 
 /**
- * The options `apply` receives, as a JSON Schema the daemon checks them against.
- *
- * `accessToken` is `secretAtUse` so a `{ "$secret": "<name>" }` reaches this
- * plugin as written rather than being read at load, and `writeOnly` so reading
- * the options back answers `<set>` rather than the token - the same shape the
- * computer's machine needs take.
- */
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    title: { type: 'string', description: "What a notification is titled. The daemon's own name when absent." },
-    accessToken: { type: 'string', writeOnly: true, secretAtUse: true, description: 'An Expo access token, where the project has push security on. A name may be given instead of the token, as {"$secret": "host:expo"}.' },
-  },
-};
-
-/**
  * The kinds of waiting that are a person being asked something.
  *
  * `toolClientExecution` is left out on purpose: the call has cleared its

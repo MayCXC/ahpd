@@ -1,0 +1,10 @@
+{
+  "id": "standalone",
+  "name": "Standalone",
+  "version": "1.2.3",
+  "description": "Describes itself from a plugin.json.",
+  "categories": ["tool"],
+  "links": [{ "title": "Docs", "url": "https://ahpd.dev/plugins" }],
+  "contracts": { "tools": ["standalone_tool"] },
+  "main": "index.mjs"
+}

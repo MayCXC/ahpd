@@ -63,19 +63,6 @@ export interface Options {
   anonymous?: boolean;
 }
 
-/**
- * `Options` as a JSON Schema, which the daemon checks what the configuration
- * named against before `apply` runs.
- */
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    name: { type: 'string', description: "What the tunnel is called in a client's list. This machine's hostname by default." },
-    keep: { type: 'boolean', description: 'Whether the tunnel outlives the daemon. true by default.' },
-    anonymous: { type: 'boolean', description: 'Whether somebody not signed in to this account may reach it. false by default.' },
-  },
-};
-
 /** What was stood up, so `stopping` can take it back down. */
 interface Held {
   tunnel: Tunnel;

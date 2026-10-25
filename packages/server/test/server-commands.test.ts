@@ -234,19 +234,19 @@ describe('--plugin-option', () => {
 
   it('merges over the file\'s options for that plugin, one flag per option', () => {
     writeFileSync(config, JSON.stringify({ plugins: [{ name: 'a', options: { x: 1, y: 2 } }, 'b'] }));
-    expect(plugins({ pluginOptions: ['a.y=3', 'a.z=x'] })).toEqual([{ name: 'a', options: { x: 1, y: 3, z: 'x' } }, 'b']);
+    expect(plugins({ pluginOptions: ['a.y=3', 'a.z=x'] })).toEqual([{ source: 'a', options: { x: 1, y: 3, z: 'x' } }, 'b']);
   });
 
   it('reads the value as JSON when it parses and as text otherwise', () => {
     writeFileSync(config, JSON.stringify({ plugins: ['a'] }));
     expect(plugins({ pluginOptions: ['a.n=1', 'a.s=x', 'a.b=true', 'a.o={"k":[1]}', 'a.e=x=y'] }))
-      .toEqual([{ name: 'a', options: { n: 1, s: 'x', b: true, o: { k: [1] }, e: 'x=y' } }]);
+      .toEqual([{ source: 'a', options: { n: 1, s: 'x', b: true, o: { k: [1] }, e: 'x=y' } }]);
   });
 
   it('keeps a number only when it reads back as typed, and a JSON string as text', () => {
     writeFileSync(config, JSON.stringify({ plugins: ['a'] }));
     expect(plugins({ pluginOptions: ['a.id=12345678901234567890', 'a.f=1.0', 'a.n=42', 'a.x=-1.5', 'a.s="123"'] }))
-      .toEqual([{ name: 'a', options: { id: '12345678901234567890', f: '1.0', n: 42, x: -1.5, s: '123' } }]);
+      .toEqual([{ source: 'a', options: { id: '12345678901234567890', f: '1.0', n: 42, x: -1.5, s: '123' } }]);
   });
 
   it('refuses a JSON value holding a number that would not read back as typed, and says to quote it', () => {
@@ -261,14 +261,14 @@ describe('--plugin-option', () => {
       .toThrow('{"x":1e400} holds 1e400, too large to be a number; write it in quotes, as a JSON string.');
     // What reads back as typed is kept, and digits inside a string are the string's.
     expect(plugins({ pluginOptions: ['a.ids={"id":"12345678901234567890","n":9007199254740992,"x":-1.5,"s":"1.0"}'] }))
-      .toEqual([{ name: 'a', options: { ids: { id: '12345678901234567890', n: 9007199254740992, x: -1.5, s: '1.0' } } }]);
+      .toEqual([{ source: 'a', options: { ids: { id: '12345678901234567890', n: 9007199254740992, x: -1.5, s: '1.0' } } }]);
   });
 
   it('finds a scoped name and a path by asking the list, not by counting dots', () => {
     writeFileSync(config, JSON.stringify({ plugins: ['@ahpd/agent-claude', './p/index.ts'] }));
     expect(plugins({ pluginOptions: ['@ahpd/agent-claude.workerStop=session', './p/index.ts.mode=fast'] })).toEqual([
-      { name: '@ahpd/agent-claude', options: { workerStop: 'session' } },
-      { name: './p/index.ts', options: { mode: 'fast' } },
+      { source: '@ahpd/agent-claude', options: { workerStop: 'session' } },
+      { source: './p/index.ts', options: { mode: 'fast' } },
     ]);
   });
 
@@ -277,24 +277,24 @@ describe('--plugin-option', () => {
       plugins: [{ name: '@ahpd/agent-claude', options: { presets: { x: { model: 'opus' }, y: { model: 'sonnet' } }, workerStop: 'session' } }],
     }));
     expect(plugins({ pluginOptions: ['@ahpd/agent-claude.presets.x.model=haiku'] })).toEqual([
-      { name: '@ahpd/agent-claude', options: { presets: { x: { model: 'haiku' }, y: { model: 'sonnet' } }, workerStop: 'session' } },
+      { source: '@ahpd/agent-claude', options: { presets: { x: { model: 'haiku' }, y: { model: 'sonnet' } }, workerStop: 'session' } },
     ]);
   });
 
   it('makes a key on the way down that is not there, the way mkdir -p makes a directory', () => {
     writeFileSync(config, JSON.stringify({ plugins: [{ name: 'a', options: { presets: { x: { model: 'opus' } } } }] }));
     expect(plugins({ pluginOptions: ['a.presets.z.model=sonnet'] })).toEqual([
-      { name: 'a', options: { presets: { x: { model: 'opus' }, z: { model: 'sonnet' } } } },
+      { source: 'a', options: { presets: { x: { model: 'opus' }, z: { model: 'sonnet' } } } },
     ]);
     expect(plugins({ pluginOptions: ['a.deep.er.still=1'] })).toEqual([
-      { name: 'a', options: { deep: { er: { still: 1 } }, presets: { x: { model: 'opus' } } } },
+      { source: 'a', options: { deep: { er: { still: 1 } }, presets: { x: { model: 'opus' } } } },
     ]);
   });
 
   it('reads the value of a key on the way down as it reads any other', () => {
     writeFileSync(config, JSON.stringify({ plugins: ['a'] }));
     expect(plugins({ pluginOptions: ['a.x.n=1', 'a.x.s=t', 'a.x.o={"k":[1]}'] }))
-      .toEqual([{ name: 'a', options: { x: { n: 1, s: 't', o: { k: [1] } } } }]);
+      .toEqual([{ source: 'a', options: { x: { n: 1, s: 't', o: { k: [1] } } } }]);
   });
 
   it('refuses a key path going through something that is not an object, naming the key and not the value', () => {
@@ -321,7 +321,7 @@ describe('--plugin-option', () => {
     writeFileSync(config, JSON.stringify({ plugins: ['a'] }));
     // `toString` is on every object's prototype and on none of the options, so a
     // path through it makes a key rather than reading a function.
-    expect(plugins({ pluginOptions: ['a.toString.x=1'] })).toEqual([{ name: 'a', options: { toString: { x: 1 } } }]);
+    expect(plugins({ pluginOptions: ['a.toString.x=1'] })).toEqual([{ source: 'a', options: { toString: { x: 1 } } }]);
   });
 
   it('refuses to set a key inside a reference to a secret', () => {
@@ -332,7 +332,7 @@ describe('--plugin-option', () => {
       .toThrow('--plugin-option sets a.key.x, and key is a reference to the secret host:k: a key set inside it would leave the reference behind, so it is set as a whole or not at all.');
     // Set whole it is a reference like any other.
     expect(plugins({ pluginOptions: ['a.key={"$secret":"host:k"}'] }))
-      .toEqual([{ name: 'a', options: { key: { $secret: 'host:k' } } }]);
+      .toEqual([{ source: 'a', options: { key: { $secret: 'host:k' } } }]);
   });
 
   it('refuses a key path through an object\'s prototype', () => {
@@ -349,12 +349,12 @@ describe('--plugin-option', () => {
 
   it('takes the longest name this run loads that the text starts with', () => {
     writeFileSync(config, JSON.stringify({ plugins: ['a', 'a.b'] }));
-    expect(plugins({ pluginOptions: ['a.b.k=1'] })).toEqual(['a', { name: 'a.b', options: { k: 1 } }]);
+    expect(plugins({ pluginOptions: ['a.b.k=1'] })).toEqual(['a', { source: 'a.b', options: { k: 1 } }]);
   });
 
   it('sets an option on a plugin named by a typed --plugin', () => {
     writeFileSync(config, JSON.stringify({ plugins: ['a'] }));
-    expect(plugins({ plugins: ['b'], pluginOptions: ['b.k=true'] })).toEqual([{ name: 'b', options: { k: true } }]);
+    expect(plugins({ plugins: ['b'], pluginOptions: ['b.k=true'] })).toEqual([{ source: 'b', options: { k: true } }]);
   });
 
   it('names a plugin by the id its module exports, once it is imported to read it', async () => {
@@ -362,8 +362,8 @@ describe('--plugin-option', () => {
     writeFileSync(config, JSON.stringify({ plugins: [hello] }));
     // The manifest says plugin-hello and the module says hello: only an import knows.
     expect((await namedOptionsFrom({ configFile: config, pluginOptions: ['hello.k=1'] })).plugins)
-      .toEqual([{ name: hello, options: { k: 1 } }]);
-    expect(plugins({ pluginOptions: [`${hello}.k=2`] })).toEqual([{ name: hello, options: { k: 2 } }]);
+      .toEqual([{ source: hello, options: { k: 1 } }]);
+    expect(plugins({ pluginOptions: [`${hello}.k=2`] })).toEqual([{ source: hello, options: { k: 2 } }]);
   });
 
   it('refuses a plugin this run does not load, naming it', () => {
@@ -377,7 +377,7 @@ describe('--plugin-option', () => {
   it('refuses a plugin whose entry is switched off, which this run does not load', () => {
     writeFileSync(config, JSON.stringify({ plugins: [{ name: 'a', enabled: false }, 'b'] }));
     expect(() => plugins({ pluginOptions: ['a.k=1'] })).toThrow('--plugin-option names a, which is not a plugin this run loads.');
-    expect(plugins({ pluginOptions: ['b.k=1'] })).toEqual([{ name: 'a', enabled: false }, { name: 'b', options: { k: 1 } }]);
+    expect(plugins({ pluginOptions: ['b.k=1'] })).toEqual([{ source: 'a', enabled: false }, { source: 'b', options: { k: 1 } }]);
   });
 
   it('refuses one that is not <plugin>.<key>=<value>', () => {

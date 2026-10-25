@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -58,7 +58,14 @@ const until = async (done: () => boolean, what: string, tries = 600): Promise<vo
 };
 
 /** The file a plugin is loaded from, by the name it writes into its own log. */
-const pluginFile = (id: string): string => join(home, `${id}.mjs`);
+const pluginFile = (id: string): string => {
+  // A standalone plugin needs a manifest, and a file the case names gets the
+  // `plugin.json` beside it, in its own folder.
+  const folder = join(home, id);
+  mkdirSync(folder, { recursive: true });
+  writeFileSync(join(folder, 'plugin.json'), JSON.stringify({ id, main: `./${id}.mjs` }));
+  return join(folder, `${id}.mjs`);
+};
 
 /**
  * A plugin that adds one tool and closes cleanly.
@@ -71,10 +78,6 @@ const toolPlugin = (id: string, tool: string): string => {
   writeFileSync(file, `
 import { appendFileSync } from 'node:fs';
 export const name = ${JSON.stringify(id)};
-export const optionsSchema = {
-  type: 'object',
-  properties: { marker: { type: 'string' }, tag: { type: 'string' } },
-};
 export function apply(host, options) {
   appendFileSync(options.marker, 'applied ' + (options.tag ?? '') + '\\n');
   host.registerTool({
@@ -135,10 +138,6 @@ const agentPlugin = (id: string, provider: string): string => {
   const file = pluginFile(id);
   writeFileSync(file, `
 export const name = ${JSON.stringify(id)};
-export const optionsSchema = {
-  type: 'object',
-  properties: { echo: { type: 'string' }, dir: { type: 'string' }, tag: { type: 'string' } },
-};
 export async function apply(host, options) {
   const { echo } = await import(options.echo);
   host.registerAgent({ ...echo({ path: options.dir, pace: 0 }), provider: ${JSON.stringify(provider)} });

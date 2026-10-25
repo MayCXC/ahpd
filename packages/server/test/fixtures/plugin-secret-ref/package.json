@@ -3,5 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "ahpd": { "entry": "./index.ts" }
+  "ahpd": {
+    "entry": "./index.ts",
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "apiKey": { "type": "string", "writeOnly": true },
+        "token": { "type": "string", "pattern": "^ghp_" },
+        "later": { "type": "string", "secretAtUse": true },
+        "every": { "type": "array", "secretAtUse": true, "items": { "type": "string" } }
+      }
+    }
+  }
 }

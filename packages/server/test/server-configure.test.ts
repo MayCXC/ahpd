@@ -157,7 +157,7 @@ const tokenFile = (): string => join(configDir, 'connection-token');
 /** The `@ahpd/agent-acp` entry in the file, as an object, which every pi case writes. */
 const acpEntry = (): Record<string, unknown> => {
   const entry = (read().plugins as unknown[]).find((one) => typeof one === 'object' && one !== null
-    && (one as Record<string, unknown>)['name'] === '@ahpd/agent-acp');
+    && ((one as Record<string, unknown>)['source'] ?? (one as Record<string, unknown>)['name']) === '@ahpd/agent-acp');
   if (entry === undefined) throw new Error('the file has no @ahpd/agent-acp entry');
   return entry as Record<string, unknown>;
 };
@@ -227,7 +227,7 @@ it('switches a web UI the file names off when it is answered No', async () => {
   put({ plugins: ['@ahpd/agent-claude', '@ahpd/web'] });
   await asked('', '', '', 'n', '', '', '', '');
   // A No is not a removal: the entry stays, saying it is off.
-  expect(read().plugins).toEqual(['@ahpd/agent-claude', { name: '@ahpd/web', enabled: false }]);
+  expect(read().plugins).toEqual(['@ahpd/agent-claude', { source: '@ahpd/web', enabled: false }]);
 });
 
 it('shows what it wrote as the default on a second run, and installs nothing again', async () => {
@@ -295,11 +295,11 @@ it('switches a backend the file names off when it is answered No, and on again w
   await asked('n', '', '', '', '', '', '', '');
   // A No is not a removal: the entry stays, saying it is off, as
   // `ahpd plugin disable` writes it.
-  expect(read().plugins).toEqual([{ name: '@ahpd/agent-claude', enabled: false }]);
+  expect(read().plugins).toEqual([{ source: '@ahpd/agent-claude', enabled: false }]);
 
   put({ plugins: [{ name: '@ahpd/agent-claude', options: { model: 'opus' } }] });
   await asked('', '', '', '', '', '', '', '');
-  expect(read().plugins).toEqual([{ name: '@ahpd/agent-claude', options: { model: 'opus' }, enabled: true }]);
+  expect(read().plugins).toEqual([{ source: '@ahpd/agent-claude', options: { model: 'opus' }, enabled: true }]);
 });
 
 it('leaves a folder answered No out of paths', async () => {

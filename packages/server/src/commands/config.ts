@@ -32,11 +32,14 @@ export const SET = '<set>';
 /** One sentence with every URL's userinfo replaced. */
 export const withoutUserinfoIn = (text: string): string => text.replace(USERINFO, `$1${SET}@`);
 
-/** A plugin spec with the userinfo of its URL, string or `name`, replaced. */
-export const withoutUserinfo = (spec: PluginSpec): PluginSpec =>
-  typeof spec === 'string'
-    ? withoutUserinfoIn(spec)
+/** A plugin spec with the userinfo of its URL, string or `source`, replaced. */
+export const withoutUserinfo = (spec: PluginSpec): PluginSpec => {
+  if (typeof spec === 'string') return withoutUserinfoIn(spec);
+  const masked: PluginSpec = 'source' in spec && spec.source !== undefined
+    ? { ...spec, source: withoutUserinfoIn(spec.source) }
     : { ...spec, name: withoutUserinfoIn(spec.name) };
+  return masked;
+};
 
 /** A schema or a value that is one object, or `undefined` for anything else. */
 const object = (value: unknown): Record<string, unknown> | undefined =>

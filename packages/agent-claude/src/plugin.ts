@@ -1,10 +1,14 @@
 /**
  * The plugin entry: what the daemon imports when the package is named.
  *
- * `index.ts` re-exports `name`, `apply` and `optionsSchema` from here, so the
- * module the manifest names is the plugin. There is deliberately no default
- * export: the loader refuses a module without a named `apply` rather than
- * guessing which export is the plugin.
+ * `index.ts` re-exports `name`, `apply` and `title` from here, so the module
+ * the manifest names is the plugin. There is deliberately no default export:
+ * the loader refuses a module without a named `apply` rather than guessing
+ * which export is the plugin.
+ *
+ * The options schema is in this package's package.json, at `ahpd.optionsSchema`,
+ * and is read from there rather than exported: the daemon reads it without
+ * importing the module, so a plugin switched off still has a form.
  *
  * The daemon has no backend of its own - decision `the-daemon-bundles-no-agent`
  * - so this is how Claude Code reaches a host: one entry in `plugins`, with
@@ -34,37 +38,12 @@ export const title = 'Agent Claude';
  * The options `apply` receives, as a JSON Schema the daemon checks them against
  * before `apply` runs.
  *
- * These are the plugin's own answers for every record of the engine. What one
- * agent runs on - its directories, models and options - is the record's, and
- * the engine's schema is where that is written.
+ * The schema is written in this package's package.json, at `ahpd.optionsSchema`,
+ * so a listing reads it without importing this module and a plugin switched off
+ * still has a form a client draws. These are the plugin's own answers for every
+ * record of the engine. What one agent runs on - its directories, models and
+ * options - is the record's, and the engine's schema is where that is written.
  */
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    paths: { type: 'array', items: { type: 'string' }, description: "The directories it catalogues, and where a session goes by default. Defaults to the host's." },
-    computerExecutable: { type: 'string', description: "Where the CLI is inside a machine. claude on the image's PATH by default." },
-    computerCli: {
-      type: 'string',
-      enum: ['part', 'host'],
-      description: "Where the CLI a machine runs comes from: part, the claude part this host builds, by default; host mounts this host's own installed CLI.",
-    },
-    computerCliFallback: {
-      type: 'string',
-      enum: ['refuse', 'host'],
-      description: "With computerCli part, what a machine gets when the claude part cannot be built: refuse, by default, refuses the Claude session naming the part; host mounts this host's own CLI instead and logs it.",
-    },
-    computerConfigDir: {
-      anyOf: [{ type: 'string' }, { const: false }],
-      description: "The configuration directory the CLI reads inside a machine. /ahpd/<id> by default, /ahpd/claude for the built-in; false leaves the image's own.",
-    },
-    workerStop: { type: 'string', enum: ['worker', 'session'], description: "What a stop given in a subagent's chat stops. worker by default." },
-    handshakeTimeoutMs: {
-      type: 'integer',
-      minimum: 1,
-      description: 'How long the CLI has to answer its handshake before its session treats it as a CLI that died. Default 120000, and a slower machine raises it.',
-    },
-  },
-};
 
 /**
  * The options every agent of one load shares, and the directories it serves.

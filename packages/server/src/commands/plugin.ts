@@ -17,7 +17,7 @@ import {
   NpmFailure, installPlugins, oneAtATime, pluginEntry, removePlugins, run as runProgram, setPluginEnabled, setPluginOption, specsIn, updatePlugins,
 } from '../install.js';
 import type { Moved } from '../install.js';
-import { describePlugin, nameOf, optionsSchemaOf, pluginIdOf, pluginIdsOf, pluginLine } from '../plugins.js';
+import { describePlugin, sourceOf, optionsSchemaOf, pluginIdOf, pluginIdsOf, pluginLine } from '../plugins.js';
 import { version } from '../version.js';
 import { keyed, maskOption, schemasFor, withoutSpecSecrets, withoutUserinfoIn } from './config.js';
 import { namedOptionsFrom, pluginWriteFields, flagFields, serverFields, servedPluginWriteFields, splitPluginOption, stop, typedValue } from './options.js';
@@ -514,7 +514,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
      * with.
      */
     const record = running();
-    const override = record?.argv !== undefined && recordedOverride(record.argv, [nameOf(entry), id], option);
+    const override = record?.argv !== undefined && recordedOverride(record.argv, [sourceOf(entry), id], option);
     if (override) say(overridden(name, option));
     const restart = await saidSo(say, namedFile);
     return output({

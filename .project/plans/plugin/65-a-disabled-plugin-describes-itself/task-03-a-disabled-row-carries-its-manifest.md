@@ -1,6 +1,6 @@
 ---
 title: A disabled row carries its manifest
-status: todo
+status: implemented
 depends: [task-02-a-standalone-plugin-has-a-manifest.md]
 layer: "server"
 refs:
@@ -38,3 +38,10 @@ An enabled plugin that failed to load holds them too.
 - A test lists an enabled plugin that failed to load, and its row holds its manifest and its problem.
 
 ## Resume
+
+- **Done so far:** `describePlugin` no longer returns early for a switched-off spec. It resolves it, reads the `plugin.json` or inline manifest, else the package's, and keeps the state `disabled` after the row is whole; a spec that does not resolve is still `missing`. The row carries `title`, `version`, `module` and `manifest`, the last from `manifestFields`. `pluginschannel`'s `rowOf` takes the loaded copy's manifest first and the described row's manifest otherwise, so an enabled plugin that failed to load carries its manifest beside its `loadProblem`. A listing does not import the module: the channel test for a switched-off plugin asserts the row is described with no import. `plugin-list.test.ts` covers a switched-off package plugin, a switched-off standalone plugin and one whose module throws on import; `plugins-channel.test.ts` covers the same three and an enabled plugin that failed to load.
+- **Next action:** [task-04-the-options-schema-is-in-the-manifest.md](task-04-the-options-schema-is-in-the-manifest.md).
+- **Files:** `packages/server/src/plugins.ts`, `packages/server/src/pluginschannel.ts`, `packages/server/test/plugin-list.test.ts`, `packages/server/test/plugins-channel.test.ts`, this task file, the plan and the index.
+- **Open questions:** none.
+- **Departures:** The daemon's `plan` still imports a switched-off plugin to learn the id its module exports, as the plan's Risks section says. The listing itself reads the manifest with no import; only the id costs an import until a standalone manifest declares it.
+- **Watch out for:** A disabled plugin's row must not carry an option value the schema marks as a secret. The schema now comes from the manifest, so masking runs for a switched-off plugin too.
