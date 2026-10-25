@@ -19,6 +19,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 
 const REPO = join(import.meta.dirname, '../../..');
 const MAIN = 'packages/server/src/main.ts';
@@ -144,7 +145,8 @@ const run = (): Promise<Run> => {
   });
 };
 
-it('puts no line on stdout that is not a frame while a channel install runs', async () => {
+// The stand-in npm is a shell script, which Windows does not run.
+it.skipIf(!posix)('puts no line on stdout that is not a frame while a channel install runs', async () => {
   const { lines, stderr, answered } = await run();
 
   // stdout is the wire: every line is a frame the client can parse.
