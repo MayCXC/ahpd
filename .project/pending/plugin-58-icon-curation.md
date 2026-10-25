@@ -9,8 +9,8 @@ plans:
 
 Plan 58 task 05 gives each plugin in this repository one SVG icon.
 Plan 61 task 01 gives each Lucide icon a second file for a dark background.
-Eight candidates come from Lucide, which publishes its icons under the ISC licence, and each of those files keeps its licence comment.
-The Activepieces, Claude and pi candidates are the vendors' own marks, after the first Lucide choices looked wrong.
+Seven candidates come from Lucide, which publishes its icons under the ISC licence, and each of those files keeps its licence comment.
+The ACP, Activepieces, Claude and pi candidates are the vendors' own marks, after the first Lucide choices looked wrong.
 Every file is under 32 KB, and none carries a script or an event attribute.
 The webhook adapter names the same two files as its plugin.
 
@@ -26,7 +26,7 @@ Nothing else changes, because the manifest of each package names the file, not t
 | Plugin | File | Candidate | Dark file | Source | Licence |
 | --- | --- | --- | --- | --- | --- |
 | Activepieces | `packages/activepieces/icon.svg` | the Activepieces mark, in `#8142E3` | none | https://github.com/activepieces/activepieces/blob/main/docs/favicon.svg | vendor mark, licence not stated |
-| ACP | `packages/agent-acp/icon.svg` | `plug` | `packages/agent-acp/icon-dark.svg` | https://lucide.dev/icons/plug | ISC |
+| ACP | `packages/agent-acp/icon.svg` | the ACP logo, in black | `packages/agent-acp/icon-dark.svg`, in white | https://github.com/agentclientprotocol/agent-client-protocol/tree/main/docs/logo | Apache 2.0 |
 | Claude | `packages/agent-claude/icon.svg` | the Claude starburst, in `#D97757` | none | https://cdn.simpleicons.org/claude | CC0 1.0, from Simple Icons |
 | Cofold | `packages/agent-cofold/icon.svg` | `layers` | `packages/agent-cofold/icon-dark.svg` | https://lucide.dev/icons/layers | ISC |
 | pi | `packages/agent-pi/icon.svg` | the pi.dev mark | none | https://pi.dev/logo-auto.svg | vendor mark, licence not stated |
