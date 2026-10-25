@@ -1,6 +1,6 @@
 ---
 title: An admin writes a plugin in the UI
-status: todo
+status: implemented
 depends: [task-02-the-channel-installs-and-removes.md]
 layer: "server, docs"
 refs:

@@ -172,8 +172,14 @@ export const OPERATIONS: Record<string, SubjectOperations> = {
   },
   plugin: {
     title: 'Plugins',
-    description: 'The plugins the configuration names: listing them, turning them on and off, and editing their options.',
-    operations: ['list', 'enable', 'disable', 'options'],
+    description: 'The plugins the configuration names: listing them, installing, removing and writing them, turning them on and off, and editing their options.',
+    /*
+     * `install` is an operation of its own and not in either group, so
+     * `plugin:write` does not hold it. Installing or removing a plugin runs
+     * code with the daemon's permissions, and only a grant that names this
+     * operation, `plugin:*` or admin's `*:*` may do it.
+     */
+    operations: ['list', 'enable', 'disable', 'options', 'install'],
     groups: { read: ['list'], write: ['enable', 'disable', 'options'] },
   },
   connector: {

@@ -654,7 +654,9 @@ it('advertises plugin and connector in the handshake, beside the built-ins', asy
   expect(grants['plugin']).toEqual({
     title: 'Plugins',
     description: expect.any(String),
-    operations: ['list', 'enable', 'disable', 'options'],
+    // `install` is outside both groups: it runs code with the daemon's
+    // permissions, so `plugin:write` may not confer it.
+    operations: ['list', 'enable', 'disable', 'options', 'install'],
     groups: { read: ['list'], write: ['enable', 'disable', 'options'] },
   });
   expect(grants['connector']).toEqual({

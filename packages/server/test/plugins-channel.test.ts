@@ -12,14 +12,16 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { createHost, fileResources, fileUsers, servedRecords, type Users } from '@ahpd/sdk';
+import { createHost, fileResources, fileUsers, servedRecords, type PluginSpec, type Users } from '@ahpd/sdk';
 import { echo } from '../../../examples/echo/agent.js';
+import { applyPlugins } from '../src/applyplugins.js';
 import { SET } from '../src/commands/config.js';
 import type { Options } from '../src/commands/options.js';
 import { apiOrigins } from '../src/commands/run.js';
 import { servedRegistry, type ServedFacts } from '../src/commands/served.js';
 import { apiHandler } from '../src/http.js';
-import { loadPlugins } from '../src/plugins.js';
+import type { Runner } from '../src/install.js';
+import { loadPlugins, pluginSet, type PluginSet } from '../src/plugins.js';
 import { pluginsChannel } from '../src/pluginschannel.js';
 
 const URI = 'x-ahpd-plugins://';
@@ -42,12 +44,17 @@ let home: string;
 let config: string;
 let usersFile: string;
 let had: string | undefined;
+let hadRoot: string | undefined;
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), 'ahpd-plugins-channel-'));
   // The daemon's own config directory, so `running()` and `configDir()` read
   // this test's home and nothing of whoever runs the suite.
   had = process.env.XDG_CONFIG_HOME;
   process.env.XDG_CONFIG_HOME = home;
+  // The plugin root too, so an install in a case writes into this test's home
+  // and not into the repository's fixtures.
+  hadRoot = process.env.AHPD_PLUGIN_ROOT;
+  process.env.AHPD_PLUGIN_ROOT = join(home, 'ahpd');
   mkdirSync(join(home, 'ahpd'), { recursive: true });
   config = join(home, 'ahpd', 'config.json');
   writeFileSync(config, JSON.stringify({
@@ -59,6 +66,7 @@ beforeEach(() => {
       reader: ['plugin:read'],
       writer: ['plugin:read', 'plugin:write'],
       enabler: ['plugin:enable'],
+      installer: ['plugin:read', 'plugin:install'],
       'config-reader': ['config:read'],
       'config-writer': ['config:write'],
     },
@@ -69,11 +77,15 @@ beforeEach(() => {
       { id: 'fa', roles: ['config-reader'] },
       { id: 'gi', roles: ['config-writer'] },
       { id: 'ha', roles: ['enabler'] },
+      { id: 'jo', roles: ['installer'] },
+      { id: 'ka', roles: ['member'] },
+      { id: 'lu', roles: ['installer'] },
     ],
   }));
 });
 afterEach(() => {
   if (had === undefined) delete process.env.XDG_CONFIG_HOME; else process.env.XDG_CONFIG_HOME = had;
+  if (hadRoot === undefined) delete process.env.AHPD_PLUGIN_ROOT; else process.env.AHPD_PLUGIN_ROOT = hadRoot;
   rmSync(home, { recursive: true, force: true });
 });
 
@@ -82,8 +94,91 @@ const wait = async (ms: number): Promise<void> => { await new Promise((done) => 
 /** The configuration file as it stands. */
 const held = (): { plugins: unknown[] } => JSON.parse(readFileSync(config, 'utf8')) as { plugins: unknown[] };
 
+/**
+ * A runner that installs without npm, as `plugin-install.test.ts` does.
+ *
+ * An install writes each package named in `lands` into `node_modules` under the
+ * call's own `--prefix`, with the `ahpd` field a plugin's manifest has, and
+ * names each in that root's `package.json` with the spec given, as npm does. An
+ * uninstall takes the package out again. Every call is kept, so a case can say
+ * what npm was asked.
+ *
+ * `names` is the name each module exports, when it is not the package's own;
+ * `esm` lands an `index.mjs` instead of an `index.ts`, which is a plugin Node
+ * can import from `node_modules` (it refuses to strip types there); `fail`
+ * names why a call fails, or answers nothing for one that succeeds.
+ */
+const fakeNpm = (
+  lands: Record<string, string>,
+  options: {
+    manifests?: Record<string, Record<string, unknown>>;
+    names?: Record<string, string>;
+    esm?: boolean;
+    fail?: (argv: readonly string[]) => string | undefined;
+  } = {},
+) => {
+  const calls: { program: string; argv: string[] }[] = [];
+  const runner: Runner = async (program, argv) => {
+    calls.push({ program, argv: [...argv] });
+    const at = argv.indexOf('--prefix');
+    if (at === -1) return { code: 0, stdout: '', stderr: '' };
+    const failed = options.fail?.(argv);
+    if (failed !== undefined) return { code: 1, stdout: '', stderr: failed };
+    const into = argv[at + 1] as string;
+    const names = Object.keys(lands);
+    const file = join(into, 'package.json');
+    const before = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown> : {};
+    const dependencies = typeof before.dependencies === 'object' && before.dependencies !== null
+      ? before.dependencies as Record<string, string>
+      : {};
+    if (argv[0] === 'install') {
+      for (const name of names) {
+        const folder = join(into, 'node_modules', name);
+        mkdirSync(folder, { recursive: true });
+        const entry = options.esm === true ? './index.mjs' : './index.ts';
+        writeFileSync(join(folder, 'package.json'), JSON.stringify({
+          name,
+          version: '1.0.0',
+          type: 'module',
+          exports: { '.': entry },
+          ahpd: { entry, title: name, description: `The ${name} plugin.`, contracts: {} },
+          ...options.manifests?.[name],
+        }));
+        const text = `export const name = '${options.names?.[name] ?? name}';\nexport function apply() {}\n`;
+        writeFileSync(join(folder, options.esm === true ? 'index.mjs' : 'index.ts'), text);
+      }
+      writeFileSync(file, `${JSON.stringify({ ...before, dependencies: { ...dependencies, ...lands } }, null, 2)}\n`);
+    }
+    if (argv[0] === 'uninstall') {
+      for (const name of names) rmSync(join(into, 'node_modules', name), { recursive: true, force: true });
+      writeFileSync(file, `${JSON.stringify({
+        ...before,
+        dependencies: Object.fromEntries(Object.entries(dependencies).filter(([name]) => !names.includes(name))),
+      }, null, 2)}\n`);
+    }
+    return { code: 0, stdout: '', stderr: '' };
+  };
+  return { runner, calls };
+};
+
+/**
+ * A plugin written in a client: one TypeScript file that appends `word` to
+ * `marker` when the daemon applies it.
+ *
+ * The text is written twice by a case that replaces it, and the marker is what
+ * says which text ran.
+ */
+const writing = (word: string, marker: string): string => [
+  "import { appendFileSync } from 'node:fs';",
+  "import type { Plugin } from '@ahpd/sdk';",
+  `const mark = ${JSON.stringify(marker)};`,
+  "export const name = 'demo';",
+  `export const apply: Plugin['apply'] = (): void => { appendFileSync(mark, '${word}\\n'); };`,
+  '',
+].join('\n');
+
 /** A host serving the plugins channel, over plugins loaded from the file. */
-const served = async ({ load = true } = {}) => {
+const served = async ({ load = true, run }: { load?: boolean; run?: Runner } = {}) => {
   let loaded: Awaited<ReturnType<typeof loadPlugins>>['loaded'] = [];
   let failures: Record<string, string> = {};
   if (load) {
@@ -102,6 +197,7 @@ const served = async ({ load = true } = {}) => {
     loaded: () => loaded,
     failures: () => failures,
     restartNeeded: () => markRestart(),
+    ...(run === undefined ? {} : { run }),
   });
   const wire = servedRecords('ahpd', [lists.channel], lists.methods);
   const users = fileUsers({ path: usersFile });
@@ -118,6 +214,63 @@ const served = async ({ load = true } = {}) => {
 };
 
 type Host = Awaited<ReturnType<typeof served>>['host'];
+
+/**
+ * A host that applies a change as the daemon does.
+ *
+ * The plugins in the file are loaded into a set, and each command's apply
+ * loads, unloads or imports a plugin again through `applyPlugins`, against the
+ * same host the channel serves. A command that writes is therefore answered
+ * with what actually happened, and a second write of one plugin runs its new
+ * text, as `ahpd plugin reload` does at the terminal.
+ */
+const live = async ({ run }: { run?: Runner } = {}) => {
+  let set: PluginSet;
+  let host: Host;
+  let markRestart: () => void = () => {};
+  let refresh: () => Promise<void> = async () => {};
+  const lists = pluginsChannel({
+    configFile: config,
+    where: { configDir: fixtures, cwd: here },
+    loaded: () => set.loaded(),
+    failures: () => set.failures(),
+    apply: async (reload?: string[]) => {
+      const answer = await applyPlugins({
+        set,
+        configFile: config,
+        host: () => host,
+        log: () => {},
+        ...(reload === undefined ? {} : { reload }),
+      });
+      await refresh();
+      return answer;
+    },
+    restartNeeded: () => markRestart(),
+    ...(run === undefined ? {} : { run }),
+  });
+  refresh = lists.refresh;
+  const wire = servedRecords('ahpd', [lists.channel], lists.methods);
+  const users = fileUsers({ path: usersFile });
+  /*
+   * The channels, the methods and the people are the base the set is folded
+   * over, not fields added beside it: an apply rewrites this object with the
+   * fold's fields, and a key the fold does not hold is removed from it.
+   */
+  const base = {
+    path: home,
+    agents: [{ ...echo({ path: home, pace: 0 }), provider: 'base', displayName: 'Base' }],
+    resources: fileResources(),
+    channels: wire.channels,
+    methods: wire.methods,
+    users,
+  };
+  const where = { configDir: fixtures, cwd: here, log: () => {} };
+  set = pluginSet({ base, ...where });
+  const first = await loadPlugins(held().plugins as PluginSpec[], { base, ...where, set });
+  host = createHost(first.options);
+  markRestart = () => { host.markRestartNeeded(); };
+  return { host, users, close: async () => { await host.close(); } };
+};
 
 /** A client signed in as `id`, whose channel actions are kept. */
 const as = async (host: Host, users: Users, id: string) => {
@@ -298,12 +451,240 @@ it('enables with plugin:enable over the protocol and over HTTP, and refuses conf
   await close();
 });
 
-it('refuses an install to a role holding plugin:write, which the deployment token keeps', async () => {
+it('installs a source as a role holding plugin:install, and lists the new row', async () => {
+  const { runner, calls } = fakeNpm({ demo: 'github:someone/demo' });
+  const { host, users, close } = await served({ run: runner });
+  const ana = await as(host, users, 'ana');
+  const jo = await as(host, users, 'jo');
+  await ana.rows();
+
+  expect(await jo.call('x-ahpd/plugins/install', { source: 'github:someone/demo' })).toEqual({
+    result: { id: 'demo', restart: true },
+  });
+  // npm ran in the plugin root, and `plugins` names the package npm wrote, not
+  // the source the client gave.
+  expect(calls[0]?.argv.slice(0, 3)).toEqual(['install', '--prefix', join(home, 'ahpd')]);
+  expect(calls[0]?.argv.at(-1)).toBe('github:someone/demo');
+  expect(held().plugins).toEqual([DECLARED, { name: SECRET, options: { apiKey: 'sk-live-1', region: 'eu' } }, 'demo']);
+
+  await wait(50);
+  expect(ana.heard(URI)).toEqual(['added demo']);
+  const rows = await ana.rows();
+  expect(Object.keys(rows)).toEqual(['declared', 'secret', 'demo']);
+  // Listed from the package npm landed, which this daemon has not loaded.
+  expect((rows['demo'] as Bag)['version']).toBe('1.0.0');
+  expect((rows['demo'] as Bag)['loaded']).toBe(false);
+  await close();
+});
+
+it('answers the id the new row is listed under, not the package npm installed', async () => {
+  // A scoped package whose module names itself something else: the row is
+  // listed under the module's name, so that is what the install answers, and a
+  // later command names the row by it. `github:` is the source so nothing here
+  // asks a registry; what npm lands is the scoped package.
+  const { runner } = fakeNpm({ '@acme/foo': '1.0.0' }, { names: { '@acme/foo': 'foo' }, esm: true });
+  const { host, users, close } = await live({ run: runner });
+  const ana = await as(host, users, 'ana');
+  const jo = await as(host, users, 'jo');
+  await ana.rows();
+
+  expect(await jo.call('x-ahpd/plugins/install', { source: 'github:acme/foo' })).toEqual({
+    result: { id: 'foo', restart: false },
+  });
+  const rows = await ana.rows();
+  expect(Object.keys(rows)).toContain('foo');
+  expect(Object.keys(rows)).not.toContain('@acme/foo');
+  expect(held().plugins).toContain('@acme/foo');
+  await close();
+});
+
+it('refuses install and remove to a member, which holds neither grant', async () => {
+  const { host, users, close } = await served();
+  const ka = await as(host, users, 'ka');
+
+  expect(await ka.call('x-ahpd/plugins/install', { source: 'github:someone/demo' })).toMatchObject({ code: -32009 });
+  expect(await ka.call('x-ahpd/plugins/remove', { id: 'declared' })).toMatchObject({ code: -32009 });
+  expect(held().plugins).toEqual([DECLARED, { name: SECRET, options: { apiKey: 'sk-live-1', region: 'eu' } }]);
+  await close();
+});
+
+it('removes a plugin through the channel, and the row leaves the list', async () => {
+  const { runner, calls } = fakeNpm({});
+  const { host, users, close } = await served({ run: runner });
+  const ana = await as(host, users, 'ana');
+  const jo = await as(host, users, 'jo');
+  await ana.rows();
+
+  expect(await jo.call('x-ahpd/plugins/remove', { id: 'secret' })).toEqual({
+    result: { id: 'secret', restart: true },
+  });
+  expect(held().plugins).toEqual([DECLARED]);
+  expect(calls.at(-1)?.argv).toEqual(['uninstall', '--prefix', join(home, 'ahpd'), '--', 'secret']);
+
+  await wait(50);
+  expect(ana.heard(URI)).toEqual(['removed secret']);
+  expect(Object.keys(await ana.rows())).toEqual(['declared']);
+  await close();
+});
+
+it('writes a plugin in a client, and lists it as loaded', async () => {
+  const marker = join(home, 'applied.log');
+  const { runner, calls } = fakeNpm({});
+  const { host, users, close } = await live({ run: runner });
+  const ana = await as(host, users, 'ana');
+  const jo = await as(host, users, 'jo');
+  await ana.rows();
+
+  const folder = join(home, 'ahpd', 'plugins', 'demo');
+  const source = writing('first', marker);
+  expect(await jo.call('x-ahpd/plugins/write', {
+    id: 'demo',
+    source,
+    packageJson: { name: 'demo-plugin', version: '1.0.0' },
+  })).toEqual({ result: { id: 'demo', restart: false } });
+
+  // The folder is the plugin root's own, outside `node_modules`, where Node
+  // would refuse to strip the types of the file the admin wrote.
+  expect(folder.includes('node_modules')).toBe(false);
+  expect(readFileSync(join(folder, 'index.ts'), 'utf8')).toBe(source);
+  expect(held().plugins).toContain(folder);
+  // npm runs in a staging folder beside it, and only a success moves that into
+  // place; a write that replaced nothing leaves no staging folder behind.
+  const staged = join(home, 'ahpd', 'plugins', '.demo.new');
+  expect(calls[0]?.argv).toEqual(['install', '--prefix', staged]);
+  expect(existsSync(staged)).toBe(false);
+  // The daemon loaded it before the command answered, so its apply ran.
+  expect(readFileSync(marker, 'utf8')).toBe('first\n');
+
+  const rows = await ana.rows();
+  expect(Object.keys(rows)).toEqual(['declared', 'secret', 'demo']);
+  expect((rows['demo'] as Bag)['loaded']).toBe(true);
+  await close();
+});
+
+it('writes the same id again, and the plugin runs the new text', async () => {
+  const marker = join(home, 'applied.log');
+  const { runner } = fakeNpm({});
+  const { host, users, close } = await live({ run: runner });
+  const jo = await as(host, users, 'jo');
+
+  await jo.call('x-ahpd/plugins/write', { id: 'demo', source: writing('first', marker), packageJson: { name: 'demo-plugin' } });
+  expect(readFileSync(marker, 'utf8')).toBe('first\n');
+
+  expect(await jo.call('x-ahpd/plugins/write', { id: 'demo', source: writing('second', marker), packageJson: { name: 'demo-plugin' } }))
+    .toEqual({ result: { id: 'demo', restart: false } });
+  // The files are replaced and the folder imported again, as a reload does:
+  // the new text ran once, and the old one did not run a second time.
+  expect(readFileSync(marker, 'utf8')).toBe('first\nsecond\n');
+  expect(readFileSync(join(home, 'ahpd', 'plugins', 'demo', 'index.ts'), 'utf8')).toBe(writing('second', marker));
+  await close();
+});
+
+it('leaves the files the daemon runs when a rewrite fails in npm', async () => {
+  // The second write's npm fails. It was staged beside the folder, so the
+  // `index.ts` and `package.json` the first write left, and the code they run,
+  // are as they were: a failed rewrite is not a half-written plugin.
+  const marker = join(home, 'applied.log');
+  let installs = 0;
+  const { runner } = fakeNpm({}, {
+    fail: (argv) => (argv[0] === 'install' && ++installs === 2 ? 'npm error code E404' : undefined),
+  });
+  const { host, users, close } = await live({ run: runner });
+  const jo = await as(host, users, 'jo');
+  const folder = join(home, 'ahpd', 'plugins', 'demo');
+  const staged = join(home, 'ahpd', 'plugins', '.demo.new');
+
+  const first = writing('first', marker);
+  await jo.call('x-ahpd/plugins/write', { id: 'demo', source: first, packageJson: { name: 'demo-plugin', version: '1.0.0' } });
+  const packageJson = readFileSync(join(folder, 'package.json'), 'utf8');
+
+  expect(await jo.call('x-ahpd/plugins/write', {
+    id: 'demo',
+    source: writing('second', marker),
+    packageJson: { name: 'demo-plugin', version: '2.0.0' },
+  })).toMatchObject({ code: -32602, message: expect.stringContaining('npm error code E404') });
+
+  expect(readFileSync(join(folder, 'index.ts'), 'utf8')).toBe(first);
+  expect(readFileSync(join(folder, 'package.json'), 'utf8')).toBe(packageJson);
+  // Only staging is taken out; the folder `plugins` names still runs the first
+  // text, and no half-swapped copy is left beside it.
+  expect(existsSync(staged)).toBe(false);
+  expect(existsSync(join(home, 'ahpd', 'plugins', '.demo.old'))).toBe(false);
+  expect(held().plugins).toContain(folder);
+  expect(readFileSync(marker, 'utf8')).toBe('first\n');
+  await close();
+});
+
+it('reads the text back as another admin, and refuses one that was not written in a client', async () => {
+  const marker = join(home, 'applied.log');
+  const { runner } = fakeNpm({});
+  const { host, users, close } = await live({ run: runner });
+  const jo = await as(host, users, 'jo');
+  const lu = await as(host, users, 'lu');
+
+  const source = writing('first', marker);
+  await jo.call('x-ahpd/plugins/write', { id: 'demo', source, packageJson: { version: '2.0.0' } });
+
+  const read = await lu.call('x-ahpd/plugins/source', { id: 'demo' });
+  expect(read.result?.['source']).toBe(source);
+  const packageJson = JSON.parse(read.result?.['packageJson'] as string) as Bag;
+  expect(packageJson['name']).toBe('demo');
+  expect(packageJson['version']).toBe('2.0.0');
+  // The entry the write filled in, because the admin's package named none.
+  expect(packageJson['ahpd']).toEqual({ entry: './index.ts' });
+
+  // A configured package is not the daemon's text to hand out.
+  expect(await lu.call('x-ahpd/plugins/source', { id: 'declared' })).toMatchObject({ code: -32602 });
+  await close();
+});
+
+it('refuses write and source to a member, and a write that is not a slug or a package', async () => {
+  const { host, users, close } = await served();
+  const jo = await as(host, users, 'jo');
+  const ka = await as(host, users, 'ka');
+  const source = writing('first', join(home, 'applied.log'));
+
+  expect(await ka.call('x-ahpd/plugins/write', { id: 'demo', source, packageJson: {} })).toMatchObject({ code: -32009 });
+  expect(await ka.call('x-ahpd/plugins/source', { id: 'demo' })).toMatchObject({ code: -32009 });
+  expect(await jo.call('x-ahpd/plugins/write', { id: 'Demo!', source, packageJson: {} })).toMatchObject({ code: -32602 });
+  expect(await jo.call('x-ahpd/plugins/write', { id: 'demo', source, packageJson: '[]' })).toMatchObject({ code: -32602 });
+  expect(await jo.call('x-ahpd/plugins/write', { id: 'demo', source: '   ', packageJson: {} })).toMatchObject({ code: -32602 });
+  await close();
+});
+
+it('removes a written plugin, and its folder is gone', async () => {
+  const marker = join(home, 'applied.log');
+  const { runner } = fakeNpm({});
+  const { host, users, close } = await live({ run: runner });
+  const ana = await as(host, users, 'ana');
+  const jo = await as(host, users, 'jo');
+  await ana.rows();
+  await jo.call('x-ahpd/plugins/write', { id: 'demo', source: writing('first', marker), packageJson: {} });
+  const folder = join(home, 'ahpd', 'plugins', 'demo');
+  expect(existsSync(folder)).toBe(true);
+  await ana.rows();
+
+  expect(await jo.call('x-ahpd/plugins/remove', { id: 'demo' })).toEqual({ result: { id: 'demo', restart: false } });
+  expect(existsSync(folder)).toBe(false);
+  expect(held().plugins).not.toContain(folder);
+  expect(Object.keys(await ana.rows())).toEqual(['declared', 'secret']);
+  await close();
+});
+
+it('refuses an install over HTTP to a role holding plugin:write, and takes plugin:install', async () => {
   const { users, close } = await served();
   const ask = servedHttp(users);
+
+  // `plugin:write` is the three commands on configured plugins, not this one.
   const refused = await ask('/plugin/install', await users.mint('cy'), { name: [DECLARED] });
   expect(refused.status).toBe(403);
-  expect((await refused.json() as { message: string }).message).toContain('only the deployment token may');
+  expect((await refused.json() as { message: string }).message).toBe('cy may not plugin:install here');
+
+  // A role that names the grant gets in: the sdk is the command's own
+  // refusal, so the request was not stopped at the grant, and npm never ran.
+  const asJo = await ask('/plugin/install', await users.mint('jo'), { name: ['@ahpd/sdk'] });
+  expect(asJo.status).toBe(400);
+  expect((await asJo.json() as { message: string }).message).toContain('@ahpd/sdk is not a plugin');
   await close();
 });
 

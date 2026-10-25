@@ -1,6 +1,6 @@
 ---
 title: The plugins channel installs and removes
-status: todo
+status: implemented
 depends: [task-01-one-install-path-takes-every-source.md]
 layer: "server, sdk, docs"
 refs:

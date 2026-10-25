@@ -72,8 +72,8 @@ describe('the command registry', () => {
     expect(scopes('daemon.status')).toEqual(['config:read']);
     expect(scopes('plugin.list')).toEqual(['plugin:list']);
     expect(scopes('daemon.config')).toEqual(['config:write']);
-    expect(scopes('plugin.install')).toEqual(['config:write']);
-    expect(scopes('plugin.remove')).toEqual(['config:write']);
+    expect(scopes('plugin.install')).toEqual(['plugin:install']);
+    expect(scopes('plugin.remove')).toEqual(['plugin:install']);
     expect(scopes('plugin.update')).toEqual(['config:write']);
     expect(scopes('daemon.restart')).toEqual(['config:write']);
     expect(scopes('daemon.update')).toEqual(['config:write']);
@@ -83,7 +83,12 @@ describe('the command registry', () => {
       expect(scopes(id)).toEqual(['config:write']);
       expect(only(id)).toBe('add or remove a served folder');
     }
-    for (const id of ['plugin.install', 'plugin.remove']) expect(only(id)).toBe('install or remove a plugin');
+    /*
+     * Installing and removing take the grant `plugin:install` instead, which no
+     * role receives with `plugin:write`: what is installed runs with the
+     * daemon's permissions, so a person must be given it by name.
+     */
+    for (const id of ['plugin.install', 'plugin.remove']) expect(only(id)).toBeUndefined();
     expect(only('plugin.update')).toBe('update a plugin');
     /*
      * The options and the switch take the plugin subject over HTTP as they do

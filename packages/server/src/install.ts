@@ -20,7 +20,7 @@
 
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
-import { isAbsolute, join, win32 } from 'node:path';
+import { isAbsolute, join, resolve, win32 } from 'node:path';
 import { readJsonObject, writeJsonAtomic } from '@ahpd/sdk';
 import type { PluginSpec } from '@ahpd/sdk';
 import { asSpec } from './config.js';
@@ -166,12 +166,12 @@ export const npmFailed = (failed: string, done: Ran): NpmFailure => {
 };
 
 /**
- * Whether a spec is a package name npm can install.
+ * Whether a spec is a bare package name rather than a path or a scheme.
  *
  * The same test `resolvePlugin` uses to tell a bare name from a path, plus the
- * scheme check: a path is already usable as written, and a `npm:` or `https:`
- * spec is the runtime's to resolve, so neither is something this command has
- * an install to run for.
+ * scheme check. An install takes every source, so this is what tells a
+ * registry name - the one kind the registry is asked about before npm runs -
+ * from a path, a URL or a git spec, which npm resolves as written.
  */
 export const isPackageName = (spec: PluginSpec): boolean => {
   const name = nameOf(spec);
@@ -599,16 +599,74 @@ const refuseNonPlugins = async (names: readonly string[], options: InstallOption
   }));
 };
 
+/** Whether a source names a package the registry can be asked about, rather than a path, a URL or a git spec. */
+const isRegistryName = (source: string): boolean => REGISTRY_NAME.test(packageOf(source));
+
+/** The manifest npm left for `name` in the root, or nothing when it left none. */
+const manifestIn = (root: string, name: string): Record<string, unknown> | undefined => {
+  const file = join(root, 'node_modules', name, 'package.json');
+  return existsSync(file) ? readEntry(file) : undefined;
+};
+
 /**
- * Install each package into the configuration directory, and name it.
+ * The package name npm wrote for each source, out of the root's dependencies
+ * before and after the install.
  *
- * npm does the install, in the configuration directory, because that is the
- * directory a bare name resolves from and a global install is invisible to
- * it. A registry package is refused first when its manifest has no `ahpd`
- * field, and a bare name is installed at the newest version that admits this
- * daemon; nothing is loaded here, so whether the plugin works is what the next
- * `ahpd plugin list` or the next run says. What npm is given is said before it
- * runs, because npm says nothing while it works.
+ * A registry name is its own package, with any version or tag left off. Every
+ * other source is named by the dependency npm added for it: npm writes a path
+ * as a `file:` spec relative to the root, and every other kind as it was
+ * given. A source npm recorded under a spec this cannot read is the one
+ * dependency left over when there is only one, which is how a git shorthand
+ * npm rewrites is still named.
+ *
+ * Nothing here throws: a source with no dependency to name it answers
+ * `undefined`, and the caller decides whether that is a refusal (it enables
+ * what it installed) or nothing to do (`--no-enable`).
+ */
+const namesInstalled = (
+  sources: readonly string[],
+  root: string,
+  before: ReadonlyMap<string, string>,
+  after: readonly (readonly [string, string])[],
+): (string | undefined)[] => {
+  const added = after.filter(([name]) => !before.has(name));
+  const claimed = new Set<string>();
+  return sources.map((source) => {
+    if (isRegistryName(source)) return packageOf(source);
+    // Everything the root names, newly added first: installing a source the
+    // root already holds moves no dependency, and it still names the package.
+    const open = [...added, ...after.filter(([name]) => before.has(name))].filter(([name]) => !claimed.has(name));
+    // A path is resolved against the working directory npm ran in, as npm
+    // read it; the `file:` spec it wrote is relative to the root.
+    const here = resolve(process.cwd(), source);
+    const named = open.find(([, spec]) => spec === source)
+      ?? open.find(([, spec]) => spec.startsWith('file:') && resolve(root, spec.slice('file:'.length)) === here)
+      ?? (added.filter(([name]) => !claimed.has(name)).length === 1 ? added.find(([name]) => !claimed.has(name)) : undefined);
+    if (named === undefined) return undefined;
+    claimed.add(named[0]);
+    return named[0];
+  });
+};
+
+/**
+ * Install each source into the plugin root, and answer what npm called them.
+ *
+ * npm does the install, in the plugin root, because that is the directory a
+ * bare name resolves from and a global install is invisible to it. A source
+ * starting with `-` is refused before npm runs, because npm would read it as an
+ * option rather than a source. A registry package is refused first when its
+ * manifest has no `ahpd` field, and a bare name is installed at the newest
+ * version that admits this daemon. Every other source - a path, a tarball URL,
+ * `github:` or `git+ssh:` - goes to npm as it was written, behind a `--`, and
+ * the name it lands under is the dependency npm adds to the root's
+ * `package.json`; one that lands with no manifest, or with one that has no
+ * `ahpd` field, is uninstalled again and refused. Nothing is loaded here, so
+ * whether the plugin works is what the next `ahpd plugin list` or the next run
+ * says. What npm is given is said before it runs, because npm says nothing
+ * while it works.
+ *
+ * The answer is the names written into `plugins`, in the order the sources
+ * were given: a later command names the row this installed by it.
  *
  * No `--allow-scripts` here, and that is a finding rather than an omission:
  * npm 12 refuses that flag on a project-scoped install (`--prefix`) and tells
@@ -619,34 +677,66 @@ const refuseNonPlugins = async (names: readonly string[], options: InstallOption
  * script of its own therefore installs its files and skips that script, which
  * npm reports and carries on from.
  */
-export async function installPlugins(names: readonly string[], options: InstallOptions): Promise<void> {
+export async function installPlugins(names: readonly string[], options: InstallOptions): Promise<string[]> {
   for (const name of names) {
-    if (!isPackageName(name)) {
-      throw new Error(`${name} is not a package name. install takes package names only; a path or a URL is used as written where it is named.`);
+    /*
+     * npm reads an argument that starts with `-` as an option, whatever it was
+     * meant to be, so a source like `--prefix=/x` is refused before npm runs
+     * and before anything is written. The `--` in the argv is the second half
+     * of that: it holds every source after it to being a source.
+     */
+    if (name.startsWith('-')) {
+      throw new Error(`${name} is not a source to install: a source that starts with "-" would be read by npm as an option.`);
     }
     if (packageOf(name) === SDK) throw new Error(SDK_IS_NOT_A_PLUGIN);
   }
   const wanted = await refuseNonPlugins(names, options);
   const root = pluginRoot(options.configDir);
   // The config dir is made either way: the packages may go elsewhere, but
-  // `--enable` still writes the daemon's own configuration there.
+  // the entry is still written to the daemon's own configuration there.
   mkdirSync(options.configDir, { recursive: true });
   mkdirSync(root, { recursive: true });
+  // What the root names before npm runs, so what it added is what npm landed:
+  // a source is named by the dependency it became, not by how it was written.
+  const before = new Map(dependenciesIn(root));
   options.say(`Installing ${wanted.join(', ')} with npm.`);
-  const done = await options.run('npm', ['install', '--prefix', root, ...daemonsSdk(options.version), ...wanted]);
+  const done = await options.run('npm', ['install', '--prefix', root, ...daemonsSdk(options.version), '--', ...wanted]);
   if (done.code !== 0) {
     throw npmFailed(`npm could not install ${names.join(', ')}`, done);
+  }
+  const installed = namesInstalled(names, root, before, dependenciesIn(root));
+  const packages: string[] = [];
+  for (const [at, name] of installed.entries()) {
+    if (name === undefined) {
+      // npm succeeded and wrote no dependency to name the source by, so there
+      // is nothing this can write into `plugins`. With `--no-enable` there is
+      // nothing to write anyway, and the install stands as npm left it.
+      if (!options.enable) continue;
+      throw new Error(`${names[at] as string} was installed, but npm wrote no dependency for it into ${join(root, 'package.json')}.`);
+    }
+    /*
+     * A package with no manifest where npm should have put one is not a plugin
+     * either: npm may land a source that resolves to nothing, or a manifest it
+     * could not read, and either way there is nothing for the loader to check.
+     */
+    const manifest = manifestIn(root, name);
+    if (manifest === undefined || !('ahpd' in manifest)) {
+      const undone = await options.run('npm', ['uninstall', '--prefix', root, '--', name]);
+      if (undone.code !== 0) throw npmFailed(`npm could not uninstall ${name}, which is not an ahpd plugin`, undone);
+      throw new Error(`${name} is not an ahpd plugin: its package.json has no "ahpd" field.`);
+    }
+    packages.push(name);
   }
   options.say(`Installed ${wanted.join(', ')} into ${root}.`);
   if (!options.enable) {
     options.say('--no-enable, so the configuration was not changed.');
-    return;
+    return packages;
   }
-  const packages = names.map(packageOf);
   const added = enableNames(options.configFile, packages);
   options.say(added.length === 0
     ? `${options.configFile} already names ${packages.join(', ')}.`
     : `plugins += ${added.join(', ')} in ${options.configFile}.`);
+  return packages;
 }
 
 /** What `plugin update` was given and where it looks. */
@@ -813,6 +903,12 @@ export interface RemoveOptions {
  * The packages are said before npm runs.
  */
 export async function removePlugins(names: readonly string[], options: RemoveOptions): Promise<void> {
+  for (const name of names) {
+    // As in `installPlugins`: npm reads an argument that starts with `-` as an option.
+    if (name.startsWith('-')) {
+      throw new Error(`${name} is not a plugin to remove: a name that starts with "-" would be read by npm as an option.`);
+    }
+  }
   const root = pluginRoot(options.configDir);
   const packages = names.map(packageOf);
   const dropped = disableNames(options.configFile, packages);
@@ -824,7 +920,7 @@ export async function removePlugins(names: readonly string[], options: RemoveOpt
   const uninstalled = packages.filter((name) => name !== SDK);
   if (uninstalled.length === 0) return;
   options.say(`Removing ${uninstalled.join(', ')} with npm.`);
-  const done = await options.run('npm', ['uninstall', '--prefix', root, ...uninstalled]);
+  const done = await options.run('npm', ['uninstall', '--prefix', root, '--', ...uninstalled]);
   if (done.code !== 0) {
     throw npmFailed(`npm could not uninstall ${uninstalled.join(', ')}`, done);
   }

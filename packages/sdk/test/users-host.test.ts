@@ -400,9 +400,18 @@ it('sends the same list to every connection when there is no directory', async (
  *
  * It is read off the same table the gate asks against, so the test asserts the
  * shape and the two invariants a client drawing a role editor depends on: a
- * subject's operations are its two groups and nothing else, and no operation
- * is in both.
+ * subject's operations are its two groups, except one that names itself out of
+ * both, and no operation is in both.
  */
+
+/**
+ * The operations no group holds.
+ *
+ * `plugin:install` is the one: it installs or removes a plugin, which runs
+ * code with the daemon's permissions, so `plugin:write` may not confer it.
+ * Only a grant naming the operation, `plugin:*` or admin's `*:*` holds it.
+ */
+const UNGROUPED: Record<string, string[]> = { plugin: ['install'] };
 
 interface Subject {
   title: string;
@@ -438,10 +447,14 @@ it('advertises the operations of every subject it gates, on both blocks', async 
   for (const [subject, one] of Object.entries(grants)) {
     expect(one.title, subject).not.toBe('');
     expect(one.description, subject).not.toBe('');
-    // Every operation is in exactly one group, and the groups are the whole of
-    // it: a client that offers these lists cannot offer an operation the host
-    // would refuse, and cannot leave one out.
-    expect([...one.groups.read, ...one.groups.write].sort(), subject).toEqual([...one.operations].sort());
+    // Every operation is in exactly one group, unless it is one of the few
+    // that name themselves out of both: a client that offers these lists
+    // cannot offer an operation the host would refuse, and cannot leave one
+    // out.
+    const loose = UNGROUPED[subject] ?? [];
+    expect([...one.groups.read, ...one.groups.write].sort(), subject)
+      .toEqual(one.operations.filter((op) => !loose.includes(op)).sort());
+    expect(one.operations.filter((op) => ![...one.groups.read, ...one.groups.write].includes(op)), subject).toEqual(loose);
     expect(one.groups.read.filter((op) => one.groups.write.includes(op)), subject).toEqual([]);
     // And the advertised words are grants the directory accepts.
     for (const op of one.operations) expect(isGrant(`${subject}:${op}` as Grant), `${subject}:${op}`).toBe(true);

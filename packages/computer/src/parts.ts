@@ -668,9 +668,9 @@ export const dockerfileOf = (part: Part, source?: AhpdSource): string => {
     fetching(true, 'ca-certificates'),
     `COPY ${names.join(' ')} ./`,
     `RUN npm install --prefix /opt/ahpd/${part.id} ${flags} ${source.tarballs.map((one) => `./${one.name}`).join(' ')}`,
-    // `ahpd plugin install` names a package, not a tarball - `isPackageName` in
-    // the installer refuses a path - so the plugins of a checkout are installed
-    // into the same root by npm, which is what `AHPD_PLUGIN_ROOT` points at.
+    // The plugins of a checkout are tarballs, and what resolves a bare name is
+    // the plugin root, so npm installs them into the same root the launcher
+    // points `AHPD_PLUGIN_ROOT` at.
     `RUN npm install --prefix ${PLUGIN_ROOT} ${flags} ${[...source.plugins, ...source.tarballs]
       .map((one) => `./${one.name}`).join(' ')}`,
     ahpdLauncher(part),

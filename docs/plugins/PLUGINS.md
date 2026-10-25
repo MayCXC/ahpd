@@ -1215,18 +1215,30 @@ with it:
 
 Reading the channel needs `plugin:list`.
 
-Three commands change the file the daemon loads:
+Six commands change the file the daemon loads, and one reads back the text a client wrote:
 
 | Method | Grant | What it does |
 | --- | --- | --- |
+| `x-ahpd/plugins/install` | `plugin:install` | Installs one source the way `ahpd plugin install` does, names the package npm wrote in `plugins` and loads it. Takes `source`; answers `{ id }`, the id the new row is listed under |
+| `x-ahpd/plugins/remove` | `plugin:install` | Takes the plugin out of `plugins` and uninstalls it, or leaves the package installed with `keep: true`. Takes `id` and an optional `keep`. A plugin written by `write` has its folder deleted instead, unless `keep: true` |
+| `x-ahpd/plugins/write` | `plugin:install` | Writes a plugin in a client: `index.ts` and `package.json` in `<plugin root>/plugins/.<id>.new/`, runs `npm install` there, swaps the folder into `<plugin root>/plugins/<id>/` only when npm succeeds, names it in `plugins` and loads it. Takes `id`, `source` and `packageJson`; a second write of the same `id` replaces the files and reloads it |
+| `x-ahpd/plugins/source` | `plugin:install` | Answers `{ id, source, packageJson }` with the text a client wrote. Takes `id`; a plugin the configuration names with a spec of its own is refused |
 | `x-ahpd/plugins/enable` | `plugin:enable` | Turns the plugin on, keeping its entry and its options. Takes `id` |
 | `x-ahpd/plugins/disable` | `plugin:disable` | Turns it off the same way. Takes `id` |
 | `x-ahpd/plugins/options` | `plugin:options` | Writes one option, checked against the plugin's own schema. Takes `id`, `key` and a `value`; a `value` left out takes the option out |
 
 The `id` is the plugin's id, which is also the row's id and the root config key
-it is edited by. A value the schema marks `writeOnly` is answered `<set>`. Every
-answer carries `restart: true`, because a running daemon loads the change at its
-next start.
+it is edited by. A value the schema marks `writeOnly` is answered `<set>`. A
+running daemon loads the change before the command answers; only a plugin with a
+port or a URI scheme in the way answers `restart: true`.
+
+`plugin:install` is in neither of the plugin groups, so `plugin:write` does not
+hold it: installing or removing a plugin runs code with the daemon's
+permissions, and only a role given that grant by name, `plugin:*` or `*:*` may
+do it. Over HTTP, `POST /plugin/install` and `/plugin/remove` ask for the same
+grant in place of the deployment token, so a person holding it installs a plugin
+from a client. `POST /plugin/update`, the option writes, the switch and the
+restart still take the deployment token.
 
 A command that writes also marks `ahpd.restartNeeded` on the root state, for
 every connection and for one that subscribes afterwards: the daemon holding the
@@ -1411,13 +1423,29 @@ where the plugin is loaded, and the daemon says which line it was. See
 
 The configuration directory is `$XDG_CONFIG_HOME/ahpd` or `~/.config/ahpd`.
 
+### Installing a plugin
+
+`ahpd plugin install` takes every source, and so does `x-ahpd/plugins/install`: a package name such as `@ahpd/agent-pi`, with a version or a tag if the writer wants one; a path to a directory or a tarball; `github:<owner>/<repo>`; a `git+ssh:` URL; and an `https:` URL to a tarball. A source that starts with `-` is refused before npm runs, because npm would read it as an option of its own, and the sources are passed to npm after a `--` so none of them can be one. npm does the install, in the plugin root, and the install path writes into `plugins` the name npm gave the package, which is the dependency npm added to the root's `package.json`. For a package name that is the name without its version or tag. `x-ahpd/plugins/install` answers the row's own `id`, which is the id the daemon lists the new plugin under: the module is loaded before the answer, so a module that exports `name` is answered by that name, not by the package npm installed.
+
+A bare registry name is asked of the registry before npm runs: the newest version whose `@ahpd/sdk` range admits this daemon is installed, and a package whose manifest has no `ahpd` field is refused before anything is installed. The registry cannot answer for a path, a URL or a git spec, so the package that source landed is read after npm installed it: one whose `package.json` is missing, or has no `ahpd` field, is uninstalled again and the command refuses. npm 12 runs no install script in the plugin root, so a git source that needs a build step ships the build or a `.ts` entry.
+
+`ahpd plugin remove` takes the name `plugins` holds, which for an installed source is the package name npm wrote, and uninstalls it; `--keep` takes the entry out and leaves the package installed. A name that starts with `-` is refused before npm runs, as an install source is.
+
+### Writing a plugin in a client
+
+A client holding `plugin:install` writes a plugin as one TypeScript file, with `x-ahpd/plugins/write`: `{ id, source, packageJson }`, where `source` is the text of `index.ts` and `packageJson` is the manifest, as an object or as its text. The daemon writes both into `<plugin root>/plugins/.<id>.new/`, runs `npm install` in that staging folder, and only when npm succeeds swaps it into `<plugin root>/plugins/<id>/`, names the folder in `plugins` and loads it before the answer. An npm that fails leaves the folder the daemon runs untouched, and the staging folder is deleted. The folder is outside `node_modules`, which is where Node refuses to strip types, and a plugin below the plugin root resolves `@ahpd/sdk` from its own `node_modules` or from the copy the install path puts at the root.
+
+The command completes the manifest rather than requiring the client to: `name` becomes the `id` when the manifest names none, and `ahpd.entry` becomes `./index.ts` when neither it, `exports` nor `main` names an entry. A second write of the same `id` replaces both files and reloads the plugin, so the text that runs is the text the client just sent. The replacement goes through the staging folder as the first write does, so an npm that fails on the second write leaves the first files, and the first code, exactly as they were.
+
+`x-ahpd/plugins/source` takes `{ id }` and answers `{ id, source, packageJson }` with the text as written, so another admin reads what a colleague wrote. A plugin the configuration names by a spec of its own is refused: that file is not the daemon's to hand out. `x-ahpd/plugins/remove` deletes the folder, unless `keep: true` leaves it on disk with the entry gone from `plugins`.
+
 ## What happens when a plugin fails
 
 A plugin is code in the daemon's process with the daemon's permissions, so
 naming one is the trust decision. The configuration file is the trust boundary
 here the way the connection token is the port's.
 
-- A plugin that does not resolve, whose manifest is wrong, that throws on import, that has no `apply`, whose options fail its `optionsSchema`, or that throws out of `apply` is **reported on stdout and skipped**.
+- A plugin that does not resolve, whose manifest is wrong, that throws on import, that has no `apply`, whose options fail its `optionsSchema`, or that throws out of `apply` is **reported on the daemon's log and skipped**, on stderr under `--stdio` where stdout is the protocol.
   The daemon starts without it and the next plugin is
   still tried. A bad registration loses that plugin's whole contribution rather
   than the part it registered before the mistake.
@@ -1447,7 +1475,7 @@ A plugin whose `apply` would throw still lists as `ready`, because a listing nev
 
 ## A change while the daemon runs
 
-The daemon reads the plugin list at each start and, after that, at every write that changes it. A command that changes the file applies at once, with no restart. That covers install, remove, update, enable, disable, an option, and a `plugins.` key written through root config. `ahpd plugin apply` applies the file as it is, without writing it.
+The daemon reads the plugin list at each start and, after that, at every write that changes it. A command that changes the file applies at once, with no restart. That covers install, remove, a plugin written in a client, update, enable, disable, an option, and a `plugins.` key written through root config. `ahpd plugin apply` applies the file as it is, without writing it.
 
 A change loads, unloads or applies again each plugin the file describes, and the host takes a new fold of every contribution. An open session is told that its tools changed, and a route or an adapter a plugin adds is served before the command answers. A plugin that failed earlier is tried again at the next change.
 

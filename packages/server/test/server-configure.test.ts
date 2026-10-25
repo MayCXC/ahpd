@@ -63,12 +63,33 @@ const failing = new Set<string>();
 const hanging = new Set<string>();
 /** Every program a case ran, so a second run can be shown not to make an npm call. */
 const calls: { program: string; argv: string[]; options?: RunOptions }[] = [];
+/** The package a source names, without the version or tag after it. */
+const packageSource = (source: string): string => {
+  const at = source.indexOf('@', source.startsWith('@') ? 1 : 0);
+  return at === -1 ? source : source.slice(0, at);
+};
+
 /**
- * The runner: npm always succeeds, and a `--version` is answered from the maps
- * above rather than by the file, which is a stub holding no code at all.
+ * The runner: npm always succeeds and lands what each source names, and a
+ * `--version` is answered from the maps above rather than by the file, which is
+ * a stub holding no code at all.
  */
 const run: Runner = async (program, argv, options) => {
   calls.push({ program, argv: [...argv], ...(options === undefined ? {} : { options }) });
+  // An install lands each source as the package it names, with the `ahpd`
+  // field a plugin's manifest has: the install path reads that manifest to
+  // tell a plugin from a package that is not one, and refuses one it cannot
+  // find at all.
+  if (argv[0] === 'install') {
+    const into = argv[argv.indexOf('--prefix') + 1] as string;
+    for (const source of argv.slice(argv.indexOf('--') + 1)) {
+      const name = packageSource(source);
+      const folder = join(into, 'node_modules', name);
+      mkdirSync(folder, { recursive: true });
+      writeFileSync(join(folder, 'package.json'), `${JSON.stringify({ name, version: '0.8.0', ahpd: { entry: './dist/index.js' } })}\n`);
+    }
+    return { code: 0, stdout: '', stderr: '' } satisfies Ran;
+  }
   if (argv[0] !== '--version') return { code: 0, stdout: '', stderr: '' } satisfies Ran;
   const name = basename(program).replace(/\.(?:cmd|exe|bat|com)$/iu, '');
   if (hanging.has(name)) return { code: -1, stdout: '', stderr: '' } satisfies Ran;

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { fittingVersion, installPlugins, isPackageName, launch, pinned, removePlugins, run as realRun, updatePlugins } from '../src/install.js';
+import { fittingVersion, installPlugins, isPackageName, launch, packageOf, pinned, removePlugins, run as realRun, updatePlugins } from '../src/install.js';
 import type { Ran, Runner } from '../src/install.js';
 import { registry } from '../src/update.js';
 import type { Fetch } from '../src/update.js';
@@ -33,6 +33,13 @@ afterEach(() => {
 });
 
 /**
+ * A package name the registry has, as `installPlugins` recognises one, so the
+ * fake lands a manifest only for the sources npm resolves that way. A path, a
+ * URL or a git spec is named by what `added` says it became.
+ */
+const registryName = /^(?:@[a-z0-9~-][a-z0-9._~-]*\/)?[a-z0-9~-][a-z0-9._~-]*$/i;
+
+/**
  * A runner that records every call and lets a verb fail. `lands` is what an
  * install leaves in `node_modules`, as a package name and its version.
  *
@@ -40,8 +47,22 @@ afterEach(() => {
  * can fail the one package of a `--force` update that gets its own call. The
  * packages land where the call's own `--prefix` says, which is what npm does: a
  * case that moves the root sees them under the root.
+ *
+ * `added` is what npm writes into the root's `package.json` dependencies, which
+ * is how an install of a source learns what npm called the package; `manifests`
+ * is what each landed `package.json` says besides its name and version, so a
+ * case can land one with an `ahpd` field and one without.
+ *
+ * An install's own sources land too, as npm leaves them: every registry name
+ * after the `--` gets a manifest with an `ahpd` field, because npm really does
+ * put one in `node_modules`. An update's argv has no `--`, so its cases land
+ * only what `lands` names and a package npm did not move stays where it was.
  */
-const fake = (answers: Record<string, Ran> = {}, lands: Record<string, string> = {}) => {
+const fake = (
+  answers: Record<string, Ran> = {},
+  lands: Record<string, string> = {},
+  options: { added?: Record<string, string>; manifests?: Record<string, Record<string, unknown>> } = {},
+) => {
   const calls: { program: string; argv: string[] }[] = [];
   const runner: Runner = async (program, argv) => {
     calls.push({ program, argv: [...argv] });
@@ -49,9 +70,32 @@ const fake = (answers: Record<string, Ran> = {}, lands: Record<string, string> =
     const at = argv.indexOf('--prefix');
     if (argv[0] === 'install' && answer.code === 0 && at !== -1) {
       const into = argv[at + 1] as string;
-      for (const [name, version] of Object.entries(lands)) {
+      const landed = new Map(Object.entries(lands));
+      const sources = argv.includes('--') ? argv.slice(argv.indexOf('--') + 1) : [];
+      for (const source of sources) {
+        const name = packageOf(source);
+        if (!registryName.test(name) || landed.has(name)) continue;
+        landed.set(name, source.slice(name.length + 1) || '0.1.0');
+      }
+      for (const [name, version] of landed) {
         mkdirSync(join(into, 'node_modules', name), { recursive: true });
-        writeFileSync(join(into, 'node_modules', name, 'package.json'), JSON.stringify({ name, version }));
+        // A manifest this case names is written as it is; one the fake lands on
+        // its own is a plugin, which is what a registry install leaves behind.
+        const said = options.manifests?.[name];
+        writeFileSync(join(into, 'node_modules', name, 'package.json'), JSON.stringify({
+          name,
+          version,
+          ...(said === undefined ? { ahpd: { entry: './index.js' } } : said),
+        }));
+      }
+      if (options.added !== undefined) {
+        const file = join(into, 'package.json');
+        const held = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown> : {};
+        const dependencies = typeof held.dependencies === 'object' && held.dependencies !== null
+          ? held.dependencies as Record<string, string>
+          : {};
+        held.dependencies = { ...dependencies, ...options.added };
+        writeFileSync(file, `${JSON.stringify(held, null, 2)}\n`);
       }
     }
     return answer;
@@ -267,7 +311,7 @@ it('installs into the configuration directory and names the packages there', asy
   // optional node-pty, which the daemon gets from its own global install.
   expect(install?.argv).toEqual([
     'install', '--prefix', configDir, '--legacy-peer-deps', '@ahpd/sdk@9.9.9',
-    '@ahpd/agent-claude@0.1.0', 'left-pad@1',
+    '--', '@ahpd/agent-claude@0.1.0', 'left-pad@1',
   ]);
   // The list holds package names, which is what the loader resolves: a
   // version or tag belongs to the install and would read back as missing.
@@ -286,7 +330,7 @@ it('installs into the plugin root when the variable is set, and still configures
   });
 
   expect(calls.find((one) => one.argv[0] === 'install')?.argv)
-    .toEqual(['install', '--prefix', pluginRoot, '--legacy-peer-deps', '@ahpd/sdk@0.8.0', '@ahpd/agent-cofold@0.1.0']);
+    .toEqual(['install', '--prefix', pluginRoot, '--legacy-peer-deps', '@ahpd/sdk@0.8.0', '--', '@ahpd/agent-cofold@0.1.0']);
   expect(existsSync(pluginRoot)).toBe(true);
   expect(said.join('\n')).toContain(pluginRoot);
   // The root moves where the packages land and nothing else: the configuration
@@ -310,12 +354,87 @@ it('removes a name given with a version', async () => {
   expect(calls.find((one) => one.argv[0] === 'uninstall')?.argv.at(-1)).toBe('@ahpd/agent-acp');
 });
 
-it('refuses a path and a scheme before npm runs', async () => {
+it('installs a source npm resolves, and names it by the package npm wrote', async () => {
+  // A `github:` spec is npm's to resolve, so nothing asks the registry and npm
+  // is handed the source as it was written. What `plugins` names is the
+  // dependency npm added for it, which is the name the loader resolves.
+  const { runner, calls } = fake({}, { demo: '0.1.0' }, {
+    added: { demo: 'github:someone/demo' },
+    manifests: { demo: { ahpd: { entry: './index.js' } } },
+  });
+  expect(await installPlugins(['github:someone/demo'], {
+    configDir, configFile, version: '0.8.0', enable: true, run: runner, fetch: aPlugin, say,
+  })).toEqual(['demo']);
+  expect(calls.find((one) => one.argv[0] === 'install')?.argv).toEqual([
+    'install', '--prefix', configDir, '--legacy-peer-deps', '@ahpd/sdk@0.8.0', '--', 'github:someone/demo',
+  ]);
+  expect(read().plugins).toEqual(['demo']);
+});
+
+it('takes a path and a tarball URL the same way, naming each by what npm added', async () => {
+  // npm writes a path as a `file:` spec beside the root, which is resolved
+  // back to the path it was given; a URL is written as it was given.
+  const plugin = join(root, 'my-plugin');
+  const tarball = 'https://example.test/tools/demo.tgz';
+  const { runner, calls } = fake({}, { demo: '0.1.0', other: '0.2.0' }, {
+    added: { demo: 'file:../my-plugin', other: tarball },
+    manifests: { demo: { ahpd: {} }, other: { ahpd: {} } },
+  });
+  expect(await installPlugins([plugin, tarball], {
+    configDir, configFile, version: '0.8.0', enable: true, run: runner, fetch: aPlugin, say,
+  })).toEqual(['demo', 'other']);
+  expect(calls.find((one) => one.argv[0] === 'install')?.argv.slice(-2)).toEqual([plugin, tarball]);
+  expect(read().plugins).toEqual(['demo', 'other']);
+});
+
+it('uninstalls and refuses a source whose package has no ahpd field', async () => {
+  // The registry cannot be asked about a source, so what npm landed is what
+  // decides: a package that is not an ahpd plugin goes out again, and nothing
+  // is written into `plugins`.
+  const { runner, calls } = fake({}, { demo: '0.1.0' }, {
+    added: { demo: 'github:someone/demo' },
+    manifests: { demo: { bin: { demo: './dist/main.js' } } },
+  });
+  await expect(installPlugins(['github:someone/demo'], {
+    configDir, configFile, version: '0.8.0', enable: true, run: runner, fetch: aPlugin, say,
+  })).rejects.toThrow('demo is not an ahpd plugin: its package.json has no "ahpd" field.');
+  expect(calls.map((one) => one.argv[0])).toEqual(['install', 'uninstall']);
+  expect(calls[1]?.argv).toEqual(['uninstall', '--prefix', configDir, '--', 'demo']);
+  expect(existsSync(configFile)).toBe(false);
+});
+
+it('uninstalls and refuses a source whose package landed no manifest at all', async () => {
+  // npm succeeded and wrote a dependency, but no `node_modules/<name>/package.json`
+  // is there: nothing was landed, or npm could not write what it landed. There
+  // is no `ahpd` field to read either, so the source is refused as the one with
+  // no field is, and the package npm named is taken out again.
+  const { runner, calls } = fake({}, {}, { added: { demo: 'github:someone/demo' } });
+  await expect(installPlugins(['github:someone/demo'], {
+    configDir, configFile, version: '0.8.0', enable: true, run: runner, fetch: aPlugin, say,
+  })).rejects.toThrow('demo is not an ahpd plugin: its package.json has no "ahpd" field.');
+  expect(calls.map((one) => one.argv[0])).toEqual(['install', 'uninstall']);
+  expect(calls[1]?.argv).toEqual(['uninstall', '--prefix', configDir, '--', 'demo']);
+  expect(existsSync(configFile)).toBe(false);
+});
+
+it('refuses a source that would be read by npm as an option, before npm runs', async () => {
+  // `--prefix=/x` is a source only in appearance: npm would take it as an
+  // option, so it never reaches npm, and nothing is written anywhere.
   const { runner, calls } = fake();
-  const options = { configDir, configFile, version: '9.9.9', enable: true, run: runner, fetch: aPlugin, say };
-  await expect(installPlugins(['./my-plugin'], options)).rejects.toThrow(/not a package name/);
-  await expect(installPlugins(['npm:@ahpd/agent-claude'], options)).rejects.toThrow(/not a package name/);
+  await expect(installPlugins(['--prefix=/x'], {
+    configDir, configFile, version: '0.8.0', enable: true, run: runner, fetch: aPlugin, say,
+  })).rejects.toThrow('--prefix=/x is not a source to install: a source that starts with "-" would be read by npm as an option.');
   expect(calls).toEqual([]);
+  expect(existsSync(configFile)).toBe(false);
+});
+
+it('refuses to remove a name that would be read by npm as an option, before npm runs', async () => {
+  write({ plugins: ['@ahpd/a'] });
+  const { runner, calls } = fake();
+  await expect(removePlugins(['--prefix=/x'], { configDir, configFile, uninstall: true, run: runner, say }))
+    .rejects.toThrow('--prefix=/x is not a plugin to remove: a name that starts with "-" would be read by npm as an option.');
+  expect(calls).toEqual([]);
+  expect(read().plugins).toEqual(['@ahpd/a']);
 });
 
 it('adds a name once, and keeps every other key and entry', async () => {
@@ -369,7 +488,7 @@ it('removes a string entry and an object entry, then uninstalls them', async () 
   expect(read().plugins).toEqual(['@ahpd/c']);
   expect(read().port).toBe(1234);
   expect(calls.find((one) => one.argv[0] === 'uninstall')?.argv)
-    .toEqual(['uninstall', '--prefix', configDir, '@ahpd/a', '@ahpd/b']);
+    .toEqual(['uninstall', '--prefix', configDir, '--', '@ahpd/a', '@ahpd/b']);
 });
 
 it('drops the name with --keep but leaves the package installed', async () => {
@@ -665,7 +784,7 @@ it('removes from the plugin root when the variable is set, and configures the da
   write({ plugins: ['@ahpd/a'] });
   const { runner, calls } = fake();
   await removePlugins(['@ahpd/a'], { configDir, configFile, uninstall: true, run: runner, say });
-  expect(calls.map((one) => one.argv)).toEqual([['uninstall', '--prefix', pluginRoot, '@ahpd/a']]);
+  expect(calls.map((one) => one.argv)).toEqual([['uninstall', '--prefix', pluginRoot, '--', '@ahpd/a']]);
   expect(read().plugins).toEqual([]);
   expect(said.join('\n')).toContain(pluginRoot);
 });
@@ -778,7 +897,7 @@ it('never uninstalls the sdk', async () => {
   write({ plugins: ['@ahpd/a'] });
   const { runner, calls } = fake();
   await removePlugins(['@ahpd/a', '@ahpd/sdk'], { configDir, configFile, uninstall: true, run: runner, say });
-  expect(calls.map((one) => one.argv)).toEqual([['uninstall', '--prefix', configDir, '@ahpd/a']]);
+  expect(calls.map((one) => one.argv)).toEqual([['uninstall', '--prefix', configDir, '--', '@ahpd/a']]);
   calls.length = 0;
   await removePlugins(['@ahpd/sdk'], { configDir, configFile, uninstall: true, run: runner, say });
   expect(calls).toEqual([]);
@@ -815,15 +934,19 @@ it('installs a package whose manifest has an ahpd field, asked at the version ch
   expect(read().plugins).toEqual(['@ahpd/agent-claude', 'mine', '@acme/agent-mine']);
 });
 
-it('never asks the registry about a path or a git spec', async () => {
-  const { runner, calls } = fake();
+it('never asks the registry about a source, and passes it to npm as written', async () => {
+  // `owner/repo` is GitHub's shorthand to npm, and npm resolves it. npm writes
+  // it back as a `github:` spec, which is not the text it was given: the one
+  // dependency npm added is still the package it landed.
+  const { runner, calls } = fake({}, { 'my-plugin': '0.1.0' }, {
+    added: { 'my-plugin': 'github:someone/my-plugin' },
+    manifests: { 'my-plugin': { ahpd: {} } },
+  });
   const { fetch, asked } = fakeRegistry({});
-  const options = { configDir, configFile, version: '0.8.0', enable: false, run: runner, fetch, say };
-  await expect(installPlugins(['./my-plugin'], options)).rejects.toThrow(/not a package name/);
-  // `owner/repo` is GitHub's shorthand to npm, and npm resolves it.
-  await installPlugins(['someone/my-plugin'], options);
+  await installPlugins(['someone/my-plugin'], { configDir, configFile, version: '0.8.0', enable: true, run: runner, fetch, say });
   expect(asked).toEqual([]);
   expect(calls.map((one) => one.argv.at(-1))).toEqual(['someone/my-plugin']);
+  expect(read().plugins).toEqual(['my-plugin']);
 });
 
 it('leaves the install to npm when the registry cannot be asked or has no such version', async () => {

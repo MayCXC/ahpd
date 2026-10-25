@@ -228,12 +228,18 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
     resource: { kind: 'plugin', ...(sub === 'install' ? {} : { key: 'name' }) },
     input: {
       ...(served === undefined ? pluginWriteFields : servedPluginWriteFields),
-      name: { type: 'array', items: { type: 'string' }, description: 'A package name. One or more.' },
+      name: {
+        type: 'array',
+        items: { type: 'string' },
+        description: sub === 'install'
+          ? 'A package name, a path, a tarball URL, github:owner/repo or a git+ssh: spec. One or more.'
+          : 'A package name. One or more.',
+      },
     },
-    scopes: ['config:write'],
-    // Installing or removing a plugin runs code in this process, so over HTTP
-    // it is the deployment's own token and never a person.
-    meta: { deploymentTokenOnly: 'install or remove a plugin' },
+    // Installing or removing a plugin runs code with the daemon's permissions,
+    // so it is an operation of its own: `plugin:write` does not hold it, and
+    // only a grant naming `plugin:install`, `plugin:*` or `*:*` does.
+    scopes: ['plugin:install'],
     run: (context) => oneAtATime(async () => {
       const names = context.list<string>('name');
       // Served, the file edited is the daemon's, whatever the request names.
