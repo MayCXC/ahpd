@@ -84,10 +84,12 @@ The same in `config.json`:
 {
   "plugins": [
     "@ahpd/agent-claude",
-    { "name": "@ahpd/agent-pi", "options": { "model": "anthropic/claude-haiku-4-5" }, "enabled": false }
+    { "source": "@ahpd/agent-pi", "options": { "model": "anthropic/claude-haiku-4-5" }, "enabled": false }
   ]
 }
 ```
+
+`source` names the package, file or directory. An entry with `name` and no `source` is the old form and still loads; the next change writes it as `source`. A `name` beside a `source` is a display name.
 
 ::: tip Credentials
 Put a secret in the [vault](VAULT.md) and name it, so it is not in `config.json` or your shell history:

@@ -1,4 +1,4 @@
-export { apply, child, childEnv, name, optionsSchema, title } from './plugin.js';
+export { apply, child, childEnv, name, title } from './plugin.js';
 export type { Child } from './plugin.js';
 export { isAnswer } from './wire.js';
 export type {

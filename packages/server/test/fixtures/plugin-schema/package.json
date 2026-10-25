@@ -1,0 +1,19 @@
+{
+  "name": "plugin-schema",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "ahpd": {
+    "entry": "./index.ts",
+    "description": "Declares a schema for its options in its package.json.",
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "command": { "type": "string" },
+        "greeting": { "type": "string" },
+        "retries": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["command", "greeting"]
+    }
+  }
+}

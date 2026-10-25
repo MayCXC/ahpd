@@ -7,10 +7,11 @@ import { memoryRecords } from '../../sdk/src/resources/records.js';
 import { memorySessions } from '../../sdk/src/sessions/sessions.js';
 import { sdkVersion } from '../../sdk/src/version.js';
 import { backSessions, chatsOf, rowId, sessionsOf } from '../src/names.js';
-import { apply, defaults, optionsSchema } from '../src/plugin.js';
+import { apply, defaults } from '../src/plugin.js';
 import { postMessage } from '../src/post.js';
 import { botStore } from '../src/store.js';
 import { botWake } from '../src/wake.js';
+import manifest from '../package.json' with { type: 'json' };
 import type { MainTurnAbsence } from '../src/wake.js';
 import type { ChatMessage, TurnHandle } from '../src/chat.js';
 import type { BotSessions } from '../src/provider.js';
@@ -34,6 +35,9 @@ import type { Owner } from '../../sdk/src/types/usage.js';
  * starts a session and what carries an action are the plugin's. The wake and
  * the rows are real, because the turn a post ends is the turn a message woke.
  */
+
+/** The schema the manifest declares, which a listing reads without importing. */
+const optionsSchema = manifest.ahpd.optionsSchema;
 
 /** The main chat every case below says something in, as this host holds it. */
 const CHAT = 'bot-chat:/one';

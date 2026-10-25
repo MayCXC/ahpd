@@ -293,7 +293,7 @@ export const THROWS = join(import.meta.dirname, 'fixtures', 'plugin-throws', 'in
 /** A plugin that drops one of its own items and says which. */
 export const SKIPS = join(import.meta.dirname, 'fixtures', 'plugin-skips', 'index.ts');
 /** A plugin whose `apply` throws an error of two lines. */
-export const MULTILINE = join(import.meta.dirname, 'fixtures', 'plugin-multiline.ts');
+export const MULTILINE = join(import.meta.dirname, 'fixtures', 'plugin-multiline', 'index.ts');
 
 /** A port nothing is listening on as this returns. */
 export const freePort = (): Promise<number> => new Promise((done, fail) => {

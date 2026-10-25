@@ -13,6 +13,4 @@ if (marker !== undefined) writeFileSync(marker, 'imported\n');
 
 export const name = 'marker-off';
 
-export const optionsSchema = { type: 'object', properties: { level: { type: 'integer' } } };
-
 export const apply: Plugin['apply'] = () => {};

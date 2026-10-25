@@ -34,22 +34,6 @@ export const defaults = {
   requireApproval: false,
 } as const;
 
-/** The options `apply` receives, as a JSON Schema the daemon checks them against. */
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    requireApproval: {
-      type: 'boolean',
-      description: 'Whether an agent may set a task to doing before somebody approved it. Off by default.',
-    },
-    sweepAfterDays: {
-      type: 'integer',
-      minimum: 1,
-      description: 'How many days a done or dropped plan is kept. Absent, a finished plan is kept forever.',
-    },
-  },
-};
-
 /** The two settings `apply` reads. */
 export interface TaskSettings {
   /** Whether a task needs an `approved` stamp before it may start. */

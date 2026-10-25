@@ -71,11 +71,13 @@
       { "src": "./icon-dark.svg", "theme": "dark" }
     ],
     "contracts": {},
-    "options": {
-      "command": { "required": false },
-      "name": { "required": false },
-      "keep": { "required": false },
-      "anonymous": { "required": false }
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "What the tunnel is called in a client's list. This machine's hostname by default." },
+        "keep": { "type": "boolean", "description": "Whether the tunnel outlives the daemon. true by default." },
+        "anonymous": { "type": "boolean", "description": "Whether somebody not signed in to this account may reach it. false by default." }
+      }
     }
   }
 }

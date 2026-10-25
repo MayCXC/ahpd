@@ -13,14 +13,6 @@ import type { Plugin, Vault } from '@ahpd/sdk';
 
 export const name = 'vault-store-two';
 
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    key: { type: 'string' },
-    replace: { type: 'boolean' },
-  },
-};
-
 export const apply: Plugin['apply'] = (host, options) => {
   const vault: Vault = {
     get: async (wanted) => (wanted === 'host:probe' ? 'from the second plugin' : undefined),

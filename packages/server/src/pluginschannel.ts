@@ -26,7 +26,7 @@ import {
   enableNames, installPlugins, oneAtATime, pluginRoot, removePlugins, run as runProgram, setPluginEnabled, setPluginOption, specsIn,
 } from './install.js';
 import type { Runner } from './install.js';
-import { describePlugin, nameOf, optionsSchemaLoaded, optionsSchemaOf, pluginIdOf, schemaOf } from './plugins.js';
+import { describePlugin, sourceOf, optionsSchemaLoaded, optionsSchemaOf, pluginIdOf, schemaOf } from './plugins.js';
 import type { Fetch } from './update.js';
 import { version } from './version.js';
 
@@ -192,7 +192,7 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     const byId = folderOf(id);
     if (byId !== undefined) return byId;
     const spec = specOf(id);
-    const at = spec === undefined ? undefined : nameOf(spec);
+    const at = spec === undefined ? undefined : sourceOf(spec);
     return at !== undefined && dirname(at) === here && existsSync(join(at, 'index.ts')) ? at : undefined;
   };
 
@@ -203,14 +203,14 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
    * The schema a plugin's options are masked and checked by.
    *
    * The copy the daemon loaded comes first, because it is the plugin that is
-   * running; a plugin that did not load is read from the module a load would
-   * import, as `plugin config` reads it. A module that cannot be imported, and
-   * one that is switched off, answer `undefined`, which marks every value.
+   * running; otherwise the manifest is read with no import, so a plugin that
+   * did not load - or is switched off - still has a form a client draws and
+   * values the daemon can refuse. A spec that does not resolve, or a manifest
+   * that declares no schema, answers `undefined`, which marks every value.
    */
   const schemaFor = async (spec: PluginSpec, id: string): Promise<Record<string, unknown> | undefined> => {
     const held = optionsSchemaLoaded(id);
     if (held !== undefined) return held;
-    if (typeof spec !== 'string' && spec.enabled === false) return undefined;
     try {
       return await optionsSchemaOf(spec, where);
     }
@@ -227,7 +227,9 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     const schema = await schemaFor(spec, id);
     const row = await describePlugin(spec, where);
     const loaded = options.loaded().find((one) => one.name === row.name);
-    const manifest = loaded?.manifest;
+    // The copy the daemon loaded is what is running; a plugin that did not load,
+    // or is switched off, is described from the manifest read without importing.
+    const manifest = loaded?.manifest ?? row.manifest;
     // What the daemon said when this plugin did not run, if it said anything.
     const failure = options.failures()[row.name];
     return {
@@ -268,7 +270,7 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
   const idOf = (spec: PluginSpec): string => withoutUserinfoIn(pluginIdOf(spec, where));
 
   /** The entry a command names, by its id or by the spec as written. */
-  const specOf = (id: string): PluginSpec | undefined => specs().find((one) => idOf(one) === id || nameOf(one) === id);
+  const specOf = (id: string): PluginSpec | undefined => specs().find((one) => idOf(one) === id || sourceOf(one) === id);
 
   const source: RecordsSource = {
     ids: async () => {
@@ -535,7 +537,7 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
       // daemon runs, which is imported again rather than loaded as a new one.
       let again = false;
       return changed(async () => {
-        again = specsIn(configFile).some((spec) => nameOf(spec) === folder);
+        again = specsIn(configFile).some((spec) => sourceOf(spec) === folder);
         rmSync(staged, { recursive: true, force: true });
         mkdirSync(staged, { recursive: true });
         writeFileSync(join(staged, 'index.ts'), text);
@@ -616,15 +618,16 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
       const spec = specOf(id);
       if (spec === undefined) throw new RpcError(INVALID_PARAMS, `${id} is not in plugins in ${configFile}.`);
       const value = params.value;
-      const disabled = typeof spec !== 'string' && spec.enabled === false;
 
-      if (value !== undefined && !disabled) {
+      if (value !== undefined) {
         /*
          * The same check `plugin config set` runs: a value the plugin's schema
          * refuses is not written, and a reference is held to the name rule
          * rather than to the option's schema, since what it resolves to is the
-         * plugin's business. A plugin switched off, or one whose module does
-         * not import, is written unchecked and checked when it loads.
+         * plugin's business. The schema is the manifest's, which is read with no
+         * import, so a plugin switched off and one whose module does not import
+         * are checked all the same; a plugin whose manifest declares no schema
+         * has nothing to check it against.
          */
         const schema = await schemaFor(spec, id);
         const properties = schema?.['properties'];

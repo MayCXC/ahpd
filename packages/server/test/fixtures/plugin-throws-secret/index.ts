@@ -10,14 +10,6 @@ import type { PluginHost } from '@ahpd/sdk';
 
 export const name = 'throws-secret';
 
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    apiKey: { type: 'string', writeOnly: true },
-    region: { type: 'string' },
-  },
-};
-
 export function apply(_host: PluginHost, options: Record<string, unknown>): void {
   throw new Error(`the secret fixture threw with apiKey ${String(options['apiKey'])} in ${String(options['region'])}`);
 }

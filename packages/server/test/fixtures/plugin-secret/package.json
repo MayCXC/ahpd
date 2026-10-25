@@ -1,0 +1,17 @@
+{
+  "name": "plugin-secret",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "ahpd": {
+    "entry": "./index.ts",
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "apiKey": { "type": "string", "writeOnly": true },
+        "region": { "type": "string" },
+        "retries": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

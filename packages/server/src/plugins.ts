@@ -57,10 +57,22 @@ export interface Resolved {
    * way `version.ts` does.
    */
   packageDir?: string;
+  /**
+   * The `plugin.json` a standalone spec named, when it named one.
+   *
+   * A standalone plugin has no package around it, so its manifest is the file
+   * the spec points at; `path` is already the module that file's `main` names.
+   */
+  manifestPath?: string;
 }
 
-/** What a spec is called, whether it was written as a string or an object. */
-export const nameOf = (spec: PluginSpec): string => (typeof spec === 'string' ? spec : spec.name);
+/**
+ * The module a spec names, whether it was written as a string or an object.
+ *
+ * `source` is the name. An entry written before `source` named its module with
+ * `name`, and that form still answers here.
+ */
+export const sourceOf = (spec: PluginSpec): string => typeof spec === 'string' ? spec : spec.source ?? spec.name;
 
 /**
  * Each plugin's id, by its spec as written: the name its module exports, then
@@ -74,20 +86,20 @@ const ids = new Map<string, string>();
  * no import has named, its manifest's name, its file's name or the spec.
  */
 export const pluginIdOf = (spec: PluginSpec, where?: { configDir: string; cwd: string }): string =>
-  ids.get(nameOf(spec)) ?? (where === undefined ? nameOf(spec) : unimportedId(spec, where));
+  ids.get(sourceOf(spec)) ?? (where === undefined ? sourceOf(spec) : unimportedId(spec, where));
 
 /** Whether a name a person typed names this spec: its id, or the spec as written. */
-export const isNamed = (spec: PluginSpec, name: string): boolean => nameOf(spec) === name || pluginIdOf(spec) === name;
+export const isNamed = (spec: PluginSpec, name: string): boolean => sourceOf(spec) === name || pluginIdOf(spec) === name;
 
 /** A spec's id read without an import, from what resolving it and its manifest say. */
 const unimportedId = (spec: PluginSpec, where: { configDir: string; cwd: string }): string => {
   try {
     const found = locate(resolvePlugin(spec, where), sdkVersion());
-    return 'refused' in found ? nameOf(spec) : provisionalOf(spec, found);
+    return 'refused' in found ? sourceOf(spec) : provisionalOf(spec, found);
   }
   catch {
     // A spec that does not resolve is called what it was written as.
-    return nameOf(spec);
+    return sourceOf(spec);
   }
 };
 
@@ -99,7 +111,7 @@ const unscoped = (id: string): string => {
 
 /** What a located plugin is called until its module says. */
 const provisionalOf = (spec: PluginSpec, found: Located): string =>
-  unscoped(found.manifest?.name ?? (found.manifest === undefined && found.target !== undefined ? fileNameOf(found.target) : nameOf(spec)));
+  unscoped(found.manifest?.name ?? (found.manifest === undefined && found.target !== undefined ? fileNameOf(found.target) : sourceOf(spec)));
 
 /**
  * Whether the spec carries a scheme of its own, which this daemon does not second-guess.
@@ -227,7 +239,7 @@ function rootsOf(configDir: string): string[] {
  * awaited, nothing here touches the network, and nothing here runs plugin code.
  */
 export function resolvePlugin(spec: PluginSpec, options: { configDir: string; cwd: string }): Resolved {
-  const name = nameOf(spec);
+  const name = sourceOf(spec);
   const { configDir, cwd } = options;
 
   // `file:`, `npm:`, `jsr:`, `https:` and `data:` are the writer's decision:
@@ -244,6 +256,53 @@ export function resolvePlugin(spec: PluginSpec, options: { configDir: string; cw
     if (statSync(found).isDirectory()) {
       const entry = entryOf(found);
       return { spec, url: pathToFileURL(entry).href, path: entry, packageDir: found };
+    }
+    /*
+     * A standalone plugin names its `plugin.json`, and the `main` in it names
+     * the module to run. The file is read here rather than imported: it is the
+     * one thing a standalone plugin says about itself that a listing needs
+     * before anything runs.
+     */
+    if (basename(found) === 'plugin.json') {
+      const manifest = readStandalone(found);
+      if (manifest.problem !== undefined) throw new Error(manifest.problem);
+      const main = manifest.entry;
+      if (main === undefined) {
+        throw new Error(`${found} has no main; a plugin.json names the module it runs.`);
+      }
+      const folder = dirname(found);
+      const at = resolve(folder, main);
+      if (at !== folder && !at.startsWith(folder + sep)) {
+        throw new Error(`${found} names a main ${main} that points outside its folder, at ${at}.`);
+      }
+      return { spec, url: pathToFileURL(at).href, path: at, manifestPath: found };
+    }
+    /*
+     * A bare file that sits in no plugin package declares its manifest the
+     * only way a standalone plugin can: a `plugin.json` beside it. Reading it
+     * here makes naming the file and naming its manifest one plugin, and one
+     * with no manifest is refused by `locate` before anything runs.
+     *
+     * The manifest describes the file the spec named, so one whose `main`
+     * points elsewhere is refused rather than followed: replacing the module a
+     * person named with another one is not this lookup's to do.
+     */
+    if (nearestManifest(found) === undefined) {
+      const beside = join(dirname(found), 'plugin.json');
+      if (existsSync(beside)) {
+        const manifest = readStandalone(beside);
+        if (manifest.problem !== undefined) throw new Error(manifest.problem);
+        const folder = dirname(beside);
+        const main = manifest.entry ?? basename(found);
+        const at = resolve(folder, main);
+        if (at !== folder && !at.startsWith(folder + sep)) {
+          throw new Error(`${beside} names a main ${main} that points outside its folder, at ${at}.`);
+        }
+        if (at !== found) {
+          throw new Error(`${beside} names ${main}, but ${basename(found)} was named; name the plugin.json, or write one whose main is ${basename(found)}.`);
+        }
+        return { spec, url: pathToFileURL(found).href, path: found, manifestPath: beside };
+      }
     }
     return { spec, url: pathToFileURL(found).href, path: found };
   }
@@ -278,14 +337,21 @@ export function resolvePlugin(spec: PluginSpec, options: { configDir: string; cw
 export interface Manifest {
   /** The `package.json` it was read from, for every message about it. */
   path: string;
-  /** The package name, when it is a string. */
+  /**
+   * The package name, or a standalone manifest's `id`.
+   *
+   * Both are what the plugin is called until its module says otherwise, so the
+   * loader reads one field for the two.
+   */
   name?: string;
-  /** `ahpd.title`, the fallback a listing prints. */
+  /** `ahpd.title`, or a standalone manifest's display `name`. */
   title?: string;
-  /** The package's `version`, which a listing shows. */
+  /** The package's `version`, or the standalone manifest's own. */
   version?: string;
-  /** `ahpd.entry`, the entry a manifest names over what the package resolves to. */
+  /** `ahpd.entry`, or a standalone manifest's `main`. */
   entry?: string;
+  /** Set when the manifest came from a `plugin.json` or a configuration entry. */
+  standalone?: true;
   /** `ahpd.description`, one sentence on what the plugin does. */
   description?: string;
   /** `ahpd.categories`, the groups a client files the plugin under. */
@@ -296,6 +362,14 @@ export interface Manifest {
   contracts?: PluginContracts;
   /** `ahpd.icons`, read and encoded as a client draws them. */
   icons?: Icon[];
+  /**
+   * `ahpd.optionsSchema`, or a standalone manifest's `optionsSchema`.
+   *
+   * A JSON Schema the options are checked against. Read here rather than from
+   * the module, so a plugin that is switched off or failed to load still has a
+   * form a client draws and values the daemon can refuse.
+   */
+  optionsSchema?: Record<string, unknown>;
   /** One line for each `ahpd.icons` entry that could not be read. */
   iconProblems?: string[];
   /** `peerDependencies["@ahpd/sdk"]`, the range compatibility is checked against. */
@@ -348,6 +422,7 @@ export const readManifest = (packageDir: string): Manifest => {
   }
   if (isLinks(inside?.links)) manifest.links = inside.links.map((one) => ({ title: one.title, url: one.url }));
   if (areContracts(inside?.contracts)) manifest.contracts = inside.contracts;
+  if (isRecord(inside?.optionsSchema)) manifest.optionsSchema = inside.optionsSchema;
   /*
    * An icon is read here rather than at each subscription, and a file that is
    * missing or too large costs the icon and not the manifest: the line is kept
@@ -360,6 +435,94 @@ export const readManifest = (packageDir: string): Manifest => {
   }
   if (typeof peer === 'string') manifest.sdkRange = peer;
   return manifest;
+};
+
+/**
+ * Read a standalone plugin's manifest from the `plugin.json` a spec named.
+ *
+ * The fields are a package's `ahpd` field with this file's top level in their
+ * place, plus `id`, `name` and `version`: the three a package.json carries
+ * outside its `ahpd`. `main` names the module to run and is kept as the entry.
+ */
+export const readStandalone = (path: string): Manifest => {
+  let value: Record<string, unknown>;
+  try {
+    const found: unknown = JSON.parse(readFileSync(path, 'utf8'));
+    if (typeof found !== 'object' || found === null || Array.isArray(found)) {
+      return { path, problem: `${path} is not a JSON object.` };
+    }
+    value = found as Record<string, unknown>;
+  }
+  catch (error) {
+    return { path, problem: `${path} could not be read: ${reason(error)}` };
+  }
+  return standaloneOf(value, path, dirname(path));
+};
+
+/**
+ * A standalone manifest from the object that declares it.
+ *
+ * Shared by a `plugin.json` and by a configuration entry that carries its own
+ * manifest, so one shape is read one way wherever it was written. `base` is the
+ * folder a relative icon is read from, or nothing where the entry has no folder
+ * of its own.
+ */
+const standaloneOf = (inside: Record<string, unknown>, path: string, base: string | undefined): Manifest => {
+  const manifest: Manifest = { path, standalone: true, ahpd: inside };
+  // The id is what a standalone plugin is called; `name` is what a listing prints.
+  if (typeof inside.id === 'string') manifest.name = inside.id;
+  if (typeof inside.name === 'string') manifest.title = inside.name;
+  if (typeof inside.version === 'string') manifest.version = inside.version;
+  if (typeof inside.main === 'string') manifest.entry = inside.main;
+  if (typeof inside.description === 'string') manifest.description = inside.description;
+  if (Array.isArray(inside.categories) && inside.categories.every((one) => typeof one === 'string')) {
+    manifest.categories = [...inside.categories];
+  }
+  if (isLinks(inside.links)) manifest.links = inside.links.map((one) => ({ title: one.title, url: one.url }));
+  if (areContracts(inside.contracts)) manifest.contracts = inside.contracts;
+  if (isRecord(inside.optionsSchema)) manifest.optionsSchema = inside.optionsSchema;
+  if (Array.isArray(inside.icons) && base !== undefined) {
+    const iconProblems: string[] = [];
+    manifest.icons = resolveIcons(inside.icons, base, `plugin ${typeof inside.id === 'string' ? inside.id : path}`, (line) => iconProblems.push(line));
+    if (iconProblems.length > 0) manifest.iconProblems = iconProblems;
+  }
+  return manifest;
+};
+
+/**
+ * The manifest an entry carries itself, or `undefined` for one that carries none.
+ *
+ * An entry declares a manifest by declaring its `id`: without one it is an
+ * entry naming a module, and the module's file is the plugin's.
+ */
+const inlineManifestOf = (spec: PluginSpec, base: string | undefined): Manifest | undefined => {
+  if (typeof spec === 'string' || spec.id === undefined) return undefined;
+  const inside = spec as unknown as Record<string, unknown>;
+  const at = `the entry for ${sourceOf(spec)}`;
+  return standaloneOf(inside, at, base);
+};
+
+/**
+ * Whether a standalone manifest is a shape anything can read.
+ *
+ * The same field checks `checkManifest` makes, on the file's own top level: an
+ * `id` to load under, and a description, categories, links, contracts and
+ * icons of the kinds a client draws. A `plugin.json` that does not parse is the
+ * reader's own `problem` and is returned as it stands.
+ */
+export const checkStandalone = (manifest: Manifest): string | undefined => {
+  if (manifest.problem !== undefined) return manifest.problem;
+  const inside = manifest.ahpd as Record<string, unknown>;
+  if (typeof inside.id !== 'string' || inside.id.trim() === '') {
+    return `${manifest.path} has no id; a standalone plugin declares the id it loads under.`;
+  }
+  if (inside.name !== undefined && typeof inside.name !== 'string') return `${manifest.path} has a name that is not a string.`;
+  if (inside.version !== undefined && typeof inside.version !== 'string') return `${manifest.path} has a version that is not a string.`;
+  if (inside.main !== undefined && typeof inside.main !== 'string') return `${manifest.path} has a main that is not a string.`;
+  if (inside.optionsSchema !== undefined && !isRecord(inside.optionsSchema)) {
+    return `${manifest.path} has an optionsSchema that is not an object.`;
+  }
+  return checkFields(inside, (field) => `${manifest.path} has a ${field} that`);
 };
 
 /** Whether a value is a list of `{ title, url }`, the shape a link is. */
@@ -426,11 +589,18 @@ const checkFields = (inside: Record<string, unknown>, named: (field: string) => 
  */
 const manifestFields = (manifest: Manifest): PluginManifest | undefined => {
   const fields: PluginManifest = {
+    // A standalone manifest is the plugin's whole description, so its id, name
+    // and version are part of what a client draws. A package's are the
+    // package's, and are the row's fields instead.
+    ...(manifest.standalone !== true || manifest.name === undefined ? {} : { id: manifest.name }),
+    ...(manifest.standalone !== true || manifest.title === undefined ? {} : { name: manifest.title }),
+    ...(manifest.standalone !== true || manifest.version === undefined ? {} : { version: manifest.version }),
     ...(manifest.description === undefined ? {} : { description: manifest.description }),
     ...(manifest.categories === undefined ? {} : { categories: manifest.categories }),
     ...(manifest.links === undefined ? {} : { links: manifest.links }),
     ...(manifest.contracts === undefined ? {} : { contracts: manifest.contracts }),
     ...(manifest.icons === undefined ? {} : { icons: manifest.icons }),
+    ...(manifest.optionsSchema === undefined ? {} : { optionsSchema: manifest.optionsSchema }),
   };
   return Object.keys(fields).length === 0 ? undefined : fields;
 };
@@ -453,6 +623,17 @@ export const checkManifest = (manifest: Manifest, packageDir: string): string | 
   const inside = manifest.ahpd as Record<string, unknown> | undefined;
   if (inside !== undefined && inside.entry !== undefined && typeof inside.entry !== 'string') {
     return `${manifest.path} has an ahpd.entry that is not a string.`;
+  }
+  /*
+   * The old per-option `ahpd.options` flags are refused rather than ignored,
+   * so their author is told where the same thing is written now instead of
+   * editing a key nothing reads.
+   */
+  if (inside !== undefined && inside.options !== undefined) {
+    return `${manifest.path} has an ahpd.options entry, which the daemon no longer reads; write the options schema in ahpd.optionsSchema`;
+  }
+  if (inside !== undefined && inside.optionsSchema !== undefined && !isRecord(inside.optionsSchema)) {
+    return `${manifest.path} has an ahpd.optionsSchema that is not an object.`;
   }
   if (inside !== undefined) {
     const wrong = checkFields(inside, (field) => `${manifest.path} has an ahpd.${field} that`);
@@ -630,16 +811,53 @@ interface Located {
 }
 
 /**
+ * Whether a resolved spec is a standalone plugin: a spec with a scheme, or a
+ * file that sits in no package with an `ahpd` field.
+ *
+ * The two have no package.json to declare a manifest, which is why their
+ * manifest must come from a `plugin.json` or from their own configuration
+ * entry, and why one that declares neither is refused rather than loaded under
+ * a guessed name.
+ */
+const standaloneSpec = (resolved: Resolved): boolean =>
+  resolved.packageDir === undefined && (resolved.path === undefined || nearestManifest(resolved.path) === undefined);
+
+/** A spec as a message names it, shortened so a `data:` URI does not drown the sentence. */
+const shownSpec = (name: string): string => name.length <= 72 ? name : `${name.slice(0, 69)}...`;
+
+/**
+ * Why a standalone plugin with no manifest is refused, as the one line a load
+ * and a listing both say.
+ *
+ * A standalone plugin has no package.json to describe it, so its manifest is a
+ * `plugin.json` or the config entry itself. With neither, nothing can say what
+ * it is before its module runs, and the answer is this refusal rather than a
+ * name guessed from its file.
+ */
+const noManifestProblem = (resolved: Resolved): string =>
+  `${shownSpec(sourceOf(resolved.spec))} has no manifest: a standalone plugin writes one in a plugin.json, with an id and a main, or in its config entry, which carries one when it has an id.`;
+
+/**
  * Read and check the manifest of a resolved spec, and find the module a load
  * imports; or the one problem that stops it being imported at all.
  */
 function locate(resolved: Resolved, version: string): Located | { refused: string } {
   const problems: string[] = [];
-  const said = nameOf(resolved.spec);
-  const manifestDir = resolved.packageDir ?? (resolved.path === undefined ? undefined : nearestManifest(resolved.path));
-
+  const said = sourceOf(resolved.spec);
   let manifest: Manifest | undefined;
-  if (manifestDir !== undefined) {
+
+  /*
+   * A `plugin.json` the spec named is a standalone plugin's manifest, and it
+   * wins over any package around it: the spec said which file describes it.
+   */
+  if (resolved.manifestPath !== undefined) {
+    manifest = readStandalone(resolved.manifestPath);
+    const bad = checkStandalone(manifest);
+    if (bad !== undefined) return { refused: bad };
+  }
+
+  const manifestDir = resolved.packageDir ?? (resolved.path === undefined ? undefined : nearestManifest(resolved.path));
+  if (manifest === undefined && manifestDir !== undefined) {
     manifest = readManifest(manifestDir);
     const bad = checkManifest(manifest, manifestDir);
     if (bad !== undefined) return { refused: bad };
@@ -660,6 +878,23 @@ function locate(resolved: Resolved, version: string): Located | { refused: strin
       }
     }
   }
+
+  /*
+   * An entry that carries an `id` carries its manifest too, since a plugin with
+   * no package has nowhere else to write it. Read last, so a package's own
+   * manifest is what a package plugin is described by.
+   */
+  if (manifest === undefined) {
+    manifest = inlineManifestOf(resolved.spec, resolved.path === undefined ? undefined : dirname(resolved.path));
+    if (manifest !== undefined) {
+      const bad = checkStandalone(manifest);
+      if (bad !== undefined) return { refused: bad };
+    }
+  }
+
+  // A standalone plugin declares its manifest, and one with none is refused
+  // before its module is reached.
+  if (manifest === undefined && standaloneSpec(resolved)) return { refused: noManifestProblem(resolved) };
 
   /*
    * Where the module actually is.
@@ -686,12 +921,14 @@ function locate(resolved: Resolved, version: string): Located | { refused: strin
 }
 
 /**
- * The options schema the module a spec names exports, imported the way a load
- * imports it, or nothing when it exports none.
+ * The options schema the manifest of the spec names declares, or nothing when
+ * it declares none.
  *
- * Throws the problem when the spec does not resolve, its manifest refuses it,
- * or the module does not import as a plugin, so a caller can say it could not
- * check rather than guess.
+ * Read with no import, so the answer is the same whether the plugin is running
+ * or not: a switched-off plugin has a form, and a plugin that would throw on
+ * import still answers one. Throws the problem when the spec does not resolve
+ * or its manifest is refused, so a caller can say it could not check rather
+ * than guess.
  */
 export async function optionsSchemaOf(
   spec: PluginSpec,
@@ -699,11 +936,7 @@ export async function optionsSchemaOf(
 ): Promise<Record<string, unknown> | undefined> {
   const found = locate(resolvePlugin(spec, options), sdkVersion());
   if ('refused' in found) throw new Error(found.refused);
-  const module: unknown = await import(found.url);
-  const wrong = checkShape(module, found.target ?? found.url);
-  if (wrong !== undefined) throw new Error(wrong);
-  const held = module as Record<string, unknown>;
-  return isRecord(held.optionsSchema) ? held.optionsSchema : undefined;
+  return found.manifest?.optionsSchema;
 }
 
 /**
@@ -871,7 +1104,14 @@ export async function namePlugin(resolved: Resolved, version: string, reload = 0
   try {
     const module: unknown = await import(at);
     const declared = typeof module === 'object' && module !== null ? (module as Record<string, unknown>).name : undefined;
-    const id = typeof declared === 'string' && declared.trim() !== '' ? declared : provisional;
+    /*
+     * A standalone plugin's id is the one its manifest declares, so its module
+     * cannot rename it: a `name` export that differs is refused at load, and
+     * answering it here would make the listing and the load disagree.
+     */
+    const id = found.manifest?.standalone === true
+      ? provisional
+      : typeof declared === 'string' && declared.trim() !== '' ? declared : provisional;
     return { found, id, provisional, module, took: Date.now() - started };
   }
   catch (error) {
@@ -897,7 +1137,7 @@ export async function pluginIdsOf(specs: readonly PluginSpec[], where: { configD
       continue;
     }
     const named = await namePlugin(resolved, sdkVersion());
-    if (!('refused' in named)) ids.set(nameOf(spec), named.id);
+    if (!('refused' in named)) ids.set(sourceOf(spec), named.id);
   }
 }
 
@@ -907,13 +1147,13 @@ export async function pluginIdsOf(specs: readonly PluginSpec[], where: { configD
  * The order is the point: the manifest is read and the range checked before
  * `import()` is reached, so an incompatible or malformed plugin is never
  * executed. Everything after that - the import, the shape of the module, its
- * options held to the `optionsSchema` it exports, and `apply` itself - is
- * caught and turned into a problem line, because a plugin that throws must cost
- * a line in the log rather than the daemon.
+ * options held to the `optionsSchema` its manifest declares, and `apply`
+ * itself - is caught and turned into a problem line, because a plugin that
+ * throws must cost a line in the log rather than the daemon.
  */
 export async function loadOne(resolved: Resolved, options: LoadOneOptions, imported?: Named): Promise<OneResult> {
   const spec = resolved.spec;
-  const said = nameOf(spec);
+  const said = sourceOf(spec);
   const ready = imported ?? await namePlugin(resolved, options.version, options.reload ?? 0);
   if ('refused' in ready) return { problems: [ready.refused] };
   const { manifest, target, url } = ready.found;
@@ -942,33 +1182,31 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   if (wrong !== undefined) return { problems: [...problems, wrong] };
 
   const held = module as Record<string, unknown>;
+  // The module wins for shape; a standalone plugin's id is the one its
+  // manifest declares, and the spec is the last resort.
+  const name = ready.id;
+  /*
+   * A standalone plugin's id is declared rather than exported, so a module that
+   * names itself something else would be listed under one id and keyed by
+   * another. Both names are in the line, because the author wrote both.
+   */
+  if (manifest?.standalone === true && typeof held.name === 'string' && held.name !== manifest.name) {
+    return { problems: [...problems, `plugin ${name} skipped: ${target ?? url} exports the name ${held.name}, but its manifest declares the id ${name}; a standalone plugin's id is its manifest's id`] };
+  }
   // An id is a slug, whether the module exports it or it is the fallback.
-  if (!isRecordSlug(ready.id)) {
+  if (!isRecordSlug(name)) {
     return { problems: [...problems, `plugin ${ready.id} skipped: its name is not a slug: ${RECORD_SLUG}`] };
   }
   const apply = held.apply as Plugin['apply'];
-  // The module wins for shape and its `name` wins for the listing; the
-  // manifest is the fallback, and the spec is the last resort.
-  const name = ready.id;
   /*
-   * The manifest a client draws: the package.json's when it declares any of
-   * the manifest fields, and the module's `manifest` export otherwise. One source
-   * for each plugin, so a package that has both cannot have a client list the
-   * package and the module disagreeing.
+   * The manifest a client draws is the declared one: a package.json's fields,
+   * or a standalone plugin's `plugin.json` or entry. A module that still
+   * exports one is refused rather than ignored, so its author is told where the
+   * manifest moved instead of editing a field nothing reads.
    */
   let declared = manifest === undefined ? undefined : manifestFields(manifest);
-  if (declared === undefined && held.manifest !== undefined) {
-    if (!isRecord(held.manifest)) {
-      return { problems: [...problems, `plugin ${name} skipped: its manifest is not an object`] };
-    }
-    const wrongField = checkFields(held.manifest, (field) => `${target ?? url} exports a manifest whose ${field}`);
-    if (wrongField !== undefined) return { problems: [...problems, `plugin ${name} skipped: ${wrongField}`] };
-    declared = held.manifest as PluginManifest;
-    // A module's own manifest names its icons the way a package's does, against
-    // the folder of its own file in place of a package.
-    if (Array.isArray(declared.icons)) {
-      declared = { ...declared, icons: resolveIcons(declared.icons, base, `plugin ${name}`, (line) => problems.push(line)) };
-    }
+  if (held.manifest !== undefined) {
+    return { problems: [...problems, `plugin ${name} skipped: ${target ?? url} exports a manifest, which the daemon no longer reads; write it in the ahpd field of package.json, or in a plugin.json for a standalone plugin`] };
   }
   const title = typeof held.title === 'string' ? held.title : manifest?.title;
   const defaults = typeof held.defaults === 'object' && held.defaults !== null && !Array.isArray(held.defaults)
@@ -976,9 +1214,14 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     : undefined;
   const named = typeof spec === 'object' && spec !== null ? spec.options : undefined;
   const written: Record<string, unknown> = { ...(defaults ?? {}), ...(named ?? {}) };
-  const optionsSchema = isRecord(held.optionsSchema) ? held.optionsSchema : undefined;
-  if (held.optionsSchema !== undefined && optionsSchema === undefined) {
-    return { problems: [...problems, `plugin ${name} skipped: its optionsSchema is not an object`] };
+  const optionsSchema = manifest?.optionsSchema;
+  /*
+   * The schema is a manifest field now, so a module that still exports one is
+   * refused rather than ignored: its author is told where it moved instead of
+   * editing an export nothing reads.
+   */
+  if (held.optionsSchema !== undefined) {
+    return { problems: [...problems, `plugin ${name} skipped: ${target ?? url} exports an optionsSchema, which the daemon no longer reads; write it in ahpd.optionsSchema of package.json, or as optionsSchema in a plugin.json for a standalone plugin`] };
   }
   /*
    * Every `{ "$secret": "<name>" }` in the options is read here, before the
@@ -1034,9 +1277,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     name,
     apply,
     ...(title === undefined ? {} : { title }),
-    ...(declared === undefined ? {} : { manifest: declared }),
     ...(defaults === undefined ? {} : { defaults }),
-    ...(optionsSchema === undefined ? {} : { optionsSchema }),
   };
 
   /*
@@ -1434,12 +1675,12 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
         resolved = resolvePlugin(spec, where);
       }
       catch (error) {
-        found.push({ spec, id: nameOf(spec), unresolved: reason(error), disabled });
+        found.push({ spec, id: sourceOf(spec), unresolved: reason(error), disabled });
         continue;
       }
       const named = await namePlugin(resolved, version);
-      const id = 'refused' in named ? nameOf(spec) : named.id;
-      ids.set(nameOf(spec), id);
+      const id = 'refused' in named ? sourceOf(spec) : named.id;
+      ids.set(sourceOf(spec), id);
       found.push({ spec, id, resolved, named, disabled });
     }
 
@@ -1450,7 +1691,7 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
      * still counts, since root config would key it the same.
      */
     const specsOf = new Map<string, string[]>();
-    for (const { spec, id } of found) specsOf.set(id, [...(specsOf.get(id) ?? []), nameOf(spec)]);
+    for (const { spec, id } of found) specsOf.set(id, [...(specsOf.get(id) ?? []), sourceOf(spec)]);
     const problems: string[] = [];
     const taken = new Set<string>();
     const entries: Planned[] = [];
@@ -1504,8 +1745,8 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
     known.push(...one.contribution.agents);
     // A copy: the schema answers for a key a client edits, so it is the host's
     // to hold and not one a plugin may reach back into.
-    if (one.loaded.plugin.optionsSchema === undefined) schemas.delete(id);
-    else schemas.set(id, frozenCopy(one.loaded.plugin.optionsSchema));
+    if (one.loaded.manifest?.optionsSchema === undefined) schemas.delete(id);
+    else schemas.set(id, frozenCopy(one.loaded.manifest.optionsSchema));
     const port = one.contribution.ports.vault;
     if (port !== undefined && (owner === undefined || port.replace)) {
       standing = port.value as Vault;
@@ -1652,13 +1893,16 @@ export interface PluginRow {
   title?: string;
   /** The version package.json declares. */
   version?: string;
+  /**
+   * What the manifest says the plugin adds, read with no import.
+   *
+   * A row carries this whether or not the plugin loaded, so a client shows what
+   * a switched-off plugin is before anybody turns it on.
+   */
+  manifest?: PluginManifest;
   /** The one line explaining a state that is not `ready`. */
   problem?: string;
 }
-
-/** Whether a manifest's `ahpd.options` entry says the option must be given. */
-const required = (value: unknown): boolean =>
-  value === true || (typeof value === 'object' && value !== null && (value as Record<string, unknown>).required === true);
 
 /**
  * Describe one spec without running anything.
@@ -1667,6 +1911,12 @@ const required = (value: unknown): boolean =>
  * `import`, no `apply`. The id is the one `pluginIdOf` holds, which a caller
  * fills with `pluginIdsOf` first; a plugin that would throw on import still
  * lists, by its manifest's name.
+ *
+ * A switched-off plugin is described like any other. Its manifest is read, so a
+ * client shows its title, version, what it adds and which options it takes
+ * before anybody turns it on; only the state differs. A switched-off spec that
+ * does not resolve is still `missing`, because what it would have been is not
+ * known.
  */
 export async function describePlugin(
   spec: PluginSpec,
@@ -1676,7 +1926,7 @@ export async function describePlugin(
   // The id the entry is keyed by, which this row answers whichever state it is
   // in, because a state is a thing to read about a name and not a name.
   const name = pluginIdOf(spec, options);
-  if (typeof spec !== 'string' && spec.enabled === false) return { spec, name, state: 'disabled' };
+  const disabled = typeof spec !== 'string' && spec.enabled === false;
 
   let resolved: Resolved;
   try {
@@ -1692,19 +1942,38 @@ export async function describePlugin(
   const slugged = (one: PluginRow): PluginRow =>
     isRecordSlug(name) ? one : { ...one, state: 'error', problem: `its name is not a slug: ${RECORD_SLUG}` };
 
-  const packageDir = resolved.packageDir ?? (resolved.path === undefined ? undefined : nearestManifest(resolved.path));
-  if (packageDir === undefined) {
-    if (resolved.path !== undefined) row.module = fileNameOf(resolved.path);
-    return slugged(row);
+  let manifest: Manifest | undefined;
+  if (resolved.manifestPath !== undefined) {
+    manifest = readStandalone(resolved.manifestPath);
+    const bad = checkStandalone(manifest);
+    if (bad !== undefined) return { ...row, state: 'error', problem: bad };
   }
-
-  const manifest = readManifest(packageDir);
-  if (manifest.problem !== undefined) return { ...row, state: 'error', problem: manifest.problem };
-  const bad = checkManifest(manifest, packageDir);
-  if (bad !== undefined) return { ...row, state: 'error', problem: bad };
+  if (manifest === undefined) {
+    manifest = inlineManifestOf(resolved.spec, resolved.path === undefined ? undefined : dirname(resolved.path));
+    const bad = manifest === undefined ? undefined : checkStandalone(manifest);
+    if (bad !== undefined) return { ...row, state: 'error', problem: bad };
+  }
+  const packageDir = resolved.packageDir ?? (resolved.path === undefined ? undefined : nearestManifest(resolved.path));
+  if (manifest === undefined && packageDir !== undefined) {
+    manifest = readManifest(packageDir);
+    if (manifest.problem !== undefined) return { ...row, state: 'error', problem: manifest.problem };
+    const bad = checkManifest(manifest, packageDir);
+    if (bad !== undefined) return { ...row, state: 'error', problem: bad };
+  }
+  if (manifest === undefined) {
+    // The same refusal a load makes, said with no import.
+    if (standaloneSpec(resolved)) return { ...row, state: 'error', problem: noManifestProblem(resolved) };
+    if (resolved.path !== undefined) row.module = fileNameOf(resolved.path);
+    return disabled ? { ...row, state: 'disabled' } : slugged(row);
+  }
   if (manifest.name !== undefined) row.module = manifest.name;
   if (manifest.title !== undefined) row.title = manifest.title;
   if (manifest.version !== undefined) row.version = manifest.version;
+  const declared = manifestFields(manifest);
+  if (declared !== undefined) row.manifest = declared;
+
+  // Read, so the row is whole; the state is the one a switched-off entry has.
+  if (disabled) return { ...row, state: 'disabled' };
 
   if (manifest.sdkRange !== undefined) {
     let satisfied = false;
@@ -1719,13 +1988,17 @@ export async function describePlugin(
   }
   if (!isRecordSlug(name)) return slugged(row);
 
-  const inside = manifest.ahpd as Record<string, unknown> | undefined;
-  const wanted = inside?.options;
-  if (typeof wanted === 'object' && wanted !== null && !Array.isArray(wanted)) {
+  /*
+   * An option the schema names in its `required` list and the configuration
+   * does not set is what keeps a plugin from loading, said here without an
+   * import. A default the module carries is not visible to a listing, so a
+   * required key with a default may be reported unconfigured and still load;
+   * the state is a hint for the person reading it, not the load's own check.
+   */
+  const required = manifest.optionsSchema?.['required'];
+  if (Array.isArray(required)) {
     const given = typeof spec === 'object' && spec !== null ? (spec.options ?? {}) : {};
-    const absent = Object.entries(wanted)
-      .filter(([key, value]) => required(value) && given[key] === undefined)
-      .map(([key]) => key);
+    const absent = required.filter((key) => typeof key === 'string' && given[key] === undefined);
     if (absent.length > 0) return { ...row, state: 'unconfigured', problem: `needs ${absent.join(', ')}` };
   }
 
@@ -1742,7 +2015,7 @@ export async function describePlugin(
 export const pluginLine = (row: PluginRow): string => {
   const where = row.path ?? row.url ?? '-';
   // The id, and the spec beside it when the two differ.
-  const said = nameOf(row.spec) === row.name ? row.name : `${row.name} (${nameOf(row.spec)})`;
+  const said = sourceOf(row.spec) === row.name ? row.name : `${row.name} (${sourceOf(row.spec)})`;
   // What the manifest says it is, which the label reads as `module`.
   const label = row.module !== undefined || row.title !== undefined
     ? `(${[row.module ?? '?', ...(row.title === undefined ? [] : [row.title])].join(', ')})`

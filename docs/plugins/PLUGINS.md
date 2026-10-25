@@ -24,7 +24,6 @@ A plugin is a module with named exports, in the same idiom as an `Agent`:
 export const name = 'agent-mine';             // optional, the plugin's id
 export const title = 'Mine';                  // optional, what a listing prints
 export const defaults = { model: 'fast' };    // optional, under the configuration's values
-export const optionsSchema = { /* ... */ };   // optional, a JSON Schema the options are checked against
 export function apply(host: PluginHost, options: Record<string, unknown>): void | Promise<void>;
 ```
 
@@ -38,71 +37,84 @@ process.
 
 ### The id
 
-A plugin is known by its id. The id is the module's `name` export. A module without one takes the manifest's `name`, then its file name (the directory's name for an `index` file), then the spec as written. A scoped fallback has its scope joined by a dash: the manifest name `@acme/agent-mine` is the id `acme-agent-mine`. The configuration names a plugin by its spec, and everything else names it by its id: the root config key `plugins.<id>`, the `ahpd plugin` verbs, `--plugin-option <id>.<key>=<value>` and the listing. The verbs and `--plugin-option` also take the spec as written. The id of each of ahpd's own plugins is its package name without the scope: `@ahpd/bot` is the plugin `bot`.
+A plugin is known by its id. The id is the module's `name` export. A module without one takes the manifest's `name`, then its file name (the directory's name for an `index` file), then the spec as written. A scoped fallback has its scope joined by a dash: the manifest name `@acme/agent-mine` is the id `acme-agent-mine`. The configuration names a plugin by its `source`, and everything else names it by its id: the root config key `plugins.<id>`, the `ahpd plugin` verbs, `--plugin-option <id>.<key>=<value>` and the listing. The verbs and `--plugin-option` also take the spec as written. The id of each of ahpd's own plugins is its package name without the scope: `@ahpd/bot` is the plugin `bot`.
 
 A `name` the module exports is a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter. A module that exports any other `name`, such as `@acme/agent-mine`, is skipped with `plugin @acme/agent-mine skipped: its name is not a slug`, and its `apply` is never called. A fallback id is held to the same rule, so a file named `My_Plugin.js` that exports no `name` is skipped with `plugin My_Plugin skipped: its name is not a slug`.
 
 ```json
-{ "plugins": [{ "name": "./plugins/mine", "options": { "model": "careful" } }] }
+{ "plugins": [{ "source": "./plugins/mine", "options": { "model": "careful" } }] }
 ```
 
 When `./plugins/mine` exports `name = 'agent-mine'`, its root config key is `plugins.agent-mine` and `ahpd plugin config agent-mine` reads its options. Two specs with one id are reported, naming both, and only the first loads. The daemon imports every module it names to read its id, a module turned off with `enabled: false` too, and calls `apply` only on one that is on.
 
 ### Declaring the options
 
-`optionsSchema` is a plain JSON Schema object for the options `apply` receives, with one property per option key. The daemon merges `defaults` under the configured options and checks the result against it before `apply` runs, so a default satisfies a `required` key and `apply` reads values that are already the type the schema says:
+The options schema is a JSON Schema in the manifest: `ahpd.optionsSchema` in a package.json, `optionsSchema` in a standalone `plugin.json` or config entry. It is plain data with one property per option key, and the daemon reads it without importing the module, so a plugin switched off still has a form a client draws and values the daemon can refuse. The daemon merges `defaults` under the configured options and checks the result against the schema before `apply` runs, so a default satisfies a `required` key and `apply` reads values that are already the type the schema says:
 
-```ts
-export const defaults = { model: 'fast' };
-
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    command: { type: 'string', description: 'The program to run.' },
-    model: { type: 'string', enum: ['fast', 'careful'] },
-    retries: { type: 'integer', minimum: 0 },
-  },
-  required: ['command'],
-};
-
-export function apply(host: PluginHost, options: Record<string, unknown>): void {
-  const command = options.command as string;
-  // ...
+```json
+{
+  "name": "@acme/agent-mine",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": { ".": "./dist/index.js" },
+  "ahpd": {
+    "entry": "./dist/index.js",
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "command": { "type": "string", "description": "The program to run." },
+        "model": { "type": "string", "enum": ["fast", "careful"] },
+        "retries": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["command"]
+    }
+  }
 }
 ```
 
-Options that fail the schema are reported and the plugin is skipped, like any other plugin failure: `{ "name": "@acme/agent-mine", "options": { "command": 3 } }` logs `plugin agent-mine skipped: plugins.agent-mine.options.command must be text` when the module exports `name = 'agent-mine'`, and the daemon starts with its other plugins. An option key the schema does not name is logged as `plugin agent-mine: plugins.agent-mine.options.extra is not an option agent-mine knows; passed through` and still reaches `apply`. A plugin that exports no `optionsSchema` gets its options unchecked. The schema is plain data and needs no import: `@ahpd/sdk` types it as `Record<string, unknown>`.
+Options that fail the schema are reported and the plugin is skipped, like any other plugin failure: `{ "source": "@acme/agent-mine", "options": { "command": 3 } }` logs `plugin agent-mine skipped: plugins.agent-mine.options.command must be text` when the module exports `name = 'agent-mine'`, and the daemon starts with its other plugins. An option key the schema does not name is logged as `plugin agent-mine: plugins.agent-mine.options.extra is not an option agent-mine knows; passed through` and still reaches `apply`. A plugin whose manifest declares no `optionsSchema` gets its options unchecked.
+
+A module does not export its schema. One that still exports `optionsSchema` is refused with `plugin agent-mine skipped: <url> exports an optionsSchema, which the daemon no longer reads; write it in ahpd.optionsSchema of package.json, or as optionsSchema in a plugin.json for a standalone plugin`. The old `ahpd.options` flags are gone for the same reason: a package that still writes them is refused with an error naming `ahpd.optionsSchema`, because the schema's `required` list already says which options the configuration must set.
 
 ### Marking a credential
 
 An option the daemon would not print is one the schema marks `writeOnly`, and that is how a credential is declared. The value is checked as any other is, but no answer carries it:
 
-```ts
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    command: { type: 'string', description: 'The program to run.' },
-    apiKey: { type: 'string', writeOnly: true, description: 'The key this calls with.' },
-    // A map of variables holds one wherever the thing it configures keeps one,
-    // so the mark goes on the values rather than on the map.
-    env: { type: 'object', additionalProperties: { type: 'string', writeOnly: true }, description: 'Environment, by variable name.' },
-  },
-  required: ['command', 'apiKey'],
-};
+```json
+{
+  "ahpd": {
+    "entry": "./dist/index.js",
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "command": { "type": "string", "description": "The program to run." },
+        "apiKey": { "type": "string", "writeOnly": true, "description": "The key this calls with." },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "writeOnly": true },
+          "description": "Environment, by variable name."
+        }
+      },
+      "required": ["command", "apiKey"]
+    }
+  }
+}
 ```
+
+A map of variables holds a credential wherever the thing it configures keeps one, so the mark goes on the values rather than on the map.
 
 The mark is read wherever the schema says it, so a credential under `env`, under a tool of your own, or at the end of a list is answered as `<set>` the same way one at the top of an option is. It is honoured through `properties`, `additionalProperties`, `patternProperties` and `items`, and a value the schema does not describe at all is shown as it is, because only the declarations above say what of your options is a secret.
 
 Root config, `GET /api/config`, `GET /api/plugin/list` and `POST /api/plugin/config` all answer such a value as `<set>`, so a client is told the key is there and is never told what it is. A client that sends `<set>` back has said the credential is left as it is, so a form sent in whole does not overwrite it with the word; another value replaces it and `null` takes it back, at either depth. What is not named is left as the file holds it, so sending one value back does not take the rest of the object with it. The terminal's `ahpd config` is the one answer that prints the file as it is.
 
-A plugin that marks nothing is one whose options are all shown to a client holding `config:read` or `plugin:list`, so a credential it does not mark is a credential that leaks. The other way round is a plugin the daemon could not import to read its schema, which is every option of one switched off with `enabled: false`: nothing is known of which of its options are credentials, so all of them are answered `<set>` until it loads and declares.
+A plugin that marks nothing is one whose options are all shown to a client holding `config:read` or `plugin:list`, so a credential it does not mark is a credential that leaks. The other way round is a plugin whose manifest declares no schema at all: nothing is known of which of its options are credentials, so all of them are answered `<set>` until it declares one.
 
 ### Naming a secret instead of holding one
 
 An option can name a secret in the host's vault rather than carry its value, and then the value never sits in `config.json`:
 
 ```json
-{ "name": "@acme/plugin-orders", "options": { "apiKey": { "$secret": "host:stripe" } } }
+{ "source": "@acme/plugin-orders", "options": { "apiKey": { "$secret": "host:stripe" } } }
 ```
 
 A name is `host:<name>`, `team:<team>/<name>` or `user:<id>/<name>`, and anything else is refused where it is written. The daemon reads the value while it loads you and hands `apply` the value, so your option is held to your own schema as the string it finally is - you write `{ $secret: ... }` and you receive a `string`, and there is no `$secret` in your code.
@@ -1077,9 +1089,20 @@ in a moment is one event.
 A plugin declares its manifest before it runs: a description, the categories a
 client files it under, the links a person may follow, the contracts that say
 what it may register, and the icons a client draws beside it. A package writes
-it in the `ahpd` field of its `package.json`, and a plugin loaded from a single
-file exports it as `manifest`. A plugin that has both is read from
-`package.json`. There is no `manifest.json`.
+it in the `ahpd` field of its `package.json`. A standalone plugin, which has no
+package, writes it in a `plugin.json` that `plugins` names, in a `plugin.json`
+beside its module, or in the `plugins` entry itself. A module does not export
+its manifest, and one that still exports `manifest` is refused with the place
+to move it. There is no `manifest.json`.
+
+A standalone plugin that declares no manifest at all, with no `plugin.json` and
+no `id` in its entry, is refused when it loads, and a listing says the same
+line with no import: `... has no manifest: a standalone plugin writes one in a
+plugin.json, with an id and a main, or in its config entry, which carries one
+when it has an id.` A `plugin.json` beside the module counts, so naming
+`./notes.mjs` loads the manifest in the `plugin.json` in its folder. A
+`plugin.json` beside it whose `main` names another file is refused, naming
+both, rather than loading a module the spec did not name.
 
 ```json
 {
@@ -1100,28 +1123,66 @@ file exports it as `manifest`. A plugin that has both is read from
 }
 ```
 
-A single-file plugin exports the same fields, without `entry` or `options`:
+A standalone plugin names its `plugin.json`, and its `main` names the module to
+run; a spec may name the module instead, and the `plugin.json` beside it is
+read. The file takes the fields above, without an enclosing `ahpd`, plus `id`,
+`name` and `version`: `id` is the plugin's id, and `name` is what a listing
+prints:
 
-```ts
-export const manifest = {
-  description: 'Adds the notes channel and its command.',
-  categories: ['connector'],
-  links: [{ title: 'Repository', url: 'https://example.com/notes' }],
-  contracts: { channels: ['x-notes'], methods: ['x-notes/*'] },
-};
+```json
+{
+  "id": "notes",
+  "name": "Notes",
+  "version": "1.0.0",
+  "main": "./notes.mjs",
+  "description": "Adds the notes channel and its command.",
+  "categories": ["connector"],
+  "links": [{ "title": "Repository", "url": "https://example.com/notes" }],
+  "contracts": { "channels": ["x-notes"], "methods": ["x-notes/*"] }
+}
 ```
+
+The same manifest may be written in the entry that names the plugin, where the
+entry declares its `id`:
+
+```json
+{
+  "plugins": [
+    {
+      "id": "notes",
+      "name": "Notes",
+      "version": "1.0.0",
+      "source": "./notes.mjs",
+      "description": "Adds the notes channel and its command.",
+      "categories": ["connector"]
+    }
+  ]
+}
+```
+
+A standalone plugin's id is the `id` its manifest declares, so its module needs
+no `name` export; one that exports a different name is refused, and the error
+holds both names.
 
 | Key | |
 | --- | --- |
 | `ahpd.entry` | What to import, when `exports` is not enough to say. It wins over `exports`, `main` and `index.js` for resolution, and a mismatch with what the package resolves to is reported |
 | `ahpd.title` | What `ahpd plugin list` prints, unless the module exports its own `title` |
-| `ahpd.description` | One sentence on what the plugin does |
-| `ahpd.categories` | The groups a client files the plugin under, such as `agent` or `connector` |
-| `ahpd.links` | Where a person reads more, each a `{ "title", "url" }` |
-| `ahpd.contracts` | The names each kind of registration may use. See [the contracts](#the-contracts) |
-| `ahpd.icons` | What a client draws beside the plugin's name and each adapter's title. See [icons](#icons) |
-| `ahpd.options` | A required option the configuration must set before the plugin is `ready`. `true` or `{ "required": true }` means required. It is only reported by `ahpd plugin list`, which reads it from the manifest and calls no `apply`; a load holds the options to the module's `optionsSchema` instead |
+| `id` | A standalone plugin's id, which a package takes from its package name |
+| `name` | A standalone plugin's display name, where a package writes `ahpd.title` |
+| `version` | A standalone plugin's version, where a package writes its own top-level `version` |
+| `main` | A standalone plugin's module, resolved against the folder of its `plugin.json` |
+| `description` | One sentence on what the plugin does |
+| `categories` | The groups a client files the plugin under, such as `agent` or `connector` |
+| `links` | Where a person reads more, each a `{ "title", "url" }` |
+| `contracts` | The names each kind of registration may use. See [the contracts](#the-contracts) |
+| `icons` | What a client draws beside the plugin's name and each adapter's title. See [icons](#icons) |
+| `optionsSchema` | A JSON Schema for the options `apply` receives: its `properties` are the option keys, and its `required` list is what the configuration must set before the plugin is `ready`. The daemon reads it with no import, so a plugin switched off is still listed with the form a client draws and its values are still checked. See [Declaring the options](#declaring-the-options) |
 | `peerDependencies["@ahpd/sdk"]` | The compatibility range, checked **before** the module is imported. It states the oldest `@ahpd/sdk` the plugin needs |
+
+A field is written at the top level of a standalone manifest and under `ahpd`
+in a package.json, so `{ "description": "..." }` in a `plugin.json` and
+`"ahpd": { "description": "..." }` in a package.json say the same thing.
 
 Compatibility supports `*`, an exact version, `^`, `~`, `>=`, `<=`, `>`, `<`,
 `=`, and a space-separated conjunction such as `>=0.8 <0.9`. Anything it cannot
@@ -1211,7 +1272,7 @@ with it:
 | `version` | The version the plugin's package.json declares, when it has one |
 | `loaded` | Whether this daemon loaded it at its start |
 | `loadProblem` | The line saying why it did not load, with the userinfo of any URL and each `writeOnly` option value an error quoted answered `<set>` |
-| `optionsSchema` | The form a client draws, from the daemon's own copy or the module it would import. A plugin switched off carries none, because its module is never imported to read it |
+| `optionsSchema` | The form a client draws and the values `x-ahpd/plugins/options` is checked against, read from the manifest with no import, so a plugin switched off carries it too |
 
 Reading the channel needs `plugin:list`.
 
@@ -1379,7 +1440,7 @@ elsewhere takes its author's scope - decision
 ```bash
 ahpd --plugin @acme/agent-mine              # an installed package
 ahpd --plugin ./my-plugin                   # a directory with a manifest
-ahpd --plugin ./scratch-plugin.mjs          # a single file
+ahpd --plugin ./scratch-plugin.mjs          # a single file, with a plugin.json beside it
 ahpd --plugin @acme/agent-mine --plugin ./another
 ahpd --no-plugins                           # load none, whatever the file says
 ```
@@ -1390,11 +1451,13 @@ Or in the configuration file:
 {
   "plugins": [
     "@acme/agent-mine",
-    { "name": "./my-plugin", "options": { "token": "…" }, "enabled": false },
-    { "name": "@ahpd/bot", "grants": ["session:read", "session:write"] }
+    { "source": "./my-plugin", "options": { "token": "…" }, "enabled": false },
+    { "source": "@ahpd/bot", "grants": ["session:read", "session:write"] }
   ]
 }
 ```
+
+`source` names the module: a package, a directory or a file, written as a spec in the table below. A bare string in `plugins` is shorthand for an entry whose only key is `source`. `name` is a display name, which a listing prints instead of the id; an entry written with `name` and no `source` is the old form, and its `name` is read as the module. The daemon writes `source` the next time it changes such an entry, so an old file keeps working and moves over one entry at a time.
 
 `--plugin` is repeatable and plugins apply in the order named. A command line
 `--plugin` **replaces** the file's `plugins` list rather than adding to it, the
@@ -1445,7 +1508,7 @@ A plugin is code in the daemon's process with the daemon's permissions, so
 naming one is the trust decision. The configuration file is the trust boundary
 here the way the connection token is the port's.
 
-- A plugin that does not resolve, whose manifest is wrong, that throws on import, that has no `apply`, whose options fail its `optionsSchema`, or that throws out of `apply` is **reported on the daemon's log and skipped**, on stderr under `--stdio` where stdout is the protocol.
+- A plugin that does not resolve, whose manifest is wrong, that throws on import, that has no `apply`, whose options fail the schema its manifest declares, or that throws out of `apply` is **reported on the daemon's log and skipped**, on stderr under `--stdio` where stdout is the protocol.
   The daemon starts without it and the next plugin is
   still tried. A bad registration loses that plugin's whole contribution rather
   than the part it registered before the mistake.
@@ -1466,7 +1529,7 @@ missing ./gone -> - (not resolved): Plugin ./gone is not there: tried /work/gone
 | --- | --- |
 | `ready` | It resolves and its manifest parses |
 | `incompatible` | Its `@ahpd/sdk` range is not satisfied by the running SDK |
-| `unconfigured` | `ahpd.options` names a required option the configuration does not set |
+| `unconfigured` | The manifest's `optionsSchema` names a required option the configuration does not set |
 | `disabled` | The spec carries `"enabled": false` |
 | `missing` | The spec does not resolve |
 | `error` | The manifest does not parse or does not hold, or the id is not a slug |
@@ -1515,7 +1578,7 @@ every record of the engine starts from:
 {
   "plugins": [
     {
-      "name": "@ahpd/agent-cofold",
+      "source": "@ahpd/agent-cofold",
       "options": {
         "model": "deepseek-chat",
         "baseUrl": "https://api.deepseek.com/v1",
@@ -1574,7 +1637,7 @@ A turn with no model in the session settings, the record, the plugin options or 
 {
   "plugins": [
     {
-      "name": "@ahpd/agent-cofold",
+      "source": "@ahpd/agent-cofold",
       "options": {
         "tools": {
           "shell": false,
@@ -1724,7 +1787,7 @@ each agent is a record of the engine `acp`:
 ```json
 {
   "plugins": [
-    { "name": "@ahpd/agent-acp", "options": { "hostTools": true } }
+    { "source": "@ahpd/agent-acp", "options": { "hostTools": true } }
   ]
 }
 ```
@@ -2032,7 +2095,19 @@ failure: `plugin-incompatible`, `plugin-bad-manifest`, `plugin-explodes`,
 `plugin-throws`, `plugin-configurable`, `plugin-plain`, `plugin-alike` and
 `plugin-broken`.
 
-A scratch plugin needs no manifest. This file is the whole of one:
+A scratch plugin declares a manifest like any other standalone plugin. These two
+files in one folder are the whole of one, and the manifest is the first:
+
+`plugin.json`:
+
+```json
+{
+  "id": "scratch",
+  "main": "./scratch-plugin.mjs"
+}
+```
+
+`scratch-plugin.mjs`:
 
 ```js
 export const name = 'scratch';
@@ -2045,6 +2120,11 @@ export function apply(host) {
 ```bash
 node packages/server/dist/main.js --port 0 --plugin ./scratch-plugin.mjs
 ```
+
+Naming either file loads the plugin: the `plugin.json` names the module, and
+the module names the `plugin.json` beside it. An entry in `config.json` with an
+`id` carries the same manifest instead, for a module kept with no `plugin.json`
+of its own.
 
 To exercise the installed (bare name) path without publishing anything, put a
 package in the configuration directory's own `node_modules` by hand and name it:

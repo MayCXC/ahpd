@@ -24,7 +24,7 @@ import { isAbsolute, join, resolve, win32 } from 'node:path';
 import { readJsonObject, writeJsonAtomic } from '@ahpd/sdk';
 import type { PluginSpec } from '@ahpd/sdk';
 import { asSpec } from './config.js';
-import { hasScheme, isNamed, nameOf, pluginIdOf } from './plugins.js';
+import { hasScheme, isNamed, sourceOf, pluginIdOf } from './plugins.js';
 import { satisfies } from './compat.js';
 import { askRegistry, newer, parse, registryPath } from './update.js';
 import type { Fetch } from './update.js';
@@ -174,7 +174,7 @@ export const npmFailed = (failed: string, done: Ran): NpmFailure => {
  * from a path, a URL or a git spec, which npm resolves as written.
  */
 export const isPackageName = (spec: PluginSpec): boolean => {
-  const name = nameOf(spec);
+  const name = sourceOf(spec);
   return !hasScheme(name) && !isAbsolute(name) && !name.startsWith('.');
 };
 
@@ -336,7 +336,7 @@ const namedIn = (list: unknown): Set<string> => {
   const names = new Set<string>();
   for (const entry of list) {
     const spec = asSpec(entry);
-    if (spec !== undefined) names.add(nameOf(spec)).add(pluginIdOf(spec));
+    if (spec !== undefined) names.add(sourceOf(spec)).add(pluginIdOf(spec));
   }
   return names;
 };
@@ -410,6 +410,25 @@ export const pluginEntry = (path: string, name: string): PluginSpec | undefined 
 };
 
 /**
+ * One entry as the file writes it: `source` names the module, and `name` is
+ * what a listing prints.
+ *
+ * An entry written before `source` named its module with `name`, so that key is
+ * dropped and the module it held moves to `source`. Every other key stays as
+ * the entry holds it.
+ */
+export const editableEntry = (spec: PluginSpec, raw: unknown): { source: string; name?: string; options?: Record<string, unknown>; enabled?: boolean } => {
+  if (typeof spec === 'string') return { source: spec };
+  const held = typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+  const { name: _old, ...rest } = held;
+  return {
+    ...rest,
+    source: sourceOf(spec),
+    ...(spec.name === undefined ? {} : { name: spec.name }),
+  };
+};
+
+/**
  * Rewrite the entry named, as an object, and write the file.
  *
  * Refused naming the plugin when the file does not configure it, because a
@@ -418,7 +437,7 @@ export const pluginEntry = (path: string, name: string): PluginSpec | undefined 
 const editEntry = (
   path: string,
   name: string,
-  change: (entry: { name: string; options?: Record<string, unknown>; enabled?: boolean }) => void,
+  change: (entry: { source: string; name?: string; options?: Record<string, unknown>; enabled?: boolean }) => void,
 ): void => {
   const held = readEntry(path);
   const list = Array.isArray(held.plugins) ? [...held.plugins] : [];
@@ -428,7 +447,7 @@ const editEntry = (
   });
   if (at === -1) throw new Error(`${name} is not in plugins in ${path}.`);
   const spec = asSpec(list[at]) as PluginSpec;
-  const entry = typeof spec === 'string' ? { name: spec } : { ...list[at] as Record<string, unknown>, name: spec.name };
+  const entry = editableEntry(spec, list[at]);
   change(entry);
   list[at] = entry;
   held.plugins = list;

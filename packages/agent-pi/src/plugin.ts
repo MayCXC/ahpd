@@ -1,10 +1,14 @@
 /**
  * The plugin entry: what the daemon imports when the package is named.
  *
- * `index.ts` re-exports `name`, `apply` and `optionsSchema` from here, so the
- * module the manifest names is the plugin. There is deliberately no default
- * export: the loader refuses a module without a named `apply` rather than
- * guessing which export is the plugin.
+ * `index.ts` re-exports `name`, `apply` and `title` from here, so the module
+ * the manifest names is the plugin. There is deliberately no default export:
+ * the loader refuses a module without a named `apply` rather than guessing
+ * which export is the plugin.
+ *
+ * The options schema is in this package's package.json, at `ahpd.optionsSchema`,
+ * and is read from there rather than exported: the daemon reads it without
+ * importing the module, so a plugin switched off still has a form.
  *
  * The plugin registers the engine `pi`, and each record of it is one pi agent
  * with its own model, project trust, session directory and variables. The
@@ -19,6 +23,7 @@
 
 import { bag } from '@ahpd/sdk';
 import type { Engine, AgentView, PluginHost } from '@ahpd/sdk';
+import manifest from '../package.json' with { type: 'json' };
 import { piAgent } from './agent.js';
 import { PI_KEY_VARIABLES } from './machine.js';
 import { loadPi } from './pi.js';
@@ -45,28 +50,20 @@ export const defaults = {
  * The options `apply` receives, as a JSON Schema the daemon checks them against
  * before `apply` runs.
  *
- * These are the defaults for every record of the engine: a record that names one
- * of them wins, and a record that names none runs on what is here.
+ * The schema is written in this package's package.json, at `ahpd.optionsSchema`,
+ * so a listing reads it without importing this module and a plugin switched off
+ * still has a form a client draws. These are the defaults for every record of
+ * the engine: a record that names one of them wins, and a record that names
+ * none runs on what is here.
  *
- * `provider`, `displayName` and `description` are deliberately not here: an
+ * `provider`, `displayName` and `description` are deliberately not there: an
  * agent is named by its record's id, name and description, and a plugin that
  * could still set them would be describing one agent while serving many.
  *
  * `projectTrust` has no `ask`, pi's third answer: there is nobody at a
  * terminal, and a prompt nothing can answer is a session that never starts.
  */
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    model: { type: 'string', description: 'The model a record that names none runs on, as provider/modelId.' },
-    projectTrust: {
-      type: 'string',
-      enum: ['trust', 'deny'],
-      description: "Whether a record that names none loads a project's own pi extensions, skills and prompts. trust by default.",
-    },
-    sessionDir: { type: 'string', description: "The folder a record that names none keeps its pi sessions in. pi's own by default." },
-  },
-};
+const optionsSchema = manifest.ahpd.optionsSchema;
 
 /**
  * The package's own options, out of values `optionsSchema` has checked.

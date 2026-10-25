@@ -594,17 +594,18 @@ export type PortOf<K extends PortKey> = NonNullable<HostOptions[K]>;
 export type Route = (request: globalThis.Request) => Promise<globalThis.Response>;
 
 /**
- * One plugin, as configuration or the command line names it.
+ * What the object form of a spec adds to the module it names.
  *
- * A bare string is the module specifier and carries no options. The object form
- * adds what only the person naming it knows: the options `apply` receives,
+ * Only the person naming the plugin knows these: the options `apply` receives,
  * whether it is switched on at all - which is what lets one configuration keep
  * a plugin installed and turned off - and what it may do when it acts on this
  * host as a client of its own.
+ *
+ * The manifest fields are here because a plugin with no package.json has no
+ * other place to declare itself: an entry with an `id` is that plugin's
+ * manifest, and it takes the same keys a `plugin.json` does.
  */
-export type PluginSpec = string | {
-  /** The module specifier, or a path to a directory or a file. */
-  name: string;
+export interface PluginSpecEntry extends PluginManifest {
   /** Passed to `apply` as its second argument. */
   options?: Record<string, unknown>;
   /** `false` drops the spec before it is resolved. Absent means on. */
@@ -623,7 +624,31 @@ export type PluginSpec = string | {
    * grant, rather than the type promising something nothing verified.
    */
   grants?: string[];
-};
+}
+
+/**
+ * One plugin, as configuration or the command line names it.
+ *
+ * A bare string is the module specifier and carries no options. The object form
+ * names its module with `source`; `name` is what a listing prints instead of
+ * the id. An entry written before `source` named its module with `name`, and
+ * that form still loads: the daemon writes `source` the next time it changes
+ * the entry.
+ */
+export type PluginSpec = string | (PluginSpecEntry & (
+  | {
+    /** The module specifier, or a path to a directory or a file. */
+    source: string;
+    /** What a listing prints instead of the id. */
+    name?: string;
+  }
+  | {
+    /** The old form has no `source`, and reads `name` as the module. */
+    source?: undefined;
+    /** The module specifier, as an entry written before `source` named it. */
+    name: string;
+  }
+));
 
 /**
  * What a plugin may read, and the one thing it may write.
@@ -1221,10 +1246,26 @@ export type PluginContracts = Record<string, string[]>;
  * The fields a client draws: a description, the categories it files the plugin
  * under, the links a person can follow, the contracts that say what the plugin
  * registers, and the icons drawn beside its name. An npm plugin writes them in
- * the `ahpd` field of its package.json, and a file plugin exports this as
- * `manifest`; a plugin that does both is read from its package.json.
+ * the `ahpd` field of its package.json, where its `name` and `version` are the
+ * package's own; a standalone plugin writes them in a `plugin.json` or in its
+ * configuration entry, with `id`, `name` and `version` beside them.
  */
 export interface PluginManifest {
+  /**
+   * The plugin's id, which a standalone plugin declares.
+   *
+   * A package's id is its `name`, so a package.json carries none. A standalone
+   * plugin's id is this, and a module whose `name` export differs is refused.
+   */
+  id?: string;
+  /**
+   * What a listing prints instead of the id, when a standalone plugin says so.
+   *
+   * A package.json spells the same display name as `ahpd.title`.
+   */
+  name?: string;
+  /** The plugin's version, which a package.json carries at its top level. */
+  version?: string;
   /** One sentence on what the plugin does. */
   description?: string;
   /** The groups a client files the plugin under. */
@@ -1241,6 +1282,19 @@ export interface PluginManifest {
    * URL or a `data:` URI is sent as it is.
    */
   icons?: Icon[];
+  /**
+   * A JSON Schema for the options `apply` receives.
+   *
+   * An object schema whose `properties` are the option keys, written in
+   * `ahpd.optionsSchema` of a package.json or as `optionsSchema` in a
+   * standalone manifest. The daemon reads it without importing the module, so
+   * a plugin switched off still has a form a client draws, and it checks the
+   * configured options, with `defaults` merged under them, before `apply`
+   * runs: options that fail it are reported and the plugin is not applied, and
+   * a key it does not name is reported and passed through. Absent, the options
+   * reach `apply` unchecked.
+   */
+  optionsSchema?: Record<string, unknown>;
 }
 
 /**
@@ -1266,26 +1320,8 @@ export interface Plugin {
   name: string;
   /** What a listing prints instead of the id. */
   title?: string;
-  /**
-   * What the plugin declares about itself, from its package.json or its own
-   * `manifest` export.
-   *
-   * Kept for the listing a client draws, so what the plugin says it adds is
-   * read without importing it again.
-   */
-  manifest?: PluginManifest;
   /** This plugin's own option defaults, under whatever the configuration said. */
   defaults?: Record<string, unknown>;
-  /**
-   * A JSON Schema for the options `apply` receives.
-   *
-   * An object schema whose `properties` are the option keys. The daemon checks
-   * the configured options, with `defaults` merged under them, against it
-   * before `apply` runs: options that fail it are reported and the plugin is
-   * not applied, and a key it does not name is reported and passed through.
-   * Absent, the options reach `apply` unchecked.
-   */
-  optionsSchema?: Record<string, unknown>;
   /** Contribute to the host. Whatever it registers on `host` is folded in. */
   apply(host: PluginHost, options: Record<string, unknown>): void | Promise<void>;
 }

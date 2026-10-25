@@ -17,16 +17,6 @@ import type { Plugin } from '@ahpd/sdk';
 
 export const name = 'secret-ref';
 
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    apiKey: { type: 'string', writeOnly: true },
-    token: { type: 'string', pattern: '^ghp_' },
-    later: { type: 'string', secretAtUse: true },
-    every: { type: 'array', secretAtUse: true, items: { type: 'string' } },
-  },
-};
-
 export const apply: Plugin['apply'] = (host, options) => {
   host.log(`arrived apiKey ${JSON.stringify(options['apiKey'])} token ${JSON.stringify(options['token'])}`
     + ` later ${JSON.stringify(options['later'])} every ${JSON.stringify(options['every'])}`);

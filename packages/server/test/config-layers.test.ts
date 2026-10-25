@@ -123,7 +123,7 @@ describe('a --plugin the file also lists', () => {
      * it runs even where the file turned it off.
      */
     expect(optionsFrom({ plugins: ['@ahpd/agent-acp', './not-in-the-file'] }).plugins).toEqual([
-      { name: '@ahpd/agent-acp', options: { presets: { 'pi-acp': { command: 'pi-acp' } } }, grants: ['session:read'] },
+      { source: '@ahpd/agent-acp', options: { presets: { 'pi-acp': { command: 'pi-acp' } } }, grants: ['session:read'] },
       './not-in-the-file',
     ]);
   });
@@ -146,7 +146,7 @@ describe('a relative path', () => {
     // directory, then the configuration directory.
     expect(options.plugins).toEqual([
       './plug',
-      { name: '../other', options: { x: 1 } },
+      { source: '../other', options: { x: 1 } },
       'bare-name',
       '/abs/plugin',
     ]);

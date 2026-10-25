@@ -139,8 +139,15 @@ describe('a wrong value on a known key', () => {
 
   it('refuses a plugins entry that is not a spec', () => {
     expect(refusal({ plugins: [3] })).toContain(`${config}: plugins must be`);
-    expect(refusal({ plugins: [{ options: {} }] })).toBe(`${config}: plugins.name is required`);
+    expect(refusal({ plugins: [{ options: {} }] })).toBe(`${config}: plugins[0].source is required`);
+    expect(refusal({ plugins: [{ source: 'x', enabled: 'no' }] })).toBe(`${config}: plugins.enabled must be true or false`);
     expect(refusal({ plugins: [{ name: 'x', enabled: 'no' }] })).toBe(`${config}: plugins.enabled must be true or false`);
+  });
+
+  it('reads the old `name` form and the `source` form alike', () => {
+    expect(folded({ plugins: [{ name: 'x' }] }).plugins).toEqual([{ source: 'x' }]);
+    expect(folded({ plugins: [{ source: 'x' }] }).plugins).toEqual([{ source: 'x' }]);
+    expect(folded({ plugins: [{ source: 'x', name: 'Foo' }] }).plugins).toEqual([{ source: 'x', name: 'Foo' }]);
   });
 
   it('refuses grants that are not a list of text', () => {
@@ -220,7 +227,7 @@ describe('a valid file', () => {
       usagePer: 'report',
       wire: join(home, 'wire.jsonl'),
       httpApi: { port: 0, host: '127.0.0.1' },
-      plugins: ['a', { name: 'b', options: { x: 1 }, enabled: false }],
+      plugins: ['a', { source: 'b', options: { x: 1 }, enabled: false }],
       updateCheck: false,
     });
   });

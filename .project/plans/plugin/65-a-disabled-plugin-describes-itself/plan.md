@@ -1,7 +1,7 @@
 ---
 title: A disabled plugin describes itself
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-25
 revalidated: 2026-10-25
@@ -84,29 +84,31 @@ config.json plugins entry -> asSpec -> describePlugin (no import) -> manifest an
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - `source` names the module in a config entry](task-01-source-names-the-module.md) | todo | - |
-| [02 - A standalone plugin has a manifest](task-02-a-standalone-plugin-has-a-manifest.md) | todo | 01 |
-| [03 - A disabled row carries its manifest](task-03-a-disabled-row-carries-its-manifest.md) | todo | 02 |
-| [04 - The options schema is in the manifest](task-04-the-options-schema-is-in-the-manifest.md) | todo | 03 |
+| [01 - `source` names the module in a config entry](task-01-source-names-the-module.md) | implemented | - |
+| [02 - A standalone plugin has a manifest](task-02-a-standalone-plugin-has-a-manifest.md) | implemented | 01 |
+| [03 - A disabled row carries its manifest](task-03-a-disabled-row-carries-its-manifest.md) | implemented | 02 |
+| [04 - The options schema is in the manifest](task-04-the-options-schema-is-in-the-manifest.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
 - A third-party plugin that exports `optionsSchema` or `manifest` stops loading - the error names the manifest key to move it to, and PLUGINS.md says so.
+- A single-file plugin with no manifest stops loading. The error names the `plugin.json` and the entry, and PLUGINS.md's scratch example shows the manifest it needs.
 - ahpw reads `row.spec.name` - the ahpw plan after this one reads `source`, and the old `name` stays readable until then.
 - `ahpd plugin` commands still import a disabled package plugin to learn its id - a standalone plugin needs no import, because its manifest names the id.
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-source-names-the-module.md](task-01-source-names-the-module.md).
+- **Done so far:** All four tasks are implemented. An entry names its module with `source`, and an old `name` entry still loads and is rewritten at its next change. A standalone plugin declares its manifest in a `plugin.json` or in its entry, with `id`, `name` and `version` beside the manifest keys. A module's `manifest` export is refused. A standalone plugin with no manifest is refused at load, and a listing reports the same line with no import. A `plugin.json` beside a file the spec names is read for it. A disabled row carries the manifest read with no import, and the plugins channel answers its options schema and masks a secret option. The options schema is `ahpd.optionsSchema` in every first-party `package.json` and `optionsSchema` in a standalone manifest. The module export and `ahpd.options` are refused, and the loader checks options against the manifest schema. The gate passed on 2026-10-25: typecheck, build and boundary are clean. `pnpm -s test` gave 7012 passed and 29 skipped, with one timeout in `packages/computer/test/computer-plugin.test.ts`. It passed alone (23 tests) when rerun.
+- **Next action:** Review. Tasks 01 to 04 hold. Task 02's two deferred validations are implemented too: the bare-file refusal, and the scheme-spec tests. Those use a `data:` URI rather than `https:` with a fake fetch.
 - **Open questions:** none.
-- **Watch out for:** a row must never carry an option value that the schema marks as a secret. A disabled plugin now has a schema, so the mask applies to it too.
+- **Watch out for:** A row must never carry an option value that the schema marks as a secret. A disabled plugin now has a schema, so the mask applies to it too. A `plugin.json` beside a file is read for any bare file in that folder, so a folder holding several modules needs one folder each.
 
 ## Final verification checklist
 
-- [ ] A disabled plugin's row shows its title, version, manifest and options schema, with no import of its module.
-- [ ] `x-ahpd/plugins/options` checks a value against a disabled plugin's schema.
-- [ ] An old entry with `name` loads, and is written back with `source` at its next change.
-- [ ] A bare file with no manifest is refused with a clear error.
-- [ ] The eleven first-party plugins load with their schema in package.json.
-- [ ] `plans/index.md` updated.
+- [x] A disabled plugin's row shows its title, version, manifest and options schema, with no import of its module.
+- [x] `x-ahpd/plugins/options` checks a value against a disabled plugin's schema.
+- [x] An old entry with `name` loads, and is written back with `source` at its next change.
+- [x] A bare file with no manifest is refused, with an error that names `plugin.json` and the entry. A listing reports the same line with no import.
+- [x] A scheme spec is tested with a `data:` URI: one with an inline manifest loads under its id, and one without is refused.
+- [x] The eleven first-party plugins load with their schema in package.json.
+- [x] `plans/index.md` updated.

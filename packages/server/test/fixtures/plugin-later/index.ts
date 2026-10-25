@@ -12,13 +12,6 @@ import type { Plugin } from '@ahpd/sdk';
 
 export const name = 'later';
 
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    later: { type: 'string', secretAtUse: true },
-  },
-};
-
 export const apply: Plugin['apply'] = (_host, options) => {
   const node = options['later'] as Record<string, unknown>;
   node['$secret'] = 'somebody-else';

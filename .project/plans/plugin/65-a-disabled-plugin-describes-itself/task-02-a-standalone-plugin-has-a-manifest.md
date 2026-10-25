@@ -1,6 +1,6 @@
 ---
 title: A standalone plugin has a manifest
-status: todo
+status: implemented
 depends: [task-01-source-names-the-module.md]
 layer: "sdk, server, docs"
 refs:
@@ -50,10 +50,19 @@ A standalone plugin with no manifest fails with a clear error, and the module's 
 
 - A test loads `plugin-standalone/plugin.json`, and the row has the manifest's id, title, version and description.
 - A test loads an inline entry `{ "id": "custom", "name": "Custom", "version": "1.0.0", "source": "./custom.mjs" }`.
-- A test loads an `https:` spec with an inline manifest through a fake fetch.
-- A test loads the same `https:` spec with no manifest, and the daemon refuses it.
-- A test loads a bare `.mjs` file with no manifest, and the error names `plugin.json`.
+- A test loads a `data:` spec with an inline manifest through Node's own import. It loads under the manifest's id.
+- A test loads the same `data:` spec with no manifest, and the daemon refuses it.
+- A test loads a bare `.mjs` file with no manifest, and the error names `plugin.json` and the entry.
+- A test loads a bare file with a `plugin.json` beside it, and it loads under the manifest's id.
+- A test names a file beside a `plugin.json` whose `main` is another, and the loader refuses it.
 - A test loads a module that exports `manifest`, and the daemon refuses it.
 - A test loads a standalone module whose `name` export is not its manifest's `id`, and the error holds both.
 
 ## Resume
+
+- **Done so far:** `PluginManifest` holds `id`, `name` and `version`, and the `manifest` export is gone from `Plugin`. The object form of `PluginSpecEntry` extends `PluginManifest`, so an entry declares its manifest by declaring its `id`. `resolvePlugin` reads a source that names a `plugin.json`, resolves its `main` against the file's folder, and refuses a `main` that points outside it. `readStandalone` and `standaloneOf` read the file and the inline entry with one shape, and `checkStandalone` holds both to the same field checks. `locate` reads the standalone manifest first, then a package's, then an inline entry's. `namePlugin` takes a standalone plugin's id from the manifest, not from the module, and `loadOne` refuses a module whose `name` export differs, holding both names. A module that exports `manifest` is refused with the place to write it. `describePlugin` reads the same manifests with no import. A standalone plugin that declares no manifest is refused: `locate` answers the refusal before any import, and `describePlugin` reports the same line as `error`. `resolvePlugin` also reads a `plugin.json` beside a file the spec names, and refuses one whose `main` names another file rather than loading that one. Every fixture and test spec that loaded bare now has a `plugin.json` or an inline `id`. A `data:` spec is tested through Node's own import: one with an inline manifest loads under its id, and one without is refused.
+- **Next action:** Review. The plan's four tasks are implemented, and the bare-file refusal and the scheme-spec tests this task deferred are done.
+- **Files:** `packages/sdk/src/types/plugin.ts`, `packages/server/src/plugins.ts`, `packages/server/test/fixtures/plugin.json`, `packages/server/test/fixtures/plugin-declared-module.ts`, `packages/server/test/fixtures/plugin-declared-both/index.ts`, `packages/server/test/fixtures/plugin-standalone/plugin.json`, `packages/server/test/fixtures/plugin-standalone/index.mjs`, the `plugin.json` beside each bare fixture (`plugin-broken`, `plugin-throws`, `plugin-skips`, `plugin-push`, `plugin-yaml`, `plugin-late-problem`, `plugin-notes`, `plugin-notes-again`, `plugin-parser`, `plugin-parser-replace`, `plugin-unchecked`, `plugin-kept`, `plugin-env`, `plugin-slow-stop`), `packages/server/test/fixtures/plugin-multiline/{plugin.json,index.ts}`, `packages/server/test/plugin-load.test.ts`, `packages/server/test/plugin-list.test.ts`, `packages/server/test/plugins-channel.test.ts`, `packages/server/test/plugin-live.test.ts`, `packages/server/test/cli.ts`, `docs/plugins/PLUGINS.md`, `README.md`, this task file, the plan and the index.
+- **Open questions:** none.
+- **Departures:** The scheme cases use a `data:` spec, as review directed, rather than `https:` with a fake fetch. `resolvePlugin` reads a beside-file `plugin.json` only when its `main` names the file the spec named. The plan did not say; substituting another module would be worse than a refusal. The `plugin-multiline` fixture moved from `fixtures/plugin-multiline.ts` into its own folder to carry a `plugin.json`, since the `plugin.json` at the fixtures root belongs to `plugin-declared-module.ts`. The README's two single-file examples now say a `plugin.json` is needed beside the file.
+- **Watch out for:** A standalone module's `name` export is only a check against the manifest id, never the id itself. A `plugin.json` in a folder is read for a bare file beside it, so a folder holding several modules needs one folder each.
