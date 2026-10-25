@@ -1,6 +1,6 @@
 import type { Agent, Host, Loaded, Route } from '@ahpd/sdk';
 import { specsIn } from './install.js';
-import { nameOf } from './plugins.js';
+import { sourceOf } from './plugins.js';
 import type { Planned, PluginSet } from './plugins.js';
 
 /**
@@ -112,7 +112,7 @@ export const applyPlugins = async (options: ApplyPluginsOptions): Promise<Applie
    * shows and the two are not always the same word.
    */
   const forced = new Set(options.reload ?? []);
-  const isForced = (entry: Planned): boolean => forced.has(entry.id) || forced.has(nameOf(entry.spec));
+  const isForced = (entry: Planned): boolean => forced.has(entry.id) || forced.has(sourceOf(entry.spec));
 
   /**
    * End every session a plugin's agents serve, before the plugin goes.
@@ -189,7 +189,7 @@ export const applyPlugins = async (options: ApplyPluginsOptions): Promise<Applie
    * plugin switched off is not running, so a restart would load nothing.
    */
   for (const word of forced) {
-    const entry = planned.entries.find((one) => one.id === word || nameOf(one.spec) === word);
+    const entry = planned.entries.find((one) => one.id === word || sourceOf(one.spec) === word);
     if (entry === undefined) {
       trouble(`plugin ${word} is not in ${options.configFile}, so there is nothing to reload; restart the daemon to load the code it names`);
       restart = true;

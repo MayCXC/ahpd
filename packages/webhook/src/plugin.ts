@@ -35,23 +35,6 @@ export const defaults = {
   maxBodyBytes: DEFAULT_MAX_BODY_BYTES,
 } as const;
 
-/** The options `apply` receives, as a JSON Schema the daemon checks them against. */
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    syncTimeoutSeconds: {
-      type: 'number',
-      exclusiveMinimum: 0,
-      description: 'How long a sync call waits for its turn to end, in seconds.',
-    },
-    maxBodyBytes: {
-      type: 'number',
-      exclusiveMinimum: 0,
-      description: 'The most of a call body this plugin reads, in bytes. A larger body answers 413.',
-    },
-  },
-};
-
 /** What the plugin's connection calls itself. */
 const CLIENT = 'ahpd-webhook';
 

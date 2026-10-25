@@ -1,0 +1,16 @@
+{
+  "name": "plugin-bounded",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "ahpd": {
+    "entry": "./index.ts",
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "paths": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 4 },
+        "label": { "type": "string", "minItems": 1, "maxItems": 4 }
+      }
+    }
+  }
+}

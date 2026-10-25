@@ -1,1 +1,1 @@
-export { apply, defaults, name, optionsSchema, title } from './plugin.js';
+export { apply, defaults, name, title } from './plugin.js';

@@ -359,8 +359,9 @@ it('lists two configured plugins, one with the manifest its package.json declare
   });
   expect(declared['undeclared']).toBeUndefined();
 
-  // The file plugin has no manifest at all, so it is listed and said to be
-  // undeclared rather than left out.
+  // The file plugin's manifest is its options schema and nothing a client
+  // draws beside the name, so it is listed and said to be undeclared rather
+  // than left out.
   const secret = rows['secret'] as Bag;
   expect(secret['state']).toBe('ready');
   expect(secret['loaded']).toBe(true);
@@ -372,7 +373,7 @@ it('lists two configured plugins, one with the manifest its package.json declare
       retries: { type: 'integer', minimum: 0 },
     },
   });
-  expect(secret['manifest']).toBeUndefined();
+  expect(secret['manifest']).toEqual({ optionsSchema: secret['optionsSchema'] });
   expect(secret['undeclared']).toBe(true);
   await close();
 });
@@ -387,12 +388,136 @@ it('turns a plugin off in the configuration file, and the row says so', async ()
     result: { id: 'declared', enabled: false, restart: true },
   });
   // The entry the command line writes: an object naming the spec, turned off.
-  expect(held().plugins).toEqual([{ name: DECLARED, enabled: false }, { name: SECRET, options: { apiKey: 'sk-live-1', region: 'eu' } }]);
+  expect(held().plugins).toEqual([{ source: DECLARED, enabled: false }, { name: SECRET, options: { apiKey: 'sk-live-1', region: 'eu' } }]);
 
   await wait(50);
   expect(ana.heard(URI)).toEqual(['changed declared']);
   const rows = await ana.rows();
-  expect((rows['declared'] as Bag)['state']).toBe('disabled');
+  // Switched off, the row still says what the plugin is: a client can draw it
+  // while it is off, from the package.json the daemon read and did not run.
+  const declared = rows['declared'] as Bag;
+  expect(declared['state']).toBe('disabled');
+  expect(declared['title']).toBe('Declared');
+  expect(declared['version']).toBe('1.0.0');
+  expect(declared['manifest']).toEqual({
+    description: 'Declares its manifest in its package.json.',
+    categories: ['tool'],
+    links: [{ title: 'Docs', url: 'https://ahpd.dev/plugins' }],
+    contracts: { agents: ['declared'] },
+  });
+  expect(declared['problem']).toBeUndefined();
+  await close();
+});
+
+it('describes a switched-off standalone plugin from the plugin.json it names', async () => {
+  writeFileSync(config, JSON.stringify({
+    plugins: [{ source: './fixtures/plugin-standalone/plugin.json', enabled: false }],
+  }));
+  const { host, users, close } = await served({ load: false });
+  const ana = await as(host, users, 'ana');
+
+  const row = (await ana.rows())['standalone'] as Bag;
+  expect(row['state']).toBe('disabled');
+  expect(row['loaded']).toBe(false);
+  expect(row['module']).toBe('standalone');
+  expect(row['title']).toBe('Standalone');
+  expect(row['version']).toBe('1.2.3');
+  expect(row['manifest']).toEqual({
+    id: 'standalone',
+    name: 'Standalone',
+    version: '1.2.3',
+    description: 'Describes itself from a plugin.json.',
+    categories: ['tool'],
+    links: [{ title: 'Docs', url: 'https://ahpd.dev/plugins' }],
+    contracts: { tools: ['standalone_tool'] },
+  });
+  await close();
+});
+
+it('reports a configured file with no manifest as the error a load gives, with no import', async () => {
+  delete (globalThis as Record<string, unknown>).__bareChannelImported;
+  const folder = join(home, 'bare-plugin');
+  mkdirSync(folder);
+  const file = join(folder, 'bare.mjs');
+  writeFileSync(file, "globalThis.__bareChannelImported = true;\nexport function apply() {}\n");
+  writeFileSync(config, JSON.stringify({ plugins: [file] }));
+
+  const { host, users, close } = await served({ load: false });
+  const ana = await as(host, users, 'ana');
+
+  const rows = await ana.rows();
+  const [row] = Object.values(rows) as Bag[];
+  expect(row?.['state']).toBe('error');
+  expect(row?.['loaded']).toBe(false);
+  expect(String(row?.['problem'])).toContain('plugin.json');
+  expect(String(row?.['problem'])).toContain('entry');
+  // The same answer a load gives, read with no import: the module was not run.
+  expect((globalThis as Record<string, unknown>).__bareChannelImported).toBeUndefined();
+  await close();
+});
+
+it('describes a switched-off plugin whose module throws on import, and says nothing is wrong', async () => {
+  const folder = join(home, 'broken-plugin');
+  mkdirSync(folder);
+  writeFileSync(join(folder, 'package.json'), JSON.stringify({
+    name: 'broken-plugin',
+    version: '2.0.0',
+    type: 'module',
+    ahpd: {
+      entry: './index.mjs',
+      title: 'Broken',
+      description: 'Throws when it is imported.',
+      contracts: { tools: ['broken_tool'] },
+    },
+  }));
+  writeFileSync(join(folder, 'index.mjs'), "throw new Error('the broken fixture throws when imported');\n");
+  writeFileSync(config, JSON.stringify({ plugins: [{ source: folder, enabled: false }] }));
+
+  const { host, users, close } = await served({ load: false });
+  const ana = await as(host, users, 'ana');
+
+  const row = (await ana.rows())['broken-plugin'] as Bag;
+  expect(row['state']).toBe('disabled');
+  expect(row['loaded']).toBe(false);
+  expect(row['problem']).toBeUndefined();
+  // The module was never imported, so there is no load problem to report.
+  expect(row['loadProblem']).toBeUndefined();
+  expect(row['manifest']).toEqual({
+    description: 'Throws when it is imported.',
+    contracts: { tools: ['broken_tool'] },
+  });
+  await close();
+});
+
+it('lists an enabled plugin that failed to load with its manifest and its problem', async () => {
+  const folder = join(home, 'broken-plugin');
+  mkdirSync(folder);
+  writeFileSync(join(folder, 'package.json'), JSON.stringify({
+    name: 'broken-plugin',
+    version: '2.0.0',
+    type: 'module',
+    ahpd: {
+      entry: './index.mjs',
+      title: 'Broken',
+      description: 'Throws when it is imported.',
+      contracts: { tools: ['broken_tool'] },
+    },
+  }));
+  writeFileSync(join(folder, 'index.mjs'), "throw new Error('the broken fixture throws when imported');\n");
+  writeFileSync(config, JSON.stringify({ plugins: [folder] }));
+
+  const { host, users, close } = await served();
+  const ana = await as(host, users, 'ana');
+
+  const row = (await ana.rows())['broken-plugin'] as Bag;
+  expect(row['state']).toBe('ready');
+  expect(row['loaded']).toBe(false);
+  expect(row['loadProblem']).toContain('the broken fixture throws when imported');
+  expect(row['title']).toBe('Broken');
+  expect(row['manifest']).toEqual({
+    description: 'Throws when it is imported.',
+    contracts: { tools: ['broken_tool'] },
+  });
   await close();
 });
 
@@ -402,7 +527,7 @@ it('lists a write-only option as set, and any other option as the file holds it'
 
   const rows = await ana.rows();
   const secret = rows['secret'] as Bag;
-  expect(secret['spec']).toEqual({ name: SECRET, options: { apiKey: SET, region: 'eu' } });
+  expect(secret['spec']).toEqual({ source: SECRET, options: { apiKey: SET, region: 'eu' } });
   await close();
 });
 
@@ -697,15 +822,15 @@ it('writes one option through the channel, and refuses a value the schema refuse
   expect(await cy.call('x-ahpd/plugins/options', { id: 'secret', key: 'region', value: 'us' })).toEqual({
     result: { id: 'secret', key: 'region', value: 'us', restart: true },
   });
-  expect(held().plugins).toEqual([DECLARED, { name: SECRET, options: { apiKey: 'sk-live-1', region: 'us' } }]);
+  expect(held().plugins).toEqual([DECLARED, { source: SECRET, options: { apiKey: 'sk-live-1', region: 'us' } }]);
 
   // `retries` is an integer of at least zero, and nothing is written.
   expect(await cy.call('x-ahpd/plugins/options', { id: 'secret', key: 'retries', value: -1 })).toMatchObject({ code: -32602 });
-  expect(held().plugins).toEqual([DECLARED, { name: SECRET, options: { apiKey: 'sk-live-1', region: 'us' } }]);
+  expect(held().plugins).toEqual([DECLARED, { source: SECRET, options: { apiKey: 'sk-live-1', region: 'us' } }]);
 
   await wait(50);
   expect(ana.heard(URI)).toEqual(['changed secret']);
-  expect(((await ana.rows())['secret'] as Bag)['spec']).toEqual({ name: SECRET, options: { apiKey: SET, region: 'us' } });
+  expect(((await ana.rows())['secret'] as Bag)['spec']).toEqual({ source: SECRET, options: { apiKey: SET, region: 'us' } });
   await close();
 });
 
@@ -750,7 +875,7 @@ it('serves a plugin whose apply throws as not loaded, and its problem without th
   await close();
 });
 
-it('lists a switched-off plugin as not loaded, with no schema, and imports nothing', async () => {
+it('lists a switched-off plugin with the schema its package.json declares, and imports nothing', async () => {
   const marker = join(home, 'imported');
   const had = process.env['AHPD_MARKER'];
   process.env['AHPD_MARKER'] = marker;
@@ -767,13 +892,50 @@ it('lists a switched-off plugin as not loaded, with no schema, and imports nothi
     expect(row['state']).toBe('disabled');
     expect(row['loaded']).toBe(false);
     expect(row['loadProblem']).toBeUndefined();
-    expect(row['optionsSchema']).toBeUndefined();
+    expect(row['optionsSchema']).toEqual({ type: 'object', properties: { level: { type: 'integer' } } });
     expect(existsSync(marker)).toBe(false);
     await close();
   }
   finally {
     if (had === undefined) delete process.env['AHPD_MARKER']; else process.env['AHPD_MARKER'] = had;
   }
+});
+
+it('refuses a value a switched-off plugin\'s schema refuses, and writes one it accepts', async () => {
+  writeFileSync(config, JSON.stringify({
+    plugins: [{ source: MARKER_OFF, options: { level: 1 }, enabled: false }],
+  }));
+  // Loaded, because a write names the plugin by the id its module exports,
+  // which is what the daemon's own set knows from the plan; the entry is still
+  // switched off, so nothing applies it.
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.rows();
+
+  // `level` is an integer, so a word is refused and the file is untouched.
+  expect(await cy.call('x-ahpd/plugins/options', { id: 'marker-off', key: 'level', value: 'high' }))
+    .toMatchObject({ code: -32602 });
+  expect(held().plugins).toEqual([{ source: MARKER_OFF, options: { level: 1 }, enabled: false }]);
+
+  expect(await cy.call('x-ahpd/plugins/options', { id: 'marker-off', key: 'level', value: 2 }))
+    .toMatchObject({ result: { id: 'marker-off', key: 'level', value: 2 } });
+  expect(held().plugins).toEqual([{ source: MARKER_OFF, options: { level: 2 }, enabled: false }]);
+  await close();
+});
+
+it('masks a secret option on a switched-off plugin, and lists its schema', async () => {
+  writeFileSync(config, JSON.stringify({
+    plugins: [DECLARED, { source: SECRET, options: { apiKey: 'sk-live-4', region: 'eu' }, enabled: false }],
+  }));
+  const { host, users, close } = await served({ load: false });
+  const ana = await as(host, users, 'ana');
+
+  const row = (await ana.rows())['secret'] as Bag;
+  expect(row['state']).toBe('disabled');
+  expect(row['spec']).toMatchObject({ options: { apiKey: SET, region: 'eu' }, enabled: false });
+  expect(row['optionsSchema']).toMatchObject({ properties: { apiKey: { writeOnly: true } } });
+  expect(JSON.stringify(row)).not.toContain('sk-live-4');
+  await close();
 });
 
 it('marks a restart on the root every client reads, and a new host over the same file starts without it', async () => {

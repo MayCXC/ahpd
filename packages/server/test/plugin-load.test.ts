@@ -1,8 +1,9 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadPlugins, pluginIdOf } from '../src/plugins.js';
+import { loadPlugins, pluginIdOf, pluginSet } from '../src/plugins.js';
+import { setPluginEnabled } from '../src/install.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { FRONTMATTER } from './fixtures/plugin-yaml/index.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
@@ -20,6 +21,7 @@ import type { PluginHost, PluginSpec } from '../../sdk/src/types/plugin.js';
 
 const here = import.meta.dirname;
 const fixtures = join(here, './fixtures');
+const REPO = join(here, '../../..');
 
 const base = (): HostOptions => ({ path: '/tmp/plugin-load', agents: [echo({ path: '/tmp/plugin-load' })] });
 
@@ -74,10 +76,31 @@ describe('loadPlugins', () => {
   });
 
   it('skips a spec that is turned off, in neither loaded nor problems', async () => {
-    const { loaded, problems } = await load([{ name: './fixtures/plugin-hello', enabled: false }]);
+    const { loaded, problems } = await load([{ source: './fixtures/plugin-hello', enabled: false }]);
 
     expect(loaded).toEqual([]);
     expect(problems).toEqual([]);
+  });
+
+  it('loads the old `name` form and the `source` form as the same plugin', async () => {
+    const old = await load([{ name: './fixtures/plugin-hello' }]);
+    const next = await load([{ source: './fixtures/plugin-hello' }]);
+
+    expect(old.problems).toEqual([]);
+    expect(next.problems).toEqual([]);
+    expect(old.loaded.map((one) => one.name)).toEqual(next.loaded.map((one) => one.name));
+    expect(old.loaded[0]?.name).toBe('hello');
+    expect(next.loaded[0]?.name).toBe('hello');
+  });
+
+  it('keeps the row id when a display name is written beside the source', async () => {
+    const plain = await load(['./fixtures/plugin-hello']);
+    const named = await load([{ source: './fixtures/plugin-hello', name: 'Foo' }]);
+
+    expect(named.problems).toEqual([]);
+    expect(named.loaded.map((one) => one.name)).toEqual(plain.loaded.map((one) => one.name));
+    // The display name reaches no key: the row is still the one the module names.
+    expect(pluginIdOf({ source: './fixtures/plugin-hello', name: 'Foo' })).toBe('hello');
   });
 
   it('reports a spec that does not resolve and loads the next one', async () => {
@@ -111,18 +134,37 @@ describe('the manifest a client lists', () => {
       links: [{ title: 'Docs', url: 'https://ahpd.dev/plugins' }],
       contracts: { agents: ['declared'] },
     });
-    expect(loaded[0]?.plugin.manifest).toEqual(loaded[0]?.manifest);
   });
 
-  it('reads a module that exports its own manifest', async () => {
-    const { loaded, problems } = await load(['./fixtures/plugin-declared-module.ts']);
+  it('reads a standalone manifest from the plugin.json the source names', async () => {
+    const { loaded, problems } = await load(['./fixtures/plugin.json']);
 
     expect(problems).toEqual([]);
+    expect(loaded[0]?.name).toBe('declared-module');
     expect(loaded[0]?.manifest).toEqual({
-      description: 'Declares its manifest from the module.',
+      id: 'declared-module',
+      description: 'Declares its manifest in a plugin.json.',
       categories: ['channel'],
       links: [{ title: 'Docs', url: 'https://ahpd.dev/plugins' }],
       contracts: { channels: ['x-declared'] },
+    });
+  });
+
+  it('reads a standalone plugin naming the module its plugin.json main names, and its whole manifest', async () => {
+    const { loaded, problems } = await load(['./fixtures/plugin-standalone/plugin.json']);
+
+    expect(problems).toEqual([]);
+    expect(loaded.map((one) => one.name)).toEqual(['standalone']);
+    expect(loaded[0]?.title).toBe('Standalone');
+    expect(loaded[0]?.path).toBe(join(fixtures, 'plugin-standalone', 'index.mjs'));
+    expect(loaded[0]?.manifest).toEqual({
+      id: 'standalone',
+      name: 'Standalone',
+      version: '1.2.3',
+      description: 'Describes itself from a plugin.json.',
+      categories: ['tool'],
+      links: [{ title: 'Docs', url: 'https://ahpd.dev/plugins' }],
+      contracts: { tools: ['standalone_tool'] },
     });
   });
 
@@ -140,6 +182,185 @@ describe('the manifest a client lists', () => {
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain('ahpd.links');
     expect(problems[0]).toContain('package.json');
+  });
+
+  it('reads an inline manifest from the entry that declares its id', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-inline-manifest-'));
+    try {
+      writeFileSync(join(root, 'custom.mjs'), 'export function apply() {}\n');
+      const { loaded, problems } = await loadPlugins(
+        [{ id: 'custom', name: 'Custom', version: '1.0.0', source: './custom.mjs' }],
+        { base: base(), configDir: root, cwd: root, log: () => {} },
+      );
+
+      expect(problems).toEqual([]);
+      expect(loaded.map((one) => one.name)).toEqual(['custom']);
+      expect(loaded[0]?.title).toBe('Custom');
+      expect(loaded[0]?.manifest).toEqual({ id: 'custom', name: 'Custom', version: '1.0.0' });
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('loads a data: spec under its inline manifest id, with no network', async () => {
+    // Node imports a `data:text/javascript` URI itself, so a scheme spec is
+    // tested without fetching anything or standing in for `fetch`.
+    const url = `data:text/javascript,${encodeURIComponent('export function apply() {}\n')}`;
+    const { loaded, problems } = await load([{ id: 'data-plugin', source: url, description: 'A plugin in a data: URI.' }]);
+
+    expect(problems).toEqual([]);
+    expect(loaded.map((one) => one.name)).toEqual(['data-plugin']);
+    expect(loaded[0]?.manifest?.description).toBe('A plugin in a data: URI.');
+  });
+
+  it('refuses a data: spec with no manifest, naming plugin.json and the entry', async () => {
+    const url = `data:text/javascript,${encodeURIComponent('export function apply() {}\n')}`;
+    const { loaded, problems } = await load([url]);
+
+    expect(loaded).toEqual([]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('data:text/javascript');
+    expect(problems[0]).toContain('plugin.json');
+    expect(problems[0]).toContain('entry');
+  });
+
+  it('refuses a module that exports a manifest, and says where the manifest goes', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-manifest-export-'));
+    try {
+      writeFileSync(
+        join(root, 'exported.mjs'),
+        "export const name = 'exported';\nexport const manifest = { description: 'Old home' };\nexport function apply() {}\n",
+      );
+      const { loaded, problems } = await load([{ id: 'exported', source: join(root, 'exported.mjs') }]);
+
+      expect(loaded).toEqual([]);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('exports a manifest');
+      expect(problems[0]).toContain('ahpd');
+      expect(problems[0]).toContain('plugin.json');
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a standalone module whose name export is not its manifest id, holding both names', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-standalone-id-'));
+    try {
+      writeFileSync(join(root, 'plugin.json'), JSON.stringify({ id: 'declared-id', main: 'index.mjs' }));
+      writeFileSync(join(root, 'index.mjs'), "export const name = 'other-name';\nexport function apply() {}\n");
+      const { loaded, problems } = await load([join(root, 'plugin.json')]);
+
+      expect(loaded).toEqual([]);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('other-name');
+      expect(problems[0]).toContain('declared-id');
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a package whose ahpd.options is written, and names ahpd.optionsSchema', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-old-options-'));
+    try {
+      mkdirSync(join(root, 'old-options'));
+      writeFileSync(join(root, 'old-options', 'package.json'), JSON.stringify({
+        name: 'old-options',
+        version: '1.0.0',
+        type: 'module',
+        ahpd: { entry: './index.mjs', options: { command: { required: false } } },
+      }));
+      writeFileSync(join(root, 'old-options', 'index.mjs'), 'export function apply() {}\n');
+      const { loaded, problems } = await load([join(root, 'old-options')]);
+
+      expect(loaded).toEqual([]);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('ahpd.options');
+      expect(problems[0]).toContain('ahpd.optionsSchema');
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a module that exports an optionsSchema, and says where it moves', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-schema-export-'));
+    try {
+      writeFileSync(
+        join(root, 'exported-schema.mjs'),
+        "export const name = 'exported-schema';\nconst declared = { type: 'object' };\nexport { declared as optionsSchema };\nexport function apply() {}\n",
+      );
+      const { loaded, problems } = await load([{ id: 'exported-schema', source: join(root, 'exported-schema.mjs') }]);
+
+      expect(loaded).toEqual([]);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('exports an optionsSchema');
+      expect(problems[0]).toContain('ahpd.optionsSchema');
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('a first-party plugin', () => {
+  /*
+   * Each package's options schema is the one it exported before the move, now
+   * written in its package.json and read with it: the load carries the schema
+   * on the manifest, so a client lists the options without the module being
+   * imported for them.
+   */
+  const schemas: [string, string[]][] = [
+    ['activepieces', ['pieces']],
+    ['agent-acp', ['hostTools', 'toolsChanged']],
+    ['agent-claude', [
+      'paths', 'computerExecutable', 'computerCli', 'computerCliFallback', 'computerConfigDir', 'workerStop',
+      'handshakeTimeoutMs',
+    ]],
+    ['agent-cofold', [
+      'model', 'baseUrl', 'instructions', 'computerConfigDir', 'store', 'memory', 'tools', 'strictTools', 'apiKey',
+      'resource', 'adapter', 'autoCompactTokens', 'policy',
+    ]],
+    ['agent-pi', ['model', 'projectTrust', 'sessionDir']],
+    ['bot', ['root', 'lastChats', 'mainTurnPostMessageAbsent']],
+    ['computer', [
+      'runtime', 'command', 'args', 'ssh', 'env', 'image', 'cpus', 'memory', 'max', 'label', 'prefix',
+      'sessionSetting', 'sessionDefault', 'needs', 'mounts', 'profiles', 'bodyMounts', 'imageMounts', 'images',
+      'devcontainer',
+    ]],
+    ['push', ['title', 'accessToken']],
+    ['tasks', ['requireApproval', 'sweepAfterDays']],
+    ['tunnel-devtunnel', ['name', 'keep', 'anonymous']],
+    ['webhook', ['syncTimeoutSeconds', 'maxBodyBytes']],
+  ];
+
+  it.each<[string, string[]]>(schemas)('loads %s with the options schema in its package.json', async (name, keys) => {
+    const root = mkdtempSync(join(tmpdir(), `ahpd-first-party-${name}-`));
+    // The set is this test's own, so a plugin that starts something - the
+    // activepieces child process - is closed as `unload` closes it.
+    const base: HostOptions = { path: root, agents: [echo({ path: root })] };
+    const where = { base, configDir: root, cwd: REPO, log: () => {} };
+    const set = pluginSet(where);
+    // Activepieces declares `pieces` required, so an empty list is what a
+    // package that offers nothing is loaded with; every other plugin loads on
+    // its defaults alone.
+    const options = name === 'activepieces' ? { pieces: [] } : {};
+    try {
+      const { loaded, problems } = await loadPlugins(
+        [{ source: `./packages/${name}/src/index.ts`, options }],
+        { ...where, set },
+      );
+
+      expect(loaded.map((one) => one.name), problems.join('\n')).toEqual([name]);
+      const schema = loaded[0]?.manifest?.optionsSchema as { properties?: Record<string, unknown> } | undefined;
+      expect(Object.keys(schema?.properties ?? {}).sort()).toEqual([...keys].sort());
+    }
+    finally {
+      for (const one of set.loaded()) await set.unload(one.name);
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
@@ -203,7 +424,7 @@ describe('loadPlugins log', () => {
   });
 
   it('logs a plugin whose apply throws starting, and says in its problem how long it took', async () => {
-    const { lines, problems } = await logged(['./fixtures/plugin-configurable']);
+    const { lines, problems } = await logged([{ name: './fixtures/plugin-configurable', options: { token: 'shh' } }]);
 
     expect(lines).toEqual(['plugin plugin-configurable loading']);
     expect(problems).toHaveLength(1);
@@ -320,27 +541,82 @@ describe('a problem line a plugin says', () => {
   });
 });
 
-describe('a plugin file with no plugin manifest of its own', () => {
-  it('is named by its name export, and never by the package it sits in', async () => {
+describe('a plugin file that sits in no plugin package', () => {
+  it('is described by the plugin.json beside it, and never by the package it sits in', async () => {
     const said: string[] = [];
     const { problems } = await loadPlugins(['./fixtures/plugin-throws/index.ts'], {
       base: base(), configDir: fixtures, cwd: here, log: (line) => { said.push(line); },
     });
-    expect(said).toContain('plugin plugin-throws loading');
+    expect(said).toContain('plugin throws loading');
     expect(said.join('\n')).not.toContain('@ahpd/server');
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain('plugin throws failed');
   });
 
-  it('is checked against no other package\'s range, and named by its file when it exports no name', async () => {
+  it('is checked against no other package\'s range, and takes its id from its entry', async () => {
     const root = mkdtempSync(join(tmpdir(), 'ahpd-no-manifest-'));
     try {
       writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'not-a-plugin', peerDependencies: { '@ahpd/sdk': '^99.0.0' } }));
       mkdirSync(join(root, 'src'));
       writeFileSync(join(root, 'src', 'loose.js'), 'export function apply() {}\n');
-      const { loaded, problems } = await load([join(root, 'src', 'loose.js')]);
+      const { loaded, problems } = await load([{ id: 'loose', source: join(root, 'src', 'loose.js') }]);
       expect(problems).toEqual([]);
       expect(loaded.map((one) => one.name)).toEqual(['loose']);
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('is refused when it declares no manifest, naming plugin.json and the entry', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-no-manifest-refusal-'));
+    try {
+      writeFileSync(join(root, 'bare.mjs'), 'export function apply() {}\n');
+      const { loaded, problems } = await load([join(root, 'bare.mjs')]);
+
+      expect(loaded).toEqual([]);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('has no manifest');
+      expect(problems[0]).toContain('plugin.json');
+      expect(problems[0]).toContain('entry');
+      expect(problems[0]).toContain('id');
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('is loaded under the plugin.json beside it, which the module beside it need not name', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-beside-manifest-'));
+    try {
+      writeFileSync(join(root, 'plugin.json'), JSON.stringify({ id: 'beside', main: 'index.mjs', description: 'Describes itself from beside.' }));
+      writeFileSync(join(root, 'index.mjs'), 'export function apply() {}\n');
+      const { loaded, problems } = await load([join(root, 'index.mjs')]);
+
+      expect(problems).toEqual([]);
+      expect(loaded.map((one) => one.name)).toEqual(['beside']);
+      expect(loaded[0]?.manifest?.description).toBe('Describes itself from beside.');
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a plugin.json beside it whose main names another file, rather than loading that one', async () => {
+    delete (globalThis as Record<string, unknown>).__besideOtherImported;
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-beside-other-'));
+    try {
+      writeFileSync(join(root, 'plugin.json'), JSON.stringify({ id: 'elsewhere', main: 'other.mjs' }));
+      writeFileSync(join(root, 'other.mjs'), 'export function apply() {}\n');
+      writeFileSync(join(root, 'named.mjs'), 'globalThis.__besideOtherImported = true;\nexport function apply() {}\n');
+      const { loaded, problems } = await load([join(root, 'named.mjs')]);
+
+      expect(loaded).toEqual([]);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('plugin.json');
+      expect(problems[0]).toContain('other.mjs');
+      expect(problems[0]).toContain('named.mjs');
+      expect((globalThis as Record<string, unknown>).__besideOtherImported).toBeUndefined();
     }
     finally {
       rmSync(root, { recursive: true, force: true });
@@ -373,9 +649,13 @@ describe('a plugin id', () => {
   it('refuses a name the module exports that is not a slug, and never applies it', async () => {
     const root = mkdtempSync(join(tmpdir(), 'ahpd-not-a-slug-'));
     try {
-      writeFileSync(join(root, 'scoped.js'), "export const name = '@acme/x';\nexport function apply() { throw new Error('applied'); }\n");
-      writeFileSync(join(root, 'plain.js'), "export const name = 'plain';\nexport function apply() {}\n");
-      const { loaded, problems } = await load([join(root, 'scoped.js'), join(root, 'plain.js')]);
+      mkdirSync(join(root, 'scoped'));
+      writeFileSync(join(root, 'scoped', 'package.json'), JSON.stringify({ name: 'scoped', type: 'module', ahpd: { entry: './index.js' } }));
+      writeFileSync(join(root, 'scoped', 'index.js'), "export const name = '@acme/x';\nexport function apply() { throw new Error('applied'); }\n");
+      mkdirSync(join(root, 'plain'));
+      writeFileSync(join(root, 'plain', 'package.json'), JSON.stringify({ name: 'plain', type: 'module', ahpd: { entry: './index.js' } }));
+      writeFileSync(join(root, 'plain', 'index.js'), "export const name = 'plain';\nexport function apply() {}\n");
+      const { loaded, problems } = await load([join(root, 'scoped'), join(root, 'plain')]);
       expect(problems).toEqual([
         'plugin @acme/x skipped: its name is not a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter',
       ]);
@@ -418,15 +698,33 @@ describe('a plugin id', () => {
     }
   });
 
-  it('refuses a file name that is not a slug, when the module exports no name', async () => {
+  it('refuses a manifest id that is not a slug, and never applies it', async () => {
     const root = mkdtempSync(join(tmpdir(), 'ahpd-file-id-'));
     try {
       writeFileSync(join(root, 'My_Plugin.js'), 'export function apply() {}\n');
-      const { loaded, problems } = await load([join(root, 'My_Plugin.js')]);
+      const { loaded, problems } = await load([{ id: 'My_Plugin', source: join(root, 'My_Plugin.js') }]);
       expect(problems).toEqual([
         'plugin My_Plugin skipped: its name is not a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter',
       ]);
       expect(loaded).toEqual([]);
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('an entry is written with its source', () => {
+  it('turns an old `name` entry off as a `source` entry that keeps its options', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-entry-source-'));
+    try {
+      const path = join(root, 'config.json');
+      writeFileSync(path, JSON.stringify({ plugins: [{ name: './fixtures/plugin-hello', options: { a: 1 } }] }));
+
+      setPluginEnabled(path, './fixtures/plugin-hello', false);
+
+      const written = JSON.parse(readFileSync(path, 'utf8')) as { plugins: unknown[] };
+      expect(written.plugins).toEqual([{ source: './fixtures/plugin-hello', options: { a: 1 }, enabled: false }]);
     }
     finally {
       rmSync(root, { recursive: true, force: true });

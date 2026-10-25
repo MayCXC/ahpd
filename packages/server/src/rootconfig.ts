@@ -18,7 +18,7 @@ import { scopeOf, secretRef } from '@ahpd/sdk';
 import { asSpec, configPath, oldNameOf } from './config.js';
 import { SET, keyed, maskValue } from './commands/config.js';
 import { checkConfig, configSchema, mcpServerSchema, mcpServers, serverFields, type ConfigKey, type Options } from './commands/options.js';
-import { oneAtATime, readEntry, writeEntry } from './install.js';
+import { editableEntry, oneAtATime, readEntry, writeEntry } from './install.js';
 import { optionsSchemaLoaded } from './plugins.js';
 
 /**
@@ -398,9 +398,7 @@ export function daemonRootConfig(
         const { at, spec, name } = found;
         // A string entry is a name and nothing else, so it becomes an object
         // entry here for the first time it says anything else.
-        const entry: Record<string, unknown> = typeof spec === 'string'
-          ? { name: spec }
-          : { ...list[at] as Record<string, unknown>, name: spec.name };
+        const entry: Record<string, unknown> = { ...editableEntry(spec, list[at]) };
         const asked = (typeof value === 'object' && value !== null ? value : {}) as { enabled?: unknown; options?: unknown };
         // A string entry is already on and holds nothing else, so asking for
         // that is asking for no change: the name stays a name, as

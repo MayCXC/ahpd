@@ -1,11 +1,14 @@
 /**
  * The plugin entry: what the daemon imports when the package is named.
  *
- * `index.ts` re-exports `name`, `apply` and `optionsSchema` from here, so the
- * module the manifest names is the plugin. There is deliberately no default
- * export: the loader refuses a module without a named `apply` rather than
- * guessing which export is the plugin, and a silent guess is worse than a
- * refusal.
+ * `index.ts` re-exports `name`, `apply` and `title` from here, so the module
+ * the manifest names is the plugin. There is deliberately no default export:
+ * the loader refuses a module without a named `apply` rather than guessing
+ * which export is the plugin, and a silent guess is worse than a refusal.
+ *
+ * The options schema is in this package's package.json, at `ahpd.optionsSchema`,
+ * and is read from there rather than exported: the daemon reads it without
+ * importing the module, so a plugin switched off still has a form.
  *
  * The plugin registers the engine `cofold`, and each record of it is one agent
  * with its own endpoint, key and model. The plugin's own options are the
@@ -23,6 +26,7 @@ import { check } from '@cofold/commands';
 import { TOOLS_SCHEMA } from '@cofold/tools';
 import { join } from 'node:path';
 import type { Engine, AgentView, PluginHost } from '@ahpd/sdk';
+import manifest from '../package.json' with { type: 'json' };
 import { cofoldAgent, defaultStoreRoot } from './agent.js';
 import type { CofoldOptions } from './agent.js';
 
@@ -39,76 +43,23 @@ export const name = 'agent-cofold';
 export const title = 'Agent Cofold';
 
 /**
- * A search provider that takes a key.
- *
- * `writeOnly` as the daemon's own is, so a client is told the key is set and
- * never what it is. The mask answers a plugin's own option keys, so this one is
- * marked because it is a credential, not because the daemon hides it.
- */
-const keyed = { type: 'object', properties: { apiKey: { type: 'string', writeOnly: true } }, required: ['apiKey'] };
-
-/**
  * The options `apply` receives, as a JSON Schema the daemon checks them against
  * before `apply` runs.
  *
- * These are the defaults for every record of the engine: a record that names one
- * of them wins, and a record that names none runs on what is here. `apiKey`,
- * `adapter` and `policy` are also what an embedder calling `apply` passes: a
- * key function and a model adapter are things JSON cannot carry, so the schema
- * describes the configuration file's spelling of them.
+ * The schema is written in this package's package.json, at `ahpd.optionsSchema`,
+ * so a listing reads it without importing this module and a plugin switched off
+ * still has a form a client draws. These are the defaults for every record of
+ * the engine: a record that names one of them wins, and a record that names
+ * none runs on what is here. `apiKey`, `adapter` and `policy` are also what an
+ * embedder calling `apply` passes: a key function and a model adapter are
+ * things JSON cannot carry, so the schema describes the configuration file's
+ * spelling of them.
  *
- * `provider`, `displayName` and `description` are deliberately not here: an
+ * `provider`, `displayName` and `description` are deliberately not there: an
  * agent is named by its record's id, name and description, and a plugin that
  * could still set them would be describing one agent while serving many.
  */
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    model: { type: 'string', description: 'The model id a record that names none runs on.' },
-    baseUrl: { type: 'string', description: 'The OpenAI-compatible endpoint a record that names none uses.' },
-    instructions: { type: 'string', description: 'The system prompt a record that names none is created with.' },
-    computerConfigDir: {
-      anyOf: [{ type: 'string' }, { const: false }],
-      description: 'The configuration directory the harness reads inside a machine. /ahpd/cofold by default; false leaves the image\'s own.',
-    },
-    store: { type: 'string', description: 'The folder each record\'s cofold file store lives under, one folder per record. The tool\'s own data directory by default.' },
-    memory: { type: 'boolean', description: 'true to hold each record\'s store in memory, for a test.' },
-    tools: {
-      type: 'object',
-      properties: {
-        files: {
-          type: ['boolean', 'object'],
-          properties: { requireRead: { type: 'boolean' } },
-        },
-        shell: { type: 'boolean' },
-        memory: { type: 'boolean' },
-        web: {
-          type: ['boolean', 'object'],
-          properties: {
-            search: {
-              type: 'object',
-              properties: { brave: keyed, tavily: keyed, duckduckgo: { type: 'boolean' } },
-            },
-          },
-        },
-      },
-      description: 'Which capabilities a session runs, where web_search gets its providers, and whether a write needs the file read first.',
-    },
-    strictTools: {
-      type: 'boolean',
-      description: 'false holds the tools option to the loose check, so a key the harness does not know is dropped rather than refused.',
-    },
-    apiKey: { type: 'string', writeOnly: true, description: "The daemon's own key, for a record that names none." },
-    resource: { type: 'string', description: 'The protected resource a client authenticates against.' },
-    adapter: { type: 'object', description: 'A cofold ModelAdapter used instead of the HTTP one.' },
-    autoCompactTokens: {
-      type: 'integer',
-      minimum: 1,
-      description: 'The estimated history size at which a session compacts, never above 80% of the model\'s listed context, or of 32000. That 80% by default.',
-    },
-    policy: { type: 'object', description: 'The run-level policy a pause comes from.' },
-  },
-};
+const optionsSchema = manifest.ahpd.optionsSchema;
 
 /**
  * The package's own options, out of values `optionsSchema` has checked.

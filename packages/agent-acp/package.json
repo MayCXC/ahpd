@@ -81,9 +81,15 @@
       "agents": ["*"],
       "engines": ["acp"]
     },
-    "options": {
-      "hostTools": {
-        "required": false
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "hostTools": { "type": "boolean", "description": "Offer the host's own tools to each session as an MCP server, on by default." },
+        "toolsChanged": {
+          "type": "string",
+          "enum": ["notify", "list"],
+          "description": "How each session's agent hears that the tools it listed have moved, over each record's own: notify sends notifications/tools/list_changed down a stream the host holds open, list says nothing and leaves it to the agent's next tools/list. Both serve the current list; defaults to notify."
+        }
       }
     }
   }

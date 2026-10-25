@@ -10,6 +10,7 @@ import type { PluginPeer } from '../../sdk/src/types/plugin.js';
 import type { BotChat, BotSeams, TurnEnd } from '../src/bot.js';
 import type { Call } from '../src/call.js';
 import type { Endpoint } from '../src/record.js';
+import manifest from '../package.json' with { type: 'json' };
 
 /*
  * The bot target, over stub seams.
@@ -336,7 +337,8 @@ it('hears a turn that ended in an error, with its message', async () => {
 });
 
 it('gives the plugin option syncTimeoutSeconds a default of 60', async () => {
-  const { defaults, optionsSchema } = await import('../src/plugin.js');
+  const { defaults } = await import('../src/plugin.js');
+  const optionsSchema = manifest.ahpd.optionsSchema;
   expect(defaults.syncTimeoutSeconds).toBe(60);
   expect(optionsSchema.properties).toHaveProperty('syncTimeoutSeconds');
 });

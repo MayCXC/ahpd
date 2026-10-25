@@ -6,7 +6,7 @@ import { isIPv6 } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { resolveConfig, type ResolvedConfig } from '@cofold/config';
-import { isShellName, issuerKind, reason, type IssuerVerify, type McpServer, type PluginSpec, type ShellEnv } from '@ahpd/sdk';
+import { isShellName, issuerKind, reason, type Icon, type IssuerVerify, type McpServer, type PluginContracts, type PluginLink, type PluginSpec, type ShellEnv } from '@ahpd/sdk';
 import type { ProxySetting } from './proxy/providers.js';
 
 /**
@@ -758,17 +758,27 @@ export function loadConfig(named?: string): LoadedConfig {
 /**
  * One configuration entry as a `PluginSpec`, or nothing when it is not one.
  *
- * A string is the specifier on its own; an object names one and may carry the
- * options `apply` receives and whether the plugin is switched on. Anything
- * else answers `undefined` rather than a half-built spec, so the caller can
- * refuse the start with a message naming the entry instead of loading
- * something nobody wrote.
+ * A string is the specifier on its own; an object names one with `source` and
+ * may carry the options `apply` receives and whether the plugin is switched on.
+ * An object whose `name` stands alone is the old form, and its `name` is the
+ * specifier. Anything else answers `undefined` rather than a half-built spec, so
+ * the caller can refuse the start with a message naming the entry instead of
+ * loading something nobody wrote.
  */
 export const asSpec = (value: unknown): PluginSpec | undefined => {
   if (typeof value === 'string') return value.trim() === '' ? undefined : value;
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
   const held = value as Record<string, unknown>;
-  if (typeof held.name !== 'string' || held.name.trim() === '') return undefined;
+  /*
+   * `source` names the module. An entry written before `source` named it with
+   * `name`, so a `name` with no `source` is the old form and its value is the
+   * module; a `name` beside a `source` is what a listing prints.
+   */
+  const source = typeof held.source === 'string'
+    ? held.source
+    : typeof held.name === 'string' ? held.name : undefined;
+  if (source === undefined || source.trim() === '') return undefined;
+  if (held.source !== undefined && typeof held.source !== 'string') return undefined;
   if (held.options !== undefined && (typeof held.options !== 'object' || held.options === null || Array.isArray(held.options))) {
     return undefined;
   }
@@ -786,10 +796,29 @@ export const asSpec = (value: unknown): PluginSpec | undefined => {
     return undefined;
   }
 
-  const spec: PluginSpec = { name: held.name };
+  // The display name, which only the form carrying `source` has.
+  if (held.name !== undefined && typeof held.name !== 'string') return undefined;
+  /*
+   * The manifest a standalone plugin carries in its own entry, which the loader
+   * reads with no import. A field of the wrong kind is refused with the entry,
+   * as a wrong `enabled` is; the structured ones are kept as written, because
+   * the loader's manifest check is what names the field that is badly shaped.
+   */
+  for (const key of ['id', 'version', 'description'] as const) {
+    if (held[key] !== undefined && typeof held[key] !== 'string') return undefined;
+  }
+  const spec: PluginSpec = { source };
+  if (typeof held.source === 'string' && typeof held.name === 'string') spec.name = held.name;
   if (held.options !== undefined) spec.options = held.options as Record<string, unknown>;
   if (held.enabled !== undefined) spec.enabled = held.enabled;
   if (held.grants !== undefined) spec.grants = held.grants as string[];
+  if (typeof held.id === 'string') spec.id = held.id;
+  if (typeof held.version === 'string') spec.version = held.version;
+  if (typeof held.description === 'string') spec.description = held.description;
+  if (held.categories !== undefined) spec.categories = held.categories as string[];
+  if (held.links !== undefined) spec.links = held.links as PluginLink[];
+  if (held.contracts !== undefined) spec.contracts = held.contracts as PluginContracts;
+  if (held.icons !== undefined) spec.icons = held.icons as Icon[];
   return spec;
 };
 

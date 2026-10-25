@@ -72,10 +72,17 @@
     "contracts": {
       "engines": ["pi"]
     },
-    "options": {
-      "model": { "required": false },
-      "projectTrust": { "required": false },
-      "sessionDir": { "required": false }
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "model": { "type": "string", "description": "The model a record that names none runs on, as provider/modelId." },
+        "projectTrust": {
+          "type": "string",
+          "enum": ["trust", "deny"],
+          "description": "Whether a record that names none loads a project's own pi extensions, skills and prompts. trust by default."
+        },
+        "sessionDir": { "type": "string", "description": "The folder a record that names none keeps its pi sessions in. pi's own by default." }
+      }
     }
   }
 }

@@ -3,5 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "ahpd": { "entry": "./index.ts" }
+  "ahpd": {
+    "entry": "./index.ts",
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "key": { "type": "string" },
+        "replace": { "type": "boolean" }
+      }
+    }
+  }
 }

@@ -46,32 +46,49 @@ describe('describePlugin', () => {
     expect(row.path).toBe(join(fixtures, 'plugin-plain', 'index.js'));
   });
 
-  it('lists a single file with no manifest above it by its file name', async () => {
+  it('lists a single file with no manifest at all as error, naming plugin.json and the entry, with no import', async () => {
+    delete (globalThis as Record<string, unknown>).__pluginBareImported;
     loose = mkdtempSync(join(tmpdir(), 'ahpd-loose-'));
-    writeFileSync(join(loose, 'loose.js'), 'export const x = 1;\n');
-    const row = await listing(join(loose, 'loose.js'));
+    writeFileSync(join(loose, 'bare.js'), "globalThis.__pluginBareImported = true;\nexport function apply() {}\n");
+    const row = await listing(join(loose, 'bare.js'));
 
-    expect(row.state).toBe('ready');
-    expect(row.name).toBe('loose');
-    expect(row.module).toBe('loose');
-    expect(row.title).toBeUndefined();
-    expect(pluginLine(row)).toContain('(loose)');
+    expect(row.state).toBe('error');
+    // No manifest names it, so the row is keyed by the spec as written.
+    expect(row.name).toBe(join(loose, 'bare.js'));
+    expect(row.problem).toContain('has no manifest');
+    expect(row.problem).toContain('plugin.json');
+    expect(row.problem).toContain('entry');
+    expect((globalThis as Record<string, unknown>).__pluginBareImported).toBeUndefined();
   });
 
-  it('lists a file whose nearest package.json is not a plugin\'s by its file name, unchecked by that package', async () => {
+  it('lists a single file by the plugin.json beside it, and never imports it', async () => {
+    delete (globalThis as Record<string, unknown>).__pluginBesideImported;
+    loose = mkdtempSync(join(tmpdir(), 'ahpd-loose-'));
+    writeFileSync(join(loose, 'plugin.json'), JSON.stringify({ id: 'beside', main: 'beside.js', description: 'Describes itself from beside.' }));
+    writeFileSync(join(loose, 'beside.js'), "globalThis.__pluginBesideImported = true;\nexport function apply() {}\n");
+    const row = await listing(join(loose, 'beside.js'));
+
+    expect(row.state).toBe('ready');
+    expect(row.name).toBe('beside');
+    expect(row.manifest?.description).toBe('Describes itself from beside.');
+    expect((globalThis as Record<string, unknown>).__pluginBesideImported).toBeUndefined();
+  });
+
+  it('lists a file whose nearest package.json is not a plugin\'s by its entry, unchecked by that package', async () => {
     loose = mkdtempSync(join(tmpdir(), 'ahpd-loose-'));
     writeFileSync(join(loose, 'package.json'), JSON.stringify({ name: 'not-a-plugin', peerDependencies: { '@ahpd/sdk': '^99.0.0' } }));
     mkdirSync(join(loose, 'plugin-x'));
     writeFileSync(join(loose, 'plugin-x', 'index.js'), 'export const x = 1;\n');
-    const row = await listing(join(loose, 'plugin-x', 'index.js'));
+    const row = await listing({ id: 'plugin-x', source: join(loose, 'plugin-x', 'index.js') });
 
     expect(row.state).toBe('ready');
     expect(row.module).toBe('plugin-x');
   });
 
-  it('names a fixture file by its directory, not by the server package above it', async () => {
+  it('lists a fixture file by its plugin.json, not by the server package above it', async () => {
     const row = await listing('./fixtures/plugin-throws/index.ts');
-    expect(row.module).toBe('plugin-throws');
+    expect(row.module).toBe('throws');
+    expect(row.title).toBeUndefined();
   });
 
   it('takes a plugin package\'s manifest for a file inside it', async () => {
@@ -94,10 +111,46 @@ describe('describePlugin', () => {
     expect(row.title).toBe('Explodes');
   });
 
-  it('lists a spec that is switched off as disabled', async () => {
-    const row = await listing({ name: './fixtures/plugin-hello', enabled: false });
+  it('describes a switched-off package plugin from its package.json, and calls it disabled', async () => {
+    const row = await listing({ source: './fixtures/plugin-declared', enabled: false });
+
     expect(row.state).toBe('disabled');
-    expect(row.path).toBeUndefined();
+    expect(row.path).toBe(join(fixtures, 'plugin-declared', 'index.ts'));
+    expect(row.title).toBe('Declared');
+    expect(row.version).toBe('1.0.0');
+    expect(row.manifest).toEqual({
+      description: 'Declares its manifest in its package.json.',
+      categories: ['tool'],
+      links: [{ title: 'Docs', url: 'https://ahpd.dev/plugins' }],
+      contracts: { agents: ['declared'] },
+    });
+  });
+
+  it('describes a switched-off standalone plugin from its plugin.json', async () => {
+    const row = await listing({ source: './fixtures/plugin-standalone/plugin.json', enabled: false });
+
+    expect(row.state).toBe('disabled');
+    expect(row.module).toBe('standalone');
+    expect(row.title).toBe('Standalone');
+    expect(row.version).toBe('1.2.3');
+    expect(row.manifest).toEqual({
+      id: 'standalone',
+      name: 'Standalone',
+      version: '1.2.3',
+      description: 'Describes itself from a plugin.json.',
+      categories: ['tool'],
+      links: [{ title: 'Docs', url: 'https://ahpd.dev/plugins' }],
+      contracts: { tools: ['standalone_tool'] },
+    });
+  });
+
+  it('describes a switched-off plugin whose module throws on import, and says nothing is wrong', async () => {
+    const row = await listing({ source: './fixtures/plugin-explodes', enabled: false });
+
+    expect(row.state).toBe('disabled');
+    expect(row.title).toBe('Explodes');
+    expect(row.version).toBe('1.0.0');
+    expect(row.problem).toBeUndefined();
   });
 
   it('lists a manifest option the configuration does not set as unconfigured', async () => {
@@ -125,10 +178,10 @@ describe('describePlugin', () => {
     expect(row.problem).toContain('package.json');
   });
 
-  it('lists a file whose name is not a slug as error, the way a load refuses it', async () => {
+  it('lists a manifest id that is not a slug as error, the way a load refuses it', async () => {
     loose = mkdtempSync(join(tmpdir(), 'ahpd-loose-'));
     writeFileSync(join(loose, 'My_Plugin.js'), 'export function apply() {}\n');
-    const row = await listing(join(loose, 'My_Plugin.js'));
+    const row = await listing({ id: 'My_Plugin', source: join(loose, 'My_Plugin.js') });
 
     expect(row.state).toBe('error');
     expect(row.name).toBe('My_Plugin');
@@ -161,10 +214,12 @@ describe('describePlugin', () => {
 
   it('lists a module that exports a name that is not a slug as error once the ids are read', async () => {
     loose = mkdtempSync(join(tmpdir(), 'ahpd-loose-'));
-    const file = join(loose, 'scoped.js');
-    writeFileSync(file, "export const name = '@acme/x';\nexport function apply() {}\n");
-    await pluginIdsOf([file], { configDir: fixtures, cwd: here });
-    const row = await listing(file);
+    mkdirSync(join(loose, 'scoped'));
+    const dir = join(loose, 'scoped');
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'scoped', type: 'module', ahpd: { entry: './entry.js' } }));
+    writeFileSync(join(dir, 'entry.js'), "export const name = '@acme/x';\nexport function apply() {}\n");
+    await pluginIdsOf([dir], { configDir: fixtures, cwd: here });
+    const row = await listing(dir);
 
     expect(row.state).toBe('error');
     expect(row.name).toBe('@acme/x');

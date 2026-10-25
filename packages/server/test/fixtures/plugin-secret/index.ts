@@ -10,13 +10,4 @@ import type { PluginHost } from '@ahpd/sdk';
 
 export const name = 'secret';
 
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    apiKey: { type: 'string', writeOnly: true },
-    region: { type: 'string' },
-    retries: { type: 'integer', minimum: 0 },
-  },
-};
-
 export function apply(_host: PluginHost): void {}

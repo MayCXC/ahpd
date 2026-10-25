@@ -6,6 +6,13 @@
   "ahpd": {
     "entry": "./index.ts",
     "title": "Configurable",
-    "options": { "token": { "required": true }, "mode": { "required": false } }
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "token": { "type": "string" },
+        "mode": { "type": "string" }
+      },
+      "required": ["token"]
+    }
   }
 }

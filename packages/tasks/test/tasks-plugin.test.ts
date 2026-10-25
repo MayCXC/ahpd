@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pluginHost } from '@ahpd/sdk';
-import { apply, defaults, name, optionsSchema, settingsOf, title } from '../src/plugin.js';
+import { apply, defaults, name, settingsOf, title } from '../src/plugin.js';
+import manifest from '../package.json' with { type: 'json' };
 import type { LoaderContext } from '@ahpd/sdk';
 
 /*
@@ -20,6 +21,9 @@ const context = (): LoaderContext => ({
   log: () => {},
   say: () => {},
 });
+
+/** The schema the manifest declares, which a listing reads without importing. */
+const optionsSchema = manifest.ahpd.optionsSchema;
 
 describe('the tasks plugin', () => {
   it('calls itself tasks, prints Tasks, and declares both settings', () => {

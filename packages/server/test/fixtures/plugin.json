@@ -1,0 +1,8 @@
+{
+  "id": "declared-module",
+  "main": "plugin-declared-module.ts",
+  "description": "Declares its manifest in a plugin.json.",
+  "categories": ["channel"],
+  "links": [{ "title": "Docs", "url": "https://ahpd.dev/plugins" }],
+  "contracts": { "channels": ["x-declared"] }
+}

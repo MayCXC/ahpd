@@ -21,7 +21,7 @@ import { isRecord, secretRef } from '@ahpd/sdk';
 import type { IssuerVerify, McpServer, PayOrder, PluginSpec, ShellEnv } from '@ahpd/sdk';
 import type { Config, HttpSetting, RoutesSetting } from '../config.js';
 import { asSpec, configDir, configPath, loadConfig, shellEnvProblems } from '../config.js';
-import { nameOf, pluginIdOf, pluginIdsOf } from '../plugins.js';
+import { sourceOf, pluginIdOf, pluginIdsOf } from '../plugins.js';
 import { proxyConfiguration, proxyProblems, proxySchema, type ProxyConfiguration } from '../proxy/providers.js';
 
 /** What this daemon was told, after argv and the configuration file were folded. */
@@ -715,6 +715,9 @@ const schemaOf = ({ cli: _cli, env: _env, ...schema }: Field): JsonSchema => sch
 const pluginEntry: JsonSchema = {
   type: ['string', 'object'],
   properties: {
+    source: { type: 'string' },
+    // What a listing prints. An entry written before `source` named the module
+    // with this key, so one with no `source` still reads it as the module.
     name: { type: 'string' },
     options: { type: 'object' },
     enabled: { type: 'boolean' },
@@ -723,7 +726,22 @@ const pluginEntry: JsonSchema = {
     // one and says so. Empty or absent, it may do nothing.
     grants: { type: 'array', items: { type: 'string' } },
   },
-  required: ['name'],
+};
+
+/**
+ * Every object entry of `plugins` that names no module, as a sentence each.
+ *
+ * The schema cannot say "one of these two keys", and `source` is the key a new
+ * entry is written with while `name` alone is the old form, so the presence of
+ * either is held here.
+ */
+const pluginProblems = (plugins: unknown): string[] => {
+  if (!Array.isArray(plugins)) return [];
+  return plugins.flatMap((entry, at) => {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return [];
+    const held = entry as Record<string, unknown>;
+    return held.source === undefined && held.name === undefined ? [`plugins[${String(at)}].source is required`] : [];
+  });
 };
 
 /**
@@ -927,6 +945,8 @@ export function checkConfig(file: object, source: (key: string) => string): stri
   }
   const problems = proxyProblems((file as Config).modelProxy);
   if (problems.length > 0) stop(problems.map((one) => `${source('modelProxy')}: ${one}`).join('\n'));
+  const pluginsNamed = pluginProblems((file as Config).plugins);
+  if (pluginsNamed.length > 0) stop(pluginsNamed.map((one) => `${source('plugins')}: ${one}`).join('\n'));
   const shellEnvBad = shellEnvProblems((file as Config).shellEnv);
   if (shellEnvBad.length > 0) stop(shellEnvBad.map((one) => `${source('shellEnv')}: ${one}`).join('\n'));
   return warnings;
@@ -1040,9 +1060,9 @@ const noCwd = input['noCwd'] === true;
   if (noPlugins && typed !== undefined && typed.length > 0) {
     stop('--no-plugins contradicts the --plugin you also passed.');
   }
-  const filed = (name: string): PluginSpec => {
-    const entry = (file.plugins ?? []).map(asSpec).find((one) => typeof one === 'object' && one.name === name);
-    if (typeof entry !== 'object') return name;
+  const filed = (source: string): PluginSpec => {
+    const entry = (file.plugins ?? []).map(asSpec).find((one) => typeof one === 'object' && sourceOf(one) === source);
+    if (typeof entry !== 'object') return source;
     const { enabled: _enabled, ...rest } = entry;
     return rest;
   };
@@ -1071,7 +1091,7 @@ const noCwd = input['noCwd'] === true;
   const where = { configDir: configDir(), cwd: process.cwd() };
   // An entry switched off is one this run does not load, so it has no names.
   const loadedNames = (spec: PluginSpec): string[] =>
-    typeof spec !== 'string' && spec.enabled === false ? [] : [nameOf(spec), pluginIdOf(spec, where)];
+    typeof spec !== 'string' && spec.enabled === false ? [] : [sourceOf(spec), pluginIdOf(spec, where)];
   const names = typedOptions.length === 0 ? [] : plugins.flatMap(loadedNames);
   for (const typedOption of typedOptions) {
     const equals = typedOption.indexOf('=');
@@ -1096,7 +1116,7 @@ const noCwd = input['noCwd'] === true;
     const at = plugins.findIndex((spec) => loadedNames(spec).includes(plugin));
     const spec = plugins[at] as PluginSpec;
     plugins[at] = typeof spec === 'string'
-      ? { name: spec, options: setAt(undefined, path, value, spelled) }
+      ? { source: spec, options: setAt(undefined, path, value, spelled) }
       : { ...spec, options: setAt(spec.options, path, value, spelled) };
   }
 

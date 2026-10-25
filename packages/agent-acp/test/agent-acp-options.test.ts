@@ -3,10 +3,10 @@ import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { optionsSchema } from '../src/plugin.js';
+import manifest from '../package.json' with { type: 'json' };
 
 /*
- * The plugin's options, held to the schema it exports.
+ * The plugin's options, held to the schema its manifest declares.
  *
  * The loader checks them before `apply`, so a value of the wrong type is
  * reported with the plugin's name and the key, and the plugin is skipped
@@ -17,6 +17,7 @@ import { optionsSchema } from '../src/plugin.js';
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/agent-acp/src/index.ts';
 const NAME = 'agent-acp';
+const optionsSchema = manifest.ahpd.optionsSchema;
 
 /** Options that pass, which each case spoils one key of. */
 const VALID: Record<string, unknown> = { hostTools: false, toolsChanged: 'notify' };

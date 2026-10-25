@@ -5,7 +5,8 @@ import { afterEach, expect, it } from 'vitest';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { closeAll, keeping } from './support/closing.js';
-import { optionsSchema, profilesOf } from '../src/plugin.js';
+import { profilesOf } from '../src/plugin.js';
+import manifest from '../package.json' with { type: 'json' };
 
 /*
  * The profile schema a client reads, against the fields a profile holds.
@@ -19,6 +20,9 @@ import { optionsSchema, profilesOf } from '../src/plugin.js';
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/computer/src/index.ts';
 const NAME = 'computer';
+
+/** The schema the manifest declares, which a listing reads without importing. */
+const optionsSchema = manifest.ahpd.optionsSchema;
 
 /** A profile that writes every field `profilesOf` reads, each with a value it keeps. */
 const EVERY_FIELD: Record<string, unknown> = {

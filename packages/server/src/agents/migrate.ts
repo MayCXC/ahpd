@@ -34,7 +34,7 @@ import { copyFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { bag, isRecord, isRecordSlug, knownAgents, reason, RECORD_SLUG } from '@ahpd/sdk';
 import type { PluginSpec, RecordCollection, ServedEngine, StoredRecord, Vault } from '@ahpd/sdk';
-import { nameOf } from '../plugins.js';
+import { sourceOf } from '../plugins.js';
 import { readEntry, writeEntry } from '../install.js';
 
 /** The engines whose presets this moves, and the package each ships as. */
@@ -75,7 +75,7 @@ const engineOfName = (name: string): PresetEngine | undefined =>
   (Object.keys(PACKAGE_OF) as PresetEngine[]).find((engine) => PACKAGE_OF[engine].test(name));
 
 /** The engine a spec points at. */
-const engineOfSpec = (spec: PluginSpec): PresetEngine | undefined => engineOfName(nameOf(spec));
+const engineOfSpec = (spec: PluginSpec): PresetEngine | undefined => engineOfName(sourceOf(spec));
 
 /** A non-blank string, or nothing for a blank or missing one. */
 const text = (value: unknown): string | undefined =>
@@ -406,7 +406,7 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
       // same engine never equals this name, so that entry is left alone.
       const at = options.plugins.findIndex((spec, position) => !paired.has(position)
         && (typeof spec === 'string' || spec.enabled !== false)
-        && nameOf(spec) === name);
+        && sourceOf(spec) === name);
       if (at === -1) return;
       paired.add(at);
       const values = bag(raw['options']);

@@ -16,7 +16,7 @@ describe('plugin config', () => {
     put({ plugins: [secret] });
     const set = await cli(['plugin', 'config', secret, 'retries', '2', '--config-file', config]);
     expect(set.code).toBe(0);
-    expect(JSON.parse(readFileSync(config, 'utf8'))).toEqual({ plugins: [{ name: secret, options: { retries: 2 } }] });
+    expect(JSON.parse(readFileSync(config, 'utf8'))).toEqual({ plugins: [{ source: secret, options: { retries: 2 } }] });
 
     const shown = await cli(['plugin', 'config', secret, '--config-file', config]);
     expect(shown.code).toBe(0);
@@ -24,7 +24,7 @@ describe('plugin config', () => {
 
     const removed = await cli(['plugin', 'config', 'unset', secret, 'retries', '--config-file', config]);
     expect(removed.code).toBe(0);
-    expect(JSON.parse(readFileSync(config, 'utf8'))).toEqual({ plugins: [{ name: secret }] });
+    expect(JSON.parse(readFileSync(config, 'utf8'))).toEqual({ plugins: [{ source: secret }] });
   }, 20000);
 });
 

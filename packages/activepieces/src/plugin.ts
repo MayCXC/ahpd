@@ -28,22 +28,6 @@ export const name = 'activepieces';
 /** What a listing prints. */
 export const title = 'Activepieces connectors';
 
-/** The options `apply` receives, as a JSON Schema the daemon checks them against. */
-export const optionsSchema = {
-  type: 'object',
-  properties: {
-    pieces: {
-      type: 'array',
-      items: {
-        type: 'string',
-        pattern: '^@activepieces/piece-[a-z0-9][a-z0-9-]*$',
-      },
-      description: 'The package of each Activepieces piece this plugin offers, such as @activepieces/piece-resend.',
-    },
-  },
-  required: ['pieces'],
-};
-
 /** One line saying what went wrong, without a stack. */
 const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 

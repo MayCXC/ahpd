@@ -1,6 +1,6 @@
 ---
 title: source names the module in a config entry
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server, docs"
 refs:
@@ -42,3 +42,10 @@ An entry with `name` and no `source` still loads, and the daemon writes `source`
 - `git grep -n "nameOf(" -- packages` prints nothing.
 
 ## Resume
+
+- **Done so far:** The object form of `PluginSpec` names the module with `source`, and `name` is the display name. `asSpec` reads an entry that has `name` and no `source` as `{ source }`, and a bare string stays the source. `sourceOf` replaced `nameOf` in the loader, and every caller in `packages/server/src` uses it. `editEntry` writes `source` in place of an old `name` and keeps every other key, so turning an old entry off leaves `{ "source": ..., "options": ..., "enabled": false }`. `plugin-load.test.ts` covers the old form loading as the same plugin, a display name not changing the row id, and the rewrite; `plugin-spec.test.ts` and `config-check.test.ts` cover the reader. `docs/plugins/PLUGINS.md` and `docs/server/PLUGINS.md` say `source` wherever an entry names its module.
+- **Next action:** [task-02-a-standalone-plugin-has-a-manifest.md](task-02-a-standalone-plugin-has-a-manifest.md).
+- **Files:** `packages/sdk/src/types/plugin.ts`, `packages/server/src/config.ts`, `packages/server/src/plugins.ts`, `packages/server/src/install.ts`, `packages/server/src/agents/migrate.ts`, `packages/server/src/applyplugins.ts`, `packages/server/src/commands/configure.ts`, `packages/server/src/commands/options.ts`, `packages/server/src/commands/plugin.ts`, `packages/server/src/pluginschannel.ts`, `packages/server/test/plugin-load.test.ts`, `packages/server/test/plugin-spec.test.ts`, `packages/server/test/config-check.test.ts`, `docs/plugins/PLUGINS.md`, `docs/server/PLUGINS.md`, this task file, the plan and the index.
+- **Open questions:** none.
+- **Departures:** The validation `git grep -n "nameOf(" -- packages` prints nothing is met for the loader's function only. Unrelated local helpers named `nameOf` remain in `packages/activepieces/src/mapping.ts`, `packages/sdk/src/host/history.ts`, `packages/sdk/src/plugins/pluginparts.ts` and `packages/agent-acp/src/session/handlers.ts`, so the literal grep prints those lines.
+- **Watch out for:** A client that still reads `row.spec.name` keeps working only while an old entry is unchanged. The daemon writes `source` at the entry's next change, so the two forms coexist until then.
