@@ -77,7 +77,7 @@
     "icons": [{ "src": "./icon.svg" }],
     "contracts": {
       "agents": ["*"],
-      "agentKinds": ["claude"]
+      "engines": ["claude"]
     },
     "options": {
       "paths": {

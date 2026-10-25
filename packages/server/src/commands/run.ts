@@ -13,10 +13,10 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { canonicalFromCli, check, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
 import type { Command, JsonSchema, Registry } from '@cofold/commands';
-import type { Agent, AutomationStore, AutomationsOptions, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, ServedAgentKind, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, AutomationStore, AutomationsOptions, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, ServedEngine, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   adaptersChannel,
-  agentKindsChannel,
+  enginesChannel,
   agentsChannel,
   clientPluginsIn,
   connectorsChannel,
@@ -728,7 +728,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const recordStore = fileRecords(configDir(), { onProblem: listProblem });
   const connectorRecords = await recordStore.collection('connectors', { format: 'json' });
   /*
-   * The agents, each one a record of a kind a plugin registers.
+   * The agents, each one a record of an engine a plugin registers.
    *
    * The same store as the connectors: a plugin takes the store over as a whole,
    * and a channel reading another folder would answer from records nobody
@@ -773,20 +773,24 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     onProblem: listProblem,
   });
   /*
-   * The agent kinds the load folds in, and the agents the records opened.
+   * The engines the load folds in, and the agents the records opened.
    *
    * Both are read through closures: the channel is built before the plugins are
-   * loaded and before the host exists, and a kind registered later, or an agent
+   * loaded and before the host exists, and an engine registered later, or an agent
    * folded later, reaches the listing that follows it.
    */
-  let agentKinds: Record<string, ServedAgentKind> = {};
+  let engines: Record<string, ServedEngine> = {};
   /** The agents of the records, as the last fold took them. */
   let recordAgents: Agent[] = [];
   /*
-   * The kinds channel, beside the adapters one: both are built before the load
+   * The engines channel, beside the adapters one: both are built before the load
    * and answer from the fold as it stands when a listing arrives.
    */
-  const kindLists = agentKindsChannel({ kinds: () => agentKinds, onProblem: listProblem });
+  const engineLists = enginesChannel({
+    engines: () => engines,
+    pluginIcons: (name) => loaded.find((one) => one.name === name)?.manifest?.icons,
+    onProblem: listProblem,
+  });
   /**
    * What serves an agent id the records do not hold.
    *
@@ -813,7 +817,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   const agentLists = agentsChannel({
     collection: agentRecords,
-    kinds: () => agentKinds,
+    engines: () => engines,
     vault: () => held,
     // The same checker a connector's and a plugin's config is held to.
     check: (value, schema, label) => { check(value, schema as JsonSchema, label); },
@@ -859,7 +863,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   };
   const lists = servedRecords(
     'ahpd',
-    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel, adapterLists.channel, kindLists.channel, connectorLists.channel, agentLists.channel],
+    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel, adapterLists.channel, engineLists.channel, connectorLists.channel, agentLists.channel],
     { ...peopleLists?.methods, ...policyLists.methods, ...pluginLists.methods, ...connectorLists.methods, ...agentLists.methods },
   );
 
@@ -1298,10 +1302,10 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   stamp('start: plugins');
   /*
    * The presets a configuration file still holds, read before any plugin loads:
-   * a plugin registers a kind now, and an agent is a record.
+   * a plugin registers an engine now, and an agent is a record.
    *
-   * Only the plans are made here. They are written once the kinds have loaded,
-   * because a kind's schema is what says which of a record's fields are
+   * Only the plans are made here. They are written once the engines have loaded,
+   * because an engine's schema is what says which of a record's fields are
    * secrets, and a plaintext key must not reach a record or a listing. The file
    * is only rewritten once every record and every vault write succeeded, so a
    * failure here leaves it as it was for the next start to try again.
@@ -1361,9 +1365,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     failures = answer.failures;
     adapters = withHostAdapters(now.adapters);
     pluginTypes = pluginTriggerTypes(now.pluginTriggers);
-    // A kind a plugin brought or took away is what the stored records are read
+    // An engine a plugin brought or took away is what the stored records are read
     // against, so the list is replaced before they are opened again.
-    agentKinds = now.agentKinds ?? {};
+    engines = now.engines ?? {};
     liveRoutes = answer.routes;
     // A plugin loaded later acts on the host as its own client, as one loaded
     // at start does, and it can only be handed the host once the host exists.
@@ -1371,11 +1375,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     for (const line of answer.problems) stamp(line);
     await pluginLists.refresh();
     await adapterLists.refresh();
-    await kindLists.refresh();
+    await engineLists.refresh();
     await connectorLists.refresh();
     /*
-     * The records again, against the kinds this fold holds: one of a kind a
-     * plugin just brought opens now, and one of a kind it took away is listed
+     * The records again, against the engines this fold holds: one of an engine a
+     * plugin just brought opens now, and one of an engine it took away is listed
      * `unavailable` and its sessions end.
      */
     await agentLists.openAll();
@@ -1390,8 +1394,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   // And the two channels start answering adapters, which is what a stored
   // connector is checked against when it opens below.
   adapters = withHostAdapters(folded.adapters);
-  // And the kinds a stored agent record is read against when it is opened below.
-  agentKinds = folded.agentKinds ?? {};
+  // And the engines a stored agent record is read against when it is opened below.
+  engines = folded.engines ?? {};
   // The trigger types a save is now checked against: the host's own two are the
   // store's, and these are what the plugins brought.
   pluginTypes = pluginTriggerTypes(folded.pluginTriggers);
@@ -1406,7 +1410,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   if (folded.vault !== undefined) held = folded.vault;
   kept = folded.automations;
   /*
-   * The presets written now that the kinds and the vault are known.
+   * The presets written now that the engines and the vault are known.
    *
    * A record's secrets are moved to the vault the fold holds, under the record's
    * own name, before the record is stored: nothing here reads one, and no
@@ -1416,7 +1420,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     plan: planned,
     records: agentRecords,
     recordsDir: configDir(),
-    kinds: agentKinds,
+    engines,
     vault: held,
     log: stamp,
   });
@@ -1562,14 +1566,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     const now = next.options;
     adapters = withHostAdapters(now.adapters);
     pluginTypes = pluginTriggerTypes(now.pluginTriggers);
-    agentKinds = now.agentKinds ?? {};
+    engines = now.engines ?? {};
     const refused = host.replace({ ...now, connectors: { refs: () => connectorLists.refs(), run: connectorLists.run } });
     if (refused !== undefined) throw new Error(refused);
     recordAgents = agents;
     return new Set(next.records);
   };
   /*
-   * Every stored agent of a kind a plugin registered, opened and folded into the
+   * Every stored agent of an engine a plugin registered, opened and folded into the
    * host before the listener answers: a session a client starts in the first
    * turn finds the agent in the root list already.
    */

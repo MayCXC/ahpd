@@ -4,15 +4,15 @@ import { join } from 'node:path';
 import { expect, it, vi } from 'vitest';
 import { echo } from '../../../examples/echo/agent.js';
 import { loadPlugins } from '../../server/src/plugins.js';
-import type { AgentKind, AgentView, Bag, Start } from '@ahpd/sdk';
+import type { Engine, AgentView, Bag, Start } from '@ahpd/sdk';
 
 /*
- * The `claude` kind: one record per agent.
+ * The `claude` engine: one record per agent.
  *
- * A record is opened by the kind rather than registered as an agent of its own,
+ * A record is opened by the engine rather than registered as an agent of its own,
  * so the cases here are what `open` builds and when it reads the record:
  *
- * - the kind a load registers, its form, its template, its host-only field and
+ * - the engine a load registers, its form, its template, its host-only field and
  *   its key variables;
  * - two records opening two backends, each with its own id, name and values;
  * - an edit to a record, which the next turn reads rather than the turn that is
@@ -93,7 +93,7 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
 
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/agent-claude/src/index.ts';
-const DIR = mkdtempSync(join(tmpdir(), 'ahpd-kind-'));
+const DIR = mkdtempSync(join(tmpdir(), 'ahpd-engine-'));
 
 const settle = async (times = 30): Promise<void> => {
   for (let i = 0; i < times; i++) await new Promise((done) => { setTimeout(done, 0); });
@@ -103,7 +103,7 @@ const settle = async (times = 30): Promise<void> => {
 const ended = (sessionId = 'aaaaaaaa-1111-4111-8111-111111111111'): Record<string, unknown> =>
   ({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1, session_id: sessionId });
 
-/** One load of the plugin, and the agent kinds and agents it served. */
+/** One load of the plugin, and the engines and agents it served. */
 const load = async (options: Record<string, unknown> = {}) => {
   const { loaded, problems, options: served } = await loadPlugins([{ name: SOURCE, options }], {
     base: { path: DIR, agents: [echo({ path: DIR })] },
@@ -114,19 +114,19 @@ const load = async (options: Record<string, unknown> = {}) => {
   return { loaded, problems, served };
 };
 
-/** The `claude` kind one load registered. */
-const kindOf = async (): Promise<AgentKind> => {
+/** The `claude` engine one load registered. */
+const engineOf = async (): Promise<Engine> => {
   const { problems, served } = await load();
   expect(problems).toEqual([]);
-  const kind = served.agentKinds?.['claude'];
-  if (kind === undefined) throw new Error('no claude kind was registered');
-  return kind;
+  const engine = served.engines?.['claude'];
+  if (engine === undefined) throw new Error('no claude engine was registered');
+  return engine;
 };
 
-/** One record, as a kind is handed it: every field read at each call. */
+/** One record, as an engine is handed it: every field read at each call. */
 const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   id,
-  kind: 'claude',
+  engine: 'claude',
   owner: 'host',
   name,
   description: undefined,
@@ -146,37 +146,37 @@ const startOf = (id: string): Start => ({
   workingDirectory: DIR,
 });
 
-it('registers the claude kind, its template and host-only field', async () => {
+it('registers the claude engine, its template and host-only field', async () => {
   const { problems, served } = await load();
   expect(problems).toEqual([]);
-  const kind = served.agentKinds?.['claude'];
-  expect(kind).toMatchObject({
+  const engine = served.engines?.['claude'];
+  expect(engine).toMatchObject({
     name: 'claude',
     title: 'Claude Code',
     hostOnly: ['extraArgs'],
     keyVariables: ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'],
   });
-  expect(kind?.templates?.[0]?.name).toBe('Claude Code');
-  expect(typeof kind?.open).toBe('function');
+  expect(engine?.templates?.[0]?.name).toBe('Claude Code');
+  expect(typeof engine?.open).toBe('function');
 
   // The fields of this backend, without the four the agents channel owns: a
-  // record's config is what this kind runs and nothing a second kind spells.
-  const fields = Object.keys((kind?.schema.properties ?? {}) as Bag).sort();
+  // record's config is what this engine runs and nothing a second engine spells.
+  const fields = Object.keys((engine?.schema.properties ?? {}) as Bag).sort();
   expect(fields).toEqual([
     'enableTasks', 'env', 'extraArgs', 'hostTasks', 'keepCliModels', 'models', 'outputStyle', 'sandbox', 'thinking',
   ]);
   for (const owned of ['name', 'description', 'icon', 'model']) expect(fields).not.toContain(owned);
 
-  // The agents are records of the kind, so the load registers none of its own
+  // The agents are records of the engine, so the load registers none of its own
   // beside the echo the base always carries.
   expect(served.agents ?? []).toHaveLength(1);
 });
 
 it('opens one backend per record, with the record\'s own id, name and values', async () => {
-  const kind = await kindOf();
+  const engine = await engineOf();
   sdk.reset();
-  const one = kind.open(viewOf('claude-one', () => ({ thinking: 'disabled' }), 'One'));
-  const two = kind.open(viewOf('claude-two', () => ({ sandbox: 'on' }), 'Two'));
+  const one = engine.open(viewOf('claude-one', () => ({ thinking: 'disabled' }), 'One'));
+  const two = engine.open(viewOf('claude-two', () => ({ sandbox: 'on' }), 'Two'));
   expect([one.provider, one.displayName]).toEqual(['claude-one', 'One']);
   expect([two.provider, two.displayName]).toEqual(['claude-two', 'Two']);
 
@@ -192,10 +192,10 @@ it('opens one backend per record, with the record\'s own id, name and values', a
 });
 
 it('applies an edit at the next turn, restarting the CLI on the conversation it had', async () => {
-  const kind = await kindOf();
+  const engine = await engineOf();
   let held: Bag = { thinking: 'disabled' };
   sdk.reset();
-  const agent = kind.open(viewOf('claude-live', () => held));
+  const agent = engine.open(viewOf('claude-live', () => held));
   const session = agent.create(startOf('live'));
   await settle();
   expect(sdk.options.map((one) => one['thinking'])).toEqual([{ type: 'disabled' }]);

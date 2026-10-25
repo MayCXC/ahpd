@@ -4,12 +4,12 @@ import { join } from 'node:path';
 import { expect, it, vi } from 'vitest';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
-import type { Agent, AgentKind, AgentView, Bag, Start } from '@ahpd/sdk';
+import type { Agent, Engine, AgentView, Bag, Start } from '@ahpd/sdk';
 
 /*
  * The built-in agent and the variants people used to write as presets, now as records.
  *
- * A record of the `claude` kind is one of these: its id is what clients name, its name is what they read, and its config carries the declared options and the model list alike. The cases here are the shapes that takes: the template with nothing set, a variant beside it with its own name and models, a record holding every declared field, and what each one's config becomes - a session's query, the endpoint it probes, and the environment it hands a CLI in a machine.
+ * A record of the `claude` engine is one of these: its id is what clients name, its name is what they read, and its config carries the declared options and the model list alike. The cases here are the shapes that takes: the template with nothing set, a variant beside it with its own name and models, a record holding every declared field, and what each one's config becomes - a session's query, the endpoint it probes, and the environment it hands a CLI in a machine.
  */
 
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
@@ -47,8 +47,8 @@ const settle = async (times = 8): Promise<void> => {
   for (let i = 0; i < times; i++) await new Promise((done) => { setTimeout(done, 0); });
 };
 
-/** The `claude` kind one load registered, with the plugin options it was given. */
-const kindOf = async (options: Record<string, unknown> = {}): Promise<AgentKind> => {
+/** The `claude` engine one load registered, with the plugin options it was given. */
+const engineOf = async (options: Record<string, unknown> = {}): Promise<Engine> => {
   const { problems, options: served } = await loadPlugins([{ name: SOURCE, options }], {
     base: { path: '/tmp/ahpd-preset', agents: [echo({ path: '/tmp/ahpd-preset' })] },
     configDir: REPO,
@@ -56,15 +56,15 @@ const kindOf = async (options: Record<string, unknown> = {}): Promise<AgentKind>
     log: () => {},
   });
   expect(problems).toEqual([]);
-  const kind = served.agentKinds?.['claude'];
-  if (kind === undefined) throw new Error('no claude kind was registered');
-  return kind;
+  const engine = served.engines?.['claude'];
+  if (engine === undefined) throw new Error('no claude engine was registered');
+  return engine;
 };
 
-/** One record, as a kind is handed it: every field read at each call. */
+/** One record, as an engine is handed it: every field read at each call. */
 const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   id,
-  kind: 'claude',
+  engine: 'claude',
   owner: 'host',
   name,
   description: undefined,
@@ -94,8 +94,8 @@ const ANTHROPIC = 'https://api.anthropic.com';
 /** One session's `query()` options, on a record holding the given values. */
 const queried = async (config: Bag | undefined, credential?: string): Promise<Record<string, unknown>> => {
   sdk.options = [];
-  const kind = await kindOf();
-  kind.open(viewOf('claude', () => config ?? {})).create(startOf('preset', {
+  const engine = await engineOf();
+  engine.open(viewOf('claude', () => config ?? {})).create(startOf('preset', {
     ...(credential === undefined ? {} : { credentials: { [ANTHROPIC]: credential } }),
   }));
   await settle();
@@ -107,8 +107,8 @@ const queried = async (config: Bag | undefined, credential?: string): Promise<Re
 /** One session's `query()` options in a machine, on a record holding the given values. */
 const queriedInside = async (config: Bag | undefined, credential?: string): Promise<Record<string, unknown>> => {
   sdk.options = [];
-  const kind = await kindOf();
-  kind.open(viewOf('claude', () => config ?? {})).create(startOf('inside', {
+  const engine = await engineOf();
+  engine.open(viewOf('claude', () => config ?? {})).create(startOf('inside', {
     settings: { computer: 'computer://box' },
     computers: { how: async () => ({ command: 'true' }) } as never,
     ...(credential === undefined ? {} : { credentials: { [ANTHROPIC]: credential } }),
@@ -133,17 +133,17 @@ const withDaemon = async <T>(held: Record<string, string>, run: () => Promise<T>
 };
 
 it('opens the template with nothing set on the CLI\'s own models', async () => {
-  const kind = await kindOf();
-  const template = kind.templates?.[0];
-  const agent = kind.open(viewOf('claude', () => template?.config ?? {}, template?.name));
+  const engine = await engineOf();
+  const template = engine.templates?.[0];
+  const agent = engine.open(viewOf('claude', () => template?.config ?? {}, template?.name));
   expect([agent.provider, agent.displayName]).toEqual(['claude', 'Claude Code']);
   expect(await modelsOf(agent)).toEqual([]);
 });
 
 it('opens one backend per record, each with its own name and models', async () => {
-  const kind = await kindOf();
-  const builtIn = kind.open(viewOf('claude', () => ({}), 'Claude Code'));
-  const router = kind.open(viewOf('claude-openrouter', () => ({
+  const engine = await engineOf();
+  const builtIn = engine.open(viewOf('claude', () => ({}), 'Claude Code'));
+  const router = engine.open(viewOf('claude-openrouter', () => ({
     models: ['stealth/space-bunny-alpha', { id: 'claude-sonnet-5', name: 'Sonnet' }],
   }), 'Claude OpenRouter'));
   expect([builtIn.provider, builtIn.displayName]).toEqual(['claude', 'Claude Code']);
@@ -162,8 +162,8 @@ it('gives each record its own configuration directory in a machine, unless compu
   const targets = (agents: Agent[]): (string | undefined)[] =>
     agents.map((one) => (one.machine?.().claudeConfigDirectory as { target?: string } | undefined)?.target);
   const pair = async (options: Record<string, unknown>) => {
-    const kind = await kindOf(options);
-    return [kind.open(viewOf('claude', () => ({}))), kind.open(viewOf('claude-openrouter', () => ({})))];
+    const engine = await engineOf(options);
+    return [engine.open(viewOf('claude', () => ({}))), engine.open(viewOf('claude-openrouter', () => ({})))];
   };
   expect(targets(await pair({}))).toEqual(['/ahpd/claude', '/ahpd/claude-openrouter']);
   expect(targets(await pair({ computerConfigDir: '/ahpd/shared' })))
@@ -171,15 +171,15 @@ it('gives each record its own configuration directory in a machine, unless compu
 });
 
 it('offers no preset key on a session, which the record names instead', async () => {
-  const kind = await kindOf();
-  const offered = (config: Bag) => kind.open(viewOf('work', () => config)).schema().properties as Bag;
+  const engine = await engineOf();
+  const offered = (config: Bag) => engine.open(viewOf('work', () => config)).schema().properties as Bag;
   expect(offered({})).not.toHaveProperty('preset');
   expect(offered({ thinking: 'disabled' })).not.toHaveProperty('preset');
 });
 
 it('opens a record holding every declared field and the models it names', async () => {
-  const kind = await kindOf();
-  const agent = kind.open(viewOf('work', () => ({
+  const engine = await engineOf();
+  const agent = engine.open(viewOf('work', () => ({
     sandbox: 'on', thinking: 'adaptive', outputStyle: 'concise',
     env: { ANTHROPIC_MODEL: 'claude-opus-5' }, extraArgs: { 'debug': null },
     models: ['stealth/space-bunny-alpha', { id: 'claude-sonnet-5', name: 'Sonnet' }],
@@ -229,8 +229,8 @@ it('hands an extraArgs value the CLI did not take as a string its JSON text', as
 
 it('probes the endpoint the record names, not the daemon\'s own', async () => {
   const at = async (config?: Bag) => {
-    const kind = await kindOf();
-    return (kind.open(viewOf('work', () => config ?? {})).endpoints?.() ?? []).flatMap((one) => [one.url]);
+    const engine = await engineOf();
+    return (engine.open(viewOf('work', () => config ?? {})).endpoints?.() ?? []).flatMap((one) => [one.url]);
   };
   expect(await at({ env: { ANTHROPIC_BASE_URL: 'https://openrouter.ai/api/' } })).toEqual(['https://openrouter.ai/api/v1/models']);
   // The daemon's own is what a record that names none runs on.
@@ -296,10 +296,10 @@ it('gives two records on one machine only their own keys on their docker exec', 
     },
   };
   await withDaemon({ ANTHROPIC_API_KEY: 'sk-daemon' }, async () => {
-    const kind = await kindOf();
+    const engine = await engineOf();
     const agents = [
-      kind.open(viewOf('claude', () => ({ env: { ANTHROPIC_API_KEY: { fromEnv: 'ANTHROPIC_API_KEY' } } }))),
-      kind.open(viewOf('openrouter', () => ({ env: { ANTHROPIC_BASE_URL: 'https://openrouter.ai/api', ANTHROPIC_AUTH_TOKEN: 'sk-or' } }))),
+      engine.open(viewOf('claude', () => ({ env: { ANTHROPIC_API_KEY: { fromEnv: 'ANTHROPIC_API_KEY' } } }))),
+      engine.open(viewOf('openrouter', () => ({ env: { ANTHROPIC_BASE_URL: 'https://openrouter.ai/api', ANTHROPIC_AUTH_TOKEN: 'sk-or' } }))),
     ];
     for (const agent of agents) {
       sdk.options = [];

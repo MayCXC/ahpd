@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import type { AgentKind } from '../../sdk/src/types/index.js';
+import type { Engine } from '../../sdk/src/types/index.js';
 import type { Bag, PluginHost, Start } from '../../sdk/src/types/index.js';
 
 /*
@@ -84,19 +84,19 @@ it('applies without waiting for pi, imports it once for the first list and sessi
   expect(entry).not.toBe('timed out');
   if (entry === 'timed out') return;
 
-  // The plugin registers the kind `pi`, and the agent a case drives is one
+  // The plugin registers the engine `pi`, and the agent a case drives is one
   // record of it: nothing is registered as an agent by the load.
-  const kinds: Record<string, AgentKind> = {};
+  const engines: Record<string, Engine> = {};
   const host = {
     paths: [root],
-    registerAgentKind: (kind: AgentKind) => { kinds[kind.name] = kind; },
+    registerEngine: (engine: Engine) => { engines[engine.name] = engine; },
   } as unknown as PluginHost;
   expect(await within(Promise.resolve(entry.apply(host, {})), 500)).not.toBe('timed out');
-  const kind = kinds['pi'];
-  if (kind === undefined) throw new Error('no pi kind was registered');
-  const agent = kind.open({
+  const engine = engines['pi'];
+  if (engine === undefined) throw new Error('no pi engine was registered');
+  const agent = engine.open({
     id: 'pi-lazy',
-    kind: 'pi',
+    engine: 'pi',
     owner: 'host',
     name: 'pi',
     description: undefined,

@@ -70,7 +70,7 @@
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
     "icons": [{ "src": "./icon.svg" }],
     "contracts": {
-      "agentKinds": ["pi"]
+      "engines": ["pi"]
     },
     "options": {
       "model": { "required": false },

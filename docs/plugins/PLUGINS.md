@@ -158,7 +158,7 @@ against its contract before it is recorded.
 | Method | Operation | What it becomes |
 | --- | --- | --- |
 | `registerAgent(agent)` | append | A backend a client names in `createSession` |
-| `registerAgentKind(kind)` | register, open key | One agent kind, whose records are the agents a client makes on `x-ahpd-agents` |
+| `registerEngine(engine)` | register, open key | One engine, whose records are the agents a client makes on `x-ahpd-agents` |
 | `registerTool(tool)` | append | A server tool offered to every session's model |
 | `registerSessionConfig(key, schema, completions?)` | register, open key | One setting a client draws on every session, merged into the backend's own schema. With a third argument, the key becomes a picker every client can draw |
 | `registerResources(store)` | set | `list`, `read`, `resolve`, `complete`, and the optional write half |
@@ -617,21 +617,21 @@ The schema can change between versions, and nothing migrates a stored
 connector: one whose config no longer fits shows as `invalid`, and one whose
 adapter no plugin registers shows as `unavailable`. Neither is opened.
 
-### An agent kind of your own
+### An engine of your own
 
-A plugin may register an agent kind: the form a person fills in, the fields only
+A plugin may register an engine: the form a person fills in, the fields only
 the host may set, and the `open` that builds a backend for one record. The host
 keeps each agent as a JSON record, and `open` is called when one is put and when
 the daemon starts with one stored. A backend that serves many agents - one per
-endpoint, one per key - is a kind rather than a registration for each; the four
-`@ahpd/agent-*` packages in this repository are kinds.
+endpoint, one per key - is an engine rather than a registration for each; the four
+`@ahpd/agent-*` packages in this repository are engines.
 
 ```ts
-host.registerAgentKind({
+host.registerEngine({
   name: 'claude',
   title: 'Claude Code',
   description: 'Claude Code, one record per configuration.',
-  schema: { type: 'object', properties: { /* the kind's own fields */ } },
+  schema: { type: 'object', properties: { /* the engine's own fields */ } },
   templates: [{ name: 'Claude Code', config: {} }],
   hostOnly: ['extraArgs'],
   keyVariables: ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'],
@@ -641,15 +641,15 @@ host.registerAgentKind({
 });
 ```
 
-- `name` is a slug, and is the `kind` every record of it carries. Two plugins
+- `name` is a slug, and is the `engine` every record of it carries. Two plugins
   cannot register one name: the later one is dropped with a problem line.
-- `title` is what a client prints for the kind, and `description` is one
+- `title` is what a client prints for the engine, and `description` is one
   sentence on what an agent of it is.
-- `icons` is what a client draws beside the kind's title.
+- `icons` is what a client draws beside the engine's title.
 - `schema` is the JSON Schema a client draws a record's own fields from, and
   what a put checks `config` against, before the record is written. The channel
-  owns `name`, `description`, `icon` and `model` on every kind, so the schema
-  holds only that kind's fields. A field it marks `writeOnly` is a secret, as
+  owns `name`, `description`, `icon` and `model` on every engine, so the schema
+  holds only that engine's fields. A field it marks `writeOnly` is a secret, as
   is each variable in `keyVariables`: the channel keeps the value in the vault
   under `agent/<id>/<field>` in the record's owner scope, and the record holds
   `{ "$secret": "<name>" }`.
@@ -660,19 +660,19 @@ host.registerAgentKind({
   person's record that sets one is refused, because a field a dangerous setting
   lives in - a command a backend runs, a directory it writes - is the daemon's
   to give rather than an owner's.
-- `keyVariables` names the `env` variables any owner may set, once the kind has
+- `keyVariables` names the `env` variables any owner may set, once the engine has
   a key a person would hold. Every other `env` variable is host-only, because a
   free environment can run a program, and `NODE_OPTIONS` is enough.
 - `open(record)` builds the backend for one record and answers an `Agent`. The
-  record is a live view rather than a copy: `id`, `kind`, `owner`, `name`,
+  record is a live view rather than a copy: `id`, `engine`, `owner`, `name`,
   `description`, `icon`, `model` and `config` are read at each call, so an edit
-  reaches a running session at its next turn. `config` is the kind's own values
+  reaches a running session at its next turn. `config` is the engine's own values
   with each secret read back from the vault. The backend's `provider` must be
   the record's id, because a client names the agent by its id alone.
 
-A record whose `config` no longer fits shows as `invalid`, and one whose kind no
+A record whose `config` no longer fits shows as `invalid`, and one whose engine no
 plugin registers shows as `unavailable`; neither is opened, and neither is
-removed. A put of a kind this host does not serve is refused before anything is
+removed. A put of an engine this host does not serve is refused before anything is
 written.
 
 ### An action offered as a tool
@@ -1160,7 +1160,7 @@ that method may be called with:
 | Key | The method it names |
 | --- | --- |
 | `agents` | `registerAgent(agent)`, by `provider` |
-| `agentKinds` | `registerAgentKind(kind)`, by the kind's name |
+| `engines` | `registerEngine(engine)`, by the engine's name |
 | `tools` | `registerTool(tool)`, by the tool's `name` |
 | `sessionConfigs` | `registerSessionConfig(key, ...)`, by key |
 | `resourceProviders` | `registerResourceProvider(scheme, provider)`, by scheme |
@@ -1196,7 +1196,7 @@ have always done, and the plugin channel marks it `undeclared`.
 The daemon serves four `x-ahpd-` channels, so a client shows what a plugin adds
 before a person uses it: one lists the plugins the configuration names, one the
 adapters the plugins register, one the connectors made from them, and one the
-agents made from the kinds they register.
+agents made from the engines they register.
 
 ### `x-ahpd-plugins`
 
@@ -1289,20 +1289,20 @@ The daemon keeps its own connectors in the JSON collection `connectors`, so one
 is `<configDir>/connectors/<id>.json`. The `@ahpd/webhook` plugin registers the
 first kind; [WEBHOOKS.md](WEBHOOKS.md) says what an endpoint is.
 
-### `x-ahpd-agent-kinds`
+### `x-ahpd-engines`
 
-A read-only channel. One row for each agent kind the loaded plugins register, keyed by the kind's name, holding `name`, `title`, `description`, `schema` and the `plugin` that registered it, and `icons`, `templates`, `hostOnly` and `keyVariables` when the kind has them. Nothing on it is an agent: the records made from a kind are on `x-ahpd-agents`. A row shows as soon as the plugin registers the kind, before any record of it exists. Reading the channel needs `agent:list`.
+A read-only channel. One row for each engine the loaded plugins register, keyed by the engine's name, holding `name`, `title`, `description`, `schema` and the `plugin` that registered it, and `icons`, `templates`, `hostOnly` and `keyVariables` when the engine has them. An engine with no icons is sent its plugin's icons. Nothing on it is an agent: the records made from an engine are on `x-ahpd-agents`. A row shows as soon as the plugin registers the engine, before any record of it exists. Reading the channel needs `agent:list`.
 
 ### `x-ahpd-agents`
 
-One row for each agent, keyed by its id. A row is the record - `id`, `kind`,
+One row for each agent, keyed by its id. A row is the record - `id`, `engine`,
 `owner`, `name`, `description`, `icon`, `model` and `config` - with a `state`:
 
 | `state` | What it says |
 | --- | --- |
-| `ready` | The kind opened it and the host serves it |
-| `invalid` | Its config no longer fits the kind's schema, the kind refused to open it, or a `$secret` in it was not in the vault |
-| `unavailable` | No loaded plugin registers its kind, so it cannot be opened |
+| `ready` | The engine opened it and the host serves it |
+| `invalid` | Its config no longer fits the engine's schema, the engine refused to open it, or a `$secret` in it was not in the vault |
+| `unavailable` | No loaded plugin registers its engine, so it cannot be opened |
 
 A row also carries a `health` when a check was run and none when it was not:
 `health.result` is `ok`, `unreachable` or `failed`, with `message` where the
@@ -1320,7 +1320,7 @@ Three commands serve an agent:
 
 | Method | Grant | What it does |
 | --- | --- | --- |
-| `x-ahpd/agents/put` | `agent:put`, and the owner's | Makes or changes `{ id, kind, owner, name, description?, icon?, model?, config }`, checks `config` against the kind's schema, moves each secret to the vault, writes the record, calls the kind's `open` and folds the new agent list into the running host. Answers the row |
+| `x-ahpd/agents/put` | `agent:put`, and the owner's | Makes or changes `{ id, engine, owner, name, description?, icon?, model?, config }`, checks `config` against the engine's schema, moves each secret to the vault, writes the record, calls the engine's `open` and folds the new agent list into the running host. Answers the row |
 | `x-ahpd/agents/remove` | `agent:remove`, and the owner's | Ends the sessions that run on `{ id }`, takes its secrets out of the vault and takes the record out |
 | `x-ahpd/agents/check` | `agent:put`, and the owner's | Builds `{ id }` again, asks its probe and answers the row with its health. A probe that has not answered in 10 seconds is `unreachable` |
 
@@ -1341,7 +1341,7 @@ because a client is never shown one to send back. The vault names are
 `user:<id>/agent/<id>/<field>`, and a variable in `env` is a field named
 `env.<VARIABLE>`, so a key is `host:agent/build/env.ANTHROPIC_API_KEY`.
 
-A put moves a `writeOnly` field and each `env` variable the kind names in
+A put moves a `writeOnly` field and each `env` variable the engine names in
 `keyVariables` to the vault, and keeps `{ "$secret": "<name>" }` in the record.
 A host record's field may hold `{ "fromEnv": "<NAME>" }` instead, which the host
 reads from its own environment when it opens the record; a team's or a person's
@@ -1351,7 +1351,7 @@ picked up at the next start.
 
 An edit keeps the agent and its sessions: the view `open` was handed is updated
 in place, so a running session reads the new record at its next turn. A record
-whose kind no plugin registers any more stays on disk and shows as
+whose engine no plugin registers any more stays on disk and shows as
 `unavailable`, because a plugin turned off keeps its agents.
 
 The daemon keeps the agents in the JSON collection `agents`, so one is
@@ -1470,7 +1470,7 @@ A plugin's entry is imported by URL. A `.ts` entry therefore needs Node 22.18 or
 ## A worked example: `@ahpd/agent-cofold`
 
 The repository ships a real backend as a plugin. `@ahpd/agent-cofold` wraps the
-cofold agent runtime as the agent kind `cofold`, so every model an
+cofold agent runtime as the engine `cofold`, so every model an
 OpenAI-compatible endpoint serves is a model inside one agent rather than a
 package of its own. It is the same package an embedder imports and the same one
 the daemon loads when it is named, which is the point: a plugin is not a second
@@ -1481,7 +1481,7 @@ ahpd --plugin @ahpd/agent-cofold
 ```
 
 Or in the configuration file, with the backend's own options as the defaults
-every record of the kind starts from:
+every record of the engine starts from:
 
 ```json
 {
@@ -1500,7 +1500,7 @@ every record of the kind starts from:
 
 Each agent is a record on `x-ahpd-agents`, and a record's id, name, description
 and model belong to the channel, so none of them is an option here. The plugin
-registers the kind with `registerAgentKind`, and its `open` builds one backend
+registers the engine with `registerEngine`, and its `open` builds one backend
 per record with that record's values over these defaults.
 
 | Option | |
@@ -1691,7 +1691,7 @@ ahpd --plugin @ahpd/agent-acp
 
 The command is an option rather than a flag, because a plugin is named on the
 command line and configured in the file. One entry serves every ACP server, and
-each agent is a record of the kind `acp`:
+each agent is a record of the engine `acp`:
 
 ```json
 {
@@ -1706,7 +1706,7 @@ each agent is a record of the kind `acp`:
 | `hostTools` | Offer the host's own tools to each session as an MCP server, on by default. A record may set its own |
 | `toolsChanged` | How each session's agent hears that the tools it listed have moved, over each record's own. `notify` by default |
 
-A record of the kind, as `x-ahpd/agents/put` takes it:
+A record of the engine, as `x-ahpd/agents/put` takes it:
 
 | Field | |
 | --- | --- |
@@ -1724,8 +1724,8 @@ A record of the kind, as `x-ahpd/agents/put` takes it:
 | `machine` | What a machine needs to run this agent: `env`, variables set only inside the machine, and `copy`, host paths copied in. See below. **Host records only** |
 
 The record's id is the provider a client names, and its `name`, `description`,
-`icon` and `model` belong to the channel, so they are not fields here. The kind
-is registered with `registerAgentKind`, and it carries a template for each
+`icon` and `model` belong to the channel, so they are not fields here. The engine
+is registered with `registerEngine`, and it carries a template for each
 shipped row: each template holds its row's command, arguments, sign-in, trust
 rule and machine, and the vendor's key variables set empty, so a record made
 from `codex` starts as Codex and a record made from `copilot` starts as Copilot.
@@ -1746,7 +1746,7 @@ reaches only a machine: a session on this host is spawned without any of it.
 ```json
 {
   "id": "codex",
-  "kind": "acp",
+  "engine": "acp",
   "owner": "host",
   "name": "Codex",
   "config": {

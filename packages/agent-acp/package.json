@@ -79,7 +79,7 @@
     ],
     "contracts": {
       "agents": ["*"],
-      "agentKinds": ["acp"]
+      "engines": ["acp"]
     },
     "options": {
       "hostTools": {

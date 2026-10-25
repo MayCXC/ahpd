@@ -238,7 +238,7 @@ export const presets: Record<string, AcpPreset> = {
  * with: a variable its vendor documents as a credential and one its server
  * takes as the sign-in are the same thing to a record, which may hold either
  * in its own vault scope. Every other variable is the host's to set, which is
- * the channel's rule for a kind's `keyVariables`.
+ * the channel's rule for an engine's `keyVariables`.
  */
 export const keyVariablesOf = (id: string): string[] => {
   const known = knownAgents[id];

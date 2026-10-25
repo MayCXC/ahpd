@@ -1,15 +1,15 @@
 /**
- * The agent kinds a plugin offers, and the records a person makes from them.
+ * The engines a plugin offers, and the records a person makes from them.
  *
- * An agent kind is what a plugin registers: one name, the form a person fills
+ * An engine is what a plugin registers: one name, the form a person fills
  * in, the host-only fields, the environment variables any owner may set, and
  * the `open` that builds the backend for one record. A record is one agent,
  * kept as a JSON record, and the channel folds it into the host's agent list
  * while the daemon runs.
  *
  * The channel owns the four fields every agent has - `name`, `description`,
- * `icon` and `model` - so a kind's schema holds only the fields of that kind,
- * and two kinds cannot disagree about what a name is.
+ * `icon` and `model` - so an engine's schema holds only the fields of that engine,
+ * and two engines cannot disagree about what a name is.
  */
 
 import type { Icon } from '@microsoft/agent-host-protocol';
@@ -25,7 +25,7 @@ import type { ConnectorOwner } from './connectors.js';
  */
 export type AgentOwner = ConnectorOwner;
 
-/** What a new record starts from, as a kind offers it. */
+/** What a new record starts from, as an engine offers it. */
 export interface AgentTemplate {
   /** The name a record made from it starts with. */
   name: string;
@@ -35,14 +35,14 @@ export interface AgentTemplate {
   icon?: Icon;
   /** The model a record made from it starts on. */
   model?: string;
-  /** The kind's own values it starts with. */
+  /** The engine's own values it starts with. */
   config?: Record<string, unknown>;
 }
 
 /**
  * One agent record, as it is kept.
  *
- * `config` holds the kind's own values. A field the kind marks `writeOnly`, or
+ * `config` holds the engine's own values. A field the engine marks `writeOnly`, or
  * one of its `keyVariables`, is a secret: the record keeps
  * `{ "$secret": "<name>" }` and the vault keeps the value, so a listing, an
  * answer and the log never carry it.
@@ -50,8 +50,8 @@ export interface AgentTemplate {
 export interface AgentRecord {
   /** The record's id: a slug, unique across every owner, and what a client names the agent by. */
   id: string;
-  /** The name of the kind it is one of. */
-  kind: string;
+  /** The name of the engine it is one of. */
+  engine: string;
   /** Whose agent it is. */
   owner: AgentOwner;
   /** What a client prints for it. */
@@ -60,25 +60,25 @@ export interface AgentRecord {
   description?: string;
   /** What a client draws beside it. */
   icon?: Icon;
-  /** The model it runs on, where the kind lets a record choose one. */
+  /** The model it runs on, where the engine lets a record choose one. */
   model?: string;
-  /** The kind's own values, held to its schema. */
+  /** The engine's own values, held to its schema. */
   config: Record<string, unknown>;
 }
 
 /**
- * The live view of one record, as a kind's `open` is handed it.
+ * The live view of one record, as an engine's `open` is handed it.
  *
  * Every field is read at each call rather than copied at open, so an edit
  * reaches a running session at its next turn instead of waiting for the daemon
- * to restart. `config` is the kind's own values with each secret read back
+ * to restart. `config` is the engine's own values with each secret read back
  * from the vault, refreshed when the record changes.
  */
 export interface AgentView {
   /** The record's id. */
   readonly id: string;
-  /** The kind's name. */
-  readonly kind: string;
+  /** The engine's name. */
+  readonly engine: string;
   /** Whose agent it is. */
   readonly owner: AgentOwner;
   /** What a client prints for it. */
@@ -89,29 +89,29 @@ export interface AgentView {
   readonly icon: Icon | undefined;
   /** The model it runs on, when it names one. */
   readonly model: string | undefined;
-  /** The kind's own values, each secret read back from the vault. */
+  /** The engine's own values, each secret read back from the vault. */
   readonly config: Record<string, unknown>;
 }
 
 /**
- * One kind of agent a plugin offers.
+ * One engine a plugin offers.
  *
- * The name is the kind's identity and is a slug, because it is also the `kind`
+ * The name is the engine's identity and is a slug, because it is also the `engine`
  * a stored record carries. The schema is what a client draws the record's own
  * form from, and `open` is where the plugin builds the backend for one record.
  */
-export interface AgentKind {
-  /** The kind's name: a slug, and the name every record of it carries. */
+export interface Engine {
+  /** The engine's name: a slug, and the name every record of it carries. */
   name: string;
-  /** What a client prints for the kind. */
+  /** What a client prints for the engine. */
   title: string;
-  /** One sentence on what an agent of this kind is. */
+  /** One sentence on what an agent of this engine is. */
   description: string;
   /** The JSON Schema a client draws a record's own fields from. */
   schema: Record<string, unknown>;
-  /** What a client draws beside the kind's title. */
+  /** What a client draws beside the engine's title. */
   icons?: Icon[];
-  /** What a new record of this kind starts from. */
+  /** What a new record of this engine starts from. */
   templates?: AgentTemplate[];
   /**
    * The fields only the host's own record may set.
@@ -140,8 +140,8 @@ export interface AgentKind {
   open(record: AgentView): Agent;
 }
 
-/** One agent kind as the fold keeps it, with the plugin that registered it. */
-export interface ServedAgentKind extends AgentKind {
+/** One engine as the fold keeps it, with the plugin that registered it. */
+export interface ServedEngine extends Engine {
   /** The plugin that registered it. */
   by: string;
 }

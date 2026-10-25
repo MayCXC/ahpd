@@ -184,7 +184,7 @@ export const OPERATIONS: Record<string, SubjectOperations> = {
   },
   agent: {
     title: 'Agents',
-    description: 'The agent kinds plugins register, and the agents made from records of them.',
+    description: 'The engines plugins register, and the agents made from records of them.',
     operations: ['list', 'all', 'put', 'remove', 'host'],
     groups: { read: ['list', 'all'], write: ['put', 'remove', 'host'] },
   },

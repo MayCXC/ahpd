@@ -7,7 +7,7 @@ import { echo } from '../../../examples/echo/agent.js';
 import { optionsSchema } from '../src/plugin.js';
 import { claudeExecutablePath } from '../src/claude.js';
 import { resolveNeeds } from '../../sdk/src/machines/machine.js';
-import type { AgentKind, AgentView, Bag } from '@ahpd/sdk';
+import type { Engine, AgentView, Bag } from '@ahpd/sdk';
 
 /*
  * The plugin's options, held to the schema it exports.
@@ -66,19 +66,19 @@ it.each<[string, unknown]>([
   expect(loaded).toEqual([]);
 });
 
-/** The `claude` kind one load registered. */
-const kindOf = async (options: Record<string, unknown> = {}): Promise<AgentKind> => {
+/** The `claude` engine one load registered. */
+const engineOf = async (options: Record<string, unknown> = {}): Promise<Engine> => {
   const { problems, options: served } = await load(options);
   expect(problems).toEqual([]);
-  const kind = served.agentKinds?.['claude'];
-  if (kind === undefined) throw new Error('no claude kind was registered');
-  return kind;
+  const engine = served.engines?.['claude'];
+  if (engine === undefined) throw new Error('no claude engine was registered');
+  return engine;
 };
 
-/** One record, as a kind is handed it: every field read at each call. */
+/** One record, as an engine is handed it: every field read at each call. */
 const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   id,
-  kind: 'claude',
+  engine: 'claude',
   owner: 'host',
   name,
   description: undefined,
@@ -89,7 +89,7 @@ const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
 
 /** What the first record opened by one load says a machine needs. */
 const needsOf = async (options: Record<string, unknown> = {}) =>
-  (await kindOf(options)).open(viewOf('claude', () => ({}))).machine?.() ?? {};
+  (await engineOf(options)).open(viewOf('claude', () => ({}))).machine?.() ?? {};
 
 /** The host binary mount, as a machine that runs the host's own CLI gets it. */
 const HOST_BINARY = {
@@ -125,8 +125,8 @@ it('mounts only the CLI with computerConfigDir false', async () => {
 });
 
 it('answers one part need for every record of one load', async () => {
-  const kind = await kindOf({ computerCliFallback: 'host' });
-  const [built, router] = [kind.open(viewOf('claude', () => ({}))), kind.open(viewOf('router', () => ({})))]
+  const engine = await engineOf({ computerCliFallback: 'host' });
+  const [built, router] = [engine.open(viewOf('claude', () => ({}))), engine.open(viewOf('router', () => ({})))]
     .map((one) => one.machine?.().claudePart);
   expect(router).toEqual(built);
 });
@@ -166,13 +166,13 @@ it('resolves to the state volume alone in mode volume, and to the host mounts in
 });
 
 it('gives each record the same state need at its own directory', async () => {
-  const kind = await kindOf();
-  const [built, router] = [kind.open(viewOf('claude', () => ({}))), kind.open(viewOf('router', () => ({})))]
+  const engine = await engineOf();
+  const [built, router] = [engine.open(viewOf('claude', () => ({}))), engine.open(viewOf('router', () => ({})))]
     .map((one) => one.machine?.().claudeState);
   expect(built).toEqual(stateAt('/ahpd/claude'));
   expect(router).toEqual(stateAt('/ahpd/router'));
   // One directory named for both answers equal needs, field by field.
-  const shared = await kindOf({ computerConfigDir: '/ahpd/shared' });
+  const shared = await engineOf({ computerConfigDir: '/ahpd/shared' });
   const pair = [shared.open(viewOf('claude', () => ({}))), shared.open(viewOf('router', () => ({})))];
   expect(pair[0]?.machine?.().claudeState).toEqual(pair[1]?.machine?.().claudeState);
 });

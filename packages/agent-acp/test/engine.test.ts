@@ -7,15 +7,15 @@ import { afterEach, expect, it } from 'vitest';
 import { echo } from '../../../examples/echo/agent.js';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../../sdk/src/tools/clientcalls.js';
-import type { AgentKind, AgentView, Bag, Session, Start } from '@ahpd/sdk';
+import type { Engine, AgentView, Bag, Session, Start } from '@ahpd/sdk';
 
 /*
- * The `acp` kind: one record per ACP server.
+ * The `acp` engine: one record per ACP server.
  *
- * A record is opened by the kind rather than registered as an agent of its own,
+ * A record is opened by the engine rather than registered as an agent of its own,
  * so the cases here are what `open` builds and when it reads the record:
  *
- * - the kind a load registers, its form, its templates, its host-only fields
+ * - the engine a load registers, its form, its templates, its host-only fields
  *   and its key variables;
  * - two records opening two backends, each with its own id, name and server;
  * - an edit to a record, which the next turn reads rather than the turn that is
@@ -44,7 +44,7 @@ afterEach(async () => {
 
 /** A folder of its own for one case, removed after it. */
 const folderOf = (label: string): string => {
-  const folder = mkdtempSync(join(tmpdir(), `ahpd-acp-kind-${label}-`));
+  const folder = mkdtempSync(join(tmpdir(), `ahpd-acp-engine-${label}-`));
   made.push(folder);
   return folder;
 };
@@ -63,7 +63,7 @@ const endings = (actions: Bag[]): string[] => actions
   .map((action) => String(action.type))
   .filter((type) => type === 'chat/turnComplete' || type === 'chat/error' || type === 'chat/turnCancelled');
 
-/** One load of the plugin, with no agent of its own: what it serves is its kind. */
+/** One load of the plugin, with no agent of its own: what it serves is its engine. */
 const load = async () => {
   const { loaded, problems, options: served } = await loadPlugins(
     [{ name: SOURCE, options: {} }],
@@ -77,19 +77,19 @@ const load = async () => {
   return { loaded, problems, served };
 };
 
-/** The `acp` kind one load registered. */
-const kindOf = async (): Promise<AgentKind> => {
+/** The `acp` engine one load registered. */
+const engineOf = async (): Promise<Engine> => {
   const { problems, served } = await load();
   expect(problems).toEqual([]);
-  const kind = served.agentKinds?.['acp'];
-  if (kind === undefined) throw new Error('no acp kind was registered');
-  return kind;
+  const engine = served.engines?.['acp'];
+  if (engine === undefined) throw new Error('no acp engine was registered');
+  return engine;
 };
 
-/** One record, as a kind is handed it: every field read at each call. */
+/** One record, as an engine is handed it: every field read at each call. */
 const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   id,
-  kind: 'acp',
+  engine: 'acp',
   owner: 'host',
   name,
   description: undefined,
@@ -100,13 +100,13 @@ const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
 
 /** One record's backend, and a session of it recording what it puts on the wire. */
 function opened(
-  kind: AgentKind,
+  engine: Engine,
   id: string,
   live: () => Bag,
   folder: string,
   name = id,
-): { agent: ReturnType<AgentKind['open']>; session: Session; actions: Bag[] } {
-  const agent = kind.open(viewOf(id, live, name));
+): { agent: ReturnType<Engine['open']>; session: Session; actions: Bag[] } {
+  const agent = engine.open(viewOf(id, live, name));
   const actions: Bag[] = [];
   const start: Start = {
     uri: `ahp-session:/${id}`,
@@ -125,18 +125,18 @@ function opened(
   return { agent, session, actions };
 }
 
-it('registers the acp kind, its templates, host-only fields and key variables', async () => {
+it('registers the acp engine, its templates, host-only fields and key variables', async () => {
   const { problems, served } = await load();
   expect(problems).toEqual([]);
-  const kind = served.agentKinds?.['acp'];
-  expect(kind).toMatchObject({
+  const engine = served.engines?.['acp'];
+  expect(engine).toMatchObject({
     name: 'acp',
     title: 'Agent Client Protocol',
     hostOnly: ['base', 'command', 'args', 'cwd', 'machine', 'install'],
   });
   // Each row's vendor key variables: the ones `knownAgents` marks secret and
   // the ones a row signs in with, which is what any owner may set.
-  expect(kind?.keyVariables).toEqual([
+  expect(engine?.keyVariables).toEqual([
     'AMP_API_KEY',
     'CLINE_API_KEY',
     'CODEX_API_KEY',
@@ -151,12 +151,12 @@ it('registers the acp kind, its templates, host-only fields and key variables', 
     'OPENAI_API_KEY',
     'WINDSURF_API_KEY',
   ]);
-  expect(typeof kind?.open).toBe('function');
+  expect(typeof engine?.open).toBe('function');
 
   // The fields of this backend, without the ones the agents channel owns: a
-  // record names a shipped row or its own program and nothing a second kind
+  // record names a shipped row or its own program and nothing a second engine
   // spells.
-  const fields = Object.keys((kind?.schema.properties ?? {}) as Bag).sort();
+  const fields = Object.keys((engine?.schema.properties ?? {}) as Bag).sort();
   expect(fields).toEqual([
     'args', 'authenticate', 'base', 'command', 'cwd', 'env', 'honoursTrust', 'hostTools', 'install', 'machine', 'page', 'toolsChanged',
   ]);
@@ -165,7 +165,7 @@ it('registers the acp kind, its templates, host-only fields and key variables', 
   // One template per shipped row, carrying the row's spawn fields so a record
   // made from it runs the agent the row describes, and its vendor's key
   // variables as fields set empty.
-  const templates = kind?.templates ?? [];
+  const templates = engine?.templates ?? [];
   expect(templates).toHaveLength(14);
   expect(templates.slice(0, 3).map((one) => one.name)).toEqual(['Codex', 'Gemini', 'Copilot']);
   const codex = templates[0]?.config ?? {};
@@ -180,19 +180,19 @@ it('registers the acp kind, its templates, host-only fields and key variables', 
   // Copilot signs in on its own, so its template names no method.
   expect(copilot).not.toHaveProperty('authenticate');
 
-  // The load registers the kind and no agent of its own: the base's echo is
-  // all this host serves until a record of the kind is opened.
+  // The load registers the engine and no agent of its own: the base's echo is
+  // all this host serves until a record of the engine is opened.
   expect((served.agents ?? []).map((one) => one.provider)).toEqual(['echo']);
 });
 
 it('opens one backend per record, with the record\'s own id, name and server', async () => {
-  const kind = await kindOf();
+  const engine = await engineOf();
   const one = folderOf('one');
   const two = folderOf('two');
   const firstLog = join(one, 'requests.jsonl');
   const secondLog = join(two, 'requests.jsonl');
-  const first = opened(kind, 'acp-one', () => ({ command: process.execPath, args: [FIXTURE], env: { ACP_LOG: firstLog } }), one, 'One');
-  const second = opened(kind, 'acp-two', () => ({ command: process.execPath, args: [FIXTURE], env: { ACP_LOG: secondLog } }), two, 'Two');
+  const first = opened(engine, 'acp-one', () => ({ command: process.execPath, args: [FIXTURE], env: { ACP_LOG: firstLog } }), one, 'One');
+  const second = opened(engine, 'acp-two', () => ({ command: process.execPath, args: [FIXTURE], env: { ACP_LOG: secondLog } }), two, 'Two');
 
   expect([first.agent.provider, first.agent.displayName]).toEqual(['acp-one', 'One']);
   expect([second.agent.provider, second.agent.displayName]).toEqual(['acp-two', 'Two']);
@@ -210,12 +210,12 @@ it('opens one backend per record, with the record\'s own id, name and server', a
 });
 
 it('applies an edit at the next turn, spawning another server on the conversation it had', async () => {
-  const kind = await kindOf();
+  const engine = await engineOf();
   const folder = folderOf('live');
   const firstLog = join(folder, 'first.jsonl');
   const secondLog = join(folder, 'second.jsonl');
   let held: Bag = { command: process.execPath, args: [FIXTURE], env: { ACP_LOG: firstLog } };
-  const { session, actions } = opened(kind, 'acp-live', () => held, folder);
+  const { session, actions } = opened(engine, 'acp-live', () => held, folder);
 
   session.begin('t1', 'first');
   await until(() => endings(actions).length === 1);

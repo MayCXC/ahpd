@@ -123,7 +123,7 @@ describe('the model kind, which is the proxy', () => {
   });
 });
 
-describe('the agent kind, which is a harness ahpd runs', () => {
+describe('the engine, which is a harness ahpd runs', () => {
   it('allows example 15, where the model is checked per turn and so not yet', async () => {
     const decision = await decide(policies, alice, BILLING, 'agent', { agent: 'claude', computer: 'sandbox-alice' }, TODAY);
     expect(decision.allowed).toBe(true);

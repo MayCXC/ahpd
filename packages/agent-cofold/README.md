@@ -6,7 +6,7 @@
 ![node >=22](https://img.shields.io/badge/node-%3E%3D22-5fa04e)
 ![Agent Host Protocol 0.9.0](https://img.shields.io/badge/AHP-0.9.0-0b7285)
 
-The cofold agent runtime as a backend for [`@ahpd/sdk`](https://www.npmjs.com/package/@ahpd/sdk), and a plugin for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon. It registers the agent kind `cofold`: each record of that kind is one agent, and every model an OpenAI-compatible endpoint serves is a model inside it.
+The cofold agent runtime as a backend for [`@ahpd/sdk`](https://www.npmjs.com/package/@ahpd/sdk), and a plugin for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon. It registers the engine `cofold`: each record of that engine is one agent, and every model an OpenAI-compatible endpoint serves is a model inside it.
 
 A session uses the models and keys cofold already knows about, and runs cofold's file, shell, web and memory tools in the daemon's process.
 
@@ -23,7 +23,7 @@ Update, remove and one-run flags such as `--plugin` are in [Plugins](https://git
 
 ## Options
 
-In the configuration file, with the plugin's own options as the defaults every record of the kind starts from:
+In the configuration file, with the plugin's own options as the defaults every record of the engine starts from:
 
 ```json
 {
@@ -44,7 +44,7 @@ In the configuration file, with the plugin's own options as the defaults every r
 
 With no model named anywhere, the providers, keys and model come from cofold's own configuration file, `$COFOLD_CONFIG` or `$XDG_CONFIG_HOME/cofold/config.json` or `~/.config/cofold/config.json`. Inside a machine the first of those is what finds it.
 
-Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. An agent of the kind is a record on the agents channel: it sets any of these except `adapter`, `strictTools` and the keyed search providers, and wins over the plugin for the ones it sets. A record's id, name and description are the record's own, so this plugin has no option for them.
+Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. An agent of the engine is a record on the agents channel: it sets any of these except `adapter`, `strictTools` and the keyed search providers, and wins over the plugin for the ones it sets. A record's id, name and description are the record's own, so this plugin has no option for them.
 
 | Option | Default | What it does |
 | --- | --- | --- |
@@ -85,18 +85,18 @@ The providers `web_search` asks, in the order they are written. A failing one is
 | `tavily` | none | Tavily, as `{ "apiKey": "..." }` |
 | `duckduckgo` | `false` | `true` scrapes DuckDuckGo's results page, with no key |
 
-## A record of the kind
+## A record of the engine
 
-An agent is a record on `x-ahpd-agents`: `{ id, kind, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model`, so `config` holds the cofold fields above, and a new record starts from the kind's one template, which sets nothing and runs on cofold's own configuration file.
+An agent is a record on `x-ahpd-agents`: `{ id, engine, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model`, so `config` holds the cofold fields above, and a new record starts from the engine's one template, which sets nothing and runs on cofold's own configuration file.
 
-`computerConfigDir`, `store` and `memory` are host-only: a team's or a person's record that sets one is refused. `adapter` and `strictTools` are not fields of a record at all, and neither is a keyed search provider, for the reason the `tools.web.search` table gives. The kind names no key variable, because cofold's key is not an environment variable: a record's `apiKey` is a `writeOnly` field of its own, so the channel keeps it in the vault under `host:agent/<id>/apiKey` for a host record, and no client, session or log gets the value.
+`computerConfigDir`, `store` and `memory` are host-only: a team's or a person's record that sets one is refused. `adapter` and `strictTools` are not fields of a record at all, and neither is a keyed search provider, for the reason the `tools.web.search` table gives. The engine names no key variable, because cofold's key is not an environment variable: a record's `apiKey` is a `writeOnly` field of its own, so the channel keeps it in the vault under `host:agent/<id>/apiKey` for a host record, and no client, session or log gets the value.
 
 A record that names its own endpoint and key, with the model the channel owns:
 
 ```json
 {
   "id": "cofold-deepseek",
-  "kind": "cofold",
+  "engine": "cofold",
   "owner": "host",
   "name": "Cofold on DeepSeek",
   "model": "deepseek-chat",
@@ -109,7 +109,7 @@ A record that names its own endpoint and key, with the model the channel owns:
 
 A client puts the key's value, and the channel moves it to the vault under `host:agent/<id>/apiKey` and keeps a `{ "$secret": "<name>" }` in its place, so no client is shown the value again. The record above names `host:deepseek`, the form a record written by hand on disk uses; `ahpd vault set host:deepseek` keeps that entry from standard input.
 
-A client makes one with `x-ahpd/agents/put`, and the daemon keeps it at `agents/<id>.json` in its configuration folder. A record whose `config` no longer fits, or whose `$secret` the vault cannot answer, is written and shown as `invalid` with one line naming it, and no value; a record whose kind no plugin registers any more is kept and shown as `unavailable`.
+A client makes one with `x-ahpd/agents/put`, and the daemon keeps it at `agents/<id>.json` in its configuration folder. A record whose `config` no longer fits, or whose `$secret` the vault cannot answer, is written and shown as `invalid` with one line naming it, and no value; a record whose engine no plugin registers any more is kept and shown as `unavailable`.
 
 ## In your own host
 

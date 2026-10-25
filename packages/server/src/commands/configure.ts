@@ -157,7 +157,7 @@ const enabledIn = (list: unknown[], name: string): boolean => {
  * The plugin list with the plugin every ACP agent runs through named in it.
  *
  * The record is what serves the agent, and the package is what registers the
- * kind the record runs on, so taking an agent without the package would leave a
+ * engine the record runs on, so taking an agent without the package would leave a
  * record nobody can open. An entry already there is left as it is, whichever
  * way it was written and whether or not it is switched off.
  */
@@ -174,7 +174,7 @@ const takeAgent = async (agents: RecordCollection, id: string): Promise<void> =>
   if (await agents.get(id) !== undefined) return;
   await agents.put({
     id,
-    kind: 'acp',
+    engine: 'acp',
     // The host owned the agents a preset registered, and it owns the records
     // they become: a record with no readable owner is served to nobody.
     owner: 'host',
@@ -186,7 +186,7 @@ const takeAgent = async (agents: RecordCollection, id: string): Promise<void> =>
 /** The agent record of one id taken out, when it is one an ACP agent runs as. */
 const dropAgent = async (agents: RecordCollection, id: string): Promise<boolean> => {
   const held = await agents.get(id);
-  if (held === undefined || held['kind'] !== 'acp') return false;
+  if (held === undefined || held['engine'] !== 'acp') return false;
   return agents.remove(id);
 };
 

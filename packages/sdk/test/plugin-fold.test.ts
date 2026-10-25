@@ -465,6 +465,13 @@ describe('the adapters a fold carries', () => {
 
     expect(() => old.registerAdapter(adapter('webhook'))).toThrow('adapters');
   });
+
+  it('refuses an engine a plugin whose contracts say agentKinds registers, naming engines', () => {
+    const old = pluginHost('alpha', ADAPTER_CONTEXT, { contracts: { agentKinds: ['claude'] } }).host;
+    const engine = { name: 'claude', title: 'Claude', description: 'An agent.', schema: { type: 'object' }, open: () => agent('claude') };
+
+    expect(() => old.registerEngine(engine)).toThrow('engines');
+  });
 });
 
 /*

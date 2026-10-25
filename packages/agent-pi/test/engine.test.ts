@@ -1,6 +1,6 @@
 import { WAIT_MS } from '../../../tools/wait.ts';
 import { afterEach, expect, it } from 'vitest';
-import type { AgentKind, AgentView, Bag, PluginHost, Session, Start } from '../../sdk/src/types/index.js';
+import type { Engine, AgentView, Bag, PluginHost, Session, Start } from '../../sdk/src/types/index.js';
 import { DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../../sdk/src/tools/clientcalls.js';
 import type { BackendOptions, OpenPi } from '../src/index.js';
 import { apply } from '../src/plugin.js';
@@ -8,12 +8,12 @@ import { PI_KEY_VARIABLES } from '../src/machine.js';
 import { fakePi, root } from './fake-pi.js';
 
 /*
- * The `pi` kind: one record per pi agent.
+ * The `pi` engine: one record per pi agent.
  *
- * A record is opened by the kind rather than registered as an agent of its
+ * A record is opened by the engine rather than registered as an agent of its
  * own, so the cases here are what `open` builds and when it reads the record:
  *
- * - the kind a load registers, its form, its template, its host-only field and
+ * - the engine a load registers, its form, its template, its host-only field and
  *   its key variables, and the fact that the plugin adds no agent of its own;
  * - two records opening two backends, each with its own id, name, model and
  *   variables;
@@ -41,14 +41,14 @@ const until = async (check: () => boolean, ms = WAIT_MS): Promise<void> => {
   }
 };
 
-/** One record, as a kind is handed it: every field read at each call. */
+/** One record, as an engine is handed it: every field read at each call. */
 const viewOf = (
   id: string,
   held: () => Bag,
   over: { name?: string; model?: () => string | undefined } = {},
 ): AgentView => ({
   id,
-  kind: 'pi',
+  engine: 'pi',
   owner: 'host',
   name: over.name ?? id,
   description: undefined,
@@ -57,25 +57,25 @@ const viewOf = (
   get config() { return held(); },
 });
 
-/** A host that keeps the kind a load registers, and a case's own `open`. */
-const kindWith = (open: OpenPi): AgentKind => {
-  const kinds: Record<string, AgentKind> = {};
+/** A host that keeps the engine a load registers, and a case's own `open`. */
+const kindWith = (open: OpenPi): Engine => {
+  const engines: Record<string, Engine> = {};
   const host = {
     paths: [root],
-    registerAgentKind: (kind: AgentKind) => { kinds[kind.name] = kind; },
+    registerEngine: (engine: Engine) => { engines[engine.name] = engine; },
   } as unknown as PluginHost;
   apply(host, { open });
-  const kind = kinds['pi'];
-  if (kind === undefined) throw new Error('no pi kind was registered');
-  return kind;
+  const engine = engines['pi'];
+  if (engine === undefined) throw new Error('no pi engine was registered');
+  return engine;
 };
 
 /** One record's agent, a session of it, and everything the session emitted. */
-function opened(agent: ReturnType<AgentKind['open']>): { session: Session; sent: Bag[] } {
+function opened(agent: ReturnType<Engine['open']>): { session: Session; sent: Bag[] } {
   const sent: Bag[] = [];
   const start = {
-    uri: 'ahp-session:/pi-kind',
-    chatUri: 'ahp-chat:/pi-kind',
+    uri: 'ahp-session:/pi-engine',
+    chatUri: 'ahp-chat:/pi-engine',
     settings: {},
     clientToolTimeoutMs: DEFAULT_CLIENT_TOOL_TIMEOUT_MS,
     workingDirectory: root,
@@ -98,15 +98,15 @@ const announced = (sent: Bag[]): Bag[] => sent
   .filter((action) => action.type === 'chat/turnStarted')
   .map((action) => action.message as Bag);
 
-it('registers the pi kind, its form, its template, its host-only field and its key variables', () => {
-  const kind = kindWith(async () => fakePi().backend);
+it('registers the pi engine, its form, its template, its host-only field and its key variables', () => {
+  const engine = kindWith(async () => fakePi().backend);
 
-  expect(kind).toMatchObject({ name: 'pi', title: 'pi', hostOnly: ['sessionDir'] });
-  expect(typeof kind.open).toBe('function');
+  expect(engine).toMatchObject({ name: 'pi', title: 'pi', hostOnly: ['sessionDir'] });
+  expect(typeof engine.open).toBe('function');
 
   // The fields of one record: what this backend has, without the four the
   // agents channel owns.
-  const fields = Object.keys((kind.schema.properties ?? {}) as Bag).sort();
+  const fields = Object.keys((engine.schema.properties ?? {}) as Bag).sort();
   expect(fields).toEqual(['env', 'projectTrust', 'sessionDir']);
   for (const owned of ['provider', 'displayName', 'name', 'description', 'icon', 'model']) {
     expect(fields).not.toContain(owned);
@@ -115,7 +115,7 @@ it('registers the pi kind, its form, its template, its host-only field and its k
   // Every variable pi takes a key from is declared, and declared write-only: a
   // client is told it is set and never what it is. The channel vaults those by
   // `keyVariables`, which is the same list.
-  const env = (kind.schema.properties as Bag)['env'] as Bag;
+  const env = (engine.schema.properties as Bag)['env'] as Bag;
   expect(Object.keys(env.properties as Bag).sort()).toEqual([...PI_KEY_VARIABLES].sort());
   for (const variable of PI_KEY_VARIABLES) {
     expect((env.properties as Bag)[variable]).toMatchObject({ type: 'string', writeOnly: true });
@@ -123,11 +123,11 @@ it('registers the pi kind, its form, its template, its host-only field and its k
   // A host record may set any other variable; a team's or a person's may not,
   // which the channel refuses by the same list.
   expect(env.additionalProperties).toEqual({ type: 'string' });
-  expect(kind.keyVariables).toEqual([...PI_KEY_VARIABLES]);
+  expect(engine.keyVariables).toEqual([...PI_KEY_VARIABLES]);
 
   // One template, and it sets nothing: a record made from it runs on pi's own
   // agent directory and credentials, which pi itself reads.
-  const templates = kind.templates ?? [];
+  const templates = engine.templates ?? [];
   expect(templates).toHaveLength(1);
   expect(templates[0]?.name).toBe('pi');
   expect(templates[0]?.config).toEqual({});
@@ -135,16 +135,16 @@ it('registers the pi kind, its form, its template, its host-only field and its k
 
 it('opens one backend per record, with the record\'s own id, name, model, trust and variables', async () => {
   const opens: { at: BackendOptions; pi: ReturnType<typeof fakePi> }[] = [];
-  const kind = kindWith(async (at) => {
+  const engine = kindWith(async (at) => {
     const pi = fakePi();
     opens.push({ at, pi });
     return pi.backend;
   });
-  const first = kind.open(viewOf('pi-one', () => ({ env: { ANTHROPIC_API_KEY: 'one-key' }, projectTrust: 'trust' }), {
+  const first = engine.open(viewOf('pi-one', () => ({ env: { ANTHROPIC_API_KEY: 'one-key' }, projectTrust: 'trust' }), {
     name: 'One',
     model: () => 'anthropic/claude-opus-5',
   }));
-  const second = kind.open(viewOf('pi-two', () => ({ env: { OPENAI_API_KEY: 'two-key' }, projectTrust: 'deny' }), {
+  const second = engine.open(viewOf('pi-two', () => ({ env: { OPENAI_API_KEY: 'two-key' }, projectTrust: 'deny' }), {
     name: 'Two',
     model: () => 'openai/gpt-5',
   }));
@@ -184,14 +184,14 @@ it('opens one backend per record, with the record\'s own id, name, model, trust 
 
 it('applies an edit of the record at the next turn, not to the one already running', async () => {
   const pis: ReturnType<typeof fakePi>[] = [];
-  const kind = kindWith(async () => {
+  const engine = kindWith(async () => {
     const pi = fakePi();
     pis.push(pi);
     return pi.backend;
   });
   let held: Bag = { env: { ANTHROPIC_API_KEY: 'first-key' } };
   let model: string | undefined;
-  const { session, sent } = opened(kind.open(viewOf('pi-live', () => held, { model: () => model })));
+  const { session, sent } = opened(engine.open(viewOf('pi-live', () => held, { model: () => model })));
 
   session.begin('t1', 'first');
   await until(() => endings(sent).length === 1);

@@ -6,14 +6,14 @@
  * export: the loader refuses a module without a named `apply` rather than
  * guessing which export is the plugin.
  *
- * One load serves every ACP agent, and each agent is a record of the kind `acp`:
+ * One load serves every ACP agent, and each agent is a record of the engine `acp`:
  * its own program, arguments, sign-in and machine. A record whose id names a
  * shipped row takes that row's values, and a record that names none writes the
  * program it runs itself, so one package serves Copilot, Codex and a server
  * nobody has heard of at once.
  */
 
-import type { AgentKind, AgentView, Plugin, PluginHost, SecretRef, Seed, ToolsChanged } from '@ahpd/sdk';
+import type { Engine, AgentView, Plugin, PluginHost, SecretRef, Seed, ToolsChanged } from '@ahpd/sdk';
 import { bag, fromEnvRef, secretRef } from '@ahpd/sdk';
 import { acpAgent } from './agent.js';
 import { KEY_VARIABLES, presets as shipped, templates } from './presets.js';
@@ -88,7 +88,7 @@ const RECORD_FIELDS: Record<string, Record<string, unknown>> = {
 };
 
 /**
- * The `acp` kind's schema: the fields a record of it may set.
+ * The `acp` engine's schema: the fields a record of it may set.
  *
  * A record may set `hostTools` and `toolsChanged` as well, overriding the
  * plugin's own for itself, because those are choices about one agent rather
@@ -250,12 +250,12 @@ const machineUnder = (row: AcpMachine | undefined, own: AcpMachine | undefined):
 };
 
 /**
- * One record's options, out of the values its kind's schema held it to and the
+ * One record's options, out of the values its engine's schema held it to and the
  * plugin's own.
  *
  * The channel owns the record's name, description and model, so those come
  * from the record rather than from its config; the id is the provider. What is
- * left is the kind's own fields, each taken as the type its schema declares,
+ * left is the engine's own fields, each taken as the type its schema declares,
  * because a record written straight into the collection is not a value that
  * was checked at the door.
  *
@@ -338,7 +338,7 @@ const optionsOfRecord = (shared: Shared, record: AgentView): AcpOptions => {
 };
 
 /**
- * The `acp` kind: the form a record of it fills in, the rows a new record
+ * The `acp` engine: the form a record of it fills in, the rows a new record
  * starts from, and the backend each record opens.
  *
  * A record names a shipped row, or writes its own program. The row the record
@@ -351,7 +351,7 @@ const optionsOfRecord = (shared: Shared, record: AgentView): AcpOptions => {
  * reads the record again, so a session spawned after an edit is built from
  * what the record says then.
  */
-const kindOf = (host: PluginHost, values: Record<string, unknown>): AgentKind => {
+const engineOf = (host: PluginHost, values: Record<string, unknown>): Engine => {
   const shared = defaultsOf(host, values);
   return {
     name: 'acp',
@@ -369,11 +369,11 @@ const kindOf = (host: PluginHost, values: Record<string, unknown>): AgentKind =>
 };
 
 /**
- * Register the `acp` kind.
+ * Register the `acp` engine.
  *
  * The agents are records of it: one load serves every ACP server, and each
  * record says which one it runs.
  */
 export const apply: Plugin['apply'] = (host, options) => {
-  host.registerAgentKind(kindOf(host, options));
+  host.registerEngine(engineOf(host, options));
 };

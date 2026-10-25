@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import { join } from 'node:path';
-import type { AgentKind, AgentView, Bag } from '@ahpd/sdk';
+import type { Engine, AgentView, Bag } from '@ahpd/sdk';
 
 /*
  * One listing for the records of one load.
@@ -56,8 +56,8 @@ const listed = (sessionId: string, summary: string): Record<string, unknown> => 
   sessionId, summary, lastModified: 1_800_000_000_000, cwd: PATH,
 });
 
-/** The `claude` kind one load of the plugin registered. */
-const kindOf = async (): Promise<AgentKind> => {
+/** The `claude` engine one load of the plugin registered. */
+const engineOf = async (): Promise<Engine> => {
   const { problems, options: served } = await loadPlugins([{ name: SOURCE, options: {} }], {
     base: { path: PATH, agents: [echo({ path: PATH })] },
     configDir: REPO,
@@ -65,15 +65,15 @@ const kindOf = async (): Promise<AgentKind> => {
     log: () => {},
   });
   expect(problems).toEqual([]);
-  const kind = served.agentKinds?.['claude'];
-  if (kind === undefined) throw new Error('no claude kind was registered');
-  return kind;
+  const engine = served.engines?.['claude'];
+  if (engine === undefined) throw new Error('no claude engine was registered');
+  return engine;
 };
 
-/** One record, as a kind is handed it: every field read at each call. */
+/** One record, as an engine is handed it: every field read at each call. */
 const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   id,
-  kind: 'claude',
+  engine: 'claude',
   owner: 'host',
   name,
   description: undefined,
@@ -84,8 +84,8 @@ const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
 
 /** The agents one load opened for the given record ids. */
 const opened = async (ids: string[]) => {
-  const kind = await kindOf();
-  return ids.map((id) => kind.open(viewOf(id, () => ({}))));
+  const engine = await engineOf();
+  return ids.map((id) => engine.open(viewOf(id, () => ({}))));
 };
 
 const RECORDS = ['claude', 'claude-openrouter', 'claude-openrouter-build'];

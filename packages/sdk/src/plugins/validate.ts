@@ -652,7 +652,7 @@ export const checkAdapter = (value: unknown, by: string): string => {
 };
 
 /**
- * Check one `registerAgentKind` value against `AgentKind`, and answer its name.
+ * Check one `registerEngine` value against `Engine`, and answer its name.
  *
  * The name is a slug and the schema an object, because those are the two the
  * host acts on: the name is what every stored record carries, and the schema is
@@ -661,46 +661,46 @@ export const checkAdapter = (value: unknown, by: string): string => {
  * setting to the host's record, and `keyVariables` is what lets a person's
  * record set an environment variable at all.
  */
-export const checkAgentKind = (value: unknown, by: string): string => {
-  const object = asObject(value, by, 'registerAgentKind', 'agent kind');
-  for (const member of ['name', 'title', 'description']) stringy(object, member, by, 'registerAgentKind');
+export const checkEngine = (value: unknown, by: string): string => {
+  const object = asObject(value, by, 'registerEngine', 'engine');
+  for (const member of ['name', 'title', 'description']) stringy(object, member, by, 'registerEngine');
   const name = object.name as string;
   if (!isRecordSlug(name)) {
-    throw new Error(miss(by, 'registerAgentKind', name, `a slug, ${RECORD_SLUG}`));
+    throw new Error(miss(by, 'registerEngine', name, `a slug, ${RECORD_SLUG}`));
   }
   if (!right(object.schema, 'object')) {
-    throw new Error(miss(by, 'registerAgentKind', 'schema', 'an object, the JSON Schema a client draws the form from'));
+    throw new Error(miss(by, 'registerEngine', 'schema', 'an object, the JSON Schema a client draws the form from'));
   }
   const names = (member: 'hostOnly' | 'keyVariables'): void => {
     const held = object[member];
     if (held === undefined) return;
     if (!Array.isArray(held) || held.some((one) => typeof one !== 'string' || one === '')) {
-      throw new Error(miss(by, 'registerAgentKind', member, 'a list of field or variable names, or nothing'));
+      throw new Error(miss(by, 'registerEngine', member, 'a list of field or variable names, or nothing'));
     }
   };
   names('hostOnly');
   names('keyVariables');
   if (object.templates !== undefined) {
     if (!Array.isArray(object.templates)) {
-      throw new Error(miss(by, 'registerAgentKind', 'templates', 'a list of templates, or nothing'));
+      throw new Error(miss(by, 'registerEngine', 'templates', 'a list of templates, or nothing'));
     }
     for (const held of object.templates) {
-      const template = asObject(held, by, 'registerAgentKind', 'a template');
-      stringy(template, 'name', by, 'registerAgentKind');
+      const template = asObject(held, by, 'registerEngine', 'a template');
+      stringy(template, 'name', by, 'registerEngine');
       for (const member of ['description', 'model']) {
         if (template[member] !== undefined && typeof template[member] !== 'string') {
-          throw new Error(miss(by, 'registerAgentKind', member, 'a string, or nothing'));
+          throw new Error(miss(by, 'registerEngine', member, 'a string, or nothing'));
         }
       }
       if (template.config !== undefined && !right(template.config, 'object')) {
-        throw new Error(miss(by, 'registerAgentKind', 'config', 'an object, or nothing'));
+        throw new Error(miss(by, 'registerEngine', 'config', 'an object, or nothing'));
       }
-      if (template.icon !== undefined) checkIcons([template.icon], by, 'registerAgentKind');
+      if (template.icon !== undefined) checkIcons([template.icon], by, 'registerEngine');
     }
   }
-  checkIcons(object.icons, by, 'registerAgentKind');
+  checkIcons(object.icons, by, 'registerEngine');
   if (typeof object.open !== 'function') {
-    throw new Error(miss(by, 'registerAgentKind', 'open', 'a function building the backend for one record'));
+    throw new Error(miss(by, 'registerEngine', 'open', 'a function building the backend for one record'));
   }
   return name;
 };

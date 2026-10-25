@@ -244,7 +244,7 @@ The fallback mount is checked with every other mount when the machine is made, w
 **No sign-in is seeded.** `.credentials.json` never reaches a state volume. A variant signs in with `CLAUDE_CODE_OAUTH_TOKEN`, the token `claude setup-token` prints, which does not need refreshing, or with `ANTHROPIC_API_KEY`, written in its own `env` as `{ "$secret": "<scope>:<name>" }` or `{ "fromEnv": "NAME" }`. A `$secret` there is read when the record opens, and a record whose secret cannot be read is shown as invalid with a line naming it. A machine whose variant names neither is still made, and the CLI's own sign-in refusal is what the session says.
 
 ```json
-{ "id": "claude", "kind": "claude", "owner": "host", "name": "Claude Code",
+{ "id": "claude", "engine": "claude", "owner": "host", "name": "Claude Code",
   "config": { "env": { "CLAUDE_CODE_OAUTH_TOKEN": { "$secret": "host:claude-token" } } } }
 ```
 
@@ -300,7 +300,7 @@ pi declares only the variables its provider list names. A variable that pi's own
 Each shipped `@ahpd/agent-acp` template brings a `machine` block: the part its CLI comes from, a state directory at `/ahpd/<id>` seeded from the agent's own host files, never its login file, and the variables that point the CLI at that directory. Codex is `CODEX_HOME=/ahpd/codex` seeded from `~/.codex/config.toml`, `AGENTS.md` and `skills/`; OpenCode, Kilo and Devin move `XDG_CONFIG_HOME` and `XDG_DATA_HOME` under their state directory; Cursor runs `cursor-agent`, the name its part and its host installer share; Amp's part holds `amp-acp` and the Amp CLI it runs, which `AMP_CLI_PATH` names, and Amp has no variable that moves its settings, so it has no state directory. A record's own `machine` is laid over the template's by key, and its `env` by variable:
 
 ```json
-{ "id": "codex", "kind": "acp", "owner": "host", "name": "Codex",
+{ "id": "codex", "engine": "acp", "owner": "host", "name": "Codex",
   "config": { "machine": { "env": { "OPENAI_API_KEY": { "$secret": "user:ada/openai" } } } } }
 ```
 
@@ -816,7 +816,7 @@ A daemon with the computer plugin and the ACP bridge, with the test fixture as t
 ```sh
 mkdir -p /tmp/ahpd-computer-config/ahpd/agents
 cat > /tmp/ahpd-computer-config/ahpd/agents/acp.json <<'JSON'
-{ "id": "acp", "kind": "acp", "owner": "host", "name": "Test ACP", "config": { "command": "node", "args": ["/srv/acp.mjs"] } }
+{ "id": "acp", "engine": "acp", "owner": "host", "name": "Test ACP", "config": { "command": "node", "args": ["/srv/acp.mjs"] } }
 JSON
 cat > /tmp/ahpd-computer.json <<'JSON'
 {

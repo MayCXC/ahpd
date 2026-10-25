@@ -10,7 +10,7 @@ import { memoryRecords } from '../src/resources/records.js';
 import { servedRecords } from '../src/resources/recordschannel.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';
-import type { AgentKind, AgentView, ServedAgentKind } from '../src/types/agents.js';
+import type { Engine, AgentView, ServedEngine } from '../src/types/agents.js';
 import type { HostOptions, Users } from '../src/types/index.js';
 import type { RecordCollection } from '../src/types/records.js';
 import type { Vault } from '../src/types/vault.js';
@@ -24,7 +24,7 @@ import type { Vault } from '../src/types/vault.js';
  * `agent:remove` make and remove one beside that owner's own rule, and a host
  * record takes `agent:host` on top.
  *
- * The kind's `open` hands back an agent that reads the record's values through
+ * The engine's `open` hands back an agent that reads the record's values through
  * the view it was given, which is how a test tells an edit from a rebuild.
  */
 
@@ -34,7 +34,7 @@ const ROOT = 'ahp-root://';
 type Bag = Record<string, any>;
 
 /**
- * The kind's schema: what a person fills in, one secret, one field only the
+ * The engine's schema: what a person fills in, one secret, one field only the
  * host may set, and the `env` a key variable is set in.
  */
 const SCHEMA: Record<string, unknown> = {
@@ -49,7 +49,7 @@ const SCHEMA: Record<string, unknown> = {
 };
 
 /**
- * The subset of JSON Schema this kind's form uses, as the daemon's checker
+ * The subset of JSON Schema this engine's form uses, as the daemon's checker
  * reads it: a value of the named type, the required fields, and no field the
  * schema does not describe.
  */
@@ -126,13 +126,13 @@ type Host = ReturnType<typeof createHost>;
 type Opened = AgentView;
 
 /**
- * One kind of agent, over the echo backend.
+ * One engine, over the echo backend.
  *
- * `probe` is built only for the `prober` kind: the host asks a fresh agent what
+ * `probe` is built only for the `prober` engine: the host asks a fresh agent what
  * it offers, and an answer moves the root list a second time, so a case about
- * one `root/agentsChanged` is served a kind that answers nothing.
+ * one `root/agentsChanged` is served an engine that answers nothing.
  */
-const kindOf = (name: string, opened: Opened[], probing: boolean): AgentKind => ({
+const engineOf = (name: string, opened: Opened[], probing: boolean): Engine => ({
   name,
   title: 'Checker',
   description: 'Answers what it is told.',
@@ -143,7 +143,7 @@ const kindOf = (name: string, opened: Opened[], probing: boolean): AgentKind => 
     opened.push(record);
     const base = echo({ path: home, pace: 0 });
     // The echo backend has a probe of its own, and a probe that answers moves
-    // the root list again: a kind that says nothing offers none.
+    // the root list again: an engine that says nothing offers none.
     delete base.probe;
     return {
       ...base,
@@ -163,20 +163,20 @@ const kindOf = (name: string, opened: Opened[], probing: boolean): AgentKind => 
 });
 
 /**
- * A kind whose backend serves another id: a record may not be one of these,
+ * An engine whose backend serves another id: a record may not be one of these,
  * because a client names a record by its id and the fold keys on the backend's.
  */
-const misnamed = (opened: Opened[]): ServedAgentKind => {
-  const kind = kindOf('misnamed', opened, false);
+const misnamed = (opened: Opened[]): ServedEngine => {
+  const engine = engineOf('misnamed', opened, false);
   return {
-    ...kind,
+    ...engine,
     by: 'test',
-    open: (record: AgentView) => ({ ...kind.open(record), provider: 'not-the-id' }),
+    open: (record: AgentView) => ({ ...engine.open(record), provider: 'not-the-id' }),
   };
 };
 
 /**
- * A host serving the agents channel over one kind, the `checker` one.
+ * A host serving the agents channel over one engine, the `checker` one.
  *
  * `fold` is called with each agent list before the host takes it, so a case
  * can ask something of the host while a fold is in flight.
@@ -188,10 +188,10 @@ async function served(options: { register?: boolean; fold?: (agents: Agent[]) =>
   const problems: string[] = [];
   const ended: string[] = [];
   const vault = made();
-  const kinds: Record<string, ServedAgentKind> = register
+  const engines: Record<string, ServedEngine> = register
     ? {
-        checker: { ...kindOf('checker', opened, false), by: 'test' },
-        prober: { ...kindOf('prober', opened, true), by: 'test' },
+        checker: { ...engineOf('checker', opened, false), by: 'test' },
+        prober: { ...engineOf('prober', opened, true), by: 'test' },
         misnamed: misnamed(opened),
       }
     : {};
@@ -218,7 +218,7 @@ async function served(options: { register?: boolean; fold?: (agents: Agent[]) =>
   });
   const lists = agentsChannel({
     collection,
-    kinds: () => kinds,
+    engines: () => engines,
     vault: () => vault,
     check,
     refold: async (agents) => {
@@ -238,7 +238,7 @@ async function served(options: { register?: boolean; fold?: (agents: Agent[]) =>
   wire = servedRecords('ahpd', [lists.channel], lists.methods);
   host = createHost(hostOptions([]));
   await lists.openAll();
-  return { host, users, collection, lists, kinds, opened, ended, problems, vault, close: async () => { await host?.close(); } };
+  return { host, users, collection, lists, engines, opened, ended, problems, vault, close: async () => { await host?.close(); } };
 }
 
 /** A client signed in as `id`, whose channel actions are kept. */
@@ -285,14 +285,14 @@ const until = async (check: () => boolean, times = 400): Promise<void> => {
   }
 };
 
-it('puts a record, lists it ready, and answers with no config of another kind', async () => {
+it('puts a record, lists it ready, and answers with no config of another engine', async () => {
   const { host, users, close } = await served();
   const cy = await as(host, users, 'cy');
 
   const answer = await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   });
-  expect(answer).toMatchObject({ result: { id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', state: 'ready' } });
+  expect(answer).toMatchObject({ result: { id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', state: 'ready' } });
   expect(await cy.agents()).toContain('mine');
   expect((await cy.rows())['mine']).toMatchObject({ name: 'Mine', state: 'ready' });
   await close();
@@ -302,12 +302,12 @@ it('edits a record on the view open was handed, without opening it again', async
   const { host, users, opened, close } = await served();
   const cy = await as(host, users, 'cy');
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   });
   expect(opened).toHaveLength(1);
 
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine, renamed', description: 'One line', config: { target: 'b' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine, renamed', description: 'One line', config: { target: 'b' },
   });
   // The same view, updated: a session holding the backend reads the new record.
   expect(opened).toHaveLength(1);
@@ -324,7 +324,7 @@ it('sends one root/agentsChanged with the new agent', async () => {
   const before = cy.actions('root/agentsChanged').length;
 
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   });
   await until(() => cy.actions('root/agentsChanged').length > before);
   await new Promise((done) => { setTimeout(done, 20); });
@@ -341,7 +341,7 @@ it('keeps a key out of every row, answer and log, and puts it in the vault', asy
 
   const put = await cy.call('x-ahpd/agents/put', {
     id: 'mine',
-    kind: 'checker',
+    engine: 'checker',
     owner: 'user:cy',
     name: 'Mine',
     config: { target: 'a', secret: 'sk-agent-1', env: { API_KEY: 'sk-env-2' } },
@@ -370,34 +370,34 @@ it('keeps a secret a client sent empty, and never asks it to send one back', asy
   const { host, users, vault, close } = await served();
   const cy = await as(host, users, 'cy');
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: 'sk-agent-1' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: 'sk-agent-1' },
   });
   // A client that read the row has no value to send, so it sends the field empty.
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'b', secret: '' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'b', secret: '' },
   });
   expect(vault.held.get('user:cy/agent/mine/secret')).toBe('sk-agent-1');
   // A field left out drops the secret, which is what a record written whole says.
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'c' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'c' },
   });
   expect(vault.held.has('user:cy/agent/mine/secret')).toBe(false);
   await close();
 });
 
-it('refuses a kind this host does not serve', async () => {
+it('refuses an engine this host does not serve', async () => {
   const { host, users, close } = await served();
   const cy = await as(host, users, 'cy');
   expect(await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'gone', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
-  })).toMatchObject({ code: -32602, message: 'gone is not an agent kind this host serves' });
+    id: 'mine', engine: 'gone', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+  })).toMatchObject({ code: -32602, message: 'gone is not an engine this host serves' });
   await close();
 });
 
-it('lists a record of a kind nobody serves as unavailable, and keeps it on disk', async () => {
+it('lists a record of an engine nobody serves as unavailable, and keeps it on disk', async () => {
   const { host, users, collection, lists, close } = await served({ register: false });
   // Written by hand, as an older daemon's folder would hold one.
-  await collection.put({ id: 'old', kind: 'checker', owner: 'user:cy', name: 'Old', config: { target: 'a' } });
+  await collection.put({ id: 'old', engine: 'checker', owner: 'user:cy', name: 'Old', config: { target: 'a' } });
   await lists.openAll();
   const cy = await as(host, users, 'cy');
   expect((await cy.rows())['old']).toMatchObject({ state: 'unavailable' });
@@ -406,20 +406,32 @@ it('lists a record of a kind nobody serves as unavailable, and keeps it on disk'
   await close();
 });
 
+it('lists a stored record that says kind and not engine as unavailable, and names the missing engine', async () => {
+  const { host, users, collection, lists, problems, close } = await served();
+  // Written by hand, as a record from before the rename to engine would be.
+  await collection.put({ id: 'old', kind: 'checker', owner: 'user:cy', name: 'Old', config: { target: 'a' } });
+  await lists.openAll();
+  const cy = await as(host, users, 'cy');
+  expect((await cy.rows())['old']).toMatchObject({ state: 'unavailable' });
+  expect(await cy.agents()).not.toContain('old');
+  expect(problems.some((line) => line.includes('old') && line.includes('names no engine'))).toBe(true);
+  await close();
+});
+
 it('refuses an id another owner holds, and one written by hand', async () => {
   const { host, users, collection, close } = await served();
   const fa = await as(host, users, 'fa');
   const cy = await as(host, users, 'cy');
   await fa.call('x-ahpd/agents/put', {
-    id: 'shared', kind: 'checker', owner: 'host', name: 'Shared', config: { target: 'a' },
+    id: 'shared', engine: 'checker', owner: 'host', name: 'Shared', config: { target: 'a' },
   });
   expect(await cy.call('x-ahpd/agents/put', {
-    id: 'shared', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'shared', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   })).toMatchObject({ code: -32009, message: "shared is host's, and an agent id is unique" });
 
-  await collection.put({ id: 'odd', kind: 'checker', name: 'Odd', config: { target: 'a' } });
+  await collection.put({ id: 'odd', engine: 'checker', name: 'Odd', config: { target: 'a' } });
   expect(await cy.call('x-ahpd/agents/put', {
-    id: 'odd', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'odd', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   })).toMatchObject({ code: -32009, message: 'odd is a record written by hand, and an agent id is unique' });
   await close();
 });
@@ -428,25 +440,25 @@ it("refuses a host-only field on a team's record", async () => {
   const { host, users, close } = await served();
   const di = await as(host, users, 'di');
   expect(await di.call('x-ahpd/agents/put', {
-    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a', command: 'rm -rf /' },
+    id: 'ours', engine: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a', command: 'rm -rf /' },
   })).toMatchObject({ code: -32602, message: 'command is a host-only field of checker, so only a host agent may set it' });
   // The host's own record may.
   const fa = await as(host, users, 'fa');
   expect(await fa.call('x-ahpd/agents/put', {
-    id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a', command: 'true' },
+    id: 'theirs', engine: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a', command: 'true' },
   })).toMatchObject({ result: { state: 'ready' } });
   await close();
 });
 
-it('refuses an env variable outside the kind key variables, and keeps one inside', async () => {
+it('refuses an env variable outside the engine key variables, and keeps one inside', async () => {
   const { host, users, vault, close } = await served();
   const di = await as(host, users, 'di');
   expect(await di.call('x-ahpd/agents/put', {
-    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a', env: { NODE_OPTIONS: '--require ./x.js' } },
+    id: 'ours', engine: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a', env: { NODE_OPTIONS: '--require ./x.js' } },
   })).toMatchObject({ code: -32602, message: 'NODE_OPTIONS is not a key variable of checker, so only a host agent may set it' });
 
   expect(await di.call('x-ahpd/agents/put', {
-    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a', env: { API_KEY: 'sk-team-1' } },
+    id: 'ours', engine: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a', env: { API_KEY: 'sk-team-1' } },
   })).toMatchObject({ result: { state: 'ready' } });
   expect(vault.held.get('team:backend/agent/ours/env.API_KEY')).toBe('sk-team-1');
   await close();
@@ -456,14 +468,14 @@ it("refuses fromEnv on a person's record, and reads it for the host's", async ()
   const { host, users, opened, close } = await served();
   const cy = await as(host, users, 'cy');
   expect(await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: { fromEnv: 'HOME' } },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: { fromEnv: 'HOME' } },
   })).toMatchObject({ code: -32602, message: "An agent's secret may read the daemon's environment only for a host agent" });
 
   process.env['AHPD_TEST_AGENT_KEY'] = 'sk-from-env';
   try {
     const fa = await as(host, users, 'fa');
     expect(await fa.call('x-ahpd/agents/put', {
-      id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a', secret: { fromEnv: 'AHPD_TEST_AGENT_KEY' } },
+      id: 'theirs', engine: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a', secret: { fromEnv: 'AHPD_TEST_AGENT_KEY' } },
     })).toMatchObject({ result: { state: 'ready' } });
     // What `open` was handed is the value, never the reference.
     expect(opened.at(-1)?.config['secret']).toBe('sk-from-env');
@@ -479,13 +491,13 @@ it('reads the agents each caller may use, and refuses one with no grant', async 
   const di = await as(host, users, 'di');
   const cy = await as(host, users, 'cy');
   await fa.call('x-ahpd/agents/put', {
-    id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a' },
+    id: 'theirs', engine: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a' },
   });
   await di.call('x-ahpd/agents/put', {
-    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
+    id: 'ours', engine: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
   });
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   });
 
   // A person reads their own agents, their teams' and the host's, and no one else's.
@@ -497,7 +509,7 @@ it('reads the agents each caller may use, and refuses one with no grant', async 
   const bo = await as(host, users, 'bo');
   expect(await bo.call('subscribe', { channel: URI })).toMatchObject({ code: -32009 });
   expect(await bo.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:bo', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'checker', owner: 'user:bo', name: 'Mine', config: { target: 'a' },
   })).toMatchObject({ code: -32009 });
   await close();
 });
@@ -508,10 +520,10 @@ it('requires agent:host for the host record and the same person for a user recor
   const gi = await as(host, users, 'gi');
   // `cy` may make its own, and may not make the host's.
   expect(await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   })).toMatchObject({ result: { state: 'ready' } });
   expect(await cy.call('x-ahpd/agents/put', {
-    id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a' },
+    id: 'theirs', engine: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a' },
   })).toMatchObject({ code: -32009 });
 
   // Even every grant does not make another person's record this caller's.
@@ -526,7 +538,7 @@ it("removes a record's secrets, and takes the agent out of the list", async () =
   const { host, users, collection, vault, close } = await served();
   const cy = await as(host, users, 'cy');
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: 'sk-agent-1' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: 'sk-agent-1' },
   });
   expect(vault.held.size).toBe(1);
   expect(await cy.call('x-ahpd/agents/remove', { id: 'mine' })).toMatchObject({ result: {} });
@@ -541,7 +553,7 @@ it('ends the sessions of a removed agent', async () => {
   const { host, users, ended, close } = await served();
   const cy = await as(host, users, 'cy');
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   });
   const uri = 'ahp-session:/on-mine';
   await cy.call('createSession', { channel: uri, provider: 'mine' });
@@ -579,7 +591,7 @@ it('refuses a start on an agent while it is being removed', async () => {
   // agent does not.
   const ka = await as(host, users, 'ka');
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   });
 
   // Before the removal: `cy` starts on its own, and `ka` does not.
@@ -603,30 +615,30 @@ it('checks an agent and answers its health, and says when the probe throws', asy
   const { host, users, close } = await served();
   const cy = await as(host, users, 'cy');
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'prober', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'prober', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   });
   expect(await cy.call('x-ahpd/agents/check', { id: 'mine' })).toMatchObject({
     result: { id: 'mine', health: { result: 'ok' } },
   });
   await cy.call('x-ahpd/agents/put', {
-    id: 'broken', kind: 'prober', owner: 'user:cy', name: 'Broken', config: { target: 'broken' },
+    id: 'broken', engine: 'prober', owner: 'user:cy', name: 'Broken', config: { target: 'broken' },
   });
   expect(await cy.call('x-ahpd/agents/check', { id: 'broken' })).toMatchObject({
     result: { id: 'broken', health: { result: 'failed', message: 'no answer from the target' } },
   });
-  // And a record of a kind nobody serves says so, rather than answering `ok`.
+  // And a record of an engine nobody serves says so, rather than answering `ok`.
   expect(await cy.call('x-ahpd/agents/check', { id: 'gone' })).toMatchObject({ code: -32602 });
   await close();
 });
 
-it('answers a row with the config the kind describes, and refuses one it does not', async () => {
+it('answers a row with the config the engine describes, and refuses one it does not', async () => {
   const { host, users, close } = await served();
   const cy = await as(host, users, 'cy');
   expect(await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', extra: 'x' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', extra: 'x' },
   })).toMatchObject({ code: -32602, message: 'agent mine.extra is not a field' });
   expect(await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: {},
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: {},
   })).toMatchObject({ code: -32602, message: 'agent mine.target is required' });
   await close();
 });
@@ -642,13 +654,13 @@ it('lets agent:all read every agent and remove one however it is owned', async (
   expect(await ja.rows()).toEqual({});
 
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   });
   await di.call('x-ahpd/agents/put', {
-    id: 'ours', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
+    id: 'ours', engine: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
   });
   await fa.call('x-ahpd/agents/put', {
-    id: 'theirs', kind: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a' },
+    id: 'theirs', engine: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a' },
   });
 
   // Every row, the other person's and another team's included.
@@ -666,14 +678,14 @@ it('refuses an agent whose backend serves another id, and does not serve it', as
 
   // A put says why, and nothing is written: the id is still free.
   const answer = await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'misnamed', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'misnamed', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   });
   expect(answer).toMatchObject({ code: -32603, message: expect.stringContaining('not-the-id') });
   expect(await collection.get('mine')).toBeUndefined();
   expect(problems.some((line) => line.includes('mine') && line.includes('not-the-id'))).toBe(true);
 
   // A record written by hand is said and left out of the list, and its row says why.
-  await collection.put({ id: 'odd', kind: 'misnamed', owner: 'user:cy', name: 'Odd', config: { target: 'a' } });
+  await collection.put({ id: 'odd', engine: 'misnamed', owner: 'user:cy', name: 'Odd', config: { target: 'a' } });
   await lists.openAll();
   expect(problems.some((line) => line.includes('odd') && line.includes('not-the-id'))).toBe(true);
   expect(await cy.agents()).not.toContain('odd');
@@ -681,18 +693,18 @@ it('refuses an agent whose backend serves another id, and does not serve it', as
   await close();
 });
 
-it('opens a record again when the plugin that registered its kind is reloaded', async () => {
-  const { host, users, lists, kinds, opened, ended, close } = await served();
+it('opens a record again when the plugin that registered its engine is reloaded', async () => {
+  const { host, users, lists, engines, opened, ended, close } = await served();
   const cy = await as(host, users, 'cy');
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   });
-  expect(opened.filter((one) => one.kind === 'checker')).toHaveLength(1);
+  expect(opened.filter((one) => one.engine === 'checker')).toHaveLength(1);
 
-  // A reload imports the module again: the same name, a new kind object.
-  kinds['checker'] = { ...kindOf('checker', opened, false), by: 'test' };
+  // A reload imports the module again: the same name, a new engine object.
+  engines['checker'] = { ...engineOf('checker', opened, false), by: 'test' };
   await lists.openAll();
-  expect(opened.filter((one) => one.kind === 'checker')).toHaveLength(2);
+  expect(opened.filter((one) => one.engine === 'checker')).toHaveLength(2);
   // The backend the old module built goes, and its sessions with it.
   expect(ended).toContain('mine');
   expect((await cy.rows())['mine']).toMatchObject({ state: 'ready' });
@@ -703,10 +715,10 @@ it('refuses an id the daemon or a plugin already serves, before writing the reco
   const { host, users, collection, close } = await served();
   const cy = await as(host, users, 'cy');
   expect(await cy.call('x-ahpd/agents/put', {
-    id: 'base', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'base', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   })).toMatchObject({ code: -32009, message: 'base is served by the daemon, and an agent id is unique' });
   expect(await cy.call('x-ahpd/agents/put', {
-    id: 'preset', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+    id: 'preset', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
   })).toMatchObject({ code: -32009, message: 'preset is served by plugin agent-claude, and an agent id is unique' });
   expect(await collection.get('base')).toBeUndefined();
   expect(await collection.get('preset')).toBeUndefined();
@@ -717,7 +729,7 @@ it('keeps an open record and its agent when its secret cannot be read', async ()
   const { host, users, lists, opened, ended, problems, vault, close } = await served();
   const cy = await as(host, users, 'cy');
   await cy.call('x-ahpd/agents/put', {
-    id: 'mine', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: 'sk-agent-1' },
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a', secret: 'sk-agent-1' },
   });
   const openedBefore = opened.length;
 
@@ -745,10 +757,10 @@ it('runs the commands one at a time, so two owners cannot both take an id', asyn
 
   const answers = await Promise.all([
     cy.call('x-ahpd/agents/put', {
-      id: 'shared', kind: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
+      id: 'shared', engine: 'checker', owner: 'user:cy', name: 'Mine', config: { target: 'a' },
     }),
     di.call('x-ahpd/agents/put', {
-      id: 'shared', kind: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
+      id: 'shared', engine: 'checker', owner: 'team:backend', name: 'Ours', config: { target: 'a' },
     }),
   ]);
 

@@ -8,7 +8,7 @@
 
 An [Agent Client Protocol](https://agentclientprotocol.com) backend for [`@ahpd/sdk`](https://www.npmjs.com/package/@ahpd/sdk), and a plugin for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon.
 
-The plugin registers the agent kind `acp`: every ACP server is a record on the agents channel, `x-ahpd-agents`, and one load serves all of them. A record's id is the provider a client names, and its `config` holds the program and what that one agent runs on.
+The plugin registers the engine `acp`: every ACP server is a record on the agents channel, `x-ahpd-agents`, and one load serves all of them. A record's id is the provider a client names, and its `config` holds the program and what that one agent runs on.
 
 Any program that speaks ACP over its stdio is one record, not a package of its own, so `copilot --acp`, `codex-acp`, `gemini --acp` and `@deepseek-ai/dsh-acp` all run through this one package.
 
@@ -51,9 +51,9 @@ The plugin's own options are its answers for every agent it serves:
 | `hostTools` | `true` | Offer the host's own tools to each session as an MCP server. A record may set its own |
 | `toolsChanged` | `notify` | How a session's agent hears that the tools it listed have moved: `notify` sends `notifications/tools/list_changed` down a stream the host holds open, `list` sends nothing. A record may set its own |
 
-### A record of the kind
+### A record of the engine
 
-An agent is a record on `x-ahpd-agents`: `{ id, kind, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model` on every kind, so a record of this kind declares only the fields below, and a new record starts from one of the kind's templates - one per shipped row, carrying that row's command, arguments, sign-in, trust, machine and key variables set empty.
+An agent is a record on `x-ahpd-agents`: `{ id, engine, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model` on every engine, so a record of this engine declares only the fields below, and a new record starts from one of the engine's templates - one per shipped row, carrying that row's command, arguments, sign-in, trust, machine and key variables set empty.
 
 The shipped rows are `codex`, `gemini`, `copilot`, `opencode`, `kilo`, `goose`, `pi`, `dsh`, `devin`, `cursor`, `amp`, `qwen`, `cline` and `omp`. A record whose id names one of them takes that row's values, and wins over the row wherever it writes its own; a record that names none writes a `command` of its own, so a server nobody has heard of is an agent like any other.
 
@@ -72,9 +72,9 @@ The shipped rows are `codex`, `gemini`, `copilot`, `opencode`, `kilo`, `goose`, 
 | `page` | the row's | The vendor's install page, for a system the install lines do not cover |
 | `machine` | the row's | What a machine needs to run this agent, laid over the row's by key. **Host records only** |
 
-`base`, `command`, `args`, `cwd`, `machine` and `install` are host-only: a team's or a person's record that sets one is refused, because a command is where a program would come from. The kind's key variables are the vendors' own - `AMP_API_KEY`, `CLINE_API_KEY`, `CODEX_API_KEY`, `COPILOT_GITHUB_TOKEN`, `CURSOR_API_KEY`, `DEEPSEEK_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `GOOSE_PROVIDER__API_KEY`, `KILO_API_KEY`, `OMP_AUTH_BROKER_TOKEN`, `OPENAI_API_KEY` and `WINDSURF_API_KEY` - so any owner may set them in `env`; every other `env` variable is the host's alone, because a free environment can run a program.
+`base`, `command`, `args`, `cwd`, `machine` and `install` are host-only: a team's or a person's record that sets one is refused, because a command is where a program would come from. The engine's key variables are the vendors' own - `AMP_API_KEY`, `CLINE_API_KEY`, `CODEX_API_KEY`, `COPILOT_GITHUB_TOKEN`, `CURSOR_API_KEY`, `DEEPSEEK_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `GOOSE_PROVIDER__API_KEY`, `KILO_API_KEY`, `OMP_AUTH_BROKER_TOKEN`, `OPENAI_API_KEY` and `WINDSURF_API_KEY` - so any owner may set them in `env`; every other `env` variable is the host's alone, because a free environment can run a program.
 
-A record whose `command` is missing, whose `base` names no shipped row, or whose `$secret` the vault cannot answer is written and shown as `invalid` with one line naming it, and no value. A record whose kind no plugin registers any more is kept and shown as `unavailable`.
+A record whose `command` is missing, whose `base` names no shipped row, or whose `$secret` the vault cannot answer is written and shown as `invalid` with one line naming it, and no value. A record whose engine no plugin registers any more is kept and shown as `unavailable`.
 
 ### `machine`
 
@@ -99,7 +99,7 @@ A record that names its own program:
 ```json
 {
   "id": "my-agent",
-  "kind": "acp",
+  "engine": "acp",
   "owner": "host",
   "name": "My agent",
   "config": { "command": "my-agent", "args": ["--acp"] }
@@ -111,7 +111,7 @@ A record made from a shipped row is shorter still, because the row already names
 ```json
 {
   "id": "gemini",
-  "kind": "acp",
+  "engine": "acp",
   "owner": "host",
   "name": "Gemini",
   "config": { "env": { "GEMINI_API_KEY": { "$secret": "host:gemini" } } }

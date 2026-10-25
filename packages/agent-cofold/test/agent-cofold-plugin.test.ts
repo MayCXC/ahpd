@@ -9,7 +9,7 @@ import { createHost } from '../../sdk/src/host.js';
 import { describePlugin, loadPlugins } from '../../server/src/plugins.js';
 import { sdkVersion } from '../../sdk/src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
-import type { AgentKind, AgentView, Bag } from '@ahpd/sdk';
+import type { Engine, AgentView, Bag } from '@ahpd/sdk';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { HostTool } from '../../sdk/src/types/host.js';
 import type { PluginSpec } from '../../sdk/src/types/plugin.js';
@@ -21,12 +21,12 @@ import type { Peer } from '../../sdk/src/types/rpc.js';
  * Every case here goes through the real loader and the real host. The model is
  * a script and the store is in memory or under a temporary directory, because
  * a test calls no endpoint; what is under test is that the manifest resolves
- * the module, that `apply` registers the kind `cofold`, that a record of it
+ * the module, that `apply` registers the engine `cofold`, that a record of it
  * serves a turn exactly as a literal backend's is, and that a resumed paused
  * run reaches a subscribing client once.
  *
  * An agent is a record now, so a case that wants a backend opens one through
- * the kind and hands it to the host: this package registers no agent of its
+ * the engine and hands it to the host: this package registers no agent of its
  * own.
  *
  * The source file is named rather than the package directory on purpose:
@@ -117,22 +117,22 @@ const initialize = async (client: ReturnType<ReturnType<typeof createHost>['acce
   params: { clientId: 'probe', protocolVersions: ['0.9.0'], initialSubscriptions: ['ahp-root://'] },
 }) as { snapshots: { state: { agents: { provider: string }[] } }[] };
 
-/** The `cofold` kind one load registered. */
-const kindOf = (options: HostOptions): AgentKind => {
-  const kind = options.agentKinds?.['cofold'];
-  if (kind === undefined) throw new Error('no cofold kind was registered');
-  return kind;
+/** The `cofold` engine one load registered. */
+const engineOf = (options: HostOptions): Engine => {
+  const engine = options.engines?.['cofold'];
+  if (engine === undefined) throw new Error('no cofold engine was registered');
+  return engine;
 };
 
 /**
- * One record, as a kind is handed it: every field read at each call.
+ * One record, as an engine is handed it: every field read at each call.
  *
  * `config` is the reader the channel installs, so a case changes what a record
  * says by changing what this answers.
  */
 const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   id,
-  kind: 'cofold',
+  engine: 'cofold',
   owner: 'host',
   name,
   description: undefined,
@@ -141,10 +141,10 @@ const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   get config() { return held(); },
 });
 
-/** A host that serves the daemon's own agents beside one record of the kind. */
+/** A host that serves the daemon's own agents beside one record of the engine. */
 const withRecord = (options: HostOptions, id: string, held: () => Bag, name = id) => createHost({
   ...options,
-  agents: [...options.agents, kindOf(options).open(viewOf(id, held, name))],
+  agents: [...options.agents, engineOf(options).open(viewOf(id, held, name))],
 });
 
 /** Open one session on a provider and watch both of its channels. */
@@ -184,9 +184,9 @@ it('loads the package from its source file and serves a turn through the stub mo
   // The module exports no title, so this is the manifest's `ahpd.title`.
   expect(loaded[0]?.title).toBe('Agent Cofold');
 
-  // An agent is a record now, so the load registers a kind and adds no agent:
+  // An agent is a record now, so the load registers an engine and adds no agent:
   // the one served here is a record this case opened through it.
-  expect(kindOf(options).name).toBe('cofold');
+  expect(engineOf(options).name).toBe('cofold');
   expect(options.agents.map((one) => one.provider)).toEqual(['base']);
 
   const host = withRecord(options, 'cofold', () => ({}), 'Cofold');
@@ -247,14 +247,14 @@ it('is loaded once, and refuses a second spec of the same name', async () => {
   ]);
 
   // A plugin is loaded once: what makes two backends of this package is two
-  // records of its kind, not two specs of it.
+  // records of its engine, not two specs of it.
   expect(problems).toEqual([`plugin agent-cofold is named 2 times, by ${SOURCE} and ${SOURCE}; write it once and use its options for variants`]);
   expect(loaded).toHaveLength(1);
   expect(loaded.map((one) => one.name)).toEqual(['agent-cofold']);
 
-  // The one load that survived registered the kind, and serves no agent of its
+  // The one load that survived registered the engine, and serves no agent of its
   // own: the daemon's own agent is the only one in the list.
-  expect(kindOf(options).name).toBe('cofold');
+  expect(engineOf(options).name).toBe('cofold');
   expect(options.agents.map((one) => one.provider)).toEqual(['base']);
 });
 
@@ -385,14 +385,14 @@ it('resumes a paused run and shows the open turn once to a client that subscribe
     adapter: createFakeModel({ script: [{ text: 'done' }], stream: true }), store: root, policy: asks,
   } }], { path: where, tools: [writer] });
   /*
-   * The kind and the host come from the fresh copies, so the second process is
+   * The engine and the host come from the fresh copies, so the second process is
    * the same code as the first and shares nothing with it but the store.
    */
-  const freshKind = second.options.agentKinds?.['cofold'];
-  if (freshKind === undefined) throw new Error('no cofold kind was registered');
+  const freshEngine = second.options.engines?.['cofold'];
+  if (freshEngine === undefined) throw new Error('no cofold engine was registered');
   const after = again.host({
     ...second.options,
-    agents: [...second.options.agents, freshKind.open(viewOf('cofold', () => ({}), 'Cofold'))],
+    agents: [...second.options.agents, freshEngine.open(viewOf('cofold', () => ({}), 'Cofold'))],
   });
   const p = peer();
   const client = after.accept(p);

@@ -316,9 +316,9 @@ describe('what is on PATH', () => {
       '@ahpd/web',
     ]);
     // The record is what the agents channel serves; the plugin is what registers
-    // the kind it opens on, and the host is the owner a preset's agent had.
+    // the engine it opens on, and the host is the owner a preset's agent had.
     expect(recordOf('gemini')).toMatchObject({
-      id: 'gemini', kind: 'acp', owner: 'host', name: 'Gemini', config: {},
+      id: 'gemini', engine: 'acp', owner: 'host', name: 'Gemini', config: {},
     });
     // The package that runs it is installed with the backend, after the write.
     expect(calls.some((one) => one.program === 'npm' && one.argv.includes('@ahpd/agent-acp'))).toBe(true);
@@ -333,7 +333,7 @@ describe('what is on PATH', () => {
 
   it('shows an agent the file has as a record as configured, asks nothing about it, and keeps it', async () => {
     put({ plugins: [{ name: '@ahpd/agent-acp', options: { hostTools: false } }] });
-    putRecord({ id: 'gemini', kind: 'acp', owner: 'host', name: 'Gemini', config: { model: 'flash' } });
+    putRecord({ id: 'gemini', engine: 'acp', owner: 'host', name: 'Gemini', config: { model: 'flash' } });
     stub('gemini', '0.9.0');
     const { said } = await asked('', '', '', '', '', '', '', '');
     expect(said).toContain('Gemini 0.9.0 (configured, @ahpd/agent-acp)');
@@ -349,8 +349,8 @@ describe('what is on PATH', () => {
   it('asks about an agent whose record is there but whose plugin the file does not name', async () => {
     // A record left behind by a setup that stopped before it wrote the file is
     // not one the daemon serves, so it is asked about, and the answer is what
-    // puts the plugin that registers its kind in the file.
-    putRecord({ id: 'gemini', kind: 'acp', owner: 'host', name: 'Gemini', config: {} });
+    // puts the plugin that registers its engine in the file.
+    putRecord({ id: 'gemini', engine: 'acp', owner: 'host', name: 'Gemini', config: {} });
     stub('gemini', '0.9.0');
     const { said } = await asked('', '', '', '', '', '', '', '', '');
     expect(said).toContain('Gemini 0.9.0 (not configured, @ahpd/agent-acp)');
@@ -387,7 +387,7 @@ describe('what is on PATH', () => {
     const both = {
       plugins: ['@ahpd/agent-pi', { name: '@ahpd/agent-acp', options: { presets: { pi: {} }, hostTools: false } }],
     };
-    const record = { id: 'pi', kind: 'acp', owner: 'host', name: 'Pi', config: {} };
+    const record = { id: 'pi', engine: 'acp', owner: 'host', name: 'Pi', config: {} };
     put(both);
     putRecord(record);
     stub('pi-acp', '1.0.0');
@@ -404,7 +404,7 @@ describe('what is on PATH', () => {
     putRecord(record);
     const no = await asked('', '', '', '', 'n', '', '', '', '');
     expect(no.said).toContain('Remove the ACP pi agent? It clashes with the pi backend. [Y/n]: ');
-    expect(recordOf('pi')).toMatchObject({ id: 'pi', kind: 'acp' });
+    expect(recordOf('pi')).toMatchObject({ id: 'pi', engine: 'acp' });
     expect(presetsOf()).toEqual({ pi: {} });
   });
 
@@ -413,7 +413,7 @@ describe('what is on PATH', () => {
     const { said } = await asked('', '', 'n', '', '', '', '', '', '');
     expect(said).toContain('Pi? [Y/n]: ');
     expect(said).not.toContain('pi-acp: not asked, the pi backend runs pi');
-    expect(recordOf('pi')).toMatchObject({ id: 'pi', kind: 'acp', owner: 'host', name: 'Pi', config: {} });
+    expect(recordOf('pi')).toMatchObject({ id: 'pi', engine: 'acp', owner: 'host', name: 'Pi', config: {} });
     expect(read().plugins).toContain('@ahpd/agent-acp');
   });
 
@@ -489,7 +489,7 @@ describe('what is on PATH', () => {
     // own install line is the one the person would run.
     put({ plugins: ['@ahpd/agent-acp'] });
     putRecord({
-      id: 'gemini', kind: 'acp', owner: 'host', name: 'Gemini',
+      id: 'gemini', engine: 'acp', owner: 'host', name: 'Gemini',
       config: { install: { all: 'npm i -g my-gemini' } },
     });
     const { said } = await asked('', '', '', '', '', '', '', '');

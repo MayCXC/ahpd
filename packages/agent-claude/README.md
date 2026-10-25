@@ -8,7 +8,7 @@
 
 Claude Code as a backend for [`@ahpd/sdk`](https://www.npmjs.com/package/@ahpd/sdk), and the plugin that lets the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon run it.
 
-The plugin registers the agent kind `claude`: every Claude Code agent is a record on the agents channel, `x-ahpd-agents`, and one load serves all of them. A record's id is the provider a client names, and its `config` holds what that one agent runs on.
+The plugin registers the engine `claude`: every Claude Code agent is a record on the agents channel, `x-ahpd-agents`, and one load serves all of them. A record's id is the provider a client names, and its `config` holds what that one agent runs on.
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/agent-claude`](https://github.com/softov/ahpd/tree/main/packages/agent-claude).
 
@@ -51,9 +51,9 @@ Every option below is a key under `options` in the plugin's entry, and the daemo
 
 `computerCli` is `part`, the `claude` part this host builds at its pinned version, or `host`, which mounts this host's own installed CLI. `computerCliFallback` is `refuse`, which refuses a Claude session in a machine and names the part, or `host`, which mounts this host's own CLI instead and logs that it did. `workerStop` is `worker`, which stops that subagent and lets the turn that started it go on, or `session`, which cancels that turn instead. `handshakeTimeoutMs` is how long a CLI has to take the control request that says it is up: a cold start with several MCP servers is slow, and a machine slower than that is what the option is for. A CLI that misses the bound is treated as one that died, so the turn fails with that reason and the query is closed.
 
-### A record of the kind
+### A record of the engine
 
-An agent is a record on `x-ahpd-agents`: `{ id, kind, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model` on every kind, so this plugin declares only the fields below, and a new record starts from the kind's one template - Claude Code with nothing set - so an empty `config` is the ordinary agent.
+An agent is a record on `x-ahpd-agents`: `{ id, engine, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model` on every engine, so this plugin declares only the fields below, and a new record starts from the engine's one template - Claude Code with nothing set - so an empty `config` is the ordinary agent.
 
 | Field | Default | What it does |
 | --- | --- | --- |
@@ -67,7 +67,7 @@ An agent is a record on `x-ahpd-agents`: `{ id, kind, owner, name, description?,
 | `hostTasks` | `true` | Whether Claude leaves its own task tools to the host's `task_add`. Off keeps them, and their calls write the session's plan |
 | `enableTasks` | `true` | Start the CLI with `CLAUDE_CODE_ENABLE_TASKS=1` whenever Claude keeps its own task tools |
 
-`extraArgs` is host-only: a team's or a person's record that sets one is refused, because an argument is where a command would come from. `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` in `env` are the kind's key variables, so any owner may set them; every other `env` variable is the host's alone, because a free environment can run a program.
+`extraArgs` is host-only: a team's or a person's record that sets one is refused, because an argument is where a command would come from. `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` in `env` are the engine's key variables, so any owner may set them; every other `env` variable is the host's alone, because a free environment can run a program.
 
 A `models` entry is a model id, `{ "id", "name" }`, or `{ "fetch": "<url>", "match": "<pattern>", "key": "..." }`, which reads an OpenAI-shaped model list and keeps the ids the pattern covers, where `*` is any run of characters. `key` is the bearer token sent with the fetch: the token's text, which is what a record's `{ "fromEnv": "NAME" }` or `{ "$secret": "<name>" }` resolves to when the channel opens it, or `{ "fromEnv": "NAME" }` itself in a preset. A fetch that fails is logged, with no key in the line, and offers nothing.
 
@@ -77,7 +77,7 @@ A record's `env` value is a string, `null` to unset the variable, `{ "fromEnv": 
 
 An `extraArgs` value is given by name without the `--`, and `null` for a flag that takes none. A value that is not a string reaches the CLI as its JSON text, so `"settings": { "permissions": { "allow": ["Read"] } }` is started as `--settings '{"permissions":{"allow":["Read"]}}'`.
 
-A record is checked against the kind's schema when it is put, and opened again on every start. One whose `config` no longer fits, or whose `$secret` the vault cannot answer, is written and shown as `invalid` with one line saying why and naming no value; a record whose kind no plugin registers any more is kept and shown as `unavailable`.
+A record is checked against the engine's schema when it is put, and opened again on every start. One whose `config` no longer fits, or whose `$secret` the vault cannot answer, is written and shown as `invalid` with one line saying why and naming no value; a record whose engine no plugin registers any more is kept and shown as `unavailable`.
 
 ### Tasks
 
@@ -104,10 +104,10 @@ await listen({ port: 9187 }, (peer) => host.accept(peer));
 
 ## Records
 
-One agent is one record. A client makes or edits one with `x-ahpd/agents/put`, and the daemon keeps it at `agents/<id>.json` in its configuration folder. The host's Claude Code, with nothing set, is the record below; a second agent is another record from the same kind, and a session picks the agent rather than a set of options of it:
+One agent is one record. A client makes or edits one with `x-ahpd/agents/put`, and the daemon keeps it at `agents/<id>.json` in its configuration folder. The host's Claude Code, with nothing set, is the record below; a second agent is another record from the same engine, and a session picks the agent rather than a set of options of it:
 
 ```json
-{ "id": "claude", "kind": "claude", "owner": "host", "name": "Claude Code", "config": {} }
+{ "id": "claude", "engine": "claude", "owner": "host", "name": "Claude Code", "config": {} }
 ```
 
 A record that names its own options and its own endpoint is a second agent on the picker, from the one plugin. The key is a `$secret`, so the record holds a reference and the vault holds the value:
@@ -115,7 +115,7 @@ A record that names its own options and its own endpoint is a second agent on th
 ```json
 {
   "id": "claude-deepseek-build",
-  "kind": "claude",
+  "engine": "claude",
   "owner": "host",
   "name": "DeepSeek build",
   "config": {
@@ -142,7 +142,7 @@ A record with its own name, its own models and an `env` that points the CLI else
 ```json
 {
   "id": "claude-openrouter",
-  "kind": "claude",
+  "engine": "claude",
   "owner": "host",
   "name": "Claude OpenRouter",
   "config": {
