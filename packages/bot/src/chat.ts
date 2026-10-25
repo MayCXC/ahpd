@@ -381,7 +381,9 @@ const append = (dir: string, id: string, said: Bag): void => {
  * One chat's row, read off its log, or nothing when there is no log.
  *
  * The name and the folder are the bot's as it is now, read from the store; the
- * mark is what says which bot a chat is for, and it is the whole answer for a
+ * mark says which bot a chat is for, and it goes on the row so a client draws
+ * a chat nothing runs as a bot chat. Sent from the store while the bot is
+ * there, and from the log when it is gone - the log is the whole answer for a
  * chat whose bot has since been deleted.
  */
 const rowOf = (dir: string, id: string, store: BotStore): Listed | undefined => {
@@ -399,12 +401,14 @@ const rowOf = (dir: string, id: string, store: BotStore): Listed | undefined => 
   const slug = typeof log.mark?.['bot'] === 'string' ? log.mark['bot'] : '';
   const bot = store.get(slug);
   const named = log.mark?.['name'];
+  const meta = bot === undefined ? log.mark : markOf(bot);
   return {
     id,
     title: bot?.name ?? (typeof named === 'string' && named !== '' ? named : id),
     createdAt: born.toISOString(),
     modifiedAt: touched.toISOString(),
     workingDirectories: bot === undefined ? [] : [uriOf(bot.workspace)],
+    ...(meta === undefined ? {} : { _meta: meta }),
   };
 };
 

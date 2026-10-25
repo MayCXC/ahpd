@@ -405,7 +405,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [63 - agent-cofold lists models under their provider id](plugin/63-cofold-lists-models-by-provider/plan.md) | high | planned 2026-10-24; three tasks | - | - |
 | [64 - An admin installs and removes a plugin from the UI](plugin/64-an-admin-installs-a-plugin-from-the-ui/plan.md) | medium | active 2026-10-25; three tasks, all implemented | plugin 59 | - |
 | [65 - A disabled plugin describes itself](plugin/65-a-disabled-plugin-describes-itself/plan.md) | medium | planned 2026-10-25; four tasks | plugin 64 | the ahpw plugin page for a disabled plugin; `definePlugin` |
-| [66 - A reopened bot chat keeps its mark](plugin/66-a-reopened-bot-chat-keeps-its-mark/plan.md) | high | planned 2026-10-25; two tasks | - | - |
+| [66 - A reopened bot chat keeps its mark](plugin/66-a-reopened-bot-chat-keeps-its-mark/plan.md) | high | active 2026-10-25; tasks 01 and 02 implemented | - | ahpw, which reads the mark from `_meta` and needs no change |
 
 Next free number in `plugin`: `63`.
 

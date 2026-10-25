@@ -8,7 +8,7 @@ import {
   resetSdk, actions, claude, createHost, echo, emit, hello, hostTools, machine, open, peer,
  sdk, serving, sessionQueries, settle, running,
 } from './support/host.js';
-import type { Agent } from '../src/types/agent.js';
+import type { Agent, Listed, Start } from '../src/types/agent.js';
 import type { HostTool } from '../src/types/host.js';
 import type { Principal } from '../src/types/users.js';
 
@@ -1057,5 +1057,92 @@ describe('a chat another backend serves', () => {
     // be two answers to one question, and could disagree with the session.
     expect(Object.prototype.hasOwnProperty.call((chat._meta as object | undefined) ?? {}, 'ahpd.provider'))
       .toBe(false);
+  });
+});
+
+describe("a browsed session's _meta", () => {
+  /*
+   * What a client draws a session it has not started from.
+   *
+   * The state of a session nothing runs is composed by `describes`, which asks
+   * the backend's running agent for `_meta` while there is one. A browsed row
+   * has no agent, so its keys are the ones the backend put on the row it
+   * listed - and the running agent's replace them once the session starts.
+   */
+  const PATH = '/home/softov';
+  const STAMP = '2026-10-25T00:00:00.000Z';
+  const chatOf = (session: string) => `ahp-chat://default/${Buffer.from(session, 'utf8').toString('base64url')}`;
+  const row = (id: string, meta?: Record<string, unknown>): Listed => ({
+    id,
+    title: id,
+    createdAt: STAMP,
+    modifiedAt: STAMP,
+    workingDirectories: [`file://${PATH}`],
+    ...(meta === undefined ? {} : { _meta: meta }),
+  });
+  /**
+   * A backend over one listed row, whose sessions report `_meta` as a running
+   * one does: the model it is on, beside what the listing said.
+   */
+  const backend = (listed: Listed[]): Agent => {
+    const base = echo({ path: PATH, pace: 0 });
+    return {
+      ...base,
+      provider: 'slow',
+      displayName: 'Slow',
+      directories: () => [PATH],
+      list: async () => [...listed],
+      create: (start: Start) => {
+        const session = base.create(start);
+        return {
+          ...session,
+          sessionState: () => ({ ...session.sessionState(), _meta: { 'ahpd.model': 'opus' } }),
+        };
+      },
+      transcript: async () => [],
+    };
+  };
+  type State = { _meta?: Record<string, unknown> };
+
+  it("answers a session nothing runs with the _meta its backend listed", async () => {
+    const host = createHost({
+      path: PATH,
+      agents: [backend([row('one', { bot: 'motion', color: 'red' })])],
+      ...machine(),
+    });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+    await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
+
+    const opened = await client.handle({ method: 'subscribe', params: { channel: 'slow:/one' } }) as {
+      snapshot: { state: State };
+    };
+    expect(opened.snapshot.state._meta).toEqual({ bot: 'motion', color: 'red' });
+  });
+
+  it("replaces a listed row's _meta with the running agent's own", async () => {
+    const host = createHost({
+      path: PATH,
+      agents: [backend([row('one', { bot: 'motion', color: 'red' })])],
+      ...machine(),
+    });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+    await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
+
+    // The first turn resumes the session, as a person opening a chat and
+    // typing into it does. The row is not created again: its id is held.
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: chatOf('slow:/one'), action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'carry on' } } },
+    });
+    await settle(8);
+
+    const opened = await client.handle({ method: 'subscribe', params: { channel: 'slow:/one' } }) as {
+      snapshot: { state: State };
+    };
+    // The running agent knows the session as it is now, and the listed keys are
+    // dropped rather than merged: `_meta` is replaced whole.
+    expect(opened.snapshot.state._meta).toEqual({ 'ahpd.model': 'opus' });
   });
 });

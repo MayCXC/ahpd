@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
@@ -11,7 +11,11 @@ import { memorySessions } from '../../sdk/src/sessions/sessions.js';
 import { sdkVersion } from '../../sdk/src/version.js';
 import { holds } from '../../sdk/src/access/users.js';
 import { echo } from '../../../examples/echo/agent.js';
+import { botChatAgent } from '../src/chat.js';
+import { BOTS_DIR } from '../src/names.js';
 import { apply } from '../src/plugin.js';
+import { botStore } from '../src/store.js';
+import type { BotRecord } from '../src/record.js';
 import type { LoaderContext } from '../../sdk/src/types/plugin.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
 import type { Grant, Principal, Users } from '../../sdk/src/types/users.js';
@@ -117,7 +121,7 @@ function made(tokens: Record<string, Grant[]>, members: Record<string, string[]>
     users,
   }, [contribution]);
   expect(problems).toEqual([]);
-  return { host: createHost(options), changed, users, records, bots };
+  return { host: createHost(options), changed, users, records, bots, root, configDir: join(root, 'config') };
 }
 
 type Host = ReturnType<typeof createHost>;
@@ -334,4 +338,122 @@ it('advertises the catalogue on initialize', async () => {
   expect(ana.ready._meta?.['ahpd.channels']).toEqual([
     { scheme: 'x-ahpd-bots', title: 'Bots', description: 'Every bot the reader may read, kept current.', grant: 'bot:read' },
   ]);
+});
+
+/*
+ * The mark a chat's row carries.
+ *
+ * A chat's log is named by a session id, so the mark on its lines is the only
+ * thing in the folder that says which bot it is with. A chat nothing runs is
+ * listed from that log, and a client that draws the row without opening it
+ * needs the mark there - the same `_meta` a running chat's state carries.
+ */
+
+const STAMP = '2026-10-25T00:00:00.000Z';
+
+/** The mark `markOf` sends for a bot, as a log line carries it. */
+const mark = (slug: string, name: string, color: string): Bag => ({
+  bot: slug, name, color, labels: [], body: 'robot', kind: 'direct',
+});
+
+/** One line in a chat's log, in the folder of the bot it is with. */
+const logged = (configDir: string, slug: string, id: string, meta?: Bag): void => {
+  const dir = join(configDir, BOTS_DIR, slug, 'logs');
+  mkdirSync(dir, { recursive: true });
+  appendFileSync(join(dir, `${encodeURIComponent(id)}.jsonl`), `${JSON.stringify({
+    id: 't1',
+    startedAt: STAMP,
+    message: { text: 'Hello', origin: { kind: 'user' } },
+    responseParts: [],
+    ...(meta === undefined ? {} : { _meta: meta }),
+  })}\n`, 'utf8');
+};
+
+/** One bot as the store keeps it, with the folder left alone. */
+const kept = (patch: Partial<BotRecord> = {}): BotRecord => ({
+  id: 'motion', name: 'Motion', labels: [], body: 'robot', color: 'red',
+  session: 'work', workspace: join('/', 'tmp', 'work'), owner: 'user:ana',
+  createdAt: STAMP, updatedAt: STAMP, ...patch,
+});
+
+/** The chat backend over a folder, holding the bots a case made. */
+async function backend(configDir: string, bots: BotRecord[] = []) {
+  const records = memoryRecords();
+  const store = botStore(await records.collection('bots'), await records.collection('bots-gone'), () => {});
+  await store.ready();
+  for (const bot of bots) await store.put(bot);
+  return { agent: botChatAgent(configDir, store), store };
+}
+
+/** A folder of this case's own, thrown away after it. */
+const folder = (): string => {
+  const dir = mkdtempSync(join(tmpdir(), 'ahpd-bot-chat-row-'));
+  loose.push(dir);
+  return dir;
+};
+
+it("lists a chat as the bot is now, not as the log's mark has it", async () => {
+  const configDir = folder();
+  // A log from before the bot was renamed and recoloured.
+  logged(configDir, 'motion', 'one', mark('motion', 'Old name', 'blue'));
+  const { agent } = await backend(configDir, [kept({ name: 'Motion', color: 'red' })]);
+
+  const rows = await agent.list!();
+
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ id: 'one', title: 'Motion' });
+  expect(rows[0]?._meta).toMatchObject({
+    bot: 'motion', name: 'Motion', color: 'red', labels: [], body: 'robot', kind: 'direct',
+  });
+});
+
+it('lists a chat of a deleted bot with the mark its log carries', async () => {
+  const configDir = folder();
+  logged(configDir, 'motion', 'one', mark('motion', 'Last name', 'blue'));
+  const { agent, store } = await backend(configDir, [kept({ name: 'Motion', color: 'red' })]);
+  await store.remove('motion');
+
+  const rows = await agent.list!();
+
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ id: 'one', title: 'Last name' });
+  expect(rows[0]?._meta).toMatchObject({ bot: 'motion', name: 'Last name', color: 'blue' });
+});
+
+it('finds a chat with the same mark its listing carries', async () => {
+  const configDir = folder();
+  logged(configDir, 'motion', 'one', mark('motion', 'Motion', 'red'));
+  const { agent } = await backend(configDir, [kept()]);
+
+  const rows = await agent.list!();
+  const row = await agent.find!('one');
+
+  expect(row).toEqual(rows[0]);
+  expect(row?._meta).toEqual(rows[0]?._meta);
+});
+
+it('lists a chat whose log carries no mark without a `_meta`', async () => {
+  const configDir = folder();
+  logged(configDir, 'motion', 'one');
+  const { agent } = await backend(configDir);
+
+  const rows = await agent.list!();
+
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).not.toHaveProperty('_meta');
+});
+
+it('lists a chat that is not running as the bot it is with', async () => {
+  const { host, configDir } = made({ ana: [...PERSON, 'session:list'] });
+  const ana = await as(host, 'ana');
+  // A log a daemon left behind, so the chat is a row and nothing runs it.
+  logged(configDir, 'motion', 'one', mark('motion', 'Motion', 'red'));
+  await write(ana, 'motion', { name: 'Motion', color: 'red' });
+
+  const answer = await call(ana, 'listSessions', { channel: ROOT });
+  if (!('result' in answer)) throw new Error(`refused: ${answer.code} ${answer.message}`);
+  const row = (answer.result.items as Bag[]).find((one) => one.resource === 'bot-chat:/one');
+
+  expect(row).toBeDefined();
+  expect(row?._meta).toMatchObject({ bot: 'motion', name: 'Motion', color: 'red' });
 });

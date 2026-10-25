@@ -1,7 +1,7 @@
 ---
 title: A reopened bot chat keeps its mark
 domain: plugin
-status: planned
+status: active
 priority: high
 created: 2026-10-25
 revalidated: 2026-10-25
@@ -63,8 +63,8 @@ bot rowOf -> Listed -> host adopt -> describes -> agentMeta -> summary and brows
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A listed row carries `_meta`](task-01-a-listed-row-carries-meta.md) | todo | - |
-| [02 - The bot's row carries its mark](task-02-the-bots-row-carries-its-mark.md) | todo | 01 |
+| [01 - A listed row carries `_meta`](task-01-a-listed-row-carries-meta.md) | implemented | - |
+| [02 - The bot's row carries its mark](task-02-the-bots-row-carries-its-mark.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -73,14 +73,14 @@ bot rowOf -> Listed -> host adopt -> describes -> agentMeta -> summary and brows
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-listed-row-carries-meta.md](task-01-a-listed-row-carries-meta.md).
+- **Done so far:** both tasks are implemented. `Listed` carries an optional `_meta`; the host answers it while nothing runs, and `rowOf` sends the bot's mark.
+- **Next action:** nothing; review, then commit.
 - **Open questions:** none.
 - **Watch out for:** `_meta` is replaced whole, never merged. Compose the listed keys and the host keys in `describes`, as the running agent's keys are.
 
 ## Final verification checklist
 
-- [ ] A reopened bot chat's summary and browsed state carry the bot's mark, with nothing running.
-- [ ] A chat whose bot is deleted carries the mark from its log.
-- [ ] Once the chat runs, the state carries the running agent's `_meta`.
-- [ ] `plans/index.md` updated.
+- [x] A reopened bot chat's summary and browsed state carry the bot's mark, with nothing running.
+- [x] A chat whose bot is deleted carries the mark from its log.
+- [x] Once the chat runs, the state carries the running agent's `_meta`.
+- [x] `plans/index.md` updated.

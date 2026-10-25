@@ -387,6 +387,15 @@ export function createHost(options: HostOptions): Host {
    */
   const moves = new Map<string, string>();
   /**
+   * What a backend said about a browsed session, by its own uri.
+   *
+   * `_meta` on a listed row, kept for the same reason `births` and `moves`
+   * are: the row is answered from this map long after the listing that named
+   * it, and no agent is running to be asked what it holds. Replaced whole on
+   * each listing, and removed when the row stops carrying one.
+   */
+  const listedMeta = new Map<string, Bag>();
+  /**
    * Every client this host has handshaken with, by the id it gave.
    *
    * What `reconnect` is answerable *against*. A client comes back saying "I am
@@ -1060,7 +1069,7 @@ export function createHost(options: HostOptions): Host {
   const ctx = {
     options, dir, known, replayable, leaves, seenBy, claims, agents, first, connections, relays: new Map(), holders, sessions, byChat, subagents, owners, names,
     leadOf, wheres, worktrees, worktreeOf, githubFacts, kept, offered, decided, about, terminals,
-    madeFrom, origins, births, moves, browsable, broadcast, presence, beside, marks, lives, lifeOf, restarting, learned, starting,
+    madeFrom, origins, births, moves, listedMeta, browsable, broadcast, presence, beside, marks, lives, lifeOf, restarting, learned, starting,
     logs, detached, refuse, echoTo,
     serverSeq: 0,
     closed: false, refusing: undefined, bareSessions: new Set<string>(), commandTurns: new Map<string, boolean>(), described, links,
