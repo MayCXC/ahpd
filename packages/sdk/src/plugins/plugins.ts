@@ -12,7 +12,7 @@
  */
 
 import type { Agent } from '../types/agent.js';
-import type { AgentOwner, ServedAgentKind } from '../types/agents.js';
+import type { AgentOwner, ServedEngine } from '../types/agents.js';
 import type { SessionConfigAnswerer } from '../types/completions.js';
 import type { ServedAdapter } from '../types/connectors.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from '../types/events.js';
@@ -31,7 +31,7 @@ import { isRecordPath, isRecordSlug, RECORD_PATH, RECORD_SLUG } from '../resourc
 import type { Pair } from '../utils/pair.js';
 import { reason } from '../utils/values.js';
 import { readSecret } from '../access/vault.js';
-import { checkAdapter, checkAgent, checkAgentKind, checkChannel, checkChatRequest, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName } from './validate.js';
+import { checkAdapter, checkAgent, checkEngine, checkChannel, checkChatRequest, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName } from './validate.js';
 
 /**
  * One contributed backend, as the host keeps it: the plugin's own agent with a
@@ -530,24 +530,24 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   }
 
   /*
-   * The agent kinds, keyed by name and never merged over one another.
+   * The engines, keyed by name and never merged over one another.
    *
    * A kind names one form and one `open`, so two plugins offering one name is a
    * collision: it is reported, and the first registration keeps it. Seeded from
    * the base for the same reason the adapters are.
    */
-  const agentKinds: Record<string, ServedAgentKind> = { ...base.agentKinds };
+  const engines: Record<string, ServedEngine> = { ...base.engines };
   for (const contribution of contributions) {
-    for (const [name, kind] of Object.entries(contribution.agentKinds ?? {})) {
-      const held = agentKinds[name];
+    for (const [name, engine] of Object.entries(contribution.engines ?? {})) {
+      const held = engines[name];
       if (held !== undefined) {
-        problems.push(`plugin ${contribution.by} registers agent kind ${name}, which ${held.by === 'the daemon' ? 'the daemon' : `plugin ${held.by}`} already registered`);
+        problems.push(`plugin ${contribution.by} registers engine ${name}, which ${held.by === 'the daemon' ? 'the daemon' : `plugin ${held.by}`} already registered`);
         continue;
       }
-      agentKinds[name] = kind;
+      engines[name] = engine;
     }
   }
-  if (Object.keys(agentKinds).length > 0) options.agentKinds = agentKinds;
+  if (Object.keys(engines).length > 0) options.engines = engines;
 
   /*
    * The agents made from records, after the plugins' own.
@@ -1007,7 +1007,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     providers: {},
     channels: {},
     adapters: {},
-    agentKinds: {},
+    engines: {},
     methods: {},
     events: events as unknown as HostHandlers,
     closers: [],
@@ -1583,15 +1583,15 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       }
       contribution.adapters[named] = { ...adapter, by };
     },
-    registerAgentKind(kind) {
+    registerEngine(engine) {
       open();
-      const named = checkAgentKind(kind, by);
-      declared(by, options.contracts, 'agentKinds', named);
-      const held = contribution.agentKinds ??= {};
+      const named = checkEngine(engine, by);
+      declared(by, options.contracts, 'engines', named);
+      const held = contribution.engines ??= {};
       if (held[named] !== undefined) {
-        throw new Error(miss(by, 'registerAgentKind', named, 'a name no other agent kind in this plugin uses'));
+        throw new Error(miss(by, 'registerEngine', named, 'a name no other engine in this plugin uses'));
       }
-      held[named] = { ...kind, by };
+      held[named] = { ...engine, by };
     },
     on(event, handle) {
       // The context is captured, not rebuilt when the event fires: it is the

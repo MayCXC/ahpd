@@ -60,12 +60,13 @@ const onAStdin = (): ContainerPort & { children: ChildProcessWithoutNullStreams[
     docker: async () => true,
     available: async () => true,
     connect: async (one, sink: ContainerSink) => {
+      // The nested daemon keeps its folders under the test's, never the person's own.
       const config = join(root, `nested-${one.connectionId}.json`);
       writeFileSync(config, CONFIG);
       const child = spawn(
         process.execPath,
         ['--conditions', 'development', '--import', './scripts/dev.mjs', 'packages/server/src/main.ts', '--stdio', '--config-file', config],
-        { cwd: REPO, env: { ...process.env, CI: '1' }, stdio: ['pipe', 'pipe', 'pipe'] },
+        { cwd: REPO, env: { ...process.env, CI: '1', XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: join(root, 'data'), XDG_STATE_HOME: join(root, 'state') }, stdio: ['pipe', 'pipe', 'pipe'] },
       );
       children.push(child);
       live.set(one.connectionId, child);

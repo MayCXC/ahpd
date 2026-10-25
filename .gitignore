@@ -2,6 +2,11 @@ node_modules
 dist
 *.tsbuildinfo
 
+# Environment files hold secrets; only the example is tracked.
+.env
+.env.*
+!.env.example
+
 # The example backend writes here when you run `npm run notes`.
 /notes
 

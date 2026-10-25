@@ -4,7 +4,7 @@ import { delimiter, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
 import { knownAgents } from '@ahpd/sdk';
-import type { AgentKind, AgentView, Bag, Session, Start } from '@ahpd/sdk';
+import type { Engine, AgentView, Bag, Session, Start } from '@ahpd/sdk';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { posix } from '../../../tools/posix.js';
@@ -62,7 +62,7 @@ const load = async (options: Record<string, unknown> = {}) => {
     cwd: REPO,
     log: () => {},
   });
-  const kind = served.agentKinds?.['acp'];
+  const kind = served.engines?.['acp'];
   if (kind === undefined) throw new Error('no acp kind was registered');
   return { loaded, problems, served, kind };
 };
@@ -70,7 +70,7 @@ const load = async (options: Record<string, unknown> = {}) => {
 /** One record, as a kind is handed it: every field read at each call. */
 const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   id,
-  kind: 'acp',
+  engine: 'acp',
   owner: 'host',
   name,
   description: undefined,
@@ -92,7 +92,7 @@ const startOf = (label: string, extra: Record<string, unknown> = {}): Start => (
 
 /** One record's session, released after the case. */
 const sessionOf = (
-  kind: AgentKind,
+  kind: Engine,
   id: string,
   held: () => Bag,
   label: string,
@@ -121,7 +121,7 @@ interface Probe {
  * shebang.
  */
 const spawnOf = async (
-  kind: AgentKind,
+  kind: Engine,
   id: string,
   held: () => Bag = () => ({}),
   command = shipped[id]?.command,
@@ -152,7 +152,7 @@ const spawnOf = async (
 
 /** One turn over the fixture, and what it was sent. */
 const turnOf = async (
-  kind: AgentKind,
+  kind: Engine,
   id: string,
   config: Bag = {},
   extra: { flags?: string[]; start?: Record<string, unknown> } = {},

@@ -5,12 +5,12 @@ import { expect, it, vi } from 'vitest';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { env, extraArgs, optionDefaults, outputStyle, sandbox, thinking } from '../src/options.js';
-import type { AgentKind, AgentView, Bag, Start } from '@ahpd/sdk';
+import type { Engine, AgentView, Bag, Start } from '@ahpd/sdk';
 
 /*
  * Each Claude option, declared once.
  *
- * A declaration is what a value may be and where it goes, and both the kind schema a record is drawn from and the options a session's `query()` is built from are made of them. So the cases here are the two questions a declaration answers - does this value hold, and what does it become - and a record's values going through them into a session, which is the half that only holds if `session.ts` asks.
+ * A declaration is what a value may be and where it goes, and both the engine schema a record is drawn from and the options a session's `query()` is built from are made of them. So the cases here are the two questions a declaration answers - does this value hold, and what does it become - and a record's values going through them into a session, which is the half that only holds if `session.ts` asks.
  */
 
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
@@ -46,8 +46,8 @@ const settle = async (times = 8): Promise<void> => {
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/agent-claude/src/index.ts';
 
-/** The `claude` kind one load registered. */
-const kindOf = async (): Promise<AgentKind> => {
+/** The `claude` engine one load registered. */
+const engineOf = async (): Promise<Engine> => {
   const { problems, options: served } = await loadPlugins([{ name: SOURCE, options: {} }], {
     base: { path: '/tmp/ahpd-declared', agents: [echo({ path: '/tmp/ahpd-declared' })] },
     configDir: REPO,
@@ -55,15 +55,15 @@ const kindOf = async (): Promise<AgentKind> => {
     log: () => {},
   });
   expect(problems).toEqual([]);
-  const kind = served.agentKinds?.['claude'];
-  if (kind === undefined) throw new Error('no claude kind was registered');
-  return kind;
+  const engine = served.engines?.['claude'];
+  if (engine === undefined) throw new Error('no claude engine was registered');
+  return engine;
 };
 
-/** One record, as a kind is handed it: every field read at each call. */
+/** One record, as an engine is handed it: every field read at each call. */
 const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   id,
-  kind: 'claude',
+  engine: 'claude',
   owner: 'host',
   name,
   description: undefined,
@@ -80,8 +80,8 @@ const queried = async (
 ): Promise<Record<string, unknown>> => {
   sdk.options = [];
   sdk.flags = [];
-  const kind = await kindOf();
-  kind.open(viewOf('claude', () => config)).create({
+  const engine = await engineOf();
+  engine.open(viewOf('claude', () => config)).create({
     uri: 'ahp-session:/declared',
     chatUri: 'ahp-chat:/declared',
     settings: settings ?? {},

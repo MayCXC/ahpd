@@ -171,7 +171,7 @@ The verbs that read or change this host's own settings, one line each. The rest 
 | Read the daemon's own settings in root state | `config:read` | `seesConfig`, and the `status` command |
 | List the plugins the configuration names | `plugin:list` | The `plugin list` command, and `x-ahpd-plugins` |
 | List the adapters the host serves | `connector:list` | `x-ahpd-adapters` |
-| List the agent kinds the host serves | `agent:list` | `x-ahpd-agent-kinds` |
+| List the engines the host serves | `agent:list` | `x-ahpd-engines` |
 | Subscribe to the connectors channel | `connector:list` | `x-ahpd-connectors` |
 | List the caller's own, their teams' and the host's connectors | `connector:list` | `x-ahpd-connectors`, and no other person's connector with it |
 | List every connector | `connector:all` | `x-ahpd-connectors`, and it is admitted without `connector:list` |

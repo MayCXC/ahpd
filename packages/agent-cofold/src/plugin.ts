@@ -7,7 +7,7 @@
  * guessing which export is the plugin, and a silent guess is worse than a
  * refusal.
  *
- * The plugin registers the kind `cofold`, and each record of it is one agent
+ * The plugin registers the engine `cofold`, and each record of it is one agent
  * with its own endpoint, key and model. The plugin's own options are the
  * defaults every record starts from; nothing is registered as an agent here.
  *
@@ -22,7 +22,7 @@
 import { check } from '@cofold/commands';
 import { TOOLS_SCHEMA } from '@cofold/tools';
 import { join } from 'node:path';
-import type { AgentKind, AgentView, PluginHost } from '@ahpd/sdk';
+import type { Engine, AgentView, PluginHost } from '@ahpd/sdk';
 import { cofoldAgent, defaultStoreRoot } from './agent.js';
 import type { CofoldOptions } from './agent.js';
 
@@ -51,7 +51,7 @@ const keyed = { type: 'object', properties: { apiKey: { type: 'string', writeOnl
  * The options `apply` receives, as a JSON Schema the daemon checks them against
  * before `apply` runs.
  *
- * These are the defaults for every record of the kind: a record that names one
+ * These are the defaults for every record of the engine: a record that names one
  * of them wins, and a record that names none runs on what is here. `apiKey`,
  * `adapter` and `policy` are also what an embedder calling `apply` passes: a
  * key function and a model adapter are things JSON cannot carry, so the schema
@@ -180,9 +180,9 @@ const TOOLS_OF_RECORD = {
 };
 
 /**
- * The kind's form: what a record may set, and nothing a second kind spells.
+ * The engine's form: what a record may set, and nothing a second engine spells.
  *
- * Everything is closed with `additionalProperties: false`, so a field the kind
+ * Everything is closed with `additionalProperties: false`, so a field the engine
  * does not have is refused where it is written rather than kept and ignored.
  */
 const kindSchema = (): Record<string, unknown> => ({
@@ -245,7 +245,7 @@ const optionsOfRecord = (defaults: CofoldOptions, record: AgentView): CofoldOpti
 };
 
 /**
- * The `cofold` kind: one record per endpoint and key, each its own agent.
+ * The `cofold` engine: one record per endpoint and key, each its own agent.
  *
  * `open` builds the backend once and hands it a reader for the record, which
  * the session calls at the start of each turn. The record the reader sees is
@@ -253,7 +253,7 @@ const optionsOfRecord = (defaults: CofoldOptions, record: AgentView): CofoldOpti
  * next turn runs on it, while the turn already running ends on what it started
  * with.
  */
-const kindOf = (defaults: CofoldOptions): AgentKind => ({
+const engineOf = (defaults: CofoldOptions): Engine => ({
   name: 'cofold',
   title: 'Cofold',
   description: 'Cofold over an OpenAI-compatible endpoint, one record per agent with its own endpoint, key and model.',
@@ -271,7 +271,7 @@ const kindOf = (defaults: CofoldOptions): AgentKind => ({
 });
 
 /**
- * Register the kind `cofold`, whose records are the agents.
+ * Register the engine `cofold`, whose records are the agents.
  *
  * `provider`, `displayName` and `description` are refused rather than ignored:
  * a configuration that still names one is asking for the single backend this
@@ -288,5 +288,5 @@ export function apply(host: PluginHost, values: Record<string, unknown>): void {
   for (const [key, where] of Object.entries(perRecord)) {
     if (values[key] !== undefined) throw new Error(`options.${key} is written per record now, as ${where}`);
   }
-  host.registerAgentKind(kindOf(optionsOf(values)));
+  host.registerEngine(engineOf(optionsOf(values)));
 }

@@ -8,7 +8,7 @@ import { createHost } from '../../sdk/src/host.js';
 import { describePlugin, loadPlugins, pluginIdsOf } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { anyone, signIn } from './people.js';
-import type { AgentKind, AgentView, Bag } from '@ahpd/sdk';
+import type { Engine, AgentView, Bag } from '@ahpd/sdk';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { PluginSpec } from '../../sdk/src/types/plugin.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
@@ -18,8 +18,8 @@ import type { Peer } from '../../sdk/src/types/rpc.js';
  *
  * Every case goes through the real loader and the real host, and the server is
  * the scripted subprocess the other ACP tests use. What is under test is that
- * the manifest resolves the module, that `apply` contributes the `acp` kind and
- * no agent of its own, and that each record opened from that kind is a backend
+ * the manifest resolves the module, that `apply` contributes the `acp` engine and
+ * no agent of its own, and that each record opened from that engine is a backend
  * the host serves.
  *
  * The source file is named rather than the package directory on purpose:
@@ -98,17 +98,17 @@ const load = (specs: PluginSpec[], over: Partial<HostOptions> = {}) =>
 /** The spec for the scripted server: no option, since each agent is a record. */
 const SPEC: PluginSpec = { name: SOURCE, options: {} };
 
-/** The `acp` kind a load registered, which is where a record's backend comes from. */
-const kindOf = (options: { agentKinds?: Record<string, AgentKind> }): AgentKind => {
-  const kind = options.agentKinds?.['acp'];
-  if (kind === undefined) throw new Error('no acp kind was registered');
-  return kind;
+/** The `acp` engine a load registered, which is where a record's backend comes from. */
+const engineOf = (options: { engines?: Record<string, Engine> }): Engine => {
+  const engine = options.engines?.['acp'];
+  if (engine === undefined) throw new Error('no acp engine was registered');
+  return engine;
 };
 
-/** One record, as a kind is handed it: every field read at each call. */
+/** One record, as an engine is handed it: every field read at each call. */
 const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   id,
-  kind: 'acp',
+  engine: 'acp',
   owner: 'host',
   name,
   description: undefined,
@@ -171,7 +171,7 @@ it('loads the package from its source file and serves a turn through the server 
   expect(loaded[0]?.name).toBe('agent-acp');
   expect(loaded[0]?.title).toBe('Agent ACP');
 
-  const agent = kindOf(options).open(viewOf('acp', () => ({ command: process.execPath, args: [FIXTURE] }), 'ACP'));
+  const agent = engineOf(options).open(viewOf('acp', () => ({ command: process.execPath, args: [FIXTURE] }), 'ACP'));
   const host = createHost({ ...options, agents: [...(options.agents ?? []), agent] });
   const said = peer();
   const client = host.accept(said);
@@ -231,16 +231,16 @@ it('contributes one backend per record, from one load', async () => {
   vi.stubEnv('OPENAI_API_KEY', undefined);
   const { options, loaded, problems } = await load([SPEC]);
 
-  // One entry serves the kind, and each record opened from it is a backend of
+  // One entry serves the engine, and each record opened from it is a backend of
   // its own: Copilot and Codex are two records rather than two specs of one
   // name.
   expect(problems).toEqual([]);
   expect(loaded).toHaveLength(1);
   expect(loaded.map((one) => one.name)).toEqual(['agent-acp']);
 
-  const kind = kindOf(options);
-  const copilot = kind.open(viewOf('copilot', () => ({ command: process.execPath, args: [FIXTURE] }), 'Copilot'));
-  const codex = kind.open(viewOf('codex', () => ({ command: process.execPath, args: [FIXTURE] }), 'Codex'));
+  const engine = engineOf(options);
+  const copilot = engine.open(viewOf('copilot', () => ({ command: process.execPath, args: [FIXTURE] }), 'Copilot'));
+  const codex = engine.open(viewOf('codex', () => ({ command: process.execPath, args: [FIXTURE] }), 'Codex'));
   const host = createHost({ ...options, agents: [...(options.agents ?? []), copilot, codex] });
   const p = peer();
   const client = host.accept(p);
@@ -266,12 +266,12 @@ it('refuses a record with nothing to spawn, and serves the records that open', a
 
   // `command` is the one thing this package cannot default, and a record with
   // nothing to run is refused where it opens rather than failing on a turn.
-  const kind = kindOf(options);
-  expect(() => kind.open(viewOf('nope', () => ({})))).toThrow(
+  const engine = engineOf(options);
+  expect(() => engine.open(viewOf('nope', () => ({})))).toThrow(
     'nope names no command, and an acp record names the program its sessions run',
   );
 
-  const agent = kind.open(viewOf('acp', () => ({ command: process.execPath, args: [FIXTURE] })));
+  const agent = engine.open(viewOf('acp', () => ({ command: process.execPath, args: [FIXTURE] })));
   const host = createHost({ ...options, agents: [...(options.agents ?? []), agent] });
   const client = host.accept(peer());
   const ready = await initialize(client);
@@ -281,7 +281,7 @@ it('refuses a record with nothing to spawn, and serves the records that open', a
 it('lists a spec with no options, or one naming hostTools, as ready', async () => {
   /*
    * The manifest declares no required option now: each agent is a record of the
-   * kind, so a spec with nothing to say is a load with every shipped row
+   * engine, so a spec with nothing to say is a load with every shipped row
    * available. A listing says `ready` without importing the entry, which is what
    * the throwing entry here proves.
    *

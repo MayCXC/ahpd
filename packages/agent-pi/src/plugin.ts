@@ -6,7 +6,7 @@
  * export: the loader refuses a module without a named `apply` rather than
  * guessing which export is the plugin.
  *
- * The plugin registers the kind `pi`, and each record of it is one pi agent
+ * The plugin registers the engine `pi`, and each record of it is one pi agent
  * with its own model, project trust, session directory and variables. The
  * plugin's own options are the defaults every record starts from; nothing is
  * registered as an agent here.
@@ -18,7 +18,7 @@
  */
 
 import { bag } from '@ahpd/sdk';
-import type { AgentKind, AgentView, PluginHost } from '@ahpd/sdk';
+import type { Engine, AgentView, PluginHost } from '@ahpd/sdk';
 import { piAgent } from './agent.js';
 import { PI_KEY_VARIABLES } from './machine.js';
 import { loadPi } from './pi.js';
@@ -45,7 +45,7 @@ export const defaults = {
  * The options `apply` receives, as a JSON Schema the daemon checks them against
  * before `apply` runs.
  *
- * These are the defaults for every record of the kind: a record that names one
+ * These are the defaults for every record of the engine: a record that names one
  * of them wins, and a record that names none runs on what is here.
  *
  * `provider`, `displayName` and `description` are deliberately not here: an
@@ -90,7 +90,7 @@ const NOT_A_RECORD = new Set(['provider', 'displayName', 'description', 'model']
 const RECORD_FIELDS = ['projectTrust', 'sessionDir'] as const;
 
 /**
- * The kind's form: what a record may set, and nothing a second kind spells.
+ * The engine's form: what a record may set, and nothing a second engine spells.
  *
  * Every variable pi takes a key from is declared `writeOnly`, so a client is
  * told it is a credential and never what it is. The channel vaults those by
@@ -98,7 +98,7 @@ const RECORD_FIELDS = ['projectTrust', 'sessionDir'] as const;
  * plain string and is refused to a team's or a person's record, because a free
  * environment can run a program.
  *
- * Everything is closed with `additionalProperties: false`, so a field the kind
+ * Everything is closed with `additionalProperties: false`, so a field the engine
  * does not have is refused where it is written rather than kept and ignored.
  */
 const kindSchema = (): Record<string, unknown> => ({
@@ -148,7 +148,7 @@ const optionsOfRecord = (shared: PiOptions, record: AgentView): PiOptions => {
 };
 
 /**
- * The `pi` kind: one record per pi agent, each its own backend.
+ * The `pi` engine: one record per pi agent, each its own backend.
  *
  * `open` builds the backend once and hands it a reader for the record, which
  * the session calls at the start of each turn. The record the reader sees is
@@ -160,7 +160,7 @@ const optionsOfRecord = (shared: PiOptions, record: AgentView): PiOptions => {
  * `projectTrust` is everyone's because it can only narrow: the host's own
  * answer about the folder is asked as well.
  */
-const kindOf = (shared: PiOptions, paths: readonly string[]): AgentKind => ({
+const engineOf = (shared: PiOptions, paths: readonly string[]): Engine => ({
   name: 'pi',
   title: 'pi',
   description: 'pi, embedded in this host, with one record per agent: its own model, project trust, sessions and variables.',
@@ -179,7 +179,7 @@ const kindOf = (shared: PiOptions, paths: readonly string[]): AgentKind => ({
 });
 
 /**
- * Register the kind `pi`, whose records are the agents.
+ * Register the engine `pi`, whose records are the agents.
  *
  * `provider`, `displayName` and `description` are refused rather than ignored:
  * a configuration that still names one is asking for the single backend this
@@ -200,6 +200,6 @@ export function apply(host: PluginHost, values: Record<string, unknown>): void {
   for (const [key, where] of Object.entries(perRecord)) {
     if (values[key] !== undefined) throw new Error(`options.${key} is written per record now, as ${where}`);
   }
-  host.registerAgentKind(kindOf(optionsOf(values), host.paths));
+  host.registerEngine(engineOf(optionsOf(values), host.paths));
   loadPi().catch(() => {});
 }

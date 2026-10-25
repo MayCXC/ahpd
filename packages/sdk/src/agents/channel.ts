@@ -1,13 +1,13 @@
 /**
- * `x-ahpd-agents`: the agents made from the kinds a host serves.
+ * `x-ahpd-agents`: the agents made from the engines a host serves.
  *
  * One row for each stored record, keyed by the agent's id, holding the record
  * as it is kept and a `state`: `ready`, `invalid` when its config no longer
- * fits the kind's schema or its kind refused to open it, or `unavailable` when
- * no plugin registers its kind any more. The kinds themselves are listed on
- * `x-ahpd-agent-kinds`, built in `agents/kinds.ts`.
+ * fits the engine's schema or its engine refused to open it, or `unavailable` when
+ * no plugin registers its engine any more. The engines themselves are listed on
+ * `x-ahpd-engines`, built in `agents/engines.ts`.
  *
- * Where a kind's schema marks a field `writeOnly`, or names an `env` variable
+ * Where an engine's schema marks a field `writeOnly`, or names an `env` variable
  * in `keyVariables`, the value is a secret. A put moves it to the vault under
  * `agent/<id>/<field>` in the owner's scope and keeps a
  * `{ "$secret": "<name>" }` in the record instead, so a listing, a snapshot, an
@@ -18,8 +18,8 @@
  * person's record that names one is refused.
  *
  * Three commands serve an agent. `x-ahpd/agents/put` takes
- * `{ id, kind, owner, name, description?, icon?, model?, config }`, checks
- * `config` against the kind's schema, writes the record, calls the kind's
+ * `{ id, engine, owner, name, description?, icon?, model?, config }`, checks
+ * `config` against the engine's schema, writes the record, calls the engine's
  * `open` with each secret read back, and folds the new agent list into the
  * running host. `x-ahpd/agents/remove` takes `{ id }`, ends the sessions that
  * run on it, takes its secrets out of the vault and takes the record out. Both
@@ -29,9 +29,9 @@
  * An edit keeps the agent and its sessions: the view `open` was handed is
  * updated in place, so a running session reads the new record at its next
  * turn. A record's id is unique across every owner, and it is also the agent's
- * `provider`: a kind that opens a backend under another id is refused rather
+ * `provider`: an engine that opens a backend under another id is refused rather
  * than served under a name no row has, and a put never takes an id the daemon
- * or a plugin already serves. A record of a kind no plugin registers stays on
+ * or a plugin already serves. A record of an engine no plugin registers stays on
  * disk and is served as `unavailable`: a disabled plugin keeps its agents. The
  * commands run one at a time, so two puts of one id cannot both find it free.
  */
@@ -56,7 +56,7 @@ import { recordsChannel, type RecordsChannel } from '../resources/recordschannel
 import { bag, isRecord, reason } from '../utils/values.js';
 import type { Icon } from '@microsoft/agent-host-protocol';
 import type { Agent } from '../types/agent.js';
-import type { AgentHealth, AgentOwner, AgentState, ServedAgentKind } from '../types/agents.js';
+import type { AgentHealth, AgentOwner, AgentState, ServedEngine } from '../types/agents.js';
 import type { PluginMethod } from '../types/plugin.js';
 import type { RecordCollection, StoredRecord } from '../types/records.js';
 import type { Grant, Principal } from '../types/users.js';
@@ -77,16 +77,16 @@ export interface AgentsChannelOptions {
   /** The `agents` collection: one JSON record for each agent. */
   collection: RecordCollection;
   /**
-   * The kinds the plugins registered, read at each call.
+   * The engines the plugins registered, read at each call.
    *
-   * Read through a function because the kinds are known only after the load,
+   * Read through a function because the engines are known only after the load,
    * and a channel built before it would hold none.
    */
-  kinds(): Record<string, ServedAgentKind>;
-  /** The vault a secret is written to, and read back from when a kind opens. */
+  engines(): Record<string, ServedEngine>;
+  /** The vault a secret is written to, and read back from when an engine opens. */
   vault(): Vault | undefined;
   /**
-   * Check one value against a kind's schema, throwing the first finding.
+   * Check one value against an engine's schema, throwing the first finding.
    *
    * Taken as an option rather than imported: the sdk takes no third-party
    * runtime, and the schema checker the daemon uses belongs to the server.
@@ -116,7 +116,7 @@ export interface AgentsChannelOptions {
 /** The live values one opened record is read through. */
 interface OpenView {
   id: string;
-  kind: string;
+  engine: string;
   owner: AgentOwner;
   name: string;
   description: string | undefined;
@@ -128,11 +128,11 @@ interface OpenView {
 /** One open agent: what built it, and the view a running session reads. */
 interface Opened {
   /**
-   * The kind object that built it, kept rather than its name: a plugin reload
+   * The engine object that built it, kept rather than its name: a plugin reload
    * brings a new object for the same name, and a record left on the old one
    * would keep a backend the unloaded module built.
    */
-  kind: ServedAgentKind;
+  engine: ServedEngine;
   /** The values `open` was handed, updated in place on an edit. */
   view: OpenView;
   /** The backend, which a session holds and reads at its next turn. */
@@ -150,7 +150,7 @@ export interface AgentsChannel {
    *
    * The records not open are opened, and the ones open have their views
    * refreshed from disk; the same backend object is answered for a record that
-   * is already open, because a session holds it. A record whose kind is not
+   * is already open, because a session holds it. A record whose engine is not
    * loaded, or whose secrets could not be read, is left out and said.
    */
   agents(): Promise<Agent[]>;
@@ -211,7 +211,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
    * The ids the host serves, as of the last fold.
    *
    * Absent until the first fold, so a channel that has not folded yet trusts
-   * the kind and the schema rather than calling every record invalid.
+   * the engine and the schema rather than calling every record invalid.
    */
   let served: ReadonlySet<string> | undefined;
 
@@ -220,17 +220,17 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   /** The config a stored record holds, as an object. */
   const configOf = (record: StoredRecord): Record<string, unknown> => bag(record.config);
 
-  /** The kind a stored record names, when this host serves one. */
-  const kindOf = (record: StoredRecord): ServedAgentKind | undefined => options.kinds()[String(record.kind)];
+  /** The engine a stored record names, when this host serves one. */
+  const engineOf = (record: StoredRecord): ServedEngine | undefined => options.engines()[String(record.engine)];
 
-  /** The fields a kind keeps secret: its `writeOnly` fields and its `keyVariables`. */
-  const secretFields = (kind: ServedAgentKind): string[] => {
-    const fields = new Set(writeOnly(kind.schema));
-    for (const variable of kind.keyVariables ?? []) fields.add(`env.${variable}`);
+  /** The fields an engine keeps secret: its `writeOnly` fields and its `keyVariables`. */
+  const secretFields = (engine: ServedEngine): string[] => {
+    const fields = new Set(writeOnly(engine.schema));
+    for (const variable of engine.keyVariables ?? []) fields.add(`env.${variable}`);
     return [...fields];
   };
 
-  /** Whether a stored config is still one the kind's schema describes. */
+  /** Whether a stored config is still one the engine's schema describes. */
   const fits = (config: Record<string, unknown>, schema: Record<string, unknown>): boolean => {
     try {
       options.check(heldAgainst(config, AGENT_SECRETS), schema, 'config');
@@ -242,9 +242,9 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
 
   /** The state a stored record is in now. */
   const stateOf = (record: StoredRecord): AgentState => {
-    const kind = kindOf(record);
-    if (kind === undefined) return 'unavailable';
-    if (!fits(configOf(record), kind.schema)) return 'invalid';
+    const engine = engineOf(record);
+    if (engine === undefined) return 'unavailable';
+    if (!fits(configOf(record), engine.schema)) return 'invalid';
     if (served !== undefined && !served.has(record.id)) return 'invalid';
     return 'ready';
   };
@@ -258,7 +258,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   /** The values a record is read through, before any secret is read back. */
   const blankView = (record: StoredRecord, owner: AgentOwner): OpenView => ({
     id: record.id,
-    kind: String(record.kind),
+    engine: String(record.engine),
     owner,
     name: typeof record.name === 'string' ? record.name : record.id,
     description: typeof record.description === 'string' ? record.description : undefined,
@@ -276,7 +276,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
    */
   const fill = (view: OpenView, record: StoredRecord, owner: AgentOwner, config: Record<string, unknown>): void => {
     view.id = record.id;
-    view.kind = String(record.kind);
+    view.engine = String(record.engine);
     view.owner = owner;
     view.name = typeof record.name === 'string' ? record.name : record.id;
     view.description = typeof record.description === 'string' ? record.description : undefined;
@@ -292,15 +292,15 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
    * `provider`, while a client names a record by its id, so a backend under
    * another id is refused here rather than served under an id no row has.
    */
-  const opened = async (record: StoredRecord, owner: AgentOwner, kind: ServedAgentKind): Promise<Opened> => {
+  const opened = async (record: StoredRecord, owner: AgentOwner, engine: ServedEngine): Promise<Opened> => {
     const config = await resolvedRecord(configOf(record), owner, options.vault(), AGENT_SECRETS);
     const view = blankView(record, owner);
     fill(view, record, owner, config);
-    const agent = kind.open(view);
+    const agent = engine.open(view);
     if (agent.provider !== record.id) {
-      throw new Error(`${kind.name} opened ${record.id} as ${agent.provider}, and an agent is served by the id of its record`);
+      throw new Error(`${engine.name} opened ${record.id} as ${agent.provider}, and an agent is served by the id of its record`);
     }
-    return { kind, view, agent };
+    return { engine, view, agent };
   };
 
   /** The agent records the store holds, and the owner each names. */
@@ -327,7 +327,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   const sync = async (): Promise<Agent[]> => {
     const before = new Map(open);
     const records = await stored();
-    const kinds = options.kinds();
+    const engines = options.engines();
     const agents: Agent[] = [];
     const live = new Set<string>();
     for (const record of records) {
@@ -337,16 +337,21 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
         open.delete(record.id);
         continue;
       }
-      const kind = kinds[String(record.kind)];
-      // A kind nobody registers keeps its records on disk, served as `unavailable`.
-      if (kind === undefined) {
+      if (typeof record.engine !== 'string') {
+        problem(`${record.id} names no engine, so it is unavailable`);
+        open.delete(record.id);
+        continue;
+      }
+      const engine = engines[record.engine];
+      // An engine nobody registers keeps its records on disk, served as `unavailable`.
+      if (engine === undefined) {
         open.delete(record.id);
         continue;
       }
       const entry = open.get(record.id);
-      // The kind object, not its name: a reload brings a new object, and the
+      // The engine object, not its name: a reload brings a new object, and the
       // backend the old module built would otherwise serve on.
-      if (entry !== undefined && entry.kind === kind) {
+      if (entry !== undefined && entry.engine === engine) {
         try {
           fill(entry.view, record, owner, await resolvedRecord(configOf(record), owner, options.vault(), AGENT_SECRETS));
         } catch (error) {
@@ -363,7 +368,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
         continue;
       }
       try {
-        const one = await opened(record, owner, kind);
+        const one = await opened(record, owner, engine);
         open.set(record.id, one);
         agents.push(one.agent);
         live.add(record.id);
@@ -374,10 +379,10 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     }
     for (const id of [...open.keys()]) if (!live.has(id)) open.delete(id);
     /*
-     * An agent that is gone, or whose kind changed under it, ends its sessions
+     * An agent that is gone, or whose engine changed under it, ends its sessions
      * first: the host keeps a backend that still has one open, so a session on
      * an agent this list no longer holds would run on until the daemon stops.
-     * An edit of the same kind keeps its agent, and its sessions.
+     * An edit of the same engine keeps its agent, and its sessions.
      */
     for (const [id, was] of before) {
       if (open.get(id) === was) continue;
@@ -436,7 +441,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     },
     describe: () => ({
       title: 'Agents',
-      description: 'The agents this host serves, each a record of a kind.',
+      description: 'The agents this host serves, each a record of an engine.',
     }),
     onProblem: problem,
   });
@@ -450,7 +455,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     return id;
   };
 
-  /** The agent's name, which the channel owns rather than the kind's schema. */
+  /** The agent's name, which the channel owns rather than the engine's schema. */
   const nameParam = (params: Record<string, unknown>, command: string): string => {
     const name = params.name;
     if (typeof name !== 'string' || name.trim() === '') {
@@ -485,35 +490,35 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
    * backend runs, and the host's own record is the only one whose person is the
    * daemon's.
    */
-  const refuseHostOnly = (config: Record<string, unknown>, owner: AgentOwner, kind: ServedAgentKind): void => {
+  const refuseHostOnly = (config: Record<string, unknown>, owner: AgentOwner, engine: ServedEngine): void => {
     if (owner === 'host') return;
-    for (const field of kind.hostOnly ?? []) {
+    for (const field of engine.hostOnly ?? []) {
       if (config[field] !== undefined) {
-        throw new RpcError(INVALID_PARAMS, `${field} is a host-only field of ${kind.name}, so only a host agent may set it`);
+        throw new RpcError(INVALID_PARAMS, `${field} is a host-only field of ${engine.name}, so only a host agent may set it`);
       }
     }
   };
 
   /**
-   * Refuse a team's or a person's record that sets an `env` variable the kind
+   * Refuse a team's or a person's record that sets an `env` variable the engine
    * does not name as a key.
    *
    * A free environment can run a program - `NODE_OPTIONS` is enough - so only
-   * the variables a kind lists as key fields may be set by anyone but the host.
+   * the variables an engine lists as key fields may be set by anyone but the host.
    * The key fields themselves are secrets, and the vault keeps their values.
    */
-  const refuseEnv = (config: Record<string, unknown>, owner: AgentOwner, kind: ServedAgentKind): void => {
+  const refuseEnv = (config: Record<string, unknown>, owner: AgentOwner, engine: ServedEngine): void => {
     const env = config.env;
     if (env === undefined) return;
     if (!isRecord(env)) {
       throw new RpcError(INVALID_PARAMS, `${PUT} takes env as an object of variables, or nothing`);
     }
     if (owner === 'host') return;
-    const allowed = new Set(kind.keyVariables ?? []);
+    const allowed = new Set(engine.keyVariables ?? []);
     for (const [name, value] of Object.entries(env)) {
       if (value === undefined) continue;
       if (!allowed.has(name)) {
-        throw new RpcError(INVALID_PARAMS, `${name} is not a key variable of ${kind.name}, so only a host agent may set it`);
+        throw new RpcError(INVALID_PARAMS, `${name} is not a key variable of ${engine.name}, so only a host agent may set it`);
       }
     }
   };
@@ -545,7 +550,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   /**
    * Make or change one record, once its turn comes.
    *
-   * A new record is opened before it is written: a kind that cannot make a
+   * A new record is opened before it is written: an engine that cannot make a
    * backend of it, or makes one under another id, leaves the store and the
    * vault as they were and the answer says why. An edit is left to `sync`,
    * which updates the view `open` was already handed and keeps the backend its
@@ -553,13 +558,13 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
    */
   const putOne = async (params: Record<string, unknown>, reader: Principal | undefined): Promise<unknown> => {
     const id = idParam(PUT, params);
-    const kindName = params.kind;
-    if (typeof kindName !== 'string' || kindName === '') {
-      throw new RpcError(INVALID_PARAMS, `${PUT} needs kind, the name of an agent kind`);
+    const engineName = params.engine;
+    if (typeof engineName !== 'string' || engineName === '') {
+      throw new RpcError(INVALID_PARAMS, `${PUT} needs engine, the name of an engine`);
     }
-    const kind = options.kinds()[kindName];
-    if (kind === undefined) {
-      throw new RpcError(INVALID_PARAMS, `${kindName} is not an agent kind this host serves`);
+    const engine = options.engines()[engineName];
+    if (engine === undefined) {
+      throw new RpcError(INVALID_PARAMS, `${engineName} is not an engine this host serves`);
     }
     const owner = asOwner(params.owner);
     if (owner === undefined) {
@@ -598,13 +603,13 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       const held = was === undefined ? 'a record written by hand' : `${was}'s`;
       throw new RpcError(DENIED, `${id} is ${held}, and an agent id is unique`);
     }
-    refuseHostOnly(config, owner, kind);
-    refuseEnv(config, owner, kind);
+    refuseHostOnly(config, owner, engine);
+    refuseEnv(config, owner, engine);
     // Nothing of another owner's is kept; only the same record's own secrets are.
     const kept = before !== undefined && was === owner ? configOf(before) : {};
-    const fields = secretFields(kind);
+    const fields = secretFields(engine);
     try {
-      options.check(checkedConfig(config, AGENT_SECRETS, fields, kept), kind.schema, `agent ${id}`);
+      options.check(checkedConfig(config, AGENT_SECRETS, fields, kept), engine.schema, `agent ${id}`);
     } catch (error) {
       throw new RpcError(INVALID_PARAMS, reason(error));
     }
@@ -620,7 +625,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     });
     const record: StoredRecord = {
       id,
-      kind: kindName,
+      engine: engineName,
       owner,
       name,
       ...(description === undefined ? {} : { description }),
@@ -631,7 +636,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     let built: Opened | undefined;
     if (before === undefined) {
       try {
-        built = await opened(record, owner, kind);
+        built = await opened(record, owner, engine);
       } catch (error) {
         // The record was not written, so the secrets moved for it go back out:
         // a vault entry no record names would outlive the refusal.
@@ -760,16 +765,16 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       if (before === undefined) throw new RpcError(INVALID_PARAMS, `${SCHEME} holds no ${id}`);
       const owner = asOwner(before.owner);
       if (owner !== undefined) refuseOwner('agent', 'check', owner, reader, 'put');
-      const kind = kindOf(before);
-      if (kind === undefined) {
-        throw new RpcError(INVALID_PARAMS, `${id} is a ${String(before.kind)}, and this host serves no such kind`);
+      const engine = engineOf(before);
+      if (engine === undefined) {
+        throw new RpcError(INVALID_PARAMS, `${id} is a ${String(before.engine)}, and this host serves no such engine`);
       }
       if (owner === undefined) {
         throw new RpcError(INVALID_PARAMS, `${id} names no owner, so it cannot be opened`);
       }
       let health: AgentHealth;
       try {
-        const one = await opened(before, owner, kind);
+        const one = await opened(before, owner, engine);
         const probe = one.agent.probe;
         const result = typeof probe === 'function' ? await within(probe.call(one.agent)) : 'ok';
         health = { result, at: new Date().toISOString() };

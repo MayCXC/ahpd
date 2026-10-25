@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it, vi } from 'vitest';
 import { machinePathOf } from '@ahpd/sdk';
-import type { AgentKind, AgentView, Bag, MachineNeed, OpenedTerminal, OpenTerminal, Session, SpawnOptions, Vault } from '@ahpd/sdk';
+import type { Engine, AgentView, Bag, MachineNeed, OpenedTerminal, OpenTerminal, Session, SpawnOptions, Vault } from '@ahpd/sdk';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { fileResources } from '../../sdk/src/resources/resources.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -67,7 +67,7 @@ const load = async (options: Record<string, unknown>) => {
     cwd: REPO,
     log: (line: string) => { lines.push(line); },
   });
-  const kind = served.agentKinds?.['acp'];
+  const kind = served.engines?.['acp'];
   if (kind === undefined) throw new Error('no acp kind was registered');
   return { loaded, problems, kind, lines };
 };
@@ -75,7 +75,7 @@ const load = async (options: Record<string, unknown>) => {
 /** One record, as a kind is handed it: every field read at each call. */
 const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
   id,
-  kind: 'acp',
+  engine: 'acp',
   owner: 'host',
   name,
   description: undefined,
@@ -85,7 +85,7 @@ const viewOf = (id: string, held: () => Bag, name = id): AgentView => ({
 });
 
 /** One record's needs, opened from the kind. */
-const needsOf = (kind: AgentKind, id: string, held: () => Bag = () => ({})): Record<string, MachineNeed> | undefined =>
+const needsOf = (kind: Engine, id: string, held: () => Bag = () => ({})): Record<string, MachineNeed> | undefined =>
   kind.open(viewOf(id, held)).machine?.();
 
 const CODEX_MACHINE = {

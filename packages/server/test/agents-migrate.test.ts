@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { memoryRecords } from '@ahpd/sdk';
-import type { PluginSpec, RecordCollection, ServedAgentKind, StoredRecord, Vault } from '@ahpd/sdk';
+import type { PluginSpec, RecordCollection, ServedEngine, StoredRecord, Vault } from '@ahpd/sdk';
 import { applyPresets, planPresets } from '../src/agents/migrate.js';
 
 /*
@@ -14,7 +14,7 @@ import { applyPresets, planPresets } from '../src/agents/migrate.js';
  * that turns each of them into a record owned by the host - the owner the
  * plugins registered them for - and takes them out of the file, with a copy of
  * the file beside it first. The cases here are the whole of that: six presets
- * of four kinds becoming six records of the same ids, a second start that finds
+ * of four engines becoming six records of the same ids, a second start that finds
  * nothing to move, a record that cannot be written leaving the file alone, and
  * the ids that cannot become a record at all being said rather than kept.
  *
@@ -74,11 +74,11 @@ const PLUGINS: PluginSpec[] = [
   },
 ];
 
-/** One kind as a plugin registers it, with only the fields the migration reads. */
-const kindOf = (name: string, schema: Record<string, unknown>, keyVariables?: string[]): ServedAgentKind => ({
+/** One engine as a plugin registers it, with only the fields the migration reads. */
+const engineOf = (name: string, schema: Record<string, unknown>, keyVariables?: string[]): ServedEngine => ({
   name,
   title: name,
-  description: `the ${name} kind`,
+  description: `the ${name} engine`,
   schema,
   ...(keyVariables === undefined ? {} : { keyVariables }),
   by: 'test',
@@ -86,14 +86,14 @@ const kindOf = (name: string, schema: Record<string, unknown>, keyVariables?: st
 });
 
 /**
- * The four kinds, with the secret fields the channel's own put reads: an ACP
+ * The four engines, with the secret fields the channel's own put reads: an ACP
  * key and a claude token are `keyVariables`, and a cofold key is `writeOnly`.
  */
-const KINDS: Record<string, ServedAgentKind> = {
-  claude: kindOf('claude', { properties: { models: {}, env: {} } }, ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN']),
-  acp: kindOf('acp', { properties: { command: {}, env: {} } }, ['CODEX_API_KEY', 'COPILOT_GITHUB_TOKEN', 'GEMINI_API_KEY']),
-  cofold: kindOf('cofold', { properties: { apiKey: { type: 'string', writeOnly: true }, baseUrl: {} } }),
-  pi: kindOf('pi', { properties: { env: {} } }, ['DEEPSEEK_API_KEY']),
+const KINDS: Record<string, ServedEngine> = {
+  claude: engineOf('claude', { properties: { models: {}, env: {} } }, ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN']),
+  acp: engineOf('acp', { properties: { command: {}, env: {} } }, ['CODEX_API_KEY', 'COPILOT_GITHUB_TOKEN', 'GEMINI_API_KEY']),
+  cofold: engineOf('cofold', { properties: { apiKey: { type: 'string', writeOnly: true }, baseUrl: {} } }),
+  pi: engineOf('pi', { properties: { env: {} } }, ['DEEPSEEK_API_KEY']),
 };
 
 let dir: string;
@@ -129,7 +129,7 @@ const vault = (): Vault => ({
 
 /**
  * One start's migration: the plan the daemon makes before the plugins load,
- * then the write step once the kinds are known.
+ * then the write step once the engines are known.
  */
 const migrate = async (
   plugins: PluginSpec[],
@@ -139,7 +139,7 @@ const migrate = async (
 ) => {
   const say = (line: string): void => { said.push(line); };
   const plan = planPresets({ plugins, configFile, recordsDir, log: say });
-  const applied = await applyPresets({ plan, records: store, recordsDir, kinds: KINDS, vault: keyring, log: say, now: () => WHEN });
+  const applied = await applyPresets({ plan, records: store, recordsDir, engines: KINDS, vault: keyring, log: say, now: () => WHEN });
   return { plugins: plan.plugins, written: applied.written };
 };
 
@@ -178,7 +178,7 @@ it('moves every preset to a host record of the same id, and takes them out of th
   // Every record is the host's, which is who owned the agents a preset
   // registered: a record with no readable owner is served to nobody.
   expect([...all.values()].map((one) => one['owner'])).toEqual(Array.from({ length: 6 }, () => 'host'));
-  expect([...all.values()].map((one) => one['kind']).sort()).toEqual([
+  expect([...all.values()].map((one) => one['engine']).sort()).toEqual([
     'acp', 'acp', 'claude', 'claude', 'cofold', 'pi',
   ]);
 
@@ -187,7 +187,7 @@ it('moves every preset to a host record of the same id, and takes them out of th
   // name it was written as.
   expect(all.get('claude')).toMatchObject({
     id: 'claude',
-    kind: 'claude',
+    engine: 'claude',
     owner: 'host',
     name: 'Claude Code',
     config: { models: [{ id: 'opus', name: 'Opus' }] },
@@ -208,20 +208,20 @@ it('moves every preset to a host record of the same id, and takes them out of th
   // is how a record names a row it is not named after. Its key was written in
   // plaintext, so it is in the vault and the record holds a reference.
   expect(all.get('codex')).toMatchObject({
-    kind: 'acp',
+    engine: 'acp',
     name: 'Codex',
     config: { env: { CODEX_API_KEY: { $secret: 'host:agent/codex/env.CODEX_API_KEY' } } },
   });
   expect(secrets.get('host:agent/codex/env.CODEX_API_KEY')).toBe(KEY);
   expect(all.get('work')).toMatchObject({
-    kind: 'acp',
+    engine: 'acp',
     name: 'Copilot work',
     config: { base: 'copilot', command: 'copilot', env: { COPILOT_HOME: '/tmp/copilot' } },
   });
   // cofold and pi wrote one agent as their own options; its id is the record's
   // and every other option stays the plugin's default.
-  expect(all.get('cofold-build')).toMatchObject({ kind: 'cofold', name: 'cofold build', config: {} });
-  expect(all.get('pi-local')).toMatchObject({ kind: 'pi', name: 'pi local', config: {} });
+  expect(all.get('cofold-build')).toMatchObject({ engine: 'cofold', name: 'cofold build', config: {} });
+  expect(all.get('pi-local')).toMatchObject({ engine: 'pi', name: 'pi local', config: {} });
 
   // The file lost what the records hold, and kept what is the plugin's own.
   expect(entries()).toEqual([
@@ -340,7 +340,7 @@ it('writes the record a fresh install has no file for', async () => {
 
   expect(moved.written).toEqual(['claude']);
   expect(await held()).toMatchObject(new Map([['claude', {
-    id: 'claude', kind: 'claude', owner: 'host', name: 'Claude Code', config: {},
+    id: 'claude', engine: 'claude', owner: 'host', name: 'Claude Code', config: {},
   }]]));
   expect(existsSync(configFile)).toBe(false);
   expect(said).toEqual(['Moved 1 preset to agent records owned by the host: claude.']);

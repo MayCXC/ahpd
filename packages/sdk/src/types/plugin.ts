@@ -15,7 +15,7 @@
 import type { AutomationTriggerDefinition, ChatOrigin, ChatSummary, Icon } from '@microsoft/agent-host-protocol';
 
 import type { Agent } from './agent.js';
-import type { AgentKind, AgentOwner, ServedAgentKind } from './agents.js';
+import type { Engine, AgentOwner, ServedEngine } from './agents.js';
 import type { StartSession } from './automations.js';
 import type { SessionConfigAnswerer } from './completions.js';
 import type { Adapter, ConnectorOwner, ServedAdapter } from './connectors.js';
@@ -1176,15 +1176,15 @@ export interface PluginHost extends PluginContext {
    */
   registerAdapter(adapter: Adapter): void;
   /**
-   * Offer one kind of agent a person can make agents from.
+   * Offer one engine a person can make agents from.
    *
-   * The name is a slug and is what a stored record carries, so a kind is
+   * The name is a slug and is what a stored record carries, so an engine is
    * registered once: a name this plugin already used is refused here, and one
    * another plugin took is reported by the fold. The schema is the form a
    * client draws for a record's own fields, and `open` builds a backend each
-   * time a record of the kind is made or the daemon starts with one stored.
+   * time a record of the engine is made or the daemon starts with one stored.
    */
-  registerAgentKind(kind: AgentKind): void;
+  registerEngine(engine: Engine): void;
   /**
    * Subscribe to one of the host's own moments.
    *
@@ -1208,7 +1208,7 @@ export interface PluginLink {
  * The registrations a plugin declares, by kind.
  *
  * A key is the plural of the register method of that kind - `agents`, `tools`,
- * `channels`, `methods`, `routes`, `triggerTypes`, `adapters`, `agentKinds` -
+ * `channels`, `methods`, `routes`, `triggerTypes`, `adapters`, `engines` -
  * and its entries are the names the method may be called with. `ports` holds
  * the singleton ports a plugin sets, such as `vault`. A registration its
  * contracts do not list is refused.
@@ -1369,13 +1369,13 @@ export interface Contribution {
    */
   adapters: Record<string, ServedAdapter>;
   /**
-   * The agent kinds this plugin offers, keyed by name.
+   * The engines this plugin offers, keyed by name.
    *
    * Each entry carries the plugin that registered it, as an adapter does, so
    * the fold can report a name two plugins both took. Absent when the plugin
    * registered none.
    */
-  agentKinds?: Record<string, ServedAgentKind>;
+  engines?: Record<string, ServedEngine>;
   /** The commands this plugin serves, keyed by name. */
   methods: Record<string, ServedMethod>;
   /**

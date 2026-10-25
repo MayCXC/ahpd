@@ -2,31 +2,32 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { agentKindsChannel } from '../src/agents/kinds.js';
+import { enginesChannel } from '../src/agents/engines.js';
 import { createHost } from '../src/host.js';
 import { fileUsers } from '../src/access/users.js';
 import { fileResources } from '../src/resources/resources.js';
 import { servedRecords } from '../src/resources/recordschannel.js';
 import { echo } from '../../../examples/echo/agent.js';
-import type { ServedAgentKind } from '../src/types/agents.js';
+import type { Icon } from '@microsoft/agent-host-protocol';
+import type { ServedEngine } from '../src/types/agents.js';
 import type { Users } from '../src/types/users.js';
 
 /*
- * The agent kinds channel over a fold that holds two kinds.
+ * The engines channel over a fold that holds two engines.
  *
  * The channel is read-only and needs `agent:list`; it lists what the plugins
- * registered before any record exists, keyed by the kind's name.
+ * registered before any record exists, keyed by the engine's name.
  */
 
-const URI = 'x-ahpd-agent-kinds://';
+const URI = 'x-ahpd-engines://';
 const ROOT = 'ahp-root://';
 
 type Bag = Record<string, any>;
 
-/** A kind's backend is never built here: the channel sends the kind and no agent. */
-const unopened = (() => { throw new Error('the kinds channel does not open a kind'); }) as unknown as ServedAgentKind['open'];
+/** An engine's backend is never built here: the channel sends the engine and no agent. */
+const unopened = (() => { throw new Error('the engines channel does not open an engine'); }) as unknown as ServedEngine['open'];
 
-const CLAUDE: ServedAgentKind = {
+const CLAUDE: ServedEngine = {
   name: 'claude',
   title: 'Claude',
   description: 'An agent on Claude Code.',
@@ -47,7 +48,7 @@ const CLAUDE: ServedAgentKind = {
   open: unopened,
 };
 
-const PI: ServedAgentKind = {
+const PI: ServedEngine = {
   name: 'pi',
   title: 'Pi',
   description: 'An agent on pi.',
@@ -59,7 +60,7 @@ const PI: ServedAgentKind = {
 let home: string;
 let usersFile: string;
 beforeEach(() => {
-  home = mkdtempSync(join(tmpdir(), 'ahpd-agent-kinds-'));
+  home = mkdtempSync(join(tmpdir(), 'ahpd-engines-'));
   usersFile = join(home, 'users.json');
   writeFileSync(usersFile, JSON.stringify({
     roles: {
@@ -77,10 +78,13 @@ afterEach(() => { rmSync(home, { recursive: true, force: true }); });
 
 type Host = ReturnType<typeof createHost>;
 
-/** A host serving the agent kinds channel over two kinds, and no record. */
-async function served() {
-  const kinds: Record<string, ServedAgentKind> = { claude: CLAUDE, pi: PI };
-  const lists = agentKindsChannel({ kinds: () => kinds });
+/** A host serving the engines channel over two engines, and no record. */
+async function served(pluginIcons?: Record<string, Icon[]>) {
+  const engines: Record<string, ServedEngine> = { claude: CLAUDE, pi: PI };
+  const lists = enginesChannel({
+    engines: () => engines,
+    ...(pluginIcons === undefined ? {} : { pluginIcons: (name: string) => pluginIcons[name] }),
+  });
   const wire = servedRecords('ahpd', [lists.channel], {});
   const users = fileUsers({ path: usersFile });
   const host = createHost({
@@ -91,7 +95,7 @@ async function served() {
     methods: wire.methods,
     users,
   });
-  return { host, users, kinds, close: async () => { await host.close(); } };
+  return { host, users, engines, close: async () => { await host.close(); } };
 }
 
 /** A client signed in as `id`. */
@@ -108,7 +112,7 @@ const as = async (host: Host, users: Users, id: string) => {
     (result) => ({ result: result as Bag }),
     (error: { code: number; message: string }) => ({ code: error.code, message: error.message }),
   );
-  /** Every row a subscribe to the kinds channel answered, by id. */
+  /** Every row a subscribe to the engines channel answered, by id. */
   const rows = async (): Promise<Record<string, Bag>> => {
     const answer = await call('subscribe', { channel: URI }) as Bag;
     if (answer['result'] === undefined) throw new Error(`subscribe refused: ${JSON.stringify(answer)}`);
@@ -118,7 +122,7 @@ const as = async (host: Host, users: Users, id: string) => {
   return { call, rows, close: () => { client.close(); } };
 };
 
-it('lists every kind by name with agent:list, before any record exists', async () => {
+it('lists every engine by name with agent:list, before any record exists', async () => {
   const { host, users, close } = await served();
   const ana = await as(host, users, 'ana');
 
@@ -138,7 +142,7 @@ it('lists every kind by name with agent:list, before any record exists', async (
   await close();
 });
 
-it('sends a kind its templates and icons, and leaves the lists out where it has none', async () => {
+it('sends an engine its templates and icons, and leaves the lists out where it has none', async () => {
   const { host, users, close } = await served();
   const ana = await as(host, users, 'ana');
 
@@ -152,11 +156,30 @@ it('sends a kind its templates and icons, and leaves the lists out where it has 
       config: { mode: 'default' },
     },
   ]);
-  // A kind with none of the lists carries no key rather than an empty one.
+  // An engine with none of the lists carries no key rather than an empty one.
   expect(rows['pi']).not.toHaveProperty('icons');
   expect(rows['pi']).not.toHaveProperty('templates');
   expect(rows['pi']).not.toHaveProperty('hostOnly');
   expect(rows['pi']).not.toHaveProperty('keyVariables');
+  await close();
+});
+
+it('sends the plugin icons for an engine with none, and the engine icons over them', async () => {
+  const plugin: Icon[] = [{ src: 'data:image/svg+xml;base64,PHN2Zy8+', contentType: 'image/svg+xml' }];
+  const { host, users, close } = await served({ 'agent-pi': plugin, 'agent-claude': plugin });
+  const ana = await as(host, users, 'ana');
+
+  const rows = await ana.rows();
+  expect(rows['pi']?.['icons']).toEqual(plugin);
+  expect(rows['claude']?.['icons']).toEqual(CLAUDE.icons);
+  await close();
+});
+
+it('sends no icons for an engine with none from a plugin with none', async () => {
+  const { host, users, close } = await served({});
+  const ana = await as(host, users, 'ana');
+
+  expect((await ana.rows())['pi']).not.toHaveProperty('icons');
   await close();
 });
 

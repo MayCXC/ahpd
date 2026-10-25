@@ -12,7 +12,7 @@
  */
 
 import type { ModelEntry } from './models.js';
-import type { AgentKind, Plugin, PluginHost } from '@ahpd/sdk';
+import type { Engine, Plugin, PluginHost } from '@ahpd/sdk';
 import { claude } from './claude.js';
 import type { ClaudeOptions } from './claude.js';
 import { sharedCatalogue as oneListing } from './catalog.js';
@@ -34,9 +34,9 @@ export const title = 'Agent Claude';
  * The options `apply` receives, as a JSON Schema the daemon checks them against
  * before `apply` runs.
  *
- * These are the plugin's own answers for every record of the kind. What one
+ * These are the plugin's own answers for every record of the engine. What one
  * agent runs on - its directories, models and options - is the record's, and
- * the kind's schema is where that is written.
+ * the engine's schema is where that is written.
  */
 export const optionsSchema = {
   type: 'object',
@@ -75,7 +75,7 @@ export const optionsSchema = {
  * host names its own.
  *
  * These are the plugin's own options rather than any one agent's, and a record
- * takes them as they are: what a record may override is what the kind's schema
+ * takes them as they are: what a record may override is what the engine's schema
  * declares, and none of these is in it.
  */
 const defaultsOf = (host: PluginHost, values: Record<string, unknown>) => {
@@ -98,7 +98,7 @@ const defaultsOf = (host: PluginHost, values: Record<string, unknown>) => {
 };
 
 /**
- * The `claude` kind: the form a record of it fills in, and the backend each
+ * The `claude` engine: the form a record of it fills in, and the backend each
  * record opens.
  *
  * The template is the built-in agent with nothing set, which is what a new
@@ -111,7 +111,7 @@ const defaultsOf = (host: PluginHost, values: Record<string, unknown>) => {
 /** The plugin's own options, as every agent of one load is built with them. */
 type Shared = ReturnType<typeof defaultsOf>['shared'];
 
-const kindOf = (paths: string[], shared: Shared): AgentKind => ({
+const engineOf = (paths: string[], shared: Shared): Engine => ({
   name: 'claude',
   title: 'Claude Code',
   description: 'Claude Code, with one record per agent: its own directories, models and options.',
@@ -135,12 +135,12 @@ const kindOf = (paths: string[], shared: Shared): AgentKind => ({
 });
 
 /**
- * Register the `claude` kind.
+ * Register the `claude` engine.
  *
  * The agents are records of it: one load serves every Claude Code variant, and
  * each record says which one it runs.
  */
 export const apply: Plugin['apply'] = (host, options) => {
   const { paths, shared } = defaultsOf(host, options);
-  host.registerAgentKind(kindOf(paths, shared));
+  host.registerEngine(engineOf(paths, shared));
 };

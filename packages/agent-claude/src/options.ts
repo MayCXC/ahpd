@@ -218,7 +218,7 @@ const OF_A_VARIANT: Record<string, Bag> = {
 };
 
 /**
- * The form a client draws for a record of this kind.
+ * The form a client draws for a record of this engine.
  *
  * The fields a record's `config` may hold, without `name`, `description`, `icon`
  * and `model`: the agents channel owns those four on every agent, so a

@@ -4,13 +4,13 @@
  * Before an agent was a record, a plugin registered one agent for every preset
  * its options named: `presets` for `claude` and `acp`, a `provider` beside
  * `displayName` for `cofold` and `pi`. A record is now the one thing the agents
- * channel serves, and a plugin registers a kind and no agent at all, so the
+ * channel serves, and a plugin registers an engine and no agent at all, so the
  * presets a file still holds would otherwise be dropped without a word.
  *
  * This runs at the start, in two steps around the plugin load. The plan reads
  * the configuration file's own entries, and never the merged options a flag
  * builds for this run, so a `--plugin-option` is not made permanent. The write
- * step runs once the kinds have loaded, because a kind's schema is what says
+ * step runs once the engines have loaded, because an engine's schema is what says
  * which fields of a record are secrets: each plaintext key is moved to the
  * vault under the record's own name, as a put of the agents channel does, and
  * the record keeps `{ "$secret": "<name>" }` in its place.
@@ -33,49 +33,49 @@
 import { copyFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { bag, isRecord, isRecordSlug, knownAgents, reason, RECORD_SLUG } from '@ahpd/sdk';
-import type { PluginSpec, RecordCollection, ServedAgentKind, StoredRecord, Vault } from '@ahpd/sdk';
+import type { PluginSpec, RecordCollection, ServedEngine, StoredRecord, Vault } from '@ahpd/sdk';
 import { nameOf } from '../plugins.js';
 import { readEntry, writeEntry } from '../install.js';
 
-/** The agent kinds whose presets this moves, and the package each ships as. */
-const PRESET_KINDS = [
+/** The engines whose presets this moves, and the package each ships as. */
+const PRESET_ENGINES = [
   ['claude', 'agent-claude'],
   ['acp', 'agent-acp'],
   ['cofold', 'agent-cofold'],
   ['pi', 'agent-pi'],
 ] as const;
 
-/** One of the kinds whose presets this moves. */
-type PresetKind = (typeof PRESET_KINDS)[number][0];
+/** One of the engines whose presets this moves. */
+type PresetEngine = (typeof PRESET_ENGINES)[number][0];
 
 /**
- * What a spec of each kind carries per agent, and a record carries instead.
+ * What a spec of each engine carries per agent, and a record carries instead.
  *
  * `claude` and `acp` name all of them under `presets`; the other two wrote one
  * agent's identity as options of their own.
  */
-const PER_AGENT: Record<PresetKind, readonly string[]> = {
+const PER_AGENT: Record<PresetEngine, readonly string[]> = {
   claude: ['presets'],
   acp: ['presets'],
   cofold: ['provider', 'displayName', 'description'],
   pi: ['provider', 'displayName', 'description'],
 };
 
-/** The package matching one kind, as the segment a spec names it by. */
-const PACKAGE_OF: Record<PresetKind, RegExp> = Object.fromEntries(PRESET_KINDS.map(([kind, pkg]) => [
-  kind,
+/** The package matching one engine, as the segment a spec names it by. */
+const PACKAGE_OF: Record<PresetEngine, RegExp> = Object.fromEntries(PRESET_ENGINES.map(([engine, pkg]) => [
+  engine,
   // A package may be scoped and a spec may be a path or a URL, so the package
   // is a segment of what was written: `@ahpd/agent-acp` and
   // `.../agent-acp/index.ts` are `acp`, and `agent-acp-extra` is neither.
   new RegExp(`(^|[/\\\\])${pkg}([/\\\\]|$)`),
-])) as Record<PresetKind, RegExp>;
+])) as Record<PresetEngine, RegExp>;
 
-/** The kind a name of a plugin points at, or nothing when it names none of them. */
-const kindOfName = (name: string): PresetKind | undefined =>
-  (Object.keys(PACKAGE_OF) as PresetKind[]).find((kind) => PACKAGE_OF[kind].test(name));
+/** The engine a name of a plugin points at, or nothing when it names none of them. */
+const engineOfName = (name: string): PresetEngine | undefined =>
+  (Object.keys(PACKAGE_OF) as PresetEngine[]).find((engine) => PACKAGE_OF[engine].test(name));
 
-/** The kind a spec points at. */
-const kindOfSpec = (spec: PluginSpec): PresetKind | undefined => kindOfName(nameOf(spec));
+/** The engine a spec points at. */
+const engineOfSpec = (spec: PluginSpec): PresetEngine | undefined => engineOfName(nameOf(spec));
 
 /** A non-blank string, or nothing for a blank or missing one. */
 const text = (value: unknown): string | undefined =>
@@ -97,7 +97,7 @@ const copied = <T>(value: T): T => {
 
 /** One agent a preset described, as the record it becomes. */
 interface Planned {
-  kind: PresetKind;
+  engine: PresetEngine;
   id: string;
   name: string;
   config: Record<string, unknown>;
@@ -127,23 +127,23 @@ interface Described {
  * first migration a file with none is found in. A `presets.claude: false` is
  * always taken as written, so a person who turned it off is answered.
  */
-const plansOf = (spec: PluginSpec, kind: PresetKind, builtin: boolean): Described[] => {
+const plansOf = (spec: PluginSpec, engine: PresetEngine, builtin: boolean): Described[] => {
   const values = specOptions(spec);
-  if (kind === 'claude') {
+  if (engine === 'claude') {
     const presets = bag(values['presets']);
     const described: Described[] = [];
     if (presets['claude'] !== false && (presets['claude'] !== undefined || builtin)) {
       const given = bag(presets['claude']);
-      described.push({ key: 'claude', plan: { kind, id: 'claude', name: text(given['name']) ?? 'Claude Code', config: without(given, ['name']) } });
+      described.push({ key: 'claude', plan: { engine, id: 'claude', name: text(given['name']) ?? 'Claude Code', config: without(given, ['name']) } });
     }
     for (const [id, one] of Object.entries(presets)) {
       if (id === 'claude' || one === false) continue;
       const given = bag(one);
-      described.push({ key: id, plan: { kind, id, name: text(given['name']) ?? id, config: without(given, ['name']) } });
+      described.push({ key: id, plan: { engine, id, name: text(given['name']) ?? id, config: without(given, ['name']) } });
     }
     return described;
   }
-  if (kind === 'acp') {
+  if (engine === 'acp') {
     const presets = bag(values['presets']);
     const described: Described[] = [];
     for (const [id, one] of Object.entries(presets)) {
@@ -158,7 +158,7 @@ const plansOf = (spec: PluginSpec, kind: PresetKind, builtin: boolean): Describe
       described.push({
         key: id,
         plan: {
-          kind,
+          engine,
           id,
           name: text(given['name']) ?? known?.name ?? id,
           config: without(given, ['name', 'description', 'model']),
@@ -177,7 +177,7 @@ const plansOf = (spec: PluginSpec, kind: PresetKind, builtin: boolean): Describe
   const description = text(values['description']);
   return [{
     plan: {
-      kind,
+      engine,
       id: provider,
       name: text(values['displayName']) ?? provider,
       config: {},
@@ -189,7 +189,7 @@ const plansOf = (spec: PluginSpec, kind: PresetKind, builtin: boolean): Describe
 /** One planned agent as the record the channel keeps. */
 const recordOf = (plan: Planned): StoredRecord => ({
   id: plan.id,
-  kind: plan.kind,
+  engine: plan.engine,
   // The host owned the agents a preset registered, and it owns the records they
   // become: a record with no owner is one nobody is served.
   owner: 'host',
@@ -206,14 +206,14 @@ const recordOf = (plan: Planned): StoredRecord => ({
  * a second copy. An entry left with no options at all loses the key, which is
  * how a person would have written it.
  */
-const cleanSpec = (spec: PluginSpec, kind: PresetKind): PluginSpec => {
+const cleanSpec = (spec: PluginSpec, engine: PresetEngine): PluginSpec => {
   if (typeof spec === 'string') return spec;
   // A switched-off entry is one this run does not load, so its presets were not
   // written either and are the only copy of its agents.
   if (spec.enabled === false) return spec;
   if (spec.options === undefined) return spec;
   const held = bag(spec.options);
-  const keys = PER_AGENT[kind];
+  const keys = PER_AGENT[engine];
   if (!keys.some((key) => held[key] !== undefined)) return spec;
   const kept = without(held, keys);
   const { options: _options, ...rest } = spec;
@@ -224,7 +224,7 @@ const cleanSpec = (spec: PluginSpec, kind: PresetKind): PluginSpec => {
 interface EntryPlan {
   /** The entry's place in the file's `plugins`. */
   index: number;
-  kind: PresetKind;
+  engine: PresetEngine;
   /** The agents it described, in the order they are written. */
   agents: Described[];
 }
@@ -253,7 +253,7 @@ const stripped = (
     if (!isRecord(options)) return one;
     const kept = { ...options };
     let took = false;
-    if (plan.kind === 'claude' || plan.kind === 'acp') {
+    if (plan.engine === 'claude' || plan.engine === 'acp') {
       const presets = kept['presets'];
       if (isRecord(presets)) {
         const rest = { ...presets };
@@ -268,7 +268,7 @@ const stripped = (
         }
       }
     } else if (plan.agents.some(({ plan: agent }) => records.has(agent.id))) {
-      for (const key of PER_AGENT[plan.kind]) {
+      for (const key of PER_AGENT[plan.engine]) {
         if (!(key in kept)) continue;
         delete kept[key];
         took = true;
@@ -361,22 +361,22 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
   const migrated = existsSync(markerOf(options.recordsDir));
   const entries: EntryPlan[] = [];
   const loose: Planned[] = [];
-  const named = new Map<string, PresetKind>();
+  const named = new Map<string, PresetEngine>();
   let marker = false;
 
-  const take = (kind: PresetKind, described: Described[], entry?: EntryPlan): void => {
+  const take = (engine: PresetEngine, described: Described[], entry?: EntryPlan): void => {
     for (const one of described) {
       const { plan } = one;
       if (!isRecordSlug(plan.id)) {
-        options.log(`The ${kind} preset ${plan.id} did not become a record: its id is not a slug: ${RECORD_SLUG}`);
+        options.log(`The ${engine} preset ${plan.id} did not become a record: its id is not a slug: ${RECORD_SLUG}`);
         continue;
       }
       const other = named.get(plan.id);
       if (other !== undefined) {
-        options.log(`The ${kind} preset ${plan.id} did not become a record: ${other} already names an agent of that id.`);
+        options.log(`The ${engine} preset ${plan.id} did not become a record: ${other} already names an agent of that id.`);
         continue;
       }
-      named.set(plan.id, kind);
+      named.set(plan.id, engine);
       if (entry === undefined) loose.push(plan);
       else entry.agents.push(one);
     }
@@ -385,12 +385,12 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
   /** The built-in claude one spec would have registered, unless it turned it off. */
   const builtinOf = (spec: PluginSpec): Described | undefined => {
     if (bag(specOptions(spec)['presets'])['claude'] === false) return undefined;
-    return { key: 'claude', plan: { kind: 'claude', id: 'claude', name: 'Claude Code', config: {} } };
+    return { key: 'claude', plan: { engine: 'claude', id: 'claude', name: 'Claude Code', config: {} } };
   };
 
   /** The run's specs that load a claude, whatever the file holds. */
   const claudeSpecs = (): PluginSpec[] => options.plugins
-    .filter((spec) => (typeof spec === 'string' || spec.enabled !== false) && kindOfSpec(spec) === 'claude');
+    .filter((spec) => (typeof spec === 'string' || spec.enabled !== false) && engineOfSpec(spec) === 'claude');
 
   const paired = new Set<number>();
   if (held !== undefined) {
@@ -400,10 +400,10 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
       if (!isRecord(raw) || raw['enabled'] === false) return;
       const name = raw['name'];
       if (typeof name !== 'string') return;
-      const kind = kindOfName(name);
-      if (kind === undefined) return;
+      const engine = engineOfName(name);
+      if (engine === undefined) return;
       // The spec this run loads that entry as. A flag naming another spec of the
-      // same kind never equals this name, so that entry is left alone.
+      // same engine never equals this name, so that entry is left alone.
       const at = options.plugins.findIndex((spec, position) => !paired.has(position)
         && (typeof spec === 'string' || spec.enabled !== false)
         && nameOf(spec) === name);
@@ -412,13 +412,13 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
       const values = bag(raw['options']);
       // The built-in claude is planned while the entry still holds a `presets`
       // key; a file entry with none is given it only on the first migration.
-      const builtin = kind === 'claude' && (values['presets'] !== undefined || !migrated);
-      const entry: EntryPlan = { index, kind, agents: [] };
-      take(kind, plansOf(raw as unknown as PluginSpec, kind, builtin), entry);
+      const builtin = engine === 'claude' && (values['presets'] !== undefined || !migrated);
+      const entry: EntryPlan = { index, engine, agents: [] };
+      take(engine, plansOf(raw as unknown as PluginSpec, engine, builtin), entry);
       // The marker is for a claude question that this pass settled: the entry
       // holds presets now, or this is the first migration and it is being given
       // its built-in agent.
-      if (kind === 'claude' && (values['presets'] !== undefined || !migrated)) marker = true;
+      if (engine === 'claude' && (values['presets'] !== undefined || !migrated)) marker = true;
       if (entry.agents.length > 0) entries.push(entry);
     });
     // A claude spec the file holds no entry for - a `--plugin` this run named -
@@ -428,7 +428,7 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
     if (!migrated) {
       for (const [at, spec] of options.plugins.entries()) {
         if (paired.has(at)) continue;
-        if (kindOfSpec(spec) !== 'claude') continue;
+        if (engineOfSpec(spec) !== 'claude') continue;
         const one = builtinOf(spec);
         if (one === undefined) continue;
         marker = true;
@@ -441,10 +441,10 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
     // those agents and they become the records the next start reads.
     for (const spec of options.plugins) {
       if (typeof spec !== 'string' && spec.enabled === false) continue;
-      const kind = kindOfSpec(spec);
-      if (kind === undefined) continue;
-      if (kind === 'claude') marker = true;
-      take(kind, plansOf(spec, kind, kind === 'claude' && !migrated));
+      const engine = engineOfSpec(spec);
+      if (engine === undefined) continue;
+      if (engine === 'claude') marker = true;
+      take(engine, plansOf(spec, engine, engine === 'claude' && !migrated));
     }
   } else if (!migrated) {
     // No configuration file at all: there is nothing to take the presets out
@@ -458,23 +458,23 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
   }
 
   const cleaned = options.plugins.map((spec, at) => {
-    const kind = held !== undefined && !paired.has(at) ? undefined : kindOfSpec(spec);
-    return kind === undefined ? spec : cleanSpec(spec, kind);
+    const engine = held !== undefined && !paired.has(at) ? undefined : engineOfSpec(spec);
+    return engine === undefined ? spec : cleanSpec(spec, engine);
   });
   return { plugins: cleaned, configFile: options.configFile, ...(held === undefined ? {} : { held }), entries, loose, unreadable, marker };
 };
 
 /**
- * The fields a kind keeps secret: its `writeOnly` fields and its `keyVariables`.
+ * The fields an engine keeps secret: its `writeOnly` fields and its `keyVariables`.
  *
  * The same set the agents channel moves on a put, so a record this writes keeps
  * no value a listing would serve.
  */
-const secretFieldsOf = (kind: ServedAgentKind): string[] => {
-  const fields = new Set(Object.entries(bag(kind.schema['properties']))
+const secretFieldsOf = (engine: ServedEngine): string[] => {
+  const fields = new Set(Object.entries(bag(engine.schema['properties']))
     .filter(([, one]) => isRecord(one) && one['writeOnly'] === true)
     .map(([field]) => field));
-  for (const variable of kind.keyVariables ?? []) fields.add(`env.${variable}`);
+  for (const variable of engine.keyVariables ?? []) fields.add(`env.${variable}`);
   return [...fields];
 };
 
@@ -514,12 +514,12 @@ const putAt = (config: Record<string, unknown>, path: readonly string[], value: 
  */
 const withSecretsMoved = async (
   config: Record<string, unknown>,
-  kind: ServedAgentKind,
+  engine: ServedEngine,
   id: string,
   vault: Vault | undefined,
 ): Promise<Record<string, unknown>> => {
   const out = copied(config);
-  for (const field of secretFieldsOf(kind)) {
+  for (const field of secretFieldsOf(engine)) {
     const path = field.split('.');
     const value = readAt(out, path);
     // An absent field, an empty one and every value that is not a string is
@@ -542,8 +542,8 @@ export interface ApplyOptions {
   records: RecordCollection;
   /** The folder the agent records are kept in, where the marker that they were made once lives. */
   recordsDir: string;
-  /** The kinds this run loaded, by name, which is what says where a key goes. */
-  kinds: Readonly<Record<string, ServedAgentKind>>;
+  /** The engines this run loaded, by name, which is what says where a key goes. */
+  engines: Readonly<Record<string, ServedEngine>>;
   /** Where a secret is kept; a host with none writes no record that holds one. */
   vault: Vault | undefined;
   /** One line per thing done, naming record ids and no value. */
@@ -605,18 +605,18 @@ export const applyPresets = async (options: ApplyOptions): Promise<Applied> => {
       accounted.add(agent.id);
       continue;
     }
-    const kind = options.kinds[agent.kind];
-    if (kind === undefined) {
-      // The kind did not load, so what its schema says is a secret is unknown
+    const engine = options.engines[agent.engine];
+    if (engine === undefined) {
+      // The engine did not load, so what its schema says is a secret is unknown
       // and no plugin serves the record: it stays in the file to try again, and
       // the pass is not one that can say the presets were moved.
       complete = false;
-      options.log(`${agent.id} did not become a record: the kind ${agent.kind} did not load.`);
+      options.log(`${agent.id} did not become a record: the engine ${agent.engine} did not load.`);
       continue;
     }
     let config: Record<string, unknown>;
     try {
-      config = await withSecretsMoved(agent.config, kind, agent.id, options.vault);
+      config = await withSecretsMoved(agent.config, engine, agent.id, options.vault);
     }
     catch (error) {
       options.log(`The presets were not moved: ${agent.id} could not be written as a record: ${reason(error)}`);

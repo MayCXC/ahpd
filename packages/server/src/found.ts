@@ -27,7 +27,7 @@ import type { Runner } from './install.js';
 import { onPath } from './onpath.js';
 import { isNamed } from './plugins.js';
 
-/** The plugin every ACP agent runs through, which is what registers the kind they are records of. */
+/** The plugin every ACP agent runs through, which is what registers the engine they are records of. */
 export const AGENT_PLUGIN = '@ahpd/agent-acp';
 
 /** How long a `--version` may take before the process is stopped. */
@@ -198,7 +198,7 @@ const presetsIn = (plugins: unknown): Map<string, Record<string, unknown>> => {
  * and that start shows the agents the file says it has rather than offering
  * every one of them again.
  *
- * A record is only served when the plugin that registers its kind is in the
+ * A record is only served when the plugin that registers its engine is in the
  * list, so a record left behind by a setup that stopped before writing the file
  * is not shown as configured: the question that adds the plugin is asked again.
  */
@@ -209,7 +209,7 @@ export const configuredAgents = (
   const found = presetsIn(plugins);
   if (!namesPlugin(plugins, AGENT_PLUGIN)) return found;
   for (const one of records) {
-    if (one.kind !== 'acp') continue;
+    if (one.engine !== 'acp') continue;
     const config = one.config;
     found.set(one.id, typeof config === 'object' && config !== null && !Array.isArray(config) ? config as Record<string, unknown> : {});
   }

@@ -1548,7 +1548,7 @@ it('declares every field a record machine takes as a property of the machine sch
     cwd: repo,
     log: () => {},
   });
-  const kind = options.agentKinds?.['acp'];
+  const kind = options.engines?.['acp'];
   if (kind === undefined) throw new Error('no acp kind was registered');
   const fields = (kind.schema as Bag)['properties'] as Bag;
   const machine = fields['machine'] as { properties: Record<string, Record<string, unknown>>; description: string };

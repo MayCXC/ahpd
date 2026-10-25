@@ -4,45 +4,39 @@ title: "Handoff: where ahpd stands, and what is pending"
 
 # Handoff: where `ahpd` stands, and what is pending
 
-Current progress and pending items only, as of 2026-10-21.
+Current progress and pending items only, as of 2026-10-25.
 [plans/index.md](../plans/index.md) is the backlog and each plan's Resume state is its detail. What merged is in `git log`, and what was released is in [CHANGELOG.md](../../CHANGELOG.md).
 
 ## Main
 
-- The last release is 0.13.0 (`v0.13.0`, 2026-10-20). Main is 36 commits past it, at `ad64d33f` (PR #60, host/113).
-- Softov's daemon needs a restart in his terminal to run host/113. After it, a connection opened with a person's own token gets `ahpd.principal`, and a config file that still sets `trustToken` logs the key as unknown.
-- Local `main` in `/github/ahpd` is at `ad64d33f`, level with origin. Fetch, and check the base before you cut a build worktree.
+- The last release is 0.13.0 (`v0.13.0`, 2026-10-20). Main is 180 commits past it, at `c58da50d` (PR #90, host/123). The CHANGELOG holds 0.14.0 as unreleased.
+- Local `main` in `/github/ahpd` is level with origin. Fetch, and check the base before you cut a build worktree.
+- Main has uncommitted changes: host/123 tasks 02 and 03, and a `.gitignore` change that is not part of them. Commit them only after Softov checks them, and leave `.gitignore` out.
+- Softov's dev daemon runs from source on port 37537, and he restarted it after host/123 task 02.
 - Code goes through a PR on `softov/ahpd`. Plan-only commits go to main. Run `gh pr checks` with `-R softov/ahpd` outside a repo.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by every test run. Restore it with `git checkout --` and never print it.
-- `nested-start.test.ts` and the `packages/computer` tests time out on this machine, on main too.
-- The remote branches of merged PRs are still there. Do not delete them without asking.
+- The build worktrees in `/github/ahpd.worktrees/` are still there, and test daemons from them can still run. Check `ss -ltnp` before you start one, and stop it by pid.
 
-## Implemented, waiting for Softov's review
+## Waiting for Softov
 
-Each stays `active` until he says his review is done. Then mark the tasks `done`, write `implemented.md`, and close the plan.
-
-- daemon/37, daemon/38, daemon/39.
-- host/112. Note for its `implemented.md`: mutation M7 survived. The second owner check in `send()`, `visible` on replay, is untested and redundant with `apply()`.
-- plugin/52 (the computer and bot listings). Note for its `implemented.md`: removing `if (only === null) return [];` in the computer list changes nothing.
-- host/113 (PR #60, merged 2026-10-21). In ahpw, every user without `requireIssuer` now shows "Trusted". The word now means "their own token signs them in"; that is Softov's to change in ahpw.
-- daemon/36 (PR #55, merged): review and close.
+- host/123 tasks 02 and 03: [pending/host-123-engines-checks.md](../pending/host-123-engines-checks.md). ahpw plugins 08 task 05 is implemented on ahpw main, not committed.
+- host/122: [pending/host-122-agent-records-checks.md](../pending/host-122-agent-records-checks.md).
+- proxy/05: [pending/proxy-05-model-checks.md](../pending/proxy-05-model-checks.md).
+- proxy/04: icon curation, and [pending/proxy-04-move-config-dev.md](../pending/proxy-04-move-config-dev.md).
+- plugin/58: task 05 waits for [pending/plugin-58-icon-curation.md](../pending/plugin-58-icon-curation.md). Task 06 waits for the shared-marks brief in `ahp-review/briefs/shared-marks.md`.
+- plugin/50: [pending/plugin-50-first-pieces.md](../pending/plugin-50-first-pieces.md).
+- The plans in [plans/index.md](../plans/index.md) with all tasks implemented wait for his review. Each stays `active` until he says his review is done.
 
 ## Next builds
 
-- None is queued. The planned ones with tasks are container/05 p8 and p10; see [plans/index.md](../plans/index.md).
+- Planned with tasks: plugin/63, proxy/06, container/05 p8 and container/05 p10.
 
-## Open questions for Softov
+## Outside this repository
 
-- acp/19 has a records follow-up. Softov does not remember what it is, and must review to know. See [acp-19-records-follow-up.md](../pending/acp-19-records-follow-up.md). Do not act on it before his answer.
-- Whether `rolesFrom` moves to the issuer level.
-- The files in [problems/](../problems/) are undecided.
+- ahpc `844de67` on main fixes `cancel` and is not pushed. What ahpc lacks against ahpd is in `ahp-review/briefs/ahpc-catch-up.md`.
+- `ahp-review/briefs/drop-deno.md` is a brief, not a plan. Plan it only when Softov says so.
+- A test session `claude-deepseek:/845c1908-…` is still on Softov's daemon. Remove it only when he says so.
 
 ## By Softov's hand
 
-The checks in [pending/](../pending/). Among them: host/100 p2, host/108 tokens, plugin/45 p2, daemon/31 on macOS, plugin/51, acp/19 on Windows, the acp/18 handshakes for cline, omp and devin, and the VS Code pending-question problem.
-
-Carried from the 2026-10-15 handoff, not rechecked: container/02 tasks 01 to 03 (the Windows VS Code run), container/05 p9 task 06 on dev02, and the Modal title copy button, which needs a scena change.
-
-## Reviews
-
-- [2026-09-19-upstream-pass-4.md](../review/2026-09-19-upstream-pass-4.md). Pass 6, against VS Code 1.141.1, is in commit `029da507`.
+The checks in [pending/](../pending/).
