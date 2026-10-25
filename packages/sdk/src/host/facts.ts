@@ -35,7 +35,7 @@ export interface Facts {
 export function createFacts(ctx: HostContext): Facts {
   const {
     options, sessions, owners, connections, worktreeOf, githubFacts, kept, log, lent, dispatch,
-    dirOf, leadOf, changesetAt, changesetOf, catalogueOf, contentMoved, operationsMoved, heldAs,
+    dirOf, leadOf, changesetAt, changesetOf, catalogueOf, contentMoved, operationsMoved, heldAs, listedMeta,
   } = ctx;
 
   /**
@@ -187,17 +187,20 @@ export function createFacts(ctx: HostContext): Facts {
     ctx.summaryMoved(uri);
   };
   /**
-   * What the agent running a session put in its `_meta`.
+   * What a session's `_meta` holds because of its agent.
    *
-   * Read off the backend's own state rather than kept here, so a key it adds
-   * or drops is one this host follows without having to know about it. Empty
-   * for a session nothing is running, which is not a gap: a browsed row has no
-   * agent to have written anything.
+   * While something runs it, read off the backend's own state rather than kept
+   * here, so a key it adds or drops is one this host follows without having to
+   * know about it. While nothing runs it, the `_meta` the backend put on the
+   * row it listed - kept by `adopt`, which is where a browsed session is
+   * remembered. A running agent's map replaces the listed one whole: the agent
+   * knows the session as it is now, and the row knew it as the listing did.
    */
   const agentMeta = (uri: string): Bag => {
     const held = sessions.get(uri);
     const lead = held === undefined ? undefined : leadOf(held);
-    const meta = (lead?.sessionState() as { _meta?: unknown } | undefined)?._meta;
+    if (lead === undefined) return listedMeta.get(uri) ?? {};
+    const meta = (lead.sessionState() as { _meta?: unknown } | undefined)?._meta;
     return typeof meta === 'object' && meta !== null ? (meta as Bag) : {};
   };
 

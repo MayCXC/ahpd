@@ -1,6 +1,6 @@
 ---
 title: The bot's row carries its mark
-status: todo
+status: implemented
 depends: [task-01-a-listed-row-carries-meta.md]
 layer: "bot"
 refs:
@@ -33,3 +33,10 @@ A bot chat that is not running is listed with its bot's mark, so a client draws 
 - A host test lists a chat that is not running, and its summary `_meta` holds `bot`, `name` and `color`.
 
 ## Resume
+
+- **Done so far:** `rowOf` sends `markOf(bot)` when the store has the bot, `log.mark` when it does not, and no `_meta` when neither has one.
+- **Next action:** none, this task is implemented.
+- **Files:** `packages/bot/src/chat.ts`, `packages/bot/test/bot-catalogue.test.ts`.
+- **Open questions:** none.
+- **Departures:** the host-level case grants the reader `session:list` beside `PERSON`, because `listSessions` asks for it and the bot grants are `bot:write` and `session:create`.
+- **Watch out for:** the mark goes on the row whole, never merged, and the log's mark answers only when the bot is gone.

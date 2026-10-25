@@ -95,7 +95,7 @@ export interface Catalogue {
 
 export function createCatalogue(ctx: HostContext): Catalogue {
   const {
-    options, agents, sessions, subagents, owners, kept, names, wheres, births, moves,
+    options, agents, sessions, subagents, owners, kept, names, wheres, births, moves, listedMeta,
     madeFrom, origins, leadOf, about, browsable, recordedChats, chatBackends, sessionHolding,
     resumedSessions, restoredSubagents,
   } = ctx;
@@ -1010,6 +1010,11 @@ export function createCatalogue(ctx: HostContext): Catalogue {
     }
     births.set(resource, row.createdAt);
     moves.set(resource, row.modifiedAt);
+    // Kept whole, as the row said it: the row that is answered later is built
+    // here and `describes` reads this map. Removed when the row has none, so a
+    // backend that dropped its keys stops being answered with them.
+    if (row._meta === undefined) listedMeta.delete(resource);
+    else listedMeta.set(resource, row._meta);
     return {
       resource,
       provider,

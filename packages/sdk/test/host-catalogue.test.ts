@@ -9,9 +9,10 @@ import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import type { Request } from '../src/types/rpc.js';
 import type { HostOptions } from '../src/types/host.js';
 import {
-  claude, createHost, machine, resetSdk, actions, emit, hello, open, peer,
+  claude, createHost, echo, machine, resetSdk, actions, emit, hello, open, peer,
   sdk, serving, sessionQueries, settle, running,
 } from './support/host.js';
+import type { Agent, Listed } from '../src/types/agent.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
 
@@ -1383,5 +1384,90 @@ describe("a row's counts are the session's own", () => {
     // The folder says 99 of its own; what comes back is what the session was
     // measured at before the daemon stopped.
     expect(listed.items.find((one) => one.resource === 'claude:/live')?.changes?.files).toBe(4);
+  });
+});
+
+describe("a listed row's _meta", () => {
+  /*
+   * What a backend knows about a session nothing runs.
+   *
+   * A row is listed once and answered many times: the summary a client reduces
+   * its list against, and the state it reads when it opens the session. Both
+   * are composed by `describes`, which reads a session's `_meta` from the agent
+   * while one runs - so a browsed row's keys have to be kept where that read
+   * finds them.
+   */
+  const PATH = '/home/softov';
+  const STAMP = '2026-10-25T00:00:00.000Z';
+  const row = (id: string, meta?: Record<string, unknown>): Listed => ({
+    id,
+    title: id,
+    createdAt: STAMP,
+    modifiedAt: STAMP,
+    workingDirectories: [`file://${PATH}`],
+    ...(meta === undefined ? {} : { _meta: meta }),
+  });
+  /** A backend over a store a test names, listing it and finding one id in it. */
+  const backend = (listed: Listed[], known?: (id: string) => Listed | undefined): Agent => ({
+    ...echo({ path: PATH, pace: 0 }),
+    provider: 'slow',
+    displayName: 'Slow',
+    directories: () => [PATH],
+    list: async () => [...listed],
+    ...(known === undefined ? {} : { find: async (id: string) => known(id) }),
+    transcript: async () => [],
+  });
+  type Row = { resource: string; _meta?: Record<string, unknown> };
+
+  it("sends a row's _meta on the summary that lists it", async () => {
+    const host = createHost({
+      path: PATH,
+      agents: [backend([row('one', { bot: 'motion', color: 'red' })])],
+      ...machine(),
+    });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+
+    const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as { items: Row[] };
+    expect(listed.items.find((one) => one.resource === 'slow:/one')?._meta).toEqual({ bot: 'motion', color: 'red' });
+  });
+
+  it("sends a row's _meta when the row is found rather than listed", async () => {
+    const found = row('late', { bot: 'motion' });
+    const host = createHost({
+      path: PATH,
+      agents: [backend([], (id) => (id === 'late' ? found : undefined))],
+      ...machine(),
+    });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
+
+    const opened = await client.handle({ method: 'subscribe', params: { channel: 'slow:/late' } }) as {
+      snapshot: { state: { _meta?: Record<string, unknown> } };
+    };
+    expect(opened.snapshot.state._meta).toEqual({ bot: 'motion' });
+    // And the row it announced, so a client that never opened it has the mark.
+    const added = p.notes
+      .filter((one) => one.method === 'root/sessionAdded')
+      .map((one) => (one.params as { summary?: Row }).summary);
+    expect(added.find((one) => one?.resource === 'slow:/late')?._meta).toEqual({ bot: 'motion' });
+  });
+
+  it("lets the host's keys win a collision with a listed one", async () => {
+    const host = createHost({
+      path: PATH,
+      agents: [backend([row('one', { git: 'listed', bot: 'motion' })])],
+      ...machine(),
+      // The directory's own answer, which is the host's and not the backend's.
+      directories: { meta: () => ({ git: { branchName: 'main' } }), refresh: async () => false },
+    });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+
+    const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as { items: Row[] };
+    expect(listed.items.find((one) => one.resource === 'slow:/one')?._meta)
+      .toEqual({ git: { branchName: 'main' }, bot: 'motion' });
   });
 });

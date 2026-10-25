@@ -136,6 +136,14 @@ export interface Listed {
   modifiedAt: string;
   /** Directories the agent has tool access to, as `file://` URIs. */
   workingDirectories: string[];
+  /**
+   * What this backend says about the session while nothing runs it.
+   *
+   * The host sends it on the session's summary and on its state, so a client
+   * that opens a row without starting it draws it from what the backend knows.
+   * Replaced whole by the running agent's own `_meta` once the session starts.
+   */
+  _meta?: Record<string, unknown>;
 }
 
 /** Where the host recorded a past session as working, handed to a backend that finds or reads it. */

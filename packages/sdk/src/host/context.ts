@@ -149,6 +149,15 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
   births: Map<string, string>;
   /** When each session last moved, by its own uri. */
   moves: Map<string, string>;
+  /**
+   * What a backend said about a browsed session, by its own uri.
+   *
+   * Kept because the row that said it is not the row a client is answered
+   * with: `describes` composes a session's `_meta` on every read, and a session
+   * nothing runs has no agent to ask. Replaced whole on each listing, and
+   * removed when the backend stops saying anything.
+   */
+  listedMeta: Map<string, Bag>;
   /** The directories a listing may say a row is gone in. */
   browsable: () => string[];
   /** Say one thing on one channel, to every connection watching it. */
