@@ -639,9 +639,9 @@ const nameOf = (spec: PluginSpec): string => (typeof spec === 'string' ? spec : 
 /**
  * Whether a spec is a package name the container's npm can install.
  *
- * The same test `ahpd plugin install` refuses on: a path and a spec with a
- * scheme of its own are used as written inside the container, where the
- * meaning of both is the deployment's and not this launcher's.
+ * A path and a spec with a scheme of its own are used as written inside the
+ * container, where the meaning of both is the deployment's and not this
+ * launcher's, so only a bare name is one an image installs.
  */
 const isPackageName = (spec: PluginSpec): boolean => {
   const name = nameOf(spec);

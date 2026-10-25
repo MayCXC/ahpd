@@ -14,14 +14,21 @@
  * says, and only a plugin with a port or a URI scheme answers `restart`.
  */
 
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { check } from '@cofold/commands';
 import type { JsonSchema } from '@cofold/commands';
-import { recordsChannel, RpcError, scopeOf, secretRef } from '@ahpd/sdk';
+import { isRecordSlug, RECORD_SLUG, recordsChannel, RpcError, scopeOf, secretRef } from '@ahpd/sdk';
 import type { Grant, Loaded, PluginMethod, PluginSpec, RecordsChannel, RecordsSource } from '@ahpd/sdk';
 import type { Applied } from './applyplugins.js';
 import { maskOption, SET, withoutSpecSecrets, withoutUserinfoIn } from './commands/config.js';
-import { oneAtATime, setPluginEnabled, setPluginOption, specsIn } from './install.js';
+import {
+  enableNames, installPlugins, oneAtATime, pluginRoot, removePlugins, run as runProgram, setPluginEnabled, setPluginOption, specsIn,
+} from './install.js';
+import type { Runner } from './install.js';
 import { describePlugin, nameOf, optionsSchemaLoaded, optionsSchemaOf, pluginIdOf, schemaOf } from './plugins.js';
+import type { Fetch } from './update.js';
+import { version } from './version.js';
 
 /** The channel, and the domain its commands are named after. */
 const SCHEME = 'x-ahpd-plugins';
@@ -120,13 +127,19 @@ export interface PluginsChannelOptions {
   restartNeeded(): void;
   /** Where a listing or an edit that could not be read or written is said. */
   onProblem?(message: string): void;
+  /** How npm is run for `install`, `remove` and `write`; absent runs it, as the command line does. */
+  run?: Runner;
+  /** How the registry is asked about a registry name before npm runs; absent is the global `fetch`. */
+  fetch?: Fetch;
+  /** The daemon's own version, which an installed plugin's `@ahpd/sdk` is pinned to; absent is this package's. */
+  version?(): string;
 }
 
-/** The plugin channel and its five commands, as the daemon hands them to `servedRecords`. */
+/** The plugin channel and its commands, as the daemon hands them to `servedRecords`. */
 export interface PluginsChannel {
   /** `x-ahpd-plugins`. */
   channel: RecordsChannel;
-  /** `x-ahpd/plugins/enable`, `disable`, `options`, `apply` and `reload`, by name. */
+  /** `x-ahpd/plugins/install`, `remove`, `write`, `source`, `enable`, `disable`, `options`, `apply` and `reload`, by name. */
   methods: Record<string, PluginMethod>;
   /** Refresh the channel. */
   refresh(): Promise<void>;
@@ -135,12 +148,53 @@ export interface PluginsChannel {
 /**
  * The configured plugins as a channel, and the commands that change them.
  *
- * Reading needs `config:read`. Every command needs `config:write`, which is what
- * `ahpd plugin enable` and `ahpd plugin config set` need, and every one is run
+ * Reading needs `plugin:list`. Each command needs its own grant: `install`,
+ * `remove`, `write` and `source` need `plugin:install`, which no group holds,
+ * and the rest need the grant named after what they change. Every one is run
  * one at a time with the command line's writers.
  */
 export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel => {
   const { configFile, where } = options;
+
+  /** npm, as the install path runs it: the caller's, or the one this process runs. */
+  const npm: Runner = options.run ?? runProgram;
+  /** The registry, as the install path asks it about a name. */
+  const registryFetch: Fetch = options.fetch ?? globalThis.fetch;
+  /** The daemon's own version, which a registry install pins the sdk to. */
+  const daemonVersion = (): string => options.version?.() ?? version();
+
+  /**
+   * Nothing the install and remove paths say reaches the channel's log.
+   *
+   * `installPlugins` and `removePlugins` say what they are about to do, because
+   * a person waiting at a terminal has nothing else moving; a client waiting on
+   * this channel has the answer. None of it is a problem, and `onProblem` is
+   * the daemon's log - on a `--stdio` daemon stdout is the wire, so a line that
+   * is not a frame there breaks the client reading it.
+   */
+  const say = (_line: string): void => {};
+
+  /**
+   * The folder a plugin written in a client keeps its files in, if one was.
+   *
+   * Found by the id first, because a write names its folder after it, and
+   * then by the spec the file holds: a written plugin's id is the one its
+   * module exports, which an admin may have written differently from the id
+   * the write was given.
+   */
+  const writtenAt = (id: string): string | undefined => {
+    const here = join(pluginRoot(where.configDir), 'plugins');
+    const folderOf = (name: string): string | undefined => {
+      if (!isRecordSlug(name)) return undefined;
+      const folder = join(here, name);
+      return existsSync(join(folder, 'index.ts')) ? folder : undefined;
+    };
+    const byId = folderOf(id);
+    if (byId !== undefined) return byId;
+    const spec = specOf(id);
+    const at = spec === undefined ? undefined : nameOf(spec);
+    return at !== undefined && dirname(at) === here && existsSync(join(at, 'index.ts')) ? at : undefined;
+  };
 
   /** The specs the file names, in its order. */
   const specs = (): PluginSpec[] => specsIn(configFile);
@@ -262,16 +316,21 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
    * and answers the restart every write used to mean.
    *
    * `reload` names the plugins the apply must import again, and is passed on
-   * as given; every other change finds what moved by comparing the file.
+   * as given; every other change finds what moved by comparing the file. It may
+   * be a thunk, which is read inside this turn: whether a write replaced a
+   * plugin this daemon already ran is not known until the write has looked.
    */
-  const changed = async (work: () => Promise<Record<string, unknown>>, reload?: string[]): Promise<Record<string, unknown>> => oneAtATime(async () => {
+  const changed = async (
+    work: () => Promise<Record<string, unknown>>,
+    reload?: string[] | (() => string[] | undefined),
+  ): Promise<Record<string, unknown>> => oneAtATime(async () => {
     const answer = await work();
     if (options.apply === undefined) {
       await channel.refresh();
       options.restartNeeded();
       return { ...answer, restart: true };
     }
-    const applied = await options.apply(reload);
+    const applied = await options.apply(typeof reload === 'function' ? reload() : reload);
     if (applied.restart) options.restartNeeded();
     return { ...answer, restart: applied.restart };
   });
@@ -298,6 +357,248 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
       return { id, enabled, restart: true };
     }),
   });
+
+  /**
+   * Install one source, through the command line's own install path.
+   *
+   * The grant is `plugin:install` and no group holds it: what is installed
+   * runs with the daemon's permissions, so a role that may toggle a plugin may
+   * not add one. The install runs in the same one-at-a-time turn as the apply
+   * that follows it, so no other command writes the file between npm and the
+   * load, and the answer says `restart` only when a plugin with a port or a
+   * URI scheme is in the way.
+   */
+  const installMethod: PluginMethod = {
+    grant: 'plugin:install' as Grant,
+    describe: () => ({
+      title: 'Install a plugin',
+      description: 'Takes `source`, a package name, a path, a tarball URL, `github:<owner>/<repo>` or a `git+ssh:` spec, installs it with npm in the plugin root, names it in `plugins` and loads it. Answers `{ id }`, the id of the row it added, and `restart: true` when a plugin with a port or a URI scheme is in the way.',
+    }),
+    handle: (params) => {
+      const name = `${DOMAIN}/install`;
+      const source = params.source;
+      if (typeof source !== 'string' || source.trim() === '') {
+        throw new RpcError(INVALID_PARAMS, `${name} needs source, a package name, a path, a URL or a git spec`);
+      }
+      // What npm installed, which is the name written into `plugins`; the
+      // source may be a URL or a git spec that no row carries.
+      let packages: string[] = [];
+      return changed(async () => {
+        try {
+          packages = await installPlugins([source], {
+            configDir: where.configDir,
+            configFile,
+            version: daemonVersion(),
+            enable: true,
+            run: npm,
+            fetch: registryFetch,
+            say,
+          });
+        }
+        catch (error) {
+          throw new RpcError(INVALID_PARAMS, withoutUserinfoIn(reason(error)));
+        }
+        return {};
+      }).then((answer) => {
+        /*
+         * The id is read once the apply has run: a module names itself, so the
+         * id the new row is listed under is known only after the daemon has
+         * imported it. A package name is what npm wrote, not what the row says.
+         */
+        return { ...answer, id: withoutUserinfoIn(pluginIdOf(packages[0] ?? source, where)) };
+      });
+    },
+  };
+
+  /**
+   * Remove one configured plugin, through the command line's own remove path.
+   *
+   * `keep` leaves the package installed, as `--keep` does, and a plugin that
+   * was written in a client leaves its folder instead. Without it the package
+   * is uninstalled, or the written folder is deleted.
+   */
+  const removeMethod: PluginMethod = {
+    grant: 'plugin:install' as Grant,
+    describe: () => ({
+      title: 'Remove a plugin',
+      description: 'Takes `id`, the plugin as a row answers it, and an optional `keep`. Takes its entry out of `plugins` and uninstalls the package, or with `keep: true` leaves the package installed; a plugin written in a client loses its folder unless it is kept. Answers `{ id }` and whether a restart is needed.',
+    }),
+    handle: (params) => {
+      const id = idParam(`${DOMAIN}/remove`, params);
+      const keep = params.keep === true;
+      return changed(async () => {
+        const folder = writtenAt(id);
+        try {
+          await removePlugins([folder ?? id], {
+            configDir: where.configDir,
+            configFile,
+            // A written plugin is a folder, not a package npm installed.
+            uninstall: folder === undefined && !keep,
+            run: npm,
+            say,
+          });
+          if (folder !== undefined && !keep) rmSync(folder, { recursive: true, force: true });
+        }
+        catch (error) {
+          throw new RpcError(INVALID_PARAMS, withoutUserinfoIn(reason(error)));
+        }
+        return { id };
+      });
+    },
+  };
+
+  /** The folder a plugin written in a client keeps its files in. */
+  const folderIn = (id: string): string => join(pluginRoot(where.configDir), 'plugins', id);
+
+  /**
+   * Where a write builds its plugin before it replaces the folder `plugins` names.
+   *
+   * A dot name, so a listing that reads the directory does not take it for a
+   * plugin, and beside the folder it replaces, so both are on one filesystem
+   * and moving one over the other is a rename.
+   */
+  const stagedIn = (id: string): string => join(pluginRoot(where.configDir), 'plugins', `.${id}.new`);
+
+  /**
+   * The `package.json` a write is given, as the object written beside `index.ts`.
+   *
+   * A client may send the text or the object. The document is written as the
+   * admin wrote it, with two additions: a `name` when it has none, so npm and
+   * the listing have one, and an `ahpd.entry` when nothing in it names an
+   * entry, because the folder holds `index.ts` and the loader reads
+   * `ahpd.entry`, `exports["."]` and `main`.
+   */
+  const packageWritten = (id: string, value: unknown): Record<string, unknown> => {
+    const name = `${DOMAIN}/write`;
+    let parsed = value;
+    if (typeof value === 'string') {
+      try {
+        parsed = JSON.parse(value) as unknown;
+      }
+      catch {
+        throw new RpcError(INVALID_PARAMS, `${name} needs packageJson as a JSON object; what it was given is not JSON`);
+      }
+    }
+    const held = object(parsed);
+    if (held === undefined) throw new RpcError(INVALID_PARAMS, `${name} needs packageJson as a JSON object`);
+    const ahpd = object(held['ahpd']);
+    const exported = held['exports'];
+    const dot = object(exported)?.['.'];
+    const namesEntry = (ahpd !== undefined && typeof ahpd['entry'] === 'string')
+      || typeof exported === 'string'
+      || typeof dot === 'string'
+      || (object(dot) !== undefined && typeof (object(dot) as Record<string, unknown>)['default'] === 'string')
+      || typeof held['main'] === 'string';
+    const named = { ...held, ...(typeof held['name'] === 'string' ? {} : { name: id }) };
+    return namesEntry ? named : { ...named, ahpd: { ...(ahpd ?? {}), entry: './index.ts' } };
+  };
+
+  /**
+   * Write a plugin in the client, as one TypeScript file and its package.json.
+   *
+   * The folder is `<plugin root>/plugins/<id>/`, outside `node_modules`, because
+   * Node refuses to strip the types of a file under one. The file is as the
+   * admin wrote it and the `package.json` is theirs to edit; npm then installs
+   * what it names, in the folder, so a plugin may import a package that is not
+   * part of ahpd. The folder path is what `plugins` names, and it is added when
+   * the file does not already hold it.
+   *
+   * The files are written into `<plugin root>/plugins/.<id>.new/` and npm runs
+   * there, so a rewrite whose npm fails leaves the folder the daemon is running
+   * untouched: the old `index.ts` and `package.json` are never replaced before
+   * npm has succeeded. On success the old folder is moved aside, the staged one
+   * is moved into place, and the old one is deleted; on failure only the staged
+   * folder is deleted. A write over an id that is already written imports the
+   * folder again, so the new text runs at once, and whether it was already
+   * written is read inside the turn rather than before it.
+   */
+  const writeMethod: PluginMethod = {
+    grant: 'plugin:install' as Grant,
+    describe: () => ({
+      title: 'Write a plugin',
+      description: 'Takes `id`, a slug; `source`, the TypeScript file\'s text; and `packageJson`, the package as an object or as its text. Writes both into `<plugin root>/plugins/.<id>.new/`, runs `npm install` there, and only when npm succeeds swaps the folder into `<plugin root>/plugins/<id>/`, names it in `plugins` and loads it. Writing the same id again replaces the files and imports the new code at once, or leaves the running code when npm fails. Answers `{ id }`.',
+    }),
+    handle: (params) => {
+      const name = `${DOMAIN}/write`;
+      const id = params.id;
+      if (typeof id !== 'string' || !isRecordSlug(id)) {
+        throw new RpcError(INVALID_PARAMS, `${name} needs id, a plugin slug: ${RECORD_SLUG}`);
+      }
+      const text = params.source;
+      if (typeof text !== 'string' || text.trim() === '') {
+        throw new RpcError(INVALID_PARAMS, `${name} needs source, the text of the plugin's TypeScript file`);
+      }
+      const held = packageWritten(id, params.packageJson);
+      const folder = folderIn(id);
+      const staged = stagedIn(id);
+      // Whether the file already names the folder: a write over a plugin this
+      // daemon runs, which is imported again rather than loaded as a new one.
+      let again = false;
+      return changed(async () => {
+        again = specsIn(configFile).some((spec) => nameOf(spec) === folder);
+        rmSync(staged, { recursive: true, force: true });
+        mkdirSync(staged, { recursive: true });
+        writeFileSync(join(staged, 'index.ts'), text);
+        writeFileSync(join(staged, 'package.json'), `${JSON.stringify(held, null, 2)}\n`);
+        const done = await npm('npm', ['install', '--prefix', staged]);
+        if (done.code !== 0) {
+          // Only what this write made is taken out: the folder the daemon runs,
+          // and the files in it, are as they were before the write arrived.
+          rmSync(staged, { recursive: true, force: true });
+          const said = done.stderr.trim();
+          throw new RpcError(INVALID_PARAMS, withoutUserinfoIn(
+            `npm could not install ${id} in ${folder}: ${said === '' ? `it ended with code ${String(done.code)}` : said}`,
+          ));
+        }
+        /*
+         * The staged folder replaces the old one in two renames, so the folder
+         * `plugins` names is always a whole plugin. The old one is moved aside
+         * rather than deleted first, and put back if the move fails.
+         */
+        const old = join(dirname(folder), `.${id}.old`);
+        rmSync(old, { recursive: true, force: true });
+        const had = existsSync(folder);
+        if (had) renameSync(folder, old);
+        try {
+          renameSync(staged, folder);
+        }
+        catch (error) {
+          if (had) renameSync(old, folder);
+          throw error;
+        }
+        rmSync(old, { recursive: true, force: true });
+        enableNames(configFile, [folder]);
+        return { id };
+      }, () => (again ? [folder] : undefined));
+    },
+  };
+
+  /**
+   * The text of a plugin written in a client: its `index.ts` and its `package.json`.
+   *
+   * Only a plugin with a folder the write made answers this. Any other plugin
+   * is a package or a path someone put there, and its text is not the daemon's
+   * to hand out. Reading needs `plugin:install`, the grant that writes one.
+   */
+  const sourceMethod: PluginMethod = {
+    grant: 'plugin:install' as Grant,
+    describe: () => ({
+      title: 'Read a plugin written in a client',
+      description: 'Takes `id`, the plugin as a row answers it, and answers the text of its `index.ts` and its `package.json`. Refuses a plugin that was not written with `x-ahpd/plugins/write`.',
+    }),
+    handle: (params) => {
+      const id = idParam(`${DOMAIN}/source`, params);
+      const folder = writtenAt(id);
+      if (folder === undefined) {
+        throw new RpcError(INVALID_PARAMS, `${id} was not written in a client; ${DOMAIN}/source reads a plugin written with ${DOMAIN}/write`);
+      }
+      return {
+        id,
+        source: readFileSync(join(folder, 'index.ts'), 'utf8'),
+        packageJson: readFileSync(join(folder, 'package.json'), 'utf8'),
+      };
+    },
+  };
 
   const optionsMethod: PluginMethod = {
     grant: 'plugin:options' as Grant,
@@ -408,6 +709,10 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
   return {
     channel,
     methods: {
+      [`${DOMAIN}/install`]: installMethod,
+      [`${DOMAIN}/remove`]: removeMethod,
+      [`${DOMAIN}/write`]: writeMethod,
+      [`${DOMAIN}/source`]: sourceMethod,
       [`${DOMAIN}/enable`]: toggle(true),
       [`${DOMAIN}/disable`]: toggle(false),
       [`${DOMAIN}/options`]: optionsMethod,

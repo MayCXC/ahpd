@@ -403,7 +403,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [61 - A plugin icon has a dark variant](plugin/61-a-plugin-icon-has-a-dark-variant/plan.md) | medium | built 2026-10-24 ([implemented.md](plugin/61-a-plugin-icon-has-a-dark-variant/implemented.md)); merged in #86 | plugin 58 | - |
 | [62 - A working connector is ready, not open](plugin/62-a-working-connector-is-ready/plan.md) | medium | active 2026-10-24; one task, implemented | - | - |
 | [63 - agent-cofold lists models under their provider id](plugin/63-cofold-lists-models-by-provider/plan.md) | high | planned 2026-10-24; three tasks | - | - |
-| [64 - An admin installs and removes a plugin from the UI](plugin/64-an-admin-installs-a-plugin-from-the-ui/plan.md) | medium | planned 2026-10-25; three tasks | plugin 59 | - |
+| [64 - An admin installs and removes a plugin from the UI](plugin/64-an-admin-installs-a-plugin-from-the-ui/plan.md) | medium | active 2026-10-25; three tasks, all implemented | plugin 59 | - |
 
 Next free number in `plugin`: `63`.
 

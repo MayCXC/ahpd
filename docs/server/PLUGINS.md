@@ -27,11 +27,11 @@ ahpd plugin list
 ahpd restart
 ```
 
-`install` runs `npm install` in the configuration directory (`~/.config/ahpd`) and adds the name to `plugins` in `config.json`. A change loads at the next restart.
+`install` runs `npm install` in the configuration directory (`~/.config/ahpd`) and adds the name to `plugins` in `config.json`. A change loads at the next restart. The source may be a package name, a path, a tarball URL, `github:<owner>/<repo>` or a `git+ssh:` URL; what `plugins` gets is the name npm wrote for it. A package with no `ahpd` field is refused, and one npm installed from a source is uninstalled again.
 
 | Command | Does |
 | --- | --- |
-| `ahpd plugin install <name>` | Install and add to `plugins` |
+| `ahpd plugin install <source>` | Install and add to `plugins` |
 | `ahpd plugin install <name> --no-enable` | Install only |
 | `ahpd plugin remove <name>` | Remove from `plugins` and uninstall |
 | `ahpd plugin remove <name> --keep` | Remove from `plugins` only |

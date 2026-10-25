@@ -1,6 +1,6 @@
 ---
 title: One install path takes every source
-status: todo
+status: implemented
 depends: []
 layer: "server, docs"
 refs:

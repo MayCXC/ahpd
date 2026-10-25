@@ -620,16 +620,34 @@ describe('a request signs in', () => {
     }
   }, 30000);
 
-  it('serves a plugin install only to the deployment token', async () => {
-    const { one, admin, token } = await guarded();
+  it('serves a plugin install to a role holding plugin:install, and refuses a member', async () => {
+    const { one, member, token } = await guarded();
     const url = `http://127.0.0.1:${String(one.port)}/api/plugin/install`;
-    const refused = await post(url, admin, { name: ['left-pad'] });
+    const refused = await post(url, member, { name: ['left-pad'] });
     expect(refused.status).toBe(403);
-    expect((await refused.json() as { message: string }).message).toContain('only the deployment token may');
-    // The deployment token is not refused: a name that is not a package is the
-    // command's own refusal, so nothing reached npm.
+    expect((await refused.json() as { message: string }).message).toBe('ada may not plugin:install here');
+    // The deployment token holds every grant, and a name that is not a package
+    // is the command's own refusal, so nothing reached npm.
     const asRoot = await post(url, token, { name: ['./not-a-package'] });
     expect(asRoot.status).toBe(400);
+  }, 30000);
+
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('runs npm for an install an admin asks for, and names the package', async () => {
+    const directory = fileUsers({ path: usersFile });
+    await directory.add('root', ['admin']);
+    const admin = await directory.mint('root');
+    const one = await daemon(
+      { httpApi: true,plugins: [BACKEND] },
+      ['--connection-token', 'root-secret', '--users', usersFile],
+      fakeNpm(),
+    );
+    const answered = await post(`http://127.0.0.1:${String(one.port)}/api/plugin/install`, admin, { name: ['left-pad'] });
+    expect(answered.status).toBe(200);
+    // The row the file now names, and what the command answered about it.
+    expect((JSON.parse(readFileSync(config, 'utf8')) as { plugins: unknown[] }).plugins).toContain('left-pad');
+    expect(await answered.json()).toEqual({ plugins: ['left-pad'] });
   }, 30000);
 
   // On Windows the daemon runs the npm beside its own Node, never one off the

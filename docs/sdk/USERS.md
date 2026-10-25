@@ -85,6 +85,8 @@ operation called `read` or `write`, and the two words in that position mean the
 group every time - decision
 A grant names a subject and one of its operations, and read and write are groups of those operations.
 
+Every operation is in one of the two groups, with one exception: `plugin:install` is in neither. Installing, removing or writing a plugin runs code with the daemon's permissions, so a role must name that grant rather than receive it with `plugin:write`; only a grant naming `plugin:install`, `plugin:*` or `*:*` holds it.
+
 The host advertises every subject a grant may name in `_meta['ahpd.grants']` on
 the handshake and on the root state, so a client reads the operations from the
 wire rather than from this page. That map holds the fourteen the host decides and,
@@ -103,7 +105,7 @@ The subjects the host decides are these fourteen:
 | `automation` | `list` | `create`, `update`, `remove`, `run`, `cancel` | Agent runs that start on a schedule or a trigger |
 | `file` | `get`, `list`, `resolve`, `watch` | `put`, `delete`, `mkdir`, `move`, `copy`, `request` | Files and other resources on this host. Every other scheme has the same operations under its own name |
 | `config` | `settings` | `change` | This host's settings |
-| `plugin` | `list` | `enable`, `disable`, `options` | The plugins the configuration names: listing them, turning them on and off, and editing their options |
+| `plugin` | `list` | `enable`, `disable`, `options` | The plugins the configuration names: listing them, turning them on and off, and editing their options. `plugin:install` installs, removes or writes a plugin and is in neither group, so `plugin:write` does not hold it |
 | `connector` | `list`, `all` | `put`, `remove`, `host` | The adapters plugins register, and the connectors made from them. `list` reads the caller's own connectors, their teams' and the host's; `all` reads every connector; `host` lets a put or a remove change a connector owned by `host` |
 | `agent` | `list`, `all` | `put`, `remove`, `host` | The engines plugins register, and the agents made from records of them. `list` reads the caller's own agents, their teams' and the host's; `all` reads every agent and lets a remove take any of them, whoever owns it; `host` lets a put or a remove change an agent owned by `host` |
 | `diagnostics` | `logs`, `network`, `fetch` | - | Logs and network details for troubleshooting |

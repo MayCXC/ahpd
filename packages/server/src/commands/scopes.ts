@@ -20,9 +20,14 @@ declare module '@cofold/commands' {
      * does in the sentence that refuses a person.
      *
      * What it changes is code the daemon's process runs, or what that code is
-     * given: installing, updating or removing a plugin, its options, turning
-     * it on or off, and a restart, which runs it all again. No grant a person
-     * may hold should confer that.
+     * given: updating a plugin, writing its options, turning it on or off, and
+     * a restart, which runs it all again. No grant a person may hold should
+     * confer that.
+     *
+     * Installing and removing a plugin are not here. They run code the daemon
+     * then runs with its own permissions, so they take the grant
+     * `plugin:install`, which no role receives with `plugin:write` and which
+     * only a role that names it holds.
      */
     deploymentTokenOnly?: string;
   }

@@ -752,14 +752,17 @@ it('lets somebody holding session:write hand a chat:write role on', async () => 
   expect(holds(new Set(['chat:write']), 'session:dispose')).toBe(false);
 });
 
-it('keeps every operation in exactly one group, and no subject a read or a write', () => {
+it('keeps every operation in one group or out of both, and no subject a read or a write', () => {
   for (const [subject, mine] of Object.entries(OPERATIONS)) {
     const { operations, groups } = mine;
     const every = [...groups.read, ...groups.write];
-    // The two groups between them hold every operation once: nothing is listed
-    // twice, and nothing is listed that is not an operation.
-    expect([...every].sort()).toEqual([...operations].sort());
-    expect(new Set(every).size).toBe(operations.length);
+    // The two groups between them hold every operation once - except one that
+    // names itself out of both, which only a grant naming it holds. Nothing is
+    // listed twice, and nothing is listed that is not an operation.
+    const loose = subject === 'plugin' ? ['install'] : [];
+    expect([...every].sort()).toEqual(operations.filter((op) => !loose.includes(op)).sort());
+    expect(operations.filter((op) => !every.includes(op))).toEqual(loose);
+    expect(new Set(every).size).toBe(operations.length - loose.length);
     for (const operation of operations) {
       // The two words that group a subject are operations nowhere, so a role
       // holding one of them holds a group rather than a thing it may do.

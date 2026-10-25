@@ -374,9 +374,9 @@ it('builds the ahpd part of a checkout from the workspace own tarballs', () => {
   expect(file).toContain('./ahpd-server.tgz ./ahpd-sdk.tgz');
   expect(file).toContain('npm install --prefix /opt/ahpd/ahpd/plugins');
   expect(file).toContain(`'export AHPD_PLUGIN_ROOT=/opt/ahpd/ahpd/plugins'`);
-  // No `ahpd plugin install` here: it names a package, and `isPackageName` in the
-  // installer refuses a path - so a tarball has to go in by npm, into the root
-  // the launcher will point the command at.
+  // No `ahpd plugin install` here: the plugins of a checkout are tarballs
+  // copied into the image, so they go in by npm, into the root the launcher
+  // will point the command at.
   expect(file).not.toContain('plugin install');
 });
 

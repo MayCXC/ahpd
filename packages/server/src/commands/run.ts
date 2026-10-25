@@ -417,12 +417,17 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * serves, and the `ahpd usage` this daemon serves. Two would have the command
    * and the scheme answer from different records.
    */
+  /*
+   * What a store could not read is written to stderr, never to stdout: a
+   * `--stdio` daemon serves the protocol on stdout, so a problem line there is
+   * a frame the client cannot parse.
+   */
   const store = fileUsage({
     folder: join(configDir(), 'usage'),
     // The same zone the `usage:` scheme cuts its periods in, so the day a total
     // is kept under and the day it is read over are the same day.
     ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
-    onProblem: (message) => process.stdout.write(`${message}\n`),
+    onProblem: (message) => process.stderr.write(`${message}\n`),
   });
   // This daemon's own once a plugin has folded in a store of its own; before
   // the host is built, a request finds the daemon's.
@@ -454,7 +459,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   const policies = filePolicies({
     file: policiesPath(),
-    onProblem: (message) => process.stdout.write(`${message}\n`),
+    onProblem: (message) => process.stderr.write(`${message}\n`),
   });
   /*
    * What a daemon with the checks on says once at start.
@@ -661,7 +666,12 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * policy one, so a reader whose grant went is sent `removed`. The watch is
    * closed once `stopping` has been raised.
    */
-  const listProblem = (message: string): void => { process.stdout.write(`${message}\n`); };
+  /*
+   * A problem a list could not answer is written to stderr: on a `--stdio`
+   * daemon stdout is the protocol, and a line there is a frame a client cannot
+   * parse.
+   */
+  const listProblem = (message: string): void => { process.stderr.write(`${message}\n`); };
   const policyLists = policyChannels(policies, {
     onProblem: listProblem,
     // The limits of a row are read from the same usage store the scheme is, so
@@ -917,7 +927,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       agents: () => agentLists.owners(),
       hasUsers: () => users !== undefined,
     })
-    : daemonAutomations((message) => process.stdout.write(`${message}\n`), {
+    : daemonAutomations((message) => process.stderr.write(`${message}\n`), {
       pluginTypes: () => pluginTypes,
       connectors: () => connectorLists.refs(),
       agents: () => agentLists.owners(),
@@ -1134,7 +1144,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      */
     sessions: options.sessions === 'memory'
       ? memorySessions()
-      : daemonSessions((message) => process.stdout.write(`${message}\n`)),
+      : daemonSessions((message) => process.stderr.write(`${message}\n`)),
     /*
      * Automations, with a clock unless asked otherwise.
      *
@@ -1159,7 +1169,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      */
     enablement: fileEnablement({
       file: customizationStatePath(),
-      onProblem: (message) => process.stdout.write(`${message}\n`),
+      onProblem: (message) => process.stderr.write(`${message}\n`),
     }),
     /*
      * What an automation that names no owner wakes on, which is a decision
@@ -1247,7 +1257,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     ownLimits: options.policiesOwnLimits,
     // The titles a pool is named with, read from the same directory the gate asks.
     ...(users === undefined ? {} : { titles: users }),
-    onProblem: (message) => process.stdout.write(`${message}\n`),
+    onProblem: (message) => process.stderr.write(`${message}\n`),
   });
   base.resourceProviders = { ...base.resourceProviders, usage: usageScheme };
   // The usage commands, which answer what the scheme's reads answer, as values.
