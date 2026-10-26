@@ -386,9 +386,9 @@ export const apply: Plugin['apply'] = async (host, options) => {
   }));
   for (const [at, piece] of answer.pieces.entries()) {
     const logo = logos[at];
-    if (logo?.problem !== undefined) host.problem(`${name}: ${logo.problem}`);
+    if (logo?.problem !== undefined) host.problem(logo.problem);
     const mapped = adapterOf(piece, (call) => callAction(channel, piece.package, call, host.installed, fromInstalled.has(piece.package)), logo?.icon);
-    for (const note of mapped.notes) host.problem(`${name}: ${note}`);
+    for (const note of mapped.notes) host.problem(note);
     if (mapped.adapter !== undefined) host.registerAdapter(mapped.adapter);
   }
 };
