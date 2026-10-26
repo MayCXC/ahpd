@@ -65,7 +65,7 @@ const HEADLESS_TERMINAL_SCROLLBACK = 0;
 
 /*
  * VS Code's `removeAnsiEscapeCodes`
- * (https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/base/common/strings.ts#L846-L887),
+ * (https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/base/common/strings.ts#L847-L886),
  * the three sequence families of the xterm control sequences.
  */
 const CSI_SEQUENCE = /(?:\x1b\[|\x9b)[=?>!]?[\d;:]*["$#'* ]?[a-zA-Z@^`{}|~]/;
