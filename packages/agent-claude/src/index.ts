@@ -11,9 +11,10 @@
  * a list, and cannot tell one from another.
  *
  * The same package is what the daemon loads as a plugin, because the daemon
- * bundles no backend of its own - decision `the-daemon-bundles-no-agent`. The
- * entry in `plugin.ts` is a wrapper over `claude()` and nothing more, so the
- * two ways in reach one object.
+ * bundles no backend of its own - decision
+ * `the-daemon-bundles-no-agent-and-starts-without-one`. The entry in
+ * `plugin.ts` is a wrapper over `claude()` and nothing more, so the two ways
+ * in reach one object.
  */
 
 export { catalogue } from './catalog.js';

@@ -239,6 +239,7 @@ describe('the manifest a client lists', () => {
       expect(problems[0]).toContain('exports a manifest');
       expect(problems[0]).toContain('ahpd');
       expect(problems[0]).toContain('plugin.json');
+      expect(problems[0]).toContain('ahpd plugin update all');
     }
     finally {
       rmSync(root, { recursive: true, force: true });
@@ -279,6 +280,7 @@ describe('the manifest a client lists', () => {
       expect(problems).toHaveLength(1);
       expect(problems[0]).toContain('ahpd.options');
       expect(problems[0]).toContain('ahpd.optionsSchema');
+      expect(problems[0]).toContain('ahpd plugin update all');
     }
     finally {
       rmSync(root, { recursive: true, force: true });
@@ -298,6 +300,7 @@ describe('the manifest a client lists', () => {
       expect(problems).toHaveLength(1);
       expect(problems[0]).toContain('exports an optionsSchema');
       expect(problems[0]).toContain('ahpd.optionsSchema');
+      expect(problems[0]).toContain('ahpd plugin update all');
     }
     finally {
       rmSync(root, { recursive: true, force: true });

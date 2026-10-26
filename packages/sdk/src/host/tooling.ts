@@ -14,7 +14,7 @@ import { bag, reason, str } from '../utils/values.js';
 import { groupOf } from '../access/users.js';
 import { enablementKeyOf } from '../plugins/enablement.js';
 import { ROOT, chatIdFor, chatUriFor, schemeOf } from './channels.js';
-import { need } from './common.js';
+import { NO_AGENT, need } from './common.js';
 import { preambleOf } from './preamble.js';
 import { startsRead } from './chatactions.js';
 import { refusalReason } from './gate.js';
@@ -371,7 +371,7 @@ interface ChatStart {
 
 export function createTooling(ctx: HostContext): Tooling {
   const {
-    options, sessions, byChat, first, kept, terminals, learned, rootConfig, sentBy, about,
+    options, sessions, byChat, kept, terminals, learned, rootConfig, sentBy, about,
     activeClientsOf, leadOf, heldAs, ownerOf, allRows, setArtifacts, forWhom,
     principalFor, senderOf, senders,
     chatSummary, keepTitle, summaryMoved, operationsMoved, dispatch, log, fire,
@@ -1696,7 +1696,8 @@ export function createTooling(ctx: HostContext): Tooling {
           + ` This session was itself created ${depth} level(s) deep.`,
         );
       }
-      const provider = asked.provider ?? sessions.get(uri)?.agent.provider ?? first.provider;
+      const provider = asked.provider ?? sessions.get(uri)?.agent.provider ?? ctx.first?.provider;
+      if (provider === undefined) throw new Error(NO_AGENT);
       // Held under its provider's name, as a client's `createSession` is.
       const made = `${provider}:/${crypto.randomUUID()}`;
       const config: Record<string, unknown> = {

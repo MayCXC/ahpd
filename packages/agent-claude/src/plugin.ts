@@ -10,9 +10,10 @@
  * and is read from there rather than exported: the daemon reads it without
  * importing the module, so a plugin switched off still has a form.
  *
- * The daemon has no backend of its own - decision `the-daemon-bundles-no-agent`
- * - so this is how Claude Code reaches a host: one entry in `plugins`, with
- * nothing under `options` in the ordinary install.
+ * The daemon has no backend of its own - decision
+ * `the-daemon-bundles-no-agent-and-starts-without-one` - so this is how Claude
+ * Code reaches a host: one entry in `plugins`, with nothing under `options` in
+ * the ordinary install.
  */
 
 import type { ModelEntry } from './models.js';

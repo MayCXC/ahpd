@@ -231,9 +231,6 @@ export function createHost(options: HostOptions): Host {
     }
     return [...found];
   };
-  const first = options.agents[0];
-  if (!first)
-    throw new Error('A host with no agents can serve nothing. Pass at least one.');
   const connections = new Set<Connection>();
   /**
    * The ten `resource*` methods, which run in both directions.
@@ -1067,7 +1064,7 @@ export function createHost(options: HostOptions): Host {
    * and the helpers declared above it.
    */
   const ctx = {
-    options, dir, known, replayable, leaves, seenBy, claims, agents, first, connections, relays: new Map(), holders, sessions, byChat, subagents, owners, names,
+    options, dir, known, replayable, leaves, seenBy, claims, agents, first: options.agents[0], connections, relays: new Map(), holders, sessions, byChat, subagents, owners, names,
     leadOf, wheres, worktrees, worktreeOf, githubFacts, kept, offered, decided, about, terminals,
     madeFrom, origins, births, moves, listedMeta, browsable, broadcast, presence, beside, marks, lives, lifeOf, restarting, learned, starting,
     logs, detached, refuse, echoTo,
@@ -1381,7 +1378,6 @@ export function createHost(options: HostOptions): Host {
        */
       const moved = portMoved(folded);
       if (moved !== undefined) return moved;
-      if (folded.agents.length === 0) return 'A host with no agents can serve nothing. Pass at least one.';
       const clash = agentsProblem(folded.agents);
       if (clash !== undefined) return clash;
       /*
@@ -1412,7 +1408,7 @@ export function createHost(options: HostOptions): Host {
       const taking = folded as unknown as Record<string, unknown>;
       for (const key of Object.keys(held)) if (!Object.hasOwn(taking, key)) delete held[key];
       Object.defineProperties(held, Object.getOwnPropertyDescriptors(taking));
-      ctx.first = options.agents[0] ?? (next.values().next().value as Agent);
+      ctx.first = options.agents[0] ?? (next.values().next().value as Agent | undefined);
       ctx.contributed = options.tools ?? [];
       ctx.contributing = permitted([...ctx.contributed, ...ctx.actionTools]);
       wireChannels();

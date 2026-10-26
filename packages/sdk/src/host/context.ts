@@ -56,8 +56,8 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
   claims: Map<string, Claimed>;
   /** The backends this host serves, by the id clients name. */
   agents: Map<string, Agent>;
-  /** The backend a client gets when it names none, which is the ordinary case. */
-  first: Agent;
+  /** The backend a client gets when it names none, which is the ordinary case; none on a host with no agent. */
+  first: Agent | undefined;
   /** Every connection the host is serving right now. */
   connections: Set<Connection>;
   /**

@@ -1,7 +1,7 @@
 ---
 title: A daemon starts with no backend
 domain: daemon
-status: planned
+status: active
 priority: high
 created: 2026-10-26
 revalidated: 2026-10-26
@@ -17,6 +17,7 @@ refs:
   - "[code://packages/server/src/pluginschannel.ts#L377-L425](../../../../packages/server/src/pluginschannel.ts#L377-L425) - `x-ahpd/plugins/install`, the pattern for an update method"
   - "[code://packages/agent-claude/package.json#L63-L64](../../../../packages/agent-claude/package.json#L63-L64) - the `@ahpd/sdk` peer range"
   - "[code://docs/server/UPGRADE.md](../../../../docs/server/UPGRADE.md) - how an update moves the plugins"
+  - "[code://packages/server/src/plugins.ts#L326-L339](../../../../packages/server/src/plugins.ts#L326-L339) - `rootsOf`, the order a bare name is resolved in"
   - "[code://scripts/install/install.sh#L761-L770](../../../../scripts/install/install.sh#L761-L770) - the install script runs `ahpd plugin update all` on an upgrade"
 ---
 
@@ -64,6 +65,7 @@ Each run used XDG folders under the scratchpad, a prefix install and port 38911.
 | The no-backend line and each refusal of an old plugin name `ahpd plugin update all` | (defaulted: the fix checked by hand) | 02 |
 | A client updates a plugin with `x-ahpd/plugins/update {id}`, with the grant `plugin:install`, as `ahpd plugin update <name>` does | (defaulted: no other client path fixes a refused plugin) | 03 |
 | Each first-party plugin's `@ahpd/sdk` peer range is `>=0.14 <1` | (defaulted: the oldest daemon the 0.14 plugins load on) | 04 |
+| With `AHPD_PLUGIN_ROOT` set, a bare name resolves from the plugin root before the configuration directory | (defaulted: install and update write to the plugin root, so the copy they moved is the one that loads) | 05 |
 | No start runs npm by itself | (defaulted: `ahpd update` and the install script already move the plugins) | - |
 
 ## Proposed architecture
@@ -78,10 +80,11 @@ Each run used XDG folders under the scratchpad, a prefix install and port 38911.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host starts with no agent](task-01-the-host-starts-with-no-agent.md) | todo | - |
-| [02 - An old plugin's refusal names the fix](task-02-an-old-plugins-refusal-names-the-fix.md) | todo | 01 |
-| [03 - A client updates a plugin](task-03-a-client-updates-a-plugin.md) | todo | - |
-| [04 - The plugins name the oldest daemon](task-04-the-plugins-name-the-oldest-daemon.md) | todo | - |
+| [01 - The host starts with no agent](task-01-the-host-starts-with-no-agent.md) | implemented | - |
+| [02 - An old plugin's refusal names the fix](task-02-an-old-plugins-refusal-names-the-fix.md) | implemented | 01 |
+| [03 - A client updates a plugin](task-03-a-client-updates-a-plugin.md) | implemented | - |
+| [04 - The plugins name the oldest daemon](task-04-the-plugins-name-the-oldest-daemon.md) | implemented | - |
+| [05 - The plugin root loads first](task-05-the-plugin-root-loads-first.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -90,8 +93,8 @@ Each run used XDG folders under the scratchpad, a prefix install and port 38911.
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-host-starts-with-no-agent.md](task-01-the-host-starts-with-no-agent.md).
+- **Done so far:** tasks 01 to 05 implemented on the branch `daemon/40-a-daemon-starts-with-no-backend`.
+- **Next action:** Softov reviews the branch, then the checks by hand in the final checklist.
 - **Open questions:** none.
 - **Watch out for:** never touch `~/.config/ahpd`. A test daemon gets XDG folders under a temp folder and a port other than 37537.
 

@@ -21,7 +21,7 @@ export interface Snapshots {
 
 export function createSnapshots(ctx: HostContext): Snapshots {
   const {
-    options, first, sessions, subagents, byChat, owners, decided, wheres, moves, drafts, terminals,
+    options, sessions, subagents, byChat, owners, decided, wheres, moves, drafts, terminals,
     kept, watches, marksOf, resumedSessions, activeClientsOf,
     about, leadOf,
     LOGS, TRACES, METRICS,
@@ -395,7 +395,8 @@ export function createSnapshots(ctx: HostContext): Snapshots {
     const missing = waitingFor(id);
     if (missing !== undefined) throw new RpcError(-32002, `${missing} is not loaded on this host`);
     const turns = await past(id);
-    const owner = owners.get(nameOf(id)) ?? first;
+    const owner = owners.get(nameOf(id)) ?? ctx.first;
+    if (owner === undefined) throw new RpcError(-32001, `No agent for session ${channel}`);
     if (turns) {
       const title = titles.get(id) ?? 'Session';
       /*

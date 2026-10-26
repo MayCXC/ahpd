@@ -12,7 +12,7 @@ decisions:
   - decisions/each-backend-offers-its-options-unless-a-rule-asks.md
   - decisions/pi-is-embedded-not-spawned.md
   - decisions/subagent-chats-are-restored-from-the-cli-meta-file.md
-  - decisions/the-daemon-bundles-no-agent.md
+  - decisions/the-daemon-bundles-no-agent-and-starts-without-one.md
   - decisions/agent-package-only-when-it-brings-a-runtime.md
   - decisions/an-acp-agents-terminal-in-a-machine-runs-in-the-machine.md
 refs:

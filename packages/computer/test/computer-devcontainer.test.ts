@@ -820,7 +820,7 @@ it.skipIf(!posix)('installs the server in a container at the daemon\'s version, 
         plugins: ['@ahpd/agent-cofold'],
       },
     }) }],
-    { base: { path: '/tmp/computer-devcontainer', agents: [], resources: fileResources() }, configDir: join(root, 'config'), cwd: REPO, log: () => {}, version: '0.10.4' },
+    { base: { path: '/tmp/computer-devcontainer', agents: [], resources: fileResources() }, configDir: join(root, 'config'), cwd: REPO, log: () => {}, version: '0.14.4' },
   );
   expect(problems).toEqual([]);
   keeping(options);
@@ -831,7 +831,7 @@ it.skipIf(!posix)('installs the server in a container at the daemon\'s version, 
     { message: (t) => { said.push(t); }, output: () => {}, close: (why) => { closed.push(why); } },
   );
   expect(dockerHeld(dockerState).commands.map((one) => one.command.at(-1)))
-    .toContain('npm i -g @ahpd/server@0.10.4 --allow-scripts=node-pty');
+    .toContain('npm i -g @ahpd/server@0.14.4 --allow-scripts=node-pty');
   for (let i = 0; i < 600 && said.length === 0 && closed.length === 0; i++) await new Promise((r) => { setTimeout(r, 5); });
   await answered(dockerState, 2);
 });

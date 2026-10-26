@@ -94,23 +94,24 @@ describe('resolvePlugin', () => {
     expect(resolved.packageDir).toBe(rooted('node_modules/fixture-plugin'));
   });
 
-  it('takes the configuration directory first, and the plugin root only after it', () => {
-    // Two installs of one name: the config dir wins, because inside the ahpd
-    // part it is still where a person's own plugins land.
+  it('takes the plugin root first, and the configuration directory only after it', () => {
+    // Two installs of one name: the plugin root wins, because it is where an
+    // install and an update write, and the copy in the config dir is one an
+    // older release left behind.
     put('node_modules/fixture-plugin/package.json', JSON.stringify({ name: 'fixture-plugin', version: '1.0.0', main: './index.js' }));
     put('node_modules/fixture-plugin/index.js', '');
     putInRoot('node_modules/fixture-plugin/package.json', JSON.stringify({ name: 'fixture-plugin', version: '2.0.0', main: './index.js' }));
     putInRoot('node_modules/fixture-plugin/index.js', '');
 
     expect(resolvePlugin('fixture-plugin', { configDir: configDir(), cwd: process.cwd() }).path)
-      .toBe(at('node_modules/fixture-plugin/index.js'));
+      .toBe(rooted('node_modules/fixture-plugin/index.js'));
   });
 
   it('names both places in the refusal when neither holds the plugin', () => {
     putInRoot('package.json', '{}');
 
     expect(() => resolvePlugin('fixture-plugin', { configDir: configDir(), cwd: process.cwd() }))
-      .toThrow(`${configDir()} or ${rooted('node_modules')}`);
+      .toThrow(`${rooted('node_modules')} or ${configDir()}`);
   });
 
   it('looks in the configuration directory alone when the variable is not set', () => {

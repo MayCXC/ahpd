@@ -24,10 +24,10 @@ import type { Peer } from '../src/types/rpc.js';
 
 const REPO = join(import.meta.dirname, '../../..');
 // The nested daemon has no backend of its own - decision
-// `the-daemon-bundles-no-agent` - so the configuration names one, and it is
-// the example's, arriving the way any plugin's backend does. A daemon
-// configured with none refuses to start, which is what this relay would then
-// be relaying to.
+// `the-daemon-bundles-no-agent-and-starts-without-one` - so the configuration
+// names one, and it is the example's, arriving the way any plugin's backend
+// does. A daemon configured with none runs no session, which is what this
+// relay would then be relaying to.
 const CONFIG = JSON.stringify({
   paths: [],
   withoutConnectionToken: true,

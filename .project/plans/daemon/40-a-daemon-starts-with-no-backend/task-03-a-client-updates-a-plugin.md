@@ -1,6 +1,6 @@
 ---
 title: A client updates a plugin
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -18,7 +18,7 @@ refs:
 
 - `UPDATE: packages/server/src/pluginschannel.ts:377-425` - add `updateMethod` beside `installMethod`, with the same grant, staging and one-at-a-time lock.
 - `UPDATE: packages/server/src/pluginschannel.ts:716-727` - add `${DOMAIN}/update` to the method map.
-- `CREATE: packages/server/test/plugins-channel-update.test.ts` - the method's cases, with a fake npm and a fake registry.
+- `UPDATE: packages/server/test/plugins-channel.test.ts` - the method's cases, with the file's fake npm and a fake registry.
 - `UPDATE: docs/plugins/PLUGINS.md` - the method, beside install and remove.
 
 ## Steps
@@ -34,7 +34,7 @@ refs:
 
 ## Validation
 
-- `packages/server/test/plugins-channel-update.test.ts` passes.
+- The update cases in `packages/server/test/plugins-channel.test.ts` pass.
 - The gates pass.
 
 ## Resume

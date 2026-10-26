@@ -592,8 +592,8 @@ export interface DevContainerOptions {
    * What the host inside loads, and the one option with no useful default.
    *
    * The host inside is an `ahpd` like this one, and it bundles no backend
-   * either - decision `the-daemon-bundles-no-agent` - so a list with nothing
-   * in it is a host that exits rather than one that serves files and shells.
+   * either - decision `the-daemon-bundles-no-agent-and-starts-without-one` -
+   * so a list with nothing in it is a host that runs no session.
    * `connect` refuses on an empty list instead of building a container for it.
    *
    * Not defaulted to this daemon's own list, tempting as that is: these

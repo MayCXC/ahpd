@@ -57,7 +57,7 @@
     "@earendil-works/pi-coding-agent": "^1.3.0"
   },
   "peerDependencies": {
-    "@ahpd/sdk": ">=0.10 <1"
+    "@ahpd/sdk": ">=0.14 <1"
   },
   "devDependencies": {
     "@ahpd/sdk": "workspace:*"

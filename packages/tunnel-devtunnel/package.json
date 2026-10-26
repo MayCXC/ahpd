@@ -55,7 +55,7 @@
     "test": "cd ../.. && vitest run packages/tunnel-devtunnel/test"
   },
   "peerDependencies": {
-    "@ahpd/sdk": ">=0.8 <1"
+    "@ahpd/sdk": ">=0.14 <1"
   },
   "devDependencies": {
     "@ahpd/sdk": "workspace:*"

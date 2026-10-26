@@ -8,7 +8,7 @@ import { createRuleEngine } from '../automations/triggers.js';
 import { wakeMessage } from '../automations/wakemessage.js';
 import { bag } from '../utils/values.js';
 import { AUTOMATIONS, chatUriFor } from './channels.js';
-import { CLOSING, need } from './common.js';
+import { CLOSING, NO_AGENT, need } from './common.js';
 import { refusalReason } from './gate.js';
 import type { Bag } from '../types/common.js';
 import type { AutomationEntry, AutomationRun, AutomationRunState, RunEnding, StartSession } from '../types/automations.js';
@@ -227,7 +227,7 @@ export interface Automations {
 
 export function createAutomations(ctx: HostContext): Automations {
   const {
-    options, sessions, byChat, senders, charged, first, origins, kept,
+    options, sessions, byChat, senders, charged, origins, kept,
     dispatch, log, fire, statusOf, principalFor, admitted, placedIn,
     isolated, settle, openSession, backendsOwn, modelIn, unheld, forWhom, leadOf,
     turnInstructions,
@@ -700,7 +700,8 @@ export function createAutomations(ctx: HostContext): Automations {
    * and what each road adds is the question that is its own.
    */
   const beginSession = async (wanted: StartSession, named?: (uri: string) => void): Promise<string> => {
-    const provider = wanted.provider ?? first.provider;
+    const provider = wanted.provider ?? ctx.first?.provider;
+    if (provider === undefined) throw new Error(NO_AGENT);
     // Held under its provider's name, as a client's `createSession` is.
     const uri = `${provider}:/${crypto.randomUUID()}`;
     unheld(uri);

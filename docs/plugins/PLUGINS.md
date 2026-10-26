@@ -5,11 +5,11 @@ A plugin is an installed package the daemon folds into the options it hands
 an install and a configuration line rather than a fork of ahpd.
 
 One of them is not optional. The daemon bundles no agent of its own - decision
-[`the-daemon-bundles-no-agent`](../../.project/decisions/the-daemon-bundles-no-agent.md) -
+[`the-daemon-bundles-no-agent-and-starts-without-one`](../../.project/decisions/the-daemon-bundles-no-agent-and-starts-without-one.md) -
 so every backend it serves arrives this way, `@ahpd/agent-claude` included, and
-a daemon configured with none refuses to start. Reading this to add a tool or a
-port, rather than to write a backend, is still reading about how the backend got
-there.
+a daemon configured with none starts but runs no session until one is installed.
+Reading this to add a tool or a port, rather than to write a backend, is still
+reading about how the backend got there.
 
 This is the author's guide: the contract, what you may register, the manifest,
 how a plugin is named, and what happens when one fails. The rules behind it are
@@ -1284,12 +1284,13 @@ with it:
 
 Reading the channel needs `plugin:list`.
 
-Six commands change the file the daemon loads, and one reads back the text a client wrote:
+Six commands change the file the daemon loads, one moves an installed package, and one reads back the text a client wrote:
 
 | Method | Grant | What it does |
 | --- | --- | --- |
 | `x-ahpd/plugins/install` | `plugin:install` | Installs one source the way `ahpd plugin install` does, names the package npm wrote in `plugins` and loads it. Takes `source`; answers `{ id }`, the id the new row is listed under |
 | `x-ahpd/plugins/remove` | `plugin:install` | Takes the plugin out of `plugins` and uninstalls it, or leaves the package installed with `keep: true`. Takes `id` and an optional `keep`. A plugin written by `write` has its folder deleted instead, unless `keep: true` |
+| `x-ahpd/plugins/update` | `plugin:install` | Moves the plugin's package to the newest version whose `@ahpd/sdk` range admits this daemon, the way `ahpd plugin update <name>` does, and loads it again. Takes `id`; answers `{ id, from, to }`, or `{ id }` when nothing moved. A plugin the configuration names by its path is refused |
 | `x-ahpd/plugins/write` | `plugin:install` | Writes a plugin in a client: `index.ts` and `package.json` in `<plugin root>/plugins/.<id>.new/`, runs `npm install` there, swaps the folder into `<plugin root>/plugins/<id>/` only when npm succeeds, names it in `plugins` and loads it. Takes `id`, `source` and `packageJson`; a second write of the same `id` replaces the files and reloads it |
 | `x-ahpd/plugins/source` | `plugin:install` | Answers `{ id, source, packageJson }` with the text a client wrote. Takes `id`; a plugin the configuration names with a spec of its own is refused |
 | `x-ahpd/plugins/enable` | `plugin:enable` | Turns the plugin on, keeping its entry and its options. Takes `id` |

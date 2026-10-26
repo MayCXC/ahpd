@@ -6,7 +6,7 @@ import { namesOf } from '../usage/scopes.js';
 import { localPath, uriOf } from '../resources/fileuri.js';
 import { bag, ownerFilter } from '../utils/values.js';
 import { configOf } from '../sessions/remotesession.js';
-import { CLOSING } from './common.js';
+import { CLOSING, NO_AGENT } from './common.js';
 import { mayUseAgent, ownershipOf } from '../agents/usable.js';
 import { chatIdFor, named, ROOT } from './channels.js';
 import { preambleOf, withPreamble } from './preamble.js';
@@ -44,7 +44,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
   const {
     about, activeSessionsMoved, admitted, agents, answeredAs, backendsOwn, beginOrRun, beside, byChat,
     charged, chatAgent, chatConfig, chatIdOf, chatOf,
-    chatSummary, chatsReordered, claimable, claims, dir, dispatch, drafts, dropChat, first, flushDeltas,
+    chatSummary, chatsReordered, claimable, claims, dir, dispatch, drafts, dropChat, flushDeltas,
     forWhom, forgetSendersIn, heldAs,
     isolating, isolated, keepChat, keepProvider, kept, leadOf, allRows, log, madeFrom, meantBy, messageFrom,
     movable, movableMoved, openSession, openedBy, options, orderChats,
@@ -915,7 +915,8 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
     createSession: async (params) => {
       if (ctx.closed) throw new RpcError(INTERNAL_ERROR, CLOSING);
       const given = named(String(params.channel ?? ''), 'session');
-      const provider = String(params.provider ?? first.provider);
+      const provider = params.provider === undefined ? ctx.first?.provider : String(params.provider);
+      if (provider === undefined) throw new RpcError(-32002, NO_AGENT);
       /*
        * An agent this caller may not use answers as one this host does not
        * serve, before anything is claimed or made: an id it is refused is an
@@ -1453,7 +1454,8 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
      * exactly what it did.
      */
     resolveSessionConfig: async (params) => {
-      const provider = String(params.provider ?? first.provider);
+      const provider = params.provider === undefined ? ctx.first?.provider : String(params.provider);
+      if (provider === undefined) throw new RpcError(-32002, NO_AGENT);
       const agent = agents.get(provider);
       if (!agent)
         throw new RpcError(-32002, `No provider called ${provider}`);

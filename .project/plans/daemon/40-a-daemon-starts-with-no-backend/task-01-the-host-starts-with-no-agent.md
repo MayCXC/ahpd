@@ -1,6 +1,6 @@
 ---
 title: The host starts with no agent
-status: todo
+status: implemented
 depends: []
 layer: sdk, server
 refs:

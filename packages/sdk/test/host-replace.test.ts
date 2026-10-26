@@ -163,3 +163,41 @@ describe('host.replace', () => {
     expect((await rootOf(host, 'root-gone')).agents.map((one) => one.provider)).not.toContain('other');
   });
 });
+
+/*
+ * A host with no agent, which is what a daemon whose plugins all failed to load
+ * builds - decision `the-daemon-bundles-no-agent-and-starts-without-one`. It
+ * serves its root so a client can fix it, refuses each session start, and
+ * serves the agent a later fold adds.
+ */
+describe('a host with no agent', () => {
+  const empty = (): HostOptions => ({ path: HERE, agents: [], ...machine() });
+
+  it('answers initialize and lists no agent', async () => {
+    const host = createHost(empty());
+    expect((await rootOf(host, 'none')).agents).toEqual([]);
+  });
+
+  it('refuses a session start, named or not', async () => {
+    const host = createHost(empty());
+    const { client } = await clientOf(host, 'start');
+    await expect(client.handle({ method: 'createSession', params: { channel: 'ahp-session:/unnamed' } }))
+      .rejects.toMatchObject({ code: -32002, message: expect.stringMatching(/serves no agent/) });
+    await expect(client.handle({ method: 'createSession', params: { channel: 'ahp-session:/named', provider: 'claude' } }))
+      .rejects.toMatchObject({ code: -32002 });
+  });
+
+  it('serves the agent a fold adds, as the one a client gets by default', async () => {
+    const options = empty();
+    const host = createHost(options);
+    expect(host.replace({ ...options, agents: [claude({ paths: [HERE] })] })).toBeUndefined();
+    await settle();
+    expect((await rootOf(host, 'after')).agents.map((one) => one.provider)).toEqual(['claude']);
+    const { client } = await clientOf(host, 'later');
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/later' } });
+    const opened = await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/later' } }) as {
+      snapshot: { state: { provider: string } };
+    };
+    expect(opened.snapshot.state.provider).toBe('claude');
+  });
+});

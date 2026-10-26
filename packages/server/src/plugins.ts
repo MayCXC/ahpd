@@ -317,17 +317,25 @@ export const entryOf = (dir: string): string => {
 };
 
 /**
+ * What an operator runs when a refused plugin is an older release of one that
+ * has moved on, which is the ordinary way to meet a refusal below: the daemon
+ * was updated by npm, and the plugins it loads were not.
+ */
+const OLDER_RELEASE = 'if it is an older release, run ahpd plugin update all, or update it from a client';
+
+/**
  * The roots a bare name is resolved from, in the order they are looked in.
  *
- * `AHPD_PLUGIN_ROOT` is the root the ahpd part installs its own nested backends
- * into, and it comes after the configuration directory rather than before it:
- * inside that image the config dir is not writable, so a plugin installed there
- * has nowhere else to be, and outside it the variable is not set at all.
+ * `AHPD_PLUGIN_ROOT`, when it is set, is where `ahpd plugin install` and
+ * `ahpd plugin update` write, so it comes first: the copy an update moved is
+ * the one that loads, and an older copy left in the configuration directory
+ * by an earlier release does not hide it. The configuration directory is
+ * still looked in after it, for a plugin installed there by hand.
  */
 function rootsOf(configDir: string): string[] {
   const root = process.env.AHPD_PLUGIN_ROOT;
   if (root === undefined || root === '') return [configDir];
-  return [configDir, join(root, 'node_modules')];
+  return [join(root, 'node_modules'), configDir];
 }
 
 /**
@@ -730,7 +738,7 @@ export const checkManifest = (manifest: Manifest, packageDir: string): string | 
    * editing a key nothing reads.
    */
   if (inside !== undefined && inside.options !== undefined) {
-    return `${manifest.path} has an ahpd.options entry, which the daemon no longer reads; write the options schema in ahpd.optionsSchema`;
+    return `${manifest.path} has an ahpd.options entry, which the daemon no longer reads; ${OLDER_RELEASE}, or write the options schema in ahpd.optionsSchema`;
   }
   if (inside !== undefined && inside.optionsSchema !== undefined && !isRecord(inside.optionsSchema)) {
     return `${manifest.path} has an ahpd.optionsSchema that is not an object.`;
@@ -1328,7 +1336,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
    */
   let declared = manifest === undefined ? undefined : manifestFields(manifest);
   if (held.manifest !== undefined) {
-    return { problems: [...problems, `plugin ${name} skipped: ${target ?? url} exports a manifest, which the daemon no longer reads; write it in the ahpd field of package.json, or in a plugin.json for a standalone plugin`] };
+    return { problems: [...problems, `plugin ${name} skipped: ${target ?? url} exports a manifest, which the daemon no longer reads; ${OLDER_RELEASE}, or write it in the ahpd field of package.json, or in a plugin.json for a standalone plugin`] };
   }
   const title = typeof held.title === 'string' ? held.title : manifest?.title;
   const defaults = typeof held.defaults === 'object' && held.defaults !== null && !Array.isArray(held.defaults)
@@ -1343,7 +1351,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
    * editing an export nothing reads.
    */
   if (held.optionsSchema !== undefined) {
-    return { problems: [...problems, `plugin ${name} skipped: ${target ?? url} exports an optionsSchema, which the daemon no longer reads; write it in ahpd.optionsSchema of package.json, or as optionsSchema in a plugin.json for a standalone plugin`] };
+    return { problems: [...problems, `plugin ${name} skipped: ${target ?? url} exports an optionsSchema, which the daemon no longer reads; ${OLDER_RELEASE}, or write it in ahpd.optionsSchema of package.json, or as optionsSchema in a plugin.json for a standalone plugin`] };
   }
   /*
    * Every `{ "$secret": "<name>" }` in the options is read here, before the

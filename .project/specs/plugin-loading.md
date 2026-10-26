@@ -46,7 +46,7 @@ The code is in [`code://packages/server/src/plugins.ts`](../../packages/server/s
 ### The daemon finds a plugin
 
 WHEN an entry in `plugins` is a bare package name
-THEN the daemon resolves it from the configuration directory first, then from `AHPD_PLUGIN_ROOT/node_modules`
+THEN the daemon resolves it from `AHPD_PLUGIN_ROOT/node_modules` first, then from the configuration directory
 AND runs no plugin code while it resolves.
 
 WHEN an entry is a path that is absolute or starts with `.`

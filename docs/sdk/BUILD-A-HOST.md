@@ -242,9 +242,10 @@ and the endpoints to probe from its `endpoints()`.
 
 ## The agents
 
-`agents` is the one option with no default: a host serves at least one backend,
-each with a `provider` no other has. The first is what a client gets when it
-names none.
+`agents` is the one option with no default. Each backend has a `provider` no
+other has, and the first is what a client gets when it names none. An empty
+list is a host that starts and refuses each `createSession` with `-32002` until
+a fold adds an agent.
 
 ```ts
 import { createHost } from '@ahpd/sdk';

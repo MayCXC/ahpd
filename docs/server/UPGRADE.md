@@ -60,6 +60,12 @@ ahpd restart
 
 `plugin update all` moves each plugin to its newest version that fits the new daemon. See [Plugins](PLUGINS.md#update).
 
+npm alone moves no plugin. A plugin from an older release that the new daemon cannot load raises an error alert, and the daemon starts without it. With no agent plugin loaded, it serves no session until one is. A client moves a plugin with `x-ahpd/plugins/update`.
+
+::: warning From 0.12
+0.12 has no `ahpd update`. Update it by hand as above, and run `ahpd plugin update all` before `ahpd restart`.
+:::
+
 ::: warning From 0.6
 0.6 had Claude built in, so an old `config.json` names no plugin. Run `ahpd plugin install @ahpd/agent-claude` once after the upgrade.
 :::
