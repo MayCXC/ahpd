@@ -40,6 +40,7 @@ export type { ContainerConnect, ContainerConnectResult, ContainerPort, Container
 export type { SessionConfigAnswerer, SessionConfigAsk } from './completions.js';
 export type { Claim, Terminal, TerminalOptions, SpawnPty, TerminalStore, OpenTerminal, OpenedTerminal, StartTerminals, OutputTerminal, OutputTerminals } from './terminals.js';
 export type { BackgroundTask, BackgroundTaskKind, BackgroundTasks } from './background.js';
+export type { HeldShell, ManagedShell, ShellCommandResult, ShellCommandStatus, Shells, ShellType } from './shells.js';
 export type { GitDir, Worktree, Worktrees } from './worktrees.js';
 export type { NewPullRequest, PullRequest, PullRequests } from './github.js';
 export type { Automation, AutomationEntry, AutomationRun, AutomationStore, RunEnding, StartSession } from './automations.js';

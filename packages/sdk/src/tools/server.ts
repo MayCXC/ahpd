@@ -35,6 +35,15 @@ export const TOOLS_PREFIX = '/ahp-mcp';
 /** The revision of the transport this server speaks. */
 const PROTOCOL = '2025-06-18';
 
+/**
+ * Where an agent names the call it is making, on a `tools/call`'s `_meta`.
+ *
+ * The key the Claude CLI's own tool server reads, which an agent built on it
+ * carries here too: a `tools/call` holds a tool and its arguments and nothing
+ * else, so this is the only thing in one that says which call it is.
+ */
+const TOOL_USE_ID = 'claudecode/toolUseId';
+
 /** One text encoder for every stream this server writes to. */
 const ENCODER = new TextEncoder();
 
@@ -249,7 +258,8 @@ const answered = async (serving: Serving, said: Message, info: { name: string; v
       const content = toMcpContent(answer, String(said.id ?? ''));
       return result(said.id, answer.ok ? { content } : { content, isError: true });
     }
-    const text = await run(input);
+    const named = (params._meta as Record<string, unknown> | undefined)?.[TOOL_USE_ID];
+    const text = await run(input, typeof named === 'string' && named !== '' ? { toolCallId: named } : undefined);
     return result(said.id, { content: [{ type: 'text', text }] });
   }
   catch (error: unknown) {

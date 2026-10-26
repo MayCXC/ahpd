@@ -185,6 +185,22 @@ it('matches the line the model wrote, not the one the shell prefix made', async 
   ]);
 });
 
+/*
+ * The host's shell, where it takes the place of `Bash`.
+ *
+ * Its calls are the same commands, so the owner's rules read them as they
+ * read `Bash`: an approved line runs without a question, and nothing is drawn.
+ */
+it('runs a command of the host\'s shell the owner\'s rules allow, without asking', async () => {
+  const { asked, check } = approving(['make test']);
+  const { canUseTool, sent } = await sessionWith(check);
+
+  expect(await canUseTool('mcp__ahp__bash', { command: 'make test' }, { toolUseID: 'toolu_host_shell' }))
+    .toEqual({ behavior: 'allow', updatedInput: { command: 'make test' } });
+  expect(asked.at(-1)).toEqual({ kind: 'shell', line: 'make test', shell: 'bash', tool: 'mcp__ahp__bash' });
+  expect(sent.filter((one) => one.type === 'session/inputNeededSet')).toEqual([]);
+});
+
 it('asks for a command no rule matches', async () => {
   const { check } = approving([]);
   const { canUseTool, sent } = await sessionWith(check);

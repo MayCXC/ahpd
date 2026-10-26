@@ -63,6 +63,26 @@ it('drops a tool that would shadow one of pi own', async () => {
   expect(await toPiTool({ definition: { name: 'bash' }, run: async () => 'no' }, noClient)).toBeUndefined();
 });
 
+/*
+ * The host's agent terminal tool, which takes the place of pi's shell.
+ *
+ * Marked as taking the place of the harness's own, so it is handed to pi under
+ * pi's own name, which is how pi replaces one of its tools. Its run is told the
+ * call pi made, which is the id the call's row carries.
+ */
+it('hands pi a tool marked as taking the place of one of pi own, and tells it the call', async () => {
+  const seen: unknown[] = [];
+  const tool = await toPiTool({
+    definition: { name: 'bash' },
+    overridesBuiltInTool: true,
+    run: async (_input, call) => { seen.push(call); return 'ran'; },
+  }, noClient);
+  expect(tool?.name).toBe('bash');
+  const result = await callTool(tool, { command: 'ls' });
+  expect(result.content).toEqual([{ type: 'text', text: 'ran' }]);
+  expect(seen).toEqual([{ toolCallId: 'c1' }]);
+});
+
 it('hands the host tools to pi as custom tools', async () => {
   const { session, pi } = opened({
     tools: [

@@ -24,8 +24,24 @@ export interface Terminals {
   terminalInfo(): OnWire<TerminalInfo>[];
   /** The terminal factory a backend is handed on `Start`. */
   heldTerminals(shells: TerminalStore, sessionUri: string, chatUri: string): StartTerminals;
+  /** A shell an agent's tool runs commands in, held by the claim it was opened with. */
+  heldShell(shells: TerminalStore, asked: HeldShellOptions): Terminal;
   /** The output terminals a backend may open, handed on `Start`. */
   heldOutputs(sessionUri: string): OutputTerminals;
+}
+
+/** What a shell for an agent's tool is opened with. */
+export interface HeldShellOptions {
+  /** The directory it starts in. */
+  cwd: string;
+  /** Who holds it: the session, the chat, and the turn and call that opened it. */
+  claim: Claim;
+  /** Display name. */
+  name: string;
+  /** Environment variables for the shell, over the host's own. */
+  env?: Record<string, string | undefined>;
+  /** Told every action the terminal sends, after the host has routed it. */
+  watch(action: Bag): void;
 }
 
 /**
@@ -255,6 +271,44 @@ export function createTerminals(ctx: HostContext): Terminals {
   });
 
   /**
+   * A shell an agent's tool runs commands in.
+   *
+   * The machinery `heldTerminals` uses, without a command: the shell sits
+   * reading its input, so one terminal serves one command after another, the
+   * way the reference host's `ShellManager` keeps a shell per session. The
+   * claim is the caller's, because it names the turn and the call that opened
+   * the shell. `watch` sees each action after it is routed, which is how the
+   * caller learns that output arrived, that the claim moved, or that the shell
+   * exited.
+   */
+  const heldShell = (shells: TerminalStore, asked: HeldShellOptions): Terminal => {
+    if (ctx.closed) throw new Error(CLOSING);
+    const uri = `ahp-terminal:/${crypto.randomUUID()}`;
+    const terminal = shells.create({
+      uri,
+      cwd: asked.cwd,
+      claim: asked.claim,
+      name: asked.name,
+      ...(asked.env !== undefined ? { env: asked.env } : {}),
+      // No shell named, for the reason on `heldTerminals`: the host's default only.
+      emit: (_channel, action) => {
+        dispatch(uri, action);
+        if ((action as Bag).type === 'terminal/exited') {
+          dispatch(ROOT, { type: 'root/terminalsChanged', terminals: ctx.terminalInfo() });
+          const ranIn = dirOfFile(asked.cwd);
+          if (ranIn !== undefined) void refreshWatched(ranIn);
+        }
+        asked.watch(action as Bag);
+      },
+    });
+    terminals.set(uri, terminal);
+    void fire({ type: 'terminal_open', terminal: uri, cwd: asked.cwd });
+    log(`opened the shell ${uri}`);
+    dispatch(ROOT, { type: 'root/terminalsChanged', terminals: ctx.terminalInfo() });
+    return terminal;
+  };
+
+  /**
    * The output terminals a backend may open.
    *
    * No process stands behind one: the backend has the text and the host owns
@@ -368,7 +422,7 @@ export function createTerminals(ctx: HostContext): Terminals {
     },
   });
 
-  return { commanded, terminalInfo, heldTerminals, heldOutputs };
+  return { commanded, terminalInfo, heldTerminals, heldShell, heldOutputs };
 }
 
 /**

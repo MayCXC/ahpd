@@ -1,6 +1,6 @@
 ---
 title: The host offers the agent terminal tool
-status: todo
+status: done
 depends: []
 layer: "sdk, docs"
 refs:
@@ -68,3 +68,8 @@ A command runs in a terminal the session holds, and the call answers as the refe
 - `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
 
 ## Resume
+
+Done 2026-10-26.
+The terminal's scrollback keeps its last 200,000 characters and drops the oldest.
+Once it is full, a length measured into it no longer names a place.
+The shells keep their own count for that reason.

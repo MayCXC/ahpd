@@ -13,10 +13,11 @@ Terms, one line each:
 | the tools endpoint | One MCP server per session, served by this host, for a backend that cannot call tools in process |
 | advanced permission | A tool's own claim that it does more than a session's ordinary work |
 | a tool's effects | The claim, `reads`, `writes`, `network` and `destructive`, a backend's policy reads |
+| the agent terminal tool | The reference host's shell for an agent: its commands run in terminals the session holds |
 
 ## The four sources
 
-**This host's own**, from `hostTools()`: the reference host's nine session tools, its three artifact tools, and this host's own three. They are the protocol's `serverTools`, reported on `SessionState.serverTools`, offered to every backend that can take tools, and replaced whole - which is what `session/serverToolsChanged` means.
+**This host's own**, from `hostTools()`: the reference host's nine session tools, its three artifact tools, this host's own three, and the reference host's agent terminal tool while a client has turned it on. They are the protocol's `serverTools`, reported on `SessionState.serverTools`, offered to every backend that can take tools, and replaced whole - which is what `session/serverToolsChanged` means.
 
 **A plugin's**, through `host.registerTool(tool)`, which appends one to the same set. The computer plugin contributes three this way - [PLUGINS.md](../plugins/PLUGINS.md#what-you-can-register).
 
@@ -44,9 +45,44 @@ The nine session tools are the reference host's, by name and by schema, so a ski
 
 The three artifact tools write the session's `_meta['agentHost/sessionArtifacts']` through the session store: `add_artifact_or_reference`, `remove_artifact_or_reference` and `list_artifacts_and_references`. An artifact is a deliverable - an issue or a pull request being created or fixed, a result somebody will reopen - and a reference is an existing thing somebody will want to look at. Adding one promotes a matching reference and keeps its id, so a reference that turns out to be a deliverable does not become a second entry.
 
-This host's own three come after them. Two are read-only, and answer what an agent cannot reach for itself. `ahp_resource` reads a resource by URI, including one a connected client publishes ([RESOURCES.md](RESOURCES.md)), and `ahp_terminals` lists the terminals this host has open, as `uri`, `title`, `cwd` and `running` on a line each - the list a person can see, which is not the same as a shell run from a tool.
+This host's own three come after them. Two are read-only, and answer what an agent cannot reach for itself. `ahp_resource` reads a resource by URI, including one a connected client publishes ([RESOURCES.md](RESOURCES.md)), and `ahp_terminals` lists the terminals this host has open, as `uri`, `title`, `cwd` and `running` on a line each - the list a person can see. A command the agent runs with its own shell is not in it; a shell of the agent terminal tool is.
 
 The third, `schedule_wakeup`, begins a new turn in the calling chat later. It takes `delaySeconds`, the seconds from now until the turn, from 60 to 2592000 (30 days), and `prompt`, the text the turn begins with, and answers when the wakeup is due. A chat holds one wakeup: a new call replaces it, and `stop: true` cancels it. The host keeps it on the chat's record in the session store, so it survives the session going to sleep and the daemon restarting. When it is due, the host wakes the session if it sleeps and begins the turn, or queues the prompt behind a turn that is running. A wakeup that fell due while the daemon was down begins once, when the daemon starts. The turn goes through the same checks as a client's message, and a wakeup whose turn is refused or whose session cannot resume stays stored and fires again when the daemon next starts. A pending wakeup does not keep the session awake - [SESSIONS.md](SESSIONS.md#sleep-and-wake).
+
+## The agent terminal tool
+
+The reference host gives an agent a shell of its own whose commands run in terminals the person in the session can watch, type into and stop, and this host carries it as it is: the names, the schemas, the descriptions and the answers of VS Code's `copilotShellTools.ts` at `122ec4fe4431`, behind the reference's own root config key, `enableCustomTerminalTool`. It is off until a client pushes `true`, it is never on under Windows, where the reference leaves the agent its own shell, and a host with no terminal store offers it nowhere. The key is read when a session's tools are listed, so a push reaches the sessions opened after it.
+
+The set is named after the kind of shell the daemon runs, which is the one a terminal opens with when nobody names one: `bash` for every POSIX shell, `powershell` for PowerShell.
+
+| Tool | What it does |
+| --- | --- |
+| `bash` | Runs `command` in a shell the session keeps, and answers `Exit code: <n>` and the output. `timeout` is in milliseconds, 120000 when it is not given |
+| `read_bash` | The latest output of the shell `shell_id` names, or of the newest shell |
+| `write_bash` | Writes `command` to the newest shell as typed, with no Enter of its own: an answer to a prompt, or `\u0003` |
+| `bash_shutdown` | Ends the shell `shell_id` names, or the newest, and takes its terminal off the list |
+| `list_bash` | Each shell, with `running`, `exited` or `exited (<code>)` |
+| `powershell` | Answers that the tool is off and names `bash`, so a model that reaches for the other shell is told which one runs here |
+
+Under PowerShell the set is `powershell`, `read_powershell`, `write_powershell`, `powershell_shutdown` and `list_powershell`, and `bash` is the one that names the other.
+
+Every answer of the shell starts with `Shell ID: <id>`. A shell is a terminal on the root list, titled `Bash` or `PowerShell`, opened in the session's first working directory and claimed by the session, the chat, the turn and the call that opened it. It is kept between calls, so a command finds the folder and the variables the last one left. A call takes an idle shell or opens another, because two commands in one shell would mix their input and their output. The shell's environment carries the reference's settings for a terminal nobody answers: no pager, `LC_ALL=C.UTF-8`, `GIT_TERMINAL_PROMPT=0` and `DEBIAN_FRONTEND=noninteractive`.
+
+A command ends in one of five ways, each the reference's, and each is what the call answers.
+
+| How it ended | The answer |
+| --- | --- |
+| It finished | `Exit code: <n>` and its output, a failure when the code is not 0 |
+| The timeout passed | `Command timed out after <s>s. Partial output:` and what it printed so far. The command runs on, and the shell is free for the next call |
+| A client narrowed the terminal's claim to the session and the chat | The command goes on in the background. Its shell stays held until the command ends |
+| It switched to the alternate screen | The reference's message that an interactive program is running. Its shell stays held until the command ends |
+| The shell exited | `Shell exited with code <n>` and the output |
+
+A shell that marks its own commands in OSC 133 ends a command at its `D` mark, with the code the mark carries and the output between the `C` and the `D` - [TERMINALS.md](TERMINALS.md#command-boundaries). A shell that has marked no command yet, and every shell on pipes, is sent the reference's sentinel after the command: `echo "<<<COPILOT_SENTINEL_<id>_EXIT_$?>>>"`, whose echo ends the command and carries its code. A command that reads its standard input, such as `read`, takes that line as its input, and the call then waits for its timeout. The alternate screen and bracketed paste are read off the output, from the sequences that switch them: the reference reads both off a terminal emulator, and this host keeps none. A command is typed as a paste on macOS, and a command of several lines anywhere, when the shell has turned bracketed paste on.
+
+All six declare `overridesBuiltInTool`, the reference's mark for a tool that takes the place of the agent's own of that name, and each backend reads it the way its harness documents. Claude disallows its own `Bash` and aliases the name to `mcp__ahp__bash`, which is the Agent SDK's way to send a `Bash` call to a replacement. pi takes the host's `bash` in place of its own by name, which is pi's way. cofold's `shell_exec` and an ACP agent's own shell are not named `bash`, so both stay beside the host's.
+
+`bash` declares every effect, so a backend's policy asks about it as it asks about its own shell, and the owner's terminal rules approve its commands as they approve Claude's `Bash`. The other five run without a confirmation, as the reference's skip its permission. Under a users directory each acts as the person who sent the turn, with the grant a client's own terminal action asks - [Grants](#grants).
 
 ## A client's tools
 
@@ -133,10 +169,11 @@ A backend that cannot - an ACP agent, which asks its client for tools - is hande
 | `mcpServers` | an object of server entries | none | The MCP servers every session is offered. Applies live, and is read again for each session opened |
 | `clientToolTimeoutMs` | integer, milliseconds | `600000` (ten minutes) | How long a tool call a client runs may wait for that client. `0` waits for ever |
 | `artifactToolsCompactPrompts` | `true` or `false` | `false` | Use the short artifact instruction and tool description. Root config, one setting for the host |
+| `enableCustomTerminalTool` | `true` or `false` | `false` | Offer the agent terminal tool, in place of the agent's own shell where its harness can replace one. Never under Windows. Root config, one setting for the host, read when a session's tools are listed |
 | `deferredTitleGeneration` | `true` or `false` | `false` | Give a session a deferred title strategy, and reshape `rename_chat` with it. Root config |
 | `plugins.<name>.hostTools` | `true` or `false` | `true` | Whether a plugin's sessions are offered this host's own tools as one MCP server |
 
-The first four are the daemon's keys and apply while it runs; a root config push of any needs `config:write`. `clientToolTimeoutMs` is a daemon key and needs `ahpd restart`. The two root config keys are one setting for the whole host rather than a connection's own, so both need `config:write` - decision [The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares](../../.project/decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md). Every key with its values and its default is [HOST.md](HOST.md#configuration-keys) and [HOST.md](HOST.md#root-config).
+The first four are the daemon's keys and apply while it runs; a root config push of any needs `config:write`. `clientToolTimeoutMs` is a daemon key and needs `ahpd restart`. The root config keys are one setting for the whole host rather than a connection's own, so each needs `config:write` - decision [The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares](../../.project/decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md). Every key with its values and its default is [HOST.md](HOST.md#configuration-keys) and [HOST.md](HOST.md#root-config).
 
 ## Commands
 
@@ -167,6 +204,11 @@ A session tool is reached from a turn and not from a socket, and the turn says w
 | `schedule_wakeup` | None, because it acts on the calling chat alone |
 | `add_artifact_or_reference`, `remove_artifact_or_reference`, `list_artifacts_and_references` | None: they write the calling session's own record |
 | `ahp_resource`, `ahp_terminals` | None: they answer what the calling session may already reach |
+| `bash` | `terminal:create`, which is what opening a terminal asks of a client |
+| `read_bash` | `terminal:output` |
+| `write_bash` | `terminal:input` |
+| `bash_shutdown` | `terminal:dispose` |
+| `list_bash`, and the tool that names the other shell | None: they list the calling session's own shells, or answer a sentence |
 
 A call nobody is behind holds the read half alone: a turn this host began for itself, a turn a rule nobody owns started, a turn whose sender has not signed in since this process started, whose grants the host cannot name, and a call reached with no turn running at all, which is a window outliving the turn it sent. Each reads the sessions and is refused every write with `this turn may not session:write here`. A turn a session tool or a wake begins carries the person of the turn that began it, so a session opened by `create_session` acts as the person who asked for it and never as more.
 
@@ -205,7 +247,7 @@ The counters live in memory, as the reference host's do, so a restart is a new p
 | --- | --- |
 | [AHP.md](AHP.md) | What a tool call is on the wire: `chat/toolCall*`, contributors and `_meta.toolKind` |
 | [RESOURCES.md](RESOURCES.md) | `ahp_resource`, and the schemes a resource URI may name |
-| [TERMINALS.md](TERMINALS.md) | `ahp_terminals`, and the shells it lists |
+| [TERMINALS.md](TERMINALS.md) | `ahp_terminals`, the shells it lists, and the agent terminal tool's shells |
 | [PLUGINS.md](../plugins/PLUGINS.md) | Registering a tool, and the endpoint a backend without in-process tools is handed |
 | [BUILD-A-HOST.md](BUILD-A-HOST.md#the-tools) | `hostTools()`, and building a host with a set of its own |
 | [COMPUTERS.md](../plugins/COMPUTERS.md) | The three tools that declare advanced permission |

@@ -1,6 +1,7 @@
 import type { HostTool } from '../types/host.js';
 import { sessionTools, wakeupTool } from './session.js';
 import { artifactTools } from './artifacts.js';
+import { shellTools } from './shell.js';
 
 /**
  * The tools this package contributes to every session, as a host's `tools`.
@@ -13,6 +14,9 @@ import { artifactTools } from './artifacts.js';
  * the artifact tools its three (`artifacts.ts`), so a skill written
  * against that host works here; the three after them are this host's own:
  * two read-only, and `schedule_wakeup`, which wakes the calling chat later.
+ * Last is the reference host's agent terminal tool (`shell.ts`), which a
+ * session is offered only while the root config's `enableCustomTerminalTool`
+ * is on.
  *
  * ```ts
  * createHost({ path, agents, tools: hostTools() });
@@ -53,4 +57,5 @@ export const hostTools = (): HostTool[] => [
     },
   },
   wakeupTool(),
+  ...shellTools(),
 ];

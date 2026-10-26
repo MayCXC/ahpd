@@ -298,6 +298,21 @@ it('declares workspaceTrust as VS Code declares it', async () => {
   });
 });
 
+it('declares enableCustomTerminalTool as VS Code declares it', async () => {
+  const { signedIn, rootOf } = served();
+  const admin = await signedIn('admin', 'admin');
+  const config = (await rootOf(admin.client)).config as { schema: { properties: Record<string, unknown> } };
+  // VS Code's own property, `common/copilotCliConfig.ts:246-251` at
+  // `122ec4fe4431`, English strings out of `localize`: the switch for the
+  // agent terminal tool, off until a client turns it on.
+  expect(config.schema.properties.enableCustomTerminalTool).toEqual({
+    type: 'boolean',
+    title: 'Use Agent Host Terminal Tool',
+    description: 'When enabled, Copilot SDK sessions use Agent Host\'s terminal tool override instead of the SDK\'s default terminal behavior. Not supported on Windows, where sessions use the SDK\'s terminal and sandbox runtime.',
+    default: false,
+  });
+});
+
 it('keeps a pushed workspaceTrust on the connection that pushed it', async () => {
   const { signedIn, rootOf } = served();
   const ana = await signedIn('admin', 'ana');

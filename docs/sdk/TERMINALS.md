@@ -34,7 +34,7 @@ The daemon hands one in when the machine has it: `node-pty`'s `spawn`, loaded by
 
 ## Who opens one
 
-Three ways in, and the difference between them is the claim and the shell.
+Four ways in, and the difference between them is the claim and the shell.
 
 A **client** asks with `createTerminal`, naming the channel URI itself so it can subscribe without a round trip in between. The claim is absent for "this connection", and any other claim is parsed rather than taken: a claim that is not one of the two kinds is refused with `-32602`, because a client that meant to name a session and got it wrong should hear about it rather than quietly become the owner. A URI already in use is `-32003`.
 
@@ -42,7 +42,9 @@ A **`!` command** in a turn's text runs in a terminal of its own, opened by the 
 
 A **backend** asks through `start.terminals.open`, the factory the host wraps around the store so that a terminal it opens is a channel the host owns rather than one nobody lists. The backend says the directory, the program and its arguments, and nothing else; the host mints the URI, registers the channel, puts it on the root list and routes its actions. The handle it gets back reads the output the way a client reads it, waits for the exit, writes, resizes, kills - which leaves the row listed, because a transcript may still point at the channel - and releases, which ends a process that has not already gone and takes the row off the list. A release that only dropped the row would leave a shell nothing lists and nothing can reach.
 
-Both the `!` command and a backend's terminal run the daemon's own shell: `$SHELL`, then `/bin/sh` - or, on Windows, PowerShell 7, then the Windows PowerShell, then `cmd.exe`, because `SHELL` there is a Git Bash leftover rather than a Windows shell. `defaultShell` is a connection's preference and neither of these has a connection - a backend has a session, and an automation fires with nobody connected at all - so there is nobody here whose choice it could be. Answered that way on purpose: a person's shell must not be what a turn runs, which is also the path where writing a file and naming it in `defaultShell` would make the next tool call run it.
+An **agent** runs its commands in shells of its own with the agent terminal tool, the reference host's, while the root config's `enableCustomTerminalTool` is on - [TOOLS.md](TOOLS.md#the-agent-terminal-tool). The host opens each shell as a terminal with no command, titled `Bash` or `PowerShell`, in the session's first working directory, and claimed by the session, the chat, the turn and the call that opened it. It keeps the shell between calls, so a command finds the folder and the variables the last one left, and it closes the session's shells with the session. A client that narrows the claim to the session and the chat moves the running command to the background, as the reference reads that change.
+
+The `!` command, a backend's terminal and an agent's shell run the daemon's own shell: `$SHELL`, then `/bin/sh` - or, on Windows, PowerShell 7, then the Windows PowerShell, then `cmd.exe`, because `SHELL` there is a Git Bash leftover rather than a Windows shell. `defaultShell` is a connection's preference and none of these has a connection - a backend and an agent have a session, and an automation fires with nobody connected at all - so there is nobody here whose choice it could be. Answered that way on purpose: a person's shell must not be what a turn runs, which is also the path where writing a file and naming it in `defaultShell` would make the next tool call run it.
 
 ## One command, or a shell to sit in
 
@@ -78,17 +80,22 @@ The shell prints them itself, mixed into its output, and this host reads them ou
 
 The command line can only be read that way because the input is watched as well: a shell echoes what was typed, but the echo arrives as output, so the bytes of `terminal/input` are what a `C` mark is read against.
 
+The agent terminal tool reads the same marks. Once an agent's shell has marked a command, the tool ends each next command at its `D`, with that code and the output between the `C` and the `D`. Before that, and always on pipes, it ends a command at the reference's sentinel line.
+
 ## Configuration keys
 
-One key changes a terminal, and it is root config rather than the file.
+Two keys reach terminals, and both are root config rather than the file.
 
 | Key | Values | Default | What changes |
 | --- | --- | --- | --- |
 | `defaultShell` | an absolute path | the system shell | The shell a host-managed terminal opens |
+| `enableCustomTerminalTool` | `true` or `false` | `false` | Offer the agent terminal tool, whose commands run in terminals. One setting for the host |
 
-It is **per connection**: it is kept on the connection that pushed it and read back by that connection, so two people on one daemon each get theirs and neither can name the binary the other's terminal opens. VS Code pushes it out of `terminal.integrated.agentHostProfile.<os>` when it connects, which is why it is a preference of a person rather than a key of the deployment. Pushing it needs no grant and only a sign-in, because it changes nothing anybody else reads.
+`defaultShell` is **per connection**: it is kept on the connection that pushed it and read back by that connection, so two people on one daemon each get theirs and neither can name the binary the other's terminal opens. VS Code pushes it out of `terminal.integrated.agentHostProfile.<os>` when it connects, which is why it is a preference of a person rather than a key of the deployment. Pushing it needs no grant and only a sign-in, because it changes nothing anybody else reads.
 
-It reaches two of the three ways in: a client's terminal uses it, and a `!` command and a backend's terminal do not, for the reason above.
+It reaches one of the four ways in: a client's terminal uses it, and a `!` command, a backend's terminal and an agent's shell do not, for the reason above.
+
+`enableCustomTerminalTool` is the other key, and it opens no terminal itself: it offers the agent terminal tool, whose shells are terminals - [TOOLS.md](TOOLS.md#the-agent-terminal-tool).
 
 The rest of the root config is [HOST.md](HOST.md#root-config), and the daemon's own keys are [HOST.md](HOST.md#configuration-keys). Nothing in either turns terminals off: a host built without a terminal store answers `This host does not serve createTerminal yet` and advertises no `terminalCommandPrefix`, and a plugin's `registerTerminals` is what puts one there - [BUILD-A-HOST.md](BUILD-A-HOST.md#terminals), [PLUGINS.md](../plugins/PLUGINS.md).
 
@@ -103,6 +110,7 @@ There is no `ahpd terminal`. A terminal is driven over the protocol, and the ver
 | `subscribe` | The snapshot - state and scrollback - and every action after it |
 | a `!command` in a turn | Run one command in a terminal of its own and read it back as the turn's answer |
 | `ahp_terminals` | Read-only: the terminals this host has open, for the model of a session - [TOOLS.md](TOOLS.md) |
+| `bash` and its four companions | An agent's commands, in shells the session keeps, while `enableCustomTerminalTool` is on - [TOOLS.md](TOOLS.md#the-agent-terminal-tool) |
 
 The root channel is where a terminal is listed and where it says it moved: `terminals` on root state, and `root/terminalsChanged` carrying the whole list when one opens, closes or exits on its own. Every client that completes a handshake is shown that list, including each terminal's URI, title and claim, because root state is one state for the whole host and is never filtered per person. Knowing a channel is not being able to drive it: a dispatch into one is refused unless the person signed in and their role covers the operation - decision [A role refuses at the dispatch boundary, and never hides root state](../../.project/decisions/a-role-refuses-at-the-dispatch-boundary.md).
 
@@ -117,14 +125,14 @@ Everything a terminal does is one of its operations, and read and write are the 
 | Type into it, resize it | `terminal:input`, `terminal:resize` |
 | Take it, rename it, clear it | `terminal:claim`, `terminal:rename`, `terminal:clear` |
 
-`member` holds `terminal:read` and `terminal:write`, so it holds every row above. `guest` holds neither: it can neither open a shell nor read one. A `!` command asks for no grant of its own, because it is part of a turn - the grant is `chat:send`.
+`member` holds `terminal:read` and `terminal:write`, so it holds every row above. `guest` holds neither: it can neither open a shell nor read one. A `!` command asks for no grant of its own, because it is part of a turn - the grant is `chat:send`. An agent's shell acts as the person who sent the turn, and asks that person's grants as a client's own action would: `terminal:create` to run a command, `terminal:output` to read a shell, `terminal:input` to write to one and `terminal:dispose` to stop one.
 
 ## See also
 
 | | |
 | --- | --- |
 | [AHP.md](AHP.md#terminal--11-of-11-) | The terminal channel's eleven actions, one line each |
-| [TOOLS.md](TOOLS.md) | `ahp_terminals`, and the rest of what a session's model is offered |
+| [TOOLS.md](TOOLS.md) | `ahp_terminals`, the agent terminal tool, and the rest of what a session's model is offered |
 | [USERS.md](USERS.md#roles) | What the grants are, and what each built-in role holds |
 | [BUILD-A-HOST.md](BUILD-A-HOST.md#terminals) | The `terminals` port, for a host built from the SDK |
 | [COMPUTERS.md](../plugins/COMPUTERS.md) | A session in a machine, where its commands run |

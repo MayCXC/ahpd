@@ -98,6 +98,25 @@ describe('a session\'s tools server', () => {
     expect(said.result).toEqual({ content: [{ type: 'text', text: 'poked the turnstile' }] });
   });
 
+  /*
+   * The call an agent names on `_meta`, handed to the tool.
+   *
+   * A host tool that ties something to its call - the agent terminal tool
+   * claims its terminal by it - reads the id from there, and a request that
+   * names none is run with none.
+   */
+  it('hands a tool the call the request names', async () => {
+    const { servers } = serving();
+    const seen: unknown[] = [];
+    const opened = servers.open([{
+      definition: { name: 'named' },
+      run: (_input, at) => { seen.push(at); return 'ran'; },
+    }]) as ToolsEndpoint;
+    await call(servers, opened, 'tools/call', { name: 'named', _meta: { 'claudecode/toolUseId': 'toolu_1' } });
+    await call(servers, opened, 'tools/call', { name: 'named' });
+    expect(seen).toEqual([{ toolCallId: 'toolu_1' }, undefined]);
+  });
+
   it('says a tool that threw in the content, which is where a model reads it', async () => {
     const { servers, endpoint } = serving();
     const opened = servers.open([{

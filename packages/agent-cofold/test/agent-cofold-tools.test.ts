@@ -266,6 +266,34 @@ it('lets a host tool keep the name it shares with a capability\'s', async () => 
   rmSync(dir, { recursive: true, force: true });
 });
 
+/*
+ * A host tool is told the call it runs for.
+ *
+ * The id is the one the call's row carries, so a host tool that ties something
+ * to its call - the agent terminal tool claims its terminal by it - names the
+ * row a client draws.
+ */
+it('tells a host tool the call it runs for', async () => {
+  const dir = place();
+  const seen: unknown[] = [];
+  const mine: BoundTool = {
+    definition: { name: 'named', description: 'Says which call it ran for.', inputSchema: { type: 'object' } },
+    run: (_input, at) => { seen.push(at); return 'ran'; },
+  };
+  const { session, v } = await open({
+    script: [{ toolCalls: [call('named', {})] }, { text: 'done' }],
+    workspace: dir,
+    store: dir,
+    hostTools: [mine],
+  });
+  session.begin('t1', 'run it');
+  await when(() => ended(v));
+
+  expect(completeFor(v, 'c1')?.result).toMatchObject({ success: true });
+  expect(seen).toEqual([{ toolCallId: 'c1' }]);
+  rmSync(dir, { recursive: true, force: true });
+});
+
 it('offers web_search only when a search provider is configured', async () => {
   const dir = place();
   const plain = await open({ script: [{ text: 'ok' }], workspace: dir, store: dir });

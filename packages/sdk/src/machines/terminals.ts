@@ -234,9 +234,10 @@ const argvLine = (kind: ShellKind, argv: string[], windowsPowerShell = false): s
  * needs them.
  *
  * Only under a pseudoterminal, because only then is there a shell running its
- * own prompt to emit them.
+ * own prompt to emit them. Exported so the agent's shells read the marks this
+ * reads: a marked command's output is what lies between its `C` and its `D`.
  */
-const MARKS = /\u001b\](133|7);([^\u0007\u001b]*)(?:\u0007|\u001b\\)/g;
+export const MARKS = /\u001b\](133|7);([^\u0007\u001b]*)(?:\u0007|\u001b\\)/g;
 
 /**
  * Open one.

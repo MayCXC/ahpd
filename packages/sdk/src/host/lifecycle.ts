@@ -247,6 +247,8 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     // First, while the chats are still here to be recognised: a closed chat is
     // one no map names, and a record left behind is a row nothing can reach.
     ctx.background.forgetSession(uri);
+    // Its shells' terminals are claimed by the session, so the loop below closes them.
+    ctx.shells.forgetSession(uri);
     for (const [chatUri, chat] of held.chats) {
       // The senders of what this chat still holds, because a closed backend
       // ends no turn and runs nothing it had queued.

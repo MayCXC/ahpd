@@ -30,6 +30,7 @@ import type { Lifecycle } from './lifecycle.js';
 import type { Tooling } from './tooling.js';
 import type { Terminals } from './terminals.js';
 import type { Background } from './background.js';
+import type { HostShells } from './shells.js';
 import type { Automations } from './automations.js';
 import type { SessionEvents } from './sessionevents.js';
 import type { Sleep } from './sleep.js';
@@ -48,6 +49,8 @@ import type { Merged } from './merged.js';
 export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Facts, Telemetry, Auth, Owners, Machines, SessionConfig, Root, Catalogue, History, Snapshots, Spawn, Lifecycle, Tooling, Terminals, Automations, Sleep, Wakes, Merged {
   /** The background tasks a backend reported, by chat. */
   background: Background;
+  /** The shells each session's agent runs commands in. */
+  shells: HostShells;
   /** The options `createHost` was given. */
   options: HostOptions;
   /** The directory this host serves. */

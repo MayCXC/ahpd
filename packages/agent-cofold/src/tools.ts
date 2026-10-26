@@ -139,7 +139,9 @@ export const cofoldTool = (bound: BoundTool, relay?: ClientToolRelay): Tool<Reco
     if (bound.run === undefined) {
       throw new Error(`${bound.definition.name} has no implementation to run`);
     }
-    return await bound.run(input);
+    // The call's id is the one its row carries, so a host tool that ties
+    // something to the call names the row a client draws.
+    return await bound.run(input, { toolCallId: ctx.callId });
   },
 });
 

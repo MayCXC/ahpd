@@ -9,7 +9,11 @@ covers:
   - packages/sdk/src/connectors/bindings.ts
 decisions:
   - decisions/each-backend-offers-its-options-unless-a-rule-asks.md
+  - decisions/the-agent-terminal-tool-is-the-reference-hosts.md
 refs:
+  - "[code://packages/sdk/src/tools/shell.ts](../../packages/sdk/src/tools/shell.ts) - the agent terminal tool's six tools"
+  - "[code://packages/sdk/src/host/shells.ts](../../packages/sdk/src/host/shells.ts) - the shells a session's agent runs commands in"
+  - "[code://packages/agent-claude/src/session/query.ts#L97](../../packages/agent-claude/src/session/query.ts#L97) - Claude's `Bash` denied and aliased while the host runs the shell"
   - "[code://packages/sdk/src/types/host.ts#L676-L728](../../packages/sdk/src/types/host.ts#L676-L728) - `HostTool`, with `effects`, `advancedPermission`, `instruction`, `forSession` and `deferLoading`"
   - "[code://packages/sdk/src/types/host.ts#L420-L427](../../packages/sdk/src/types/host.ts#L420-L427) - `HostOptions.advancedTools`"
   - "[code://packages/sdk/src/types/agent.ts#L60-L69](../../packages/sdk/src/types/agent.ts#L60-L69) - `ToolEffects`"
@@ -32,6 +36,7 @@ The host gives every session its own tools, the protocol `serverTools`, as `Host
 The nine session tools and the three artifact tools have the names and schemas of the VS Code agent host.
 This is so that a skill written for that host works here.
 Three more are this host's own: `ahp_resource`, `ahp_terminals` and `schedule_wakeup`.
+The six tools of the agent terminal tool are the VS Code agent host's too, and a root config key turns them on.
 Each tool says what it does to the world in `effects`, and a backend's policy reads that to decide what to ask.
 A backend calls the tools in its own process, or through an MCP endpoint that the host opens for the session.
 The host also stamps the times of every tool call in its `_meta`.
@@ -120,6 +125,57 @@ AND the duration is the one the harness measured, or else the difference of the 
 The reason: the protocol gives a tool call no time of its own.
 A `_meta` on an action replaces the whole bag, so the times are merged into it.
 The ACP, Claude, cofold and pi plugins all use `callTimes` and `withCallTimes` from `@ahpd/sdk`.
+
+### The agent terminal tool is offered
+
+WHEN a client pushes `enableCustomTerminalTool: true`
+AND the host has a terminal store and does not run on Windows
+THEN each session listed after it is offered `bash`, `read_bash`, `write_bash`, `bash_shutdown`, `list_bash` and `powershell`.
+Under PowerShell the set is the `powershell` one, and `bash` is the tool that names the other.
+WHEN the key is not true
+THEN none of the six is offered.
+
+### A command runs in a terminal the session holds
+
+WHEN an agent calls `bash` with a command
+THEN the host runs it in an idle shell of the session, or opens a shell
+AND a new shell is a terminal on the root list, titled `Bash` and claimed by the session, the chat, the turn and the call
+AND the answer is `Shell ID: <id>`, then `Exit code: <n>` and the output.
+A code other than 0 is a failed call.
+The shell keeps its folder and its variables for the next call.
+
+### A command ends before it finishes
+
+WHEN the timeout passes
+THEN the answer is `Command timed out after <s>s. Partial output:` and the output so far.
+WHEN a client narrows the terminal's claim to the session and the chat
+THEN the answer says the command goes on in the background
+AND the shell stays held until the command ends.
+WHEN the command switches to the alternate screen
+THEN the answer is the reference's message, and the shell stays held.
+WHEN the shell exits
+THEN the answer is `Shell exited with code <n>` and the output.
+
+### The shell's own marks end a command
+
+WHEN a shell has marked a command in OSC 133
+THEN the next command ends at its `D` mark, with the code the mark carries
+AND the output is what lies between its `C` and its `D`.
+WHEN a shell has marked no command
+THEN the reference's sentinel line follows the command, and its echo ends the command.
+
+### A backend's own shell steps aside
+
+WHEN the host offers its `bash`
+THEN Claude disallows `Bash` and aliases the name to `mcp__ahp__bash`
+AND pi takes the host's `bash` in place of its own.
+A host tool takes a harness's name only when it sets `overridesBuiltInTool`.
+
+### A host tool knows its call
+
+WHEN a backend runs a host tool and knows the call's id
+THEN `BoundTool.run` gets `{ toolCallId }`.
+Claude reads the id off its handler's `_meta`, pi and cofold take their own, and the tools endpoint reads the request's `_meta['claudecode/toolUseId']`.
 
 ### The host tools as an MCP server
 

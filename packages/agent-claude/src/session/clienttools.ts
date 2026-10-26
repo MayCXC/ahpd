@@ -115,7 +115,11 @@ export const contributed = (
           };
         }
         try {
-          return { content: [{ type: 'text' as const, text: await one.run?.(input) ?? '' }] };
+          // The call's id, where the CLI named it, so a host tool that ties
+          // something to the call - a shell's claim - names the same call a
+          // client reads in `chat/toolCallStart`.
+          const toolCallId = namedBy(extra);
+          return { content: [{ type: 'text' as const, text: await one.run?.(input, toolCallId === undefined ? undefined : { toolCallId }) ?? '' }] };
         }
         catch (error: unknown) {
           // The message, not a throw: an MCP tool that rejects is a transport

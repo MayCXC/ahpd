@@ -252,7 +252,7 @@ Reference: [00-host.md](host/00-host.md)
 | [120 - A bot session starts with its actions](host/120-a-bot-session-starts-with-its-actions/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #78 | host 118 | - |
 | [122 - Agents are records on their own channel](host/122-agents-are-records-on-their-own-channel/plan.md) | high | active 2026-10-24; merged in #89, waits on the check by hand | - | - |
 | [123 - Agent kinds on their own channel](host/123-agent-kinds-on-their-own-channel/plan.md) | high | active 2026-10-25; tasks 02 and 03 implemented, wait on Softov | host 122 | ahpw plugins 08 |
-| [124 - An agent's shell is a terminal the person sees](host/124-an-agents-shell-is-a-terminal-the-person-sees/plan.md) | medium | planned 2026-10-26; the decision waits on Softov | - | - |
+| [124 - An agent's shell is a terminal the person sees](host/124-an-agents-shell-is-a-terminal-the-person-sees/plan.md) | medium | built 2026-10-26 ([implemented.md](host/124-an-agents-shell-is-a-terminal-the-person-sees/implemented.md)); the decision waits on Softov | - | - |
 
 Next free number in `host`: `121`.
 

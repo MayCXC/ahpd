@@ -7,6 +7,7 @@ import type { HostHandlers } from './events.js';
 import type { ResourceProvider, ResourceStore } from './resources.js';
 import type { Grant, Principal, Users } from './users.js';
 import type { TerminalStore } from './terminals.js';
+import type { Shells } from './shells.js';
 import type { ChangesetSource } from './changes.js';
 import type { Worktrees } from './worktrees.js';
 import type { PullRequests } from './github.js';
@@ -882,6 +883,16 @@ export interface HostTool {
    * Undefined leaves the harness's own default in force.
    */
   deferLoading?: boolean;
+  /**
+   * Whether this tool takes the place of the agent's own tool of that name.
+   *
+   * The reference host's `overridesBuiltInTool`, which its agent terminal tool
+   * sets: a backend whose harness has a tool of its own by the name, or by the
+   * name a harness spells it with, offers this one instead, in the way that
+   * harness documents for replacing one of its own. Undefined leaves the
+   * harness's tools as they are.
+   */
+  overridesBuiltInTool?: boolean;
 }
 
 /**
@@ -906,6 +917,8 @@ export interface ToolCall {
   provider?: string;
   /** The turn the call is running in, when the chat has one running. */
   turn(): string | undefined;
+  /** The call's own id, as its `chat/toolCallStart` carried it, when the backend named it. */
+  toolCallId?: string;
   /**
    * Who is behind this call: a person's id, a session's owner, or `host`.
    *
@@ -1054,6 +1067,12 @@ export interface ToolCall {
   setArtifacts(list: Bag[]): void;
   /** Every terminal this host has open. */
   terminals(): { uri: string; title: string; cwd: string; running: boolean }[];
+  /**
+   * The calling session's shells, which the agent terminal tool runs commands in.
+   *
+   * Nothing where this host has no terminal store, since a shell is a terminal.
+   */
+  shells(): Shells | undefined;
   /**
    * Read a resource this host serves, as text.
    *

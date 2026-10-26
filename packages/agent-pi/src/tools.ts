@@ -19,9 +19,13 @@ import { loadPi } from './pi.js';
 /**
  * pi's own tool names.
  *
- * A custom tool with one of these would be offered beside pi's built-in of the
- * same name, and the model would have two answers to one name. pi's is the one
- * that owns the tools, so the shadowing one is dropped.
+ * A custom tool with one of these takes the place of pi's built-in of the same
+ * name, which is how pi replaces one of its own: its containerization extension
+ * overrides `bash` and the file tools so they run in a VM (pi's
+ * `docs/containerization.md`). pi's tools are the ones a session runs on, so a
+ * tool that only happens to share a name is dropped, and only a tool marked as
+ * taking the place of the harness's own - the host's agent terminal tool - is
+ * handed to pi under one of these names.
  */
 const PI_TOOLS = new Set(['bash', 'edit', 'find', 'grep', 'ls', 'powershell', 'read', 'write']);
 
@@ -76,7 +80,7 @@ const stopped = (signal: AbortSignal | undefined): Promise<never> => new Promise
  */
 export async function toPiTool(bound: BoundTool, client: RunByClient): Promise<ToolDefinition | undefined> {
   const { definition } = bound;
-  if (PI_TOOLS.has(definition.name)) {
+  if (PI_TOOLS.has(definition.name) && bound.overridesBuiltInTool !== true) {
     console.warn(`@ahpd/agent-pi: dropping tool "${definition.name}", which is one of pi's own`);
     return undefined;
   }
@@ -99,8 +103,10 @@ export async function toPiTool(bound: BoundTool, client: RunByClient): Promise<T
           content: [{
             type: 'text' as const,
             // A `run` that never answers still ends when pi stops the turn.
+            // The call's id is the one its row carries, so a host tool that
+            // ties something to the call names the row a client draws.
             text: await Promise.race([
-              Promise.resolve(bound.run(params as Record<string, unknown>)),
+              Promise.resolve(bound.run(params as Record<string, unknown>, { toolCallId })),
               stopped(signal),
             ]),
           }],

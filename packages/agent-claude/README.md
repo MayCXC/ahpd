@@ -85,6 +85,10 @@ A Claude session uses the host's task tools by default. When the tasks plugin is
 
 `hostTasks: false` in a record keeps Claude's own tools; so does a host with no tasks plugin loaded. In either case the CLI is started with `CLAUDE_CODE_ENABLE_TASKS=1`, which `enableTasks` does and which is on by default. A value the record's own `env` gives the variable is kept rather than written over. Each `TodoWrite`, `TaskCreate` and `TaskUpdate` is then written into the session's plan, and [The task list](https://github.com/softov/ahpd/blob/main/docs/plugins/TASK-LIST.md) says how.
 
+### The shell
+
+While the host offers its agent terminal tool, which a client turns on with the root config key `enableCustomTerminalTool`, Claude's own `Bash` is denied and the name is aliased to the host's `bash`, through the Agent SDK's `disallowedTools` and `toolAliases`. A command then runs in a terminal of the session's, which the person in the session can watch, type into and stop, and a `Bash` call a skill wrote reaches the same shell. The owner's terminal rules approve its commands as they approve `Bash`. A host that offers no such tool leaves `Bash` as it is - [Tools](https://github.com/softov/ahpd/blob/main/docs/sdk/TOOLS.md#the-agent-terminal-tool).
+
 ## In your own host
 
 ```bash

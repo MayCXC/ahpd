@@ -10,6 +10,7 @@ import { BINDINGS_KEY } from '../connectors/bindings.js';
 import { actionTools } from '../connectors/actions.js';
 import { SEND_REMOTE_MESSAGE } from '../sessions/remotesession.js';
 import { SESSION_TOOL_NAMES } from '../tools/session.js';
+import { ENABLE_CUSTOM_TERMINAL_TOOL, SHELL_TOOL_NAMES } from '../tools/shell.js';
 import { bag, reason, str } from '../utils/values.js';
 import { groupOf } from '../access/users.js';
 import { enablementKeyOf } from '../plugins/enablement.js';
@@ -288,8 +289,8 @@ export interface Tooling {
   moving: Map<string, Move>;
   /** Give a chat a title, and say so. */
   renameChat(uri: string, chatUri: string, title: string): void;
-  /** What a host tool sees of this host, from inside one chat. */
-  toolContext(uri: string, chatUri: string, provider?: string): ToolCall;
+  /** What a host tool sees of this host, from inside one chat and, when the backend named it, one call. */
+  toolContext(uri: string, chatUri: string, provider?: string, toolCallId?: string): ToolCall;
   /**
    * The client plugins a chat's agent is being handed, and a note of which they are.
    *
@@ -471,10 +472,25 @@ export function createTooling(ctx: HostContext): Tooling {
    */
   const contributingTo = (uri: string, provider?: string): HostTool[] => {
     const named = namedBy(uri);
+    const shells = terminalToolOn();
     return ctx.contributing.filter((one) =>
       (one.optIn !== true || named.includes(one.definition.name))
-      && (sessionToolsFor(uri, provider) || !SESSION_TOOL_NAMES.includes(one.definition.name)));
+      && (sessionToolsFor(uri, provider) || !SESSION_TOOL_NAMES.includes(one.definition.name))
+      && (shells || !SHELL_TOOL_NAMES.includes(one.definition.name)));
   };
+  /**
+   * Whether a session is offered the agent terminal tool.
+   *
+   * The reference host's own switch: `enableCustomTerminalTool` on the root
+   * config, off until a client pushes it, and never on Windows, where the
+   * reference leaves the agent its own shell
+   * (`node/copilot/copilotSessionLauncher.ts` at VS Code `122ec4fe4431`). A
+   * host with no terminal store has no shell to offer either. Read when a
+   * session's tools are listed, so a push reaches the sessions listed after it.
+   */
+  const terminalToolOn = (): boolean => rootConfig[ENABLE_CUSTOM_TERMINAL_TOOL] === true
+    && process.platform !== 'win32'
+    && options.terminals !== undefined;
   /**
    * The title strategy every session runs under, which is the deferred one.
    *
@@ -1590,10 +1606,11 @@ export function createTooling(ctx: HostContext): Tooling {
     return { chat: chatUri };
   };
 
-  const toolContext = (uri: string, chatUri: string, provider?: string): ToolCall => ({
+  const toolContext = (uri: string, chatUri: string, provider?: string, toolCallId?: string): ToolCall => ({
     session: uri,
     chat: chatUri,
     ...providerOf(uri, provider),
+    ...(toolCallId !== undefined ? { toolCallId } : {}),
     turn: () => activeTurnOf(chatUri),
     person: () => personOfCall(uri, chatUri),
     may: (grant) => mayDo(chatUri, grant),
@@ -1808,6 +1825,7 @@ export function createTooling(ctx: HostContext): Tooling {
       cwd: String((held.state() as Record<string, unknown>).cwd ?? ''),
       running: held.exitCode() === undefined,
     })),
+    shells: () => ctx.shells.of(uri),
     read: async (asked) => {
       // The client that published it, if one did - that is the only thing
       // that can read it - and this host's own store otherwise.
@@ -1952,9 +1970,9 @@ export function createTooling(ctx: HostContext): Tooling {
         // The call and its outcome are one event, raised after the tool is
         // done, so a handler knows whether it answered and not only that it
         // ran. Raising it before would report an attempt as a result.
-        run: async (input: Record<string, unknown>): Promise<string> => {
+        run: async (input: Record<string, unknown>, call?: { toolCallId?: string }): Promise<string> => {
           try {
-            const answer = await one.run(input, toolContext(uri, chatUri, provider));
+            const answer = await one.run(input, toolContext(uri, chatUri, provider, call?.toolCallId));
             void fire({ type: 'tool_call', session: uri, chat: chatUri, tool: definition.name, ok: true });
             return answer;
           }
@@ -1973,6 +1991,7 @@ export function createTooling(ctx: HostContext): Tooling {
         ...(one.effects !== undefined ? { effects: frozenCopy(one.effects) } : {}),
         ...(one.confirm !== undefined ? { confirm: one.confirm } : {}),
         ...(one.deferLoading !== undefined ? { deferLoading: one.deferLoading } : {}),
+        ...(one.overridesBuiltInTool !== undefined ? { overridesBuiltInTool: one.overridesBuiltInTool } : {}),
       }];
     }),
   ];

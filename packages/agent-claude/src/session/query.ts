@@ -5,7 +5,7 @@ import type { HookCallback, SDKUserMessage, SettingSource } from '@anthropic-ai/
 import { bag, list, str } from './common.js';
 import type { SessionContext } from './context.js';
 import { failureOf } from './failure.js';
-import { hostHoldsTasks, ownEnvOf, OWN_TASK_TOOLS, queryOptionsOf } from '../options.js';
+import { HOST_SHELL_TOOL, hostHoldsTasks, hostRunsShell, ownEnvOf, OWN_TASK_TOOLS, queryOptionsOf } from '../options.js';
 import { agentNameOf } from './customizations.js';
 
 /** What the SDK will accept as a session id of our choosing. */
@@ -89,13 +89,20 @@ export function createQuery(ctx: SessionContext): Query {
    * Whatever the host holds the list, the query is built the same way.
    *
    * A person's own deny list, and `TodoWrite`, `TaskCreate`, `TaskUpdate`,
-   * `TaskList` and `TaskGet` too when the host holds the list. A host that does
-   * not leaves the harness's own tools where they are.
+   * `TaskList` and `TaskGet` too when the host holds the list. `Bash` too when
+   * the host runs the shell, with its name aliased to the host's tool, so a
+   * call a skill wrote for `Bash` reaches the shell the person can see. A host
+   * that does neither leaves the harness's own tools where they are.
    */
   const denyOption = (): Bag => {
     const deny = [...ctx.allowed.deny];
     if (hostHoldsTasks(ctx.values, ctx.offering)) for (const name of OWN_TASK_TOOLS) if (!deny.includes(name)) deny.push(name);
-    return deny.length > 0 ? { disallowedTools: deny } : {};
+    const shell = hostRunsShell(ctx.offering);
+    if (shell && !deny.includes('Bash')) deny.push('Bash');
+    return {
+      ...(deny.length > 0 ? { disallowedTools: deny } : {}),
+      ...(shell ? { toolAliases: { Bash: HOST_SHELL_TOOL } } : {}),
+    };
   };
 
   const stopped: Query['stopped'] = { backgroundTasks: [], sessionCrons: [] };

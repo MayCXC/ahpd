@@ -1,7 +1,7 @@
 ---
 title: An agent's shell is a terminal the person sees
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-26
 revalidated: 2026-10-26
@@ -82,30 +82,30 @@ root/configChanged enableCustomTerminalTool -> tooling lists the six tools -> ba
 - **Event flow** - the terminal's actions reach the session's shells through `heldShell`'s `watch`, after the host routes them.
 - **State flow** - the session's shells keep what each shell said, with a running count, because the terminal's scrollback slides.
 - **Layer responsibilities** - sdk: the shells, the tools, the switch and the call id. agent-claude and agent-pi: their shell steps aside. agent-cofold: passes the call id.
-- **Source-of-truth files** - `packages/sdk/src/host/shells.ts` and `packages/sdk/src/tools/shell.ts`, which task 01 creates.
+- **Source-of-truth files** - [`code://packages/sdk/src/host/shells.ts`](../../../../packages/sdk/src/host/shells.ts), [`code://packages/sdk/src/tools/shell.ts`](../../../../packages/sdk/src/tools/shell.ts).
 
 ## Tasks
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host offers the agent terminal tool](task-01-the-host-offers-the-agent-terminal-tool.md) | todo | - |
-| [02 - Each backend gives the host its shell](task-02-each-backend-gives-the-host-its-shell.md) | todo | 01 |
+| [01 - The host offers the agent terminal tool](task-01-the-host-offers-the-agent-terminal-tool.md) | done | - |
+| [02 - Each backend gives the host its shell](task-02-each-backend-gives-the-host-its-shell.md) | done | 01 |
 
 ## Risks and tradeoffs
 
 - A command that reads its standard input takes the sentinel's line where the shell has no marks, and the call waits for its timeout. The reference has the same sentinel.
-- The reference shows a terminal in the call's own content, and this plan does not.
+- The reference shows a terminal in the call's own content, and this host does not yet - see [deferred.md](deferred.md).
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-host-offers-the-agent-terminal-tool.md](task-01-the-host-offers-the-agent-terminal-tool.md).
+- **Done so far:** both tasks, 2026-10-26.
+- **Next action:** Softov reads [decisions/the-agent-terminal-tool-is-the-reference-hosts.md](../../../decisions/the-agent-terminal-tool-is-the-reference-hosts.md).
 - **Open questions:**
-  1. Does the call show its terminal in its content, as the reference's does - proposed: yes, as a later plan.
+  1. Does the call show its terminal in its content, as the reference's does - proposed: yes, as a later plan, see [deferred.md](deferred.md).
 - **Watch out for:** a shell on pipes reads its commands from its input. A test that types into one reaches the shell, not a running command.
 
 ## Final verification checklist
 
-- [ ] `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
-- [ ] A daemon from this tree offers the six tools after a client pushes `enableCustomTerminalTool`.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
+- [x] A daemon from this tree offers the six tools after a client pushes `enableCustomTerminalTool`.
+- [x] `plans/index.md` updated.

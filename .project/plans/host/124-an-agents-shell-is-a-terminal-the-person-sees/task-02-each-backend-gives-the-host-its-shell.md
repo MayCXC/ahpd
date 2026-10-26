@@ -1,6 +1,6 @@
 ---
 title: Each backend gives the host its shell
-status: todo
+status: done
 depends:
   - task-01-the-host-offers-the-agent-terminal-tool.md
 layer: "agent-claude, agent-pi, agent-cofold, docs"
@@ -50,3 +50,6 @@ Every backend tells a host tool the call it runs for.
 - `packages/sdk/test/shell-tools.test.ts` reads Claude's `disallowedTools` and `toolAliases` with the switch on and off.
 
 ## Resume
+
+Done 2026-10-26.
+pi 1.3.0 builds its tool registry from its built-ins and then sets each custom tool by name, so a custom `bash` replaces pi's own.

@@ -83,8 +83,13 @@ export interface BoundTool {
   definition: ToolDefinition;
   /**
    * What running it does. Absent for a tool a client runs - see `owner`.
+   *
+   * `call` is what the backend knows about this call: its `toolCallId`, the
+   * id its `chat/toolCallStart` carried, when the backend's harness names the
+   * call to the handler. A host tool that ties something to the call, such as
+   * the claim on a terminal it opens, reads it from there.
    */
-  run?(input: Record<string, unknown>): Promise<string> | string;
+  run?(input: Record<string, unknown>, call?: { toolCallId?: string }): Promise<string> | string;
   /**
    * What running it does to the world, carried from the `HostTool` that
    * contributed it. A backend reads this to decide whether to ask a person.
@@ -116,6 +121,13 @@ export interface BoundTool {
    * means the harness's own default applies.
    */
   deferLoading?: boolean;
+  /**
+   * Whether this tool takes the place of the harness's own tool of that name.
+   *
+   * The host's `HostTool.overridesBuiltInTool`, carried here for the same
+   * reason as `deferLoading`. Undefined leaves the harness's tools as they are.
+   */
+  overridesBuiltInTool?: boolean;
 }
 
 /**
