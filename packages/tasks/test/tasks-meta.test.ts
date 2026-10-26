@@ -100,7 +100,7 @@ async function served(): Promise<{
   const records = memoryRecords();
   const { host: plugin, contribution, seal } = pluginHost(name, context(), {
     records: () => records,
-    problem: () => {},
+    alert: () => {},
   });
   await apply(plugin, {});
   seal();

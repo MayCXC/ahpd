@@ -1,4 +1,4 @@
-import type { Agent, Host, Loaded, Route } from '@ahpd/sdk';
+import type { Agent, Alert, Host, Loaded, Route } from '@ahpd/sdk';
 import { specsIn } from './install.js';
 import { sourceOf } from './plugins.js';
 import type { Planned, PluginSet } from './plugins.js';
@@ -20,8 +20,8 @@ export interface Applied {
   problems: string[];
   /** Every plugin the daemon holds now, in load order. */
   loaded: Loaded[];
-  /** The plugins that did not load, by id, with the line that says why. */
-  failures: Record<string, string>;
+  /** The alerts each plugin's row carries, by id; a plugin with none has no entry. */
+  alerts: Record<string, Alert[]>;
   /** The routes every plugin the daemon holds now registered. */
   routes: Record<string, Route>;
 }
@@ -98,7 +98,7 @@ export const applyPlugins = async (options: ApplyPluginsOptions): Promise<Applie
 
   if (options.noPlugins === true) {
     trouble('this daemon was started with --no-plugins, so it loads nothing; restart it without the flag to load a plugin');
-    return { restart: true, changed: false, problems, loaded: set.loaded(), failures: set.failures(), routes: {} };
+    return { restart: true, changed: false, problems, loaded: set.loaded(), alerts: set.alerts(), routes: {} };
   }
 
   const planned = await set.plan(specsIn(options.configFile));
@@ -210,5 +210,5 @@ export const applyPlugins = async (options: ApplyPluginsOptions): Promise<Applie
     }
   }
 
-  return { restart, changed, problems, loaded: set.loaded(), failures: set.failures(), routes: folded.routes };
+  return { restart, changed, problems, loaded: set.loaded(), alerts: set.alerts(), routes: folded.routes };
 };

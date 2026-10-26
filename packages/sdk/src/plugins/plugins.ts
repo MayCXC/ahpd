@@ -17,7 +17,7 @@ import type { SessionConfigAnswerer } from '../types/completions.js';
 import type { ServedAdapter } from '../types/connectors.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from '../types/events.js';
 import type { HostOptions, HostTool } from '../types/host.js';
-import type { ChannelHandle, Contribution, LoaderContext, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
+import type { ChannelHandle, Contribution, LoaderContext, Alert, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
 import type { CollectionOptions, RecordCollection, RecordStore } from '../types/records.js';
 import type { SessionStore } from '../types/sessions.js';
 import type { Usage } from '../types/usage.js';
@@ -866,12 +866,19 @@ export interface HostRecordingOptions {
    */
   vault?: () => Vault | undefined;
   /**
-   * Where a `problem` line goes, for the loader to carry beside its own.
+   * Where an `alert` goes, for the daemon to serve on the plugin's row.
    *
-   * Collected rather than written, because the person who ran the start is the
-   * one who has to read them and the loader is what that person reads from.
+   * Collected rather than written, because the person who has to read it is the
+   * one looking at the plugin's page and the daemon is what that page reads
+   * from. A loader in a test may give none, and the alert is then dropped.
    */
-  problem?: (line: string) => void;
+  alert?: (alert: Alert) => void;
+  /**
+   * Where a `clearAlert` goes, for the daemon to work on the same alerts.
+   *
+   * Beside `alert` and for the same reason; a host with no sink drops it too.
+   */
+  clearAlert?: (ref: string) => void;
   /**
    * The sessions this host keeps, read when `sessionKept` is called.
    *
@@ -1096,7 +1103,11 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
 
   const host: PluginHost = {
     ...context,
-    problem: (line) => { options.problem?.(line); },
+    alert: (alert) => { options.alert?.(alert); },
+    clearAlert: (ref) => { options.clearAlert?.(ref); },
+    // A problem is one kind of alert - a warning about an item the plugin went
+    // without - so a plugin that says one today needs no change to say it.
+    problem: (line) => { options.alert?.({ level: 'warning', text: line }); },
     // Read from the live list, not a snapshot: the agents this host will have
     // are not all known while any one plugin is applying. An agent that
     // declares nothing answers an empty record, which is a machine with

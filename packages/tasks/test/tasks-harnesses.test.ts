@@ -49,7 +49,7 @@ async function folded() {
   const records = memoryRecords();
   const { host, contribution, seal } = pluginHost(name, context(), {
     records: () => records,
-    problem: () => {},
+    alert: () => {},
   });
   await apply(host, {});
   seal();

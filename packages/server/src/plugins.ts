@@ -30,7 +30,7 @@ import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { checkIcons, foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
-import type { Agent, AgentOwner, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, AgentOwner, Alert, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginHost, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { fetchIcons, resolveIcons } from './icons.js';
 import { satisfies } from './compat.js';
 
@@ -108,6 +108,14 @@ const unscoped = (id: string): string => {
   const scoped = /^@([^/]+)\/([^/]+)$/.exec(id);
   return scoped === null ? id : `${scoped[1]}-${scoped[2]}`;
 };
+
+/**
+ * How many alerts one plugin's row holds.
+ *
+ * A plugin that alerts from a watch that keeps firing must not grow the row
+ * without end, so the oldest goes first once there are more than this.
+ */
+export const MAX_ALERTS = 50;
 
 /** What a located plugin is called until its module says. */
 const provisionalOf = (spec: PluginSpec, found: Located): string =>
@@ -781,6 +789,16 @@ export interface LoadOneOptions {
    */
   reload?: number;
   /**
+   * Where an alert this plugin raises goes, while it applies and after.
+   *
+   * The set keeps it on the plugin's row, and a callback given here outlives the
+   * load: a plugin that keeps its host and raises one from a watch is the same
+   * call as one raised while `apply` ran.
+   */
+  alert?: (alert: Alert) => void;
+  /** Where `clearAlert` removes one of those alerts, by `ref`. */
+  clearAlert?: (ref: string) => void;
+  /**
    * What reaches the network for an `https:` icon, when the host loads one.
    *
    * A parameter rather than the global `fetch` so a test answers without a
@@ -1281,31 +1299,6 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   };
 
   /*
-   * What the plugin itself dropped on the way, said through `problem`.
-   *
-   * A line the plugin said is a line this loader told on its behalf, so the
-   * person who started the daemon reads it beside the ones the loader found -
-   * which is the whole point of `problem`: an item skipped costs the item, and
-   * the one running `ahpd start` is the one who has to be told.
-   *
-   * This list is read exactly once, by the answer returned below. A line said
-   * after that is a line nothing would read again - a plugin that kept a watch
-   * saying one when a record it holds is refused - so past `answered` the line
-   * is written to the log instead, at the moment it is said. That is the same
-   * writer the daemon writes the problems of this load to.
-   */
-  const told: string[] = [];
-
-  /*
-   * Whether this load has answered, which is when `told` stops being read.
-   *
-   * Set just before each of the three returns below, so a line said while the
-   * load is still running - including one said after `apply` returned but
-   * before the answer is built - is still carried in the answer, as today.
-   */
-  let answered = false;
-
-  /*
    * What this plugin is told about the host, frozen, and every plugin gets its
    * own.
    *
@@ -1336,7 +1329,8 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     ...(options.agentOwners === undefined ? {} : { agentOwners: options.agentOwners }),
     ...(options.usage === undefined ? {} : { usage: options.usage }),
     ...(options.vault === undefined ? {} : { vault: options.vault }),
-    problem: (line) => { if (answered) options.log(line); else told.push(line); },
+    ...(options.alert === undefined ? {} : { alert: options.alert }),
+    ...(options.clearAlert === undefined ? {} : { clearAlert: options.clearAlert }),
     ...(grants.length === 0 ? {} : { grants }),
     ...(declared?.contracts === undefined ? {} : { contracts: declared.contracts }),
     ...(options.sessions === undefined ? {} : { sessions: options.sessions }),
@@ -1345,8 +1339,35 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     // As configuration wrote it, which is what a host inside a machine loads.
     spec: said,
   });
+  /*
+   * What the plugin itself dropped on the way, said through `problem`.
+   *
+   * A line the plugin said is a line this loader tells on its behalf, so the
+   * person who started the daemon reads it beside the ones the loader found.
+   * The same line is a `warning` alert on the plugin's row, because the host
+   * raises one for every `problem` it is given; the set knows it has arrived
+   * twice and keeps it once.
+   *
+   * This list is read exactly once, by the answer returned below. A line said
+   * after that is a line nothing would read again, so past `answered` it is
+   * written to the log instead: the plugin's row is where it now shows.
+   *
+   * The host `apply` is handed is a frozen copy with this one method replaced.
+   * Every other method is the same function, and the seal taken below is the
+   * `pluginHost` one, which does not move with the copy.
+   */
+  const told: string[] = [];
+  let answered = false;
+  const saying: PluginHost = Object.freeze({
+    ...host,
+    problem: (line: string) => {
+      if (answered) options.log(line);
+      else told.push(line);
+      host.problem(line);
+    },
+  });
   try {
-    await apply.call(plugin, host, values);
+    await apply.call(plugin, saying, values);
   }
   catch (error) {
     // One failure path: whatever the registration check or the plugin itself
@@ -1459,6 +1480,15 @@ export interface LoadOptions {
    * its own.
    */
   set?: PluginSet;
+  /**
+   * One or more alerts changed after a load answered.
+   *
+   * A plugin that keeps its host may raise or clear one long after `apply`
+   * returned, and a client reading the plugin rows has to be sent them again.
+   * The load itself needs no call: the caller refreshes the rows once it has the
+   * answer.
+   */
+  alertsChanged?(): void;
   /** What reaches the network for an `https:` icon; the global `fetch` otherwise. */
   fetcher?: typeof fetch;
 }
@@ -1474,13 +1504,14 @@ export interface LoadedPlugins {
   /** The plugins that loaded and applied, in load order. */
   loaded: Loaded[];
   /**
-   * The plugins that did not load, by id, with the line that says why.
+   * The alerts each plugin's row carries, by id.
    *
-   * The same lines are among `problems`, with everything else that went wrong;
-   * this is the one fact keyed by the plugin a row is listed under, so a client
-   * reads a row's `loadProblem` without searching the daemon's log.
+   * Every line a plugin or its loader said about it is here, as an `error` for
+   * the line that says it did not load and a `warning` for the rest, so a client
+   * reads the row without searching the daemon's log. A plugin with no alerts
+   * has no entry.
    */
-  failures: Record<string, string>;
+  alerts: Record<string, Alert[]>;
   /**
    * Every plugin's route, by plugin name, for the listener to serve.
    *
@@ -1580,8 +1611,8 @@ export interface PluginSet {
   loaded(): Loaded[];
   /** Every contribution, in load order. */
   contributions(): Contribution[];
-  /** The plugins that did not load, by id, with the line that says why. */
-  failures(): Record<string, string>;
+  /** The alerts each plugin's row carries, by id; a plugin with none has no entry. */
+  alerts(): Record<string, Alert[]>;
   /**
    * Fold the base with every contribution, and the agents made from records.
    *
@@ -1611,7 +1642,55 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
   const version = options.version ?? sdkVersion();
   const where = { configDir: options.configDir, cwd: options.cwd };
   const kept = new Map<string, Kept>();
-  const failed = new Map<string, string>();
+  /**
+   * What each plugin's row says, by id, in the order the alerts arrived.
+   *
+   * The oldest goes first once a plugin holds `MAX_ALERTS`, so a plugin that
+   * alerts in a loop cannot grow its row.
+   */
+  const alerted = new Map<string, Alert[]>();
+  /**
+   * The plugins whose load has answered, by id.
+   *
+   * An alert raised while one of these is not here is part of a load the caller
+   * is about to read: the caller refreshes its rows once it has the answer. One
+   * raised for an id that is here comes out of a plugin that kept its host, and
+   * is said with `alertsChanged` so a client reads the row again now.
+   */
+  const answered = new Set<string>();
+  /**
+   * The load each plugin's alerts are taken from, by id.
+   *
+   * A host outlives its plugin when a closer leaves a watch running, and what
+   * that host says is not about the plugin now on the row. Each load is its own
+   * token, and an alert from a token that is not here is dropped.
+   */
+  const current = new Map<string, object>();
+  /**
+   * Raise one alert on a plugin's row.
+   *
+   * An alert with the `ref` of one already there replaces it, and the newest is
+   * at the end: the replacement is the current thing rather than the old one.
+   */
+  const addAlert = (id: string, alert: Alert): void => {
+    const list = alerted.get(id) ?? [];
+    const at = alert.ref === undefined ? -1 : list.findIndex((one) => one.ref === alert.ref);
+    if (at !== -1) list.splice(at, 1);
+    list.push(alert);
+    if (list.length > MAX_ALERTS) list.splice(0, list.length - MAX_ALERTS);
+    alerted.set(id, list);
+    if (answered.has(id)) options.alertsChanged?.();
+  };
+  /** Take one alert away by its `ref`, and say so when the load has answered. */
+  const dropAlert = (id: string, ref: string): void => {
+    const list = alerted.get(id);
+    if (list === undefined) return;
+    const at = list.findIndex((one) => one.ref === ref);
+    if (at === -1) return;
+    list.splice(at, 1);
+    if (list.length === 0) alerted.delete(id);
+    if (answered.has(id)) options.alertsChanged?.();
+  };
   /** How many times each plugin has been imported again, by id. */
   const counts = new Map<string, number>();
   /**
@@ -1709,11 +1788,25 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
 
   const load = async (entry: Planned): Promise<StagedPlugin> => {
     const { spec, id, resolved, named, unresolved } = entry;
+    // A load starts a clean row: a reload replaces what the last one said.
+    alerted.delete(id);
+    answered.delete(id);
     if (resolved === undefined || named === undefined) {
       const line = unresolved ?? `plugin ${id} did not resolve`;
-      failed.set(id, line);
+      addAlert(id, { level: 'error', text: line });
+      answered.add(id);
       return { id, problems: [line] };
     }
+    /*
+     * The texts the plugin raised while it applied.
+     *
+     * A line the plugin said itself is in `problems` too, because the loader
+     * tells it on the plugin's behalf for the log and for `ahpd start`, so it
+     * is on the row once rather than twice.
+     */
+    const raised: string[] = [];
+    const self = {};
+    current.set(id, self);
     const one = await loadOne(resolved, {
       path: options.base.path,
       paths,
@@ -1732,16 +1825,29 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
       records: () => hosted.then((host) => host.records),
       collections,
       reload: counts.get(id) ?? 0,
+      // The plugin's own alerts, while it applies and after: the sink outlives
+      // this call, so a plugin that kept its host still reaches its own row.
+      alert: (alert) => {
+        if (current.get(id) !== self) return;
+        if (!answered.has(id)) raised.push(alert.text);
+        addAlert(id, alert);
+      },
+      clearAlert: (ref) => { if (current.get(id) === self) dropAlert(id, ref); },
       ...(options.fetcher === undefined ? {} : { fetcher: options.fetcher }),
     }, (counts.get(id) ?? 0) > 0 ? undefined : named);
-    if (one.loaded === undefined || one.contribution === undefined) {
-      // The last line is the one that says why this plugin is not running.
-      const line = one.problems.at(-1);
-      if (line !== undefined) failed.set(id, line);
-      return { id, problems: one.problems };
+    /*
+     * The lines this load found, on the row as well as in the answer: the last
+     * one when the plugin did not load says why, and every other line is what
+     * the loader or the plugin went without.
+     */
+    const refused = one.loaded === undefined || one.contribution === undefined;
+    for (const [at, line] of one.problems.entries()) {
+      if (raised.includes(line)) continue;
+      addAlert(id, { level: refused && at === one.problems.length - 1 ? 'error' : 'warning', text: line });
     }
+    answered.add(id);
+    if (one.loaded === undefined || one.contribution === undefined) return { id, problems: one.problems };
     kept.set(id, { loaded: one.loaded, contribution: one.contribution, resolved, named });
-    failed.delete(id);
     known.push(...one.contribution.agents);
     // A copy: the schema answers for a key a client edits, so it is the host's
     // to hold and not one a plugin may reach back into.
@@ -1762,7 +1868,13 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
 
   const unload = async (id: string): Promise<string[]> => {
     const one = kept.get(id);
-    if (one === undefined) return [];
+    if (one === undefined) {
+      // A plugin that never loaded has no row to clear, but a failed one does.
+      alerted.delete(id);
+      answered.delete(id);
+      current.delete(id);
+      return [];
+    }
     const problems: string[] = [];
     // The plugin's own connections first: a closer that tells somebody about
     // the ending needs the connection it tells them over.
@@ -1776,7 +1888,10 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
       }
     }
     kept.delete(id);
-    failed.delete(id);
+    // A plugin that is gone has nothing left to say: its row carries no alerts.
+    alerted.delete(id);
+    answered.delete(id);
+    current.delete(id);
     schemas.delete(id);
     for (const agent of one.contribution.agents) {
       const at = known.findIndex((each) => each.provider === agent.provider);
@@ -1808,7 +1923,9 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
     held: (id) => kept.get(id),
     loaded: () => [...kept.values()].map((one) => one.loaded),
     contributions,
-    failures: () => Object.fromEntries([...failed].map(([id, line]) => [id, line])),
+    // A copy of each list: a row a client reads is not the one the next alert
+    // would push into while it is being served.
+    alerts: () => Object.fromEntries([...alerted].map(([id, list]) => [id, [...list]])),
     /*
      * Fold what is loaded, and the records the host has opened.
      *
@@ -1852,7 +1969,7 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
   const folded = set.fold();
   problems.push(...folded.problems);
   set.settle(folded.options);
-  return { options: folded.options, contributions: set.contributions(), problems, loaded: set.loaded(), routes: folded.routes, failures: set.failures() };
+  return { options: folded.options, contributions: set.contributions(), problems, loaded: set.loaded(), routes: folded.routes, alerts: set.alerts() };
 }
 
 /**

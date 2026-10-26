@@ -19,7 +19,7 @@ import { dirname, join } from 'node:path';
 import { check } from '@cofold/commands';
 import type { JsonSchema } from '@cofold/commands';
 import { isRecordSlug, RECORD_SLUG, recordsChannel, RpcError, scopeOf, secretRef } from '@ahpd/sdk';
-import type { Grant, Loaded, PluginMethod, PluginSpec, RecordsChannel, RecordsSource } from '@ahpd/sdk';
+import type { Alert, Grant, Loaded, PluginMethod, PluginSpec, RecordsChannel, RecordsSource } from '@ahpd/sdk';
 import type { Applied } from './applyplugins.js';
 import { maskOption, SET, withoutSpecSecrets, withoutUserinfoIn } from './commands/config.js';
 import {
@@ -67,7 +67,7 @@ const secretsOf = (schema: Record<string, unknown> | undefined, value: unknown, 
 };
 
 /**
- * A load problem as a client may read it.
+ * An alert text as a client may read it.
  *
  * Masked as every other answer is: the userinfo of any URL in the sentence, and
  * each write-only option value the plugin's own error quoted.
@@ -95,12 +95,12 @@ export interface PluginsChannelOptions {
    */
   loaded(): Loaded[];
   /**
-   * The plugins the daemon could not load, by id, once it has.
+   * The alerts each plugin's row carries, by id, once it has.
    *
-   * The same fact as `loaded()`, the other way: a row says `loaded: false` when
-   * its id is absent here and when it is present with the line that says why.
+   * A plugin with no entry has nothing to show: a row that loaded cleanly says
+   * nothing, and one that did not says why as an `error` alert.
    */
-  failures(): Record<string, string>;
+  alerts(): Record<string, Alert[]>;
   /**
    * Load, unload or reconfigure what the file now says, in the daemon behind
    * this channel.
@@ -230,8 +230,8 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     // The copy the daemon loaded is what is running; a plugin that did not load,
     // or is switched off, is described from the manifest read without importing.
     const manifest = loaded?.manifest ?? row.manifest;
-    // What the daemon said when this plugin did not run, if it said anything.
-    const failure = options.failures()[row.name];
+    // What this plugin's row carries, masked as every other answer is.
+    const alerts = options.alerts()[row.name] ?? [];
     return {
       id: withoutUserinfoIn(row.name),
       record: {
@@ -249,7 +249,11 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
         // What the running daemon did, which the state does not say: a plugin
         // may be configured and yet not be running.
         loaded: loaded !== undefined,
-        ...(failure === undefined ? {} : { loadProblem: loadProblemOf(failure, row.spec, schema) }),
+        alerts: alerts.map((alert) => ({
+          level: alert.level,
+          text: loadProblemOf(alert.text, row.spec, schema),
+          ...(alert.ref === undefined ? {} : { ref: withoutUserinfoIn(alert.ref) }),
+        })),
         // The form a client draws, from the daemon's copy or the module it
         // would import; absent for one switched off, which is never imported.
         ...(schema === undefined ? {} : { optionsSchema: schema }),

@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { canonicalFromCli, check, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
 import type { Command, JsonSchema, Registry } from '@cofold/commands';
-import type { Agent, AutomationStore, AutomationsOptions, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, ServedEngine, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, Alert, AutomationStore, AutomationsOptions, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, ServedEngine, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   adaptersChannel,
   enginesChannel,
@@ -692,7 +692,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * load finishes anyway.
    */
   let loaded: Loaded[] = [];
-  let failures: Record<string, string> = {};
+  let alerts: Record<string, Alert[]> = {};
   /*
    * The host's restart mark, once there is a host: the channel is built before
    * `createHost`, and a command that writes calls this through the closure.
@@ -715,14 +715,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     changed: false,
     problems: [`${pluginFile} changed before this daemon finished starting; restart it to load the plugins`],
     loaded: [],
-    failures: {},
+    alerts: {},
     routes: {},
   });
   const pluginLists = pluginsChannel({
     configFile: pluginFile,
     where: { configDir: configDir(), cwd: process.cwd() },
     loaded: () => loaded,
-    failures: () => failures,
+    alerts: () => alerts,
     restartNeeded: () => markRestart(),
     apply: (reload) => applyNow(reload),
     onProblem: listProblem,
@@ -1343,6 +1343,16 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       if (one === '' || announced) return;
       said.push(one);
     },
+    /*
+     * An alert a plugin raises after its load answered changes its row, so a
+     * client watching the plugins channel is sent the row again. The list the
+     * channel reads is replaced first, because what it was handed is a copy
+     * taken when the load answered.
+     */
+    alertsChanged: () => {
+      alerts = pluginHoldings.alerts();
+      void pluginLists.refresh();
+    },
   };
   /*
    * The set this daemon keeps for as long as it runs.
@@ -1372,7 +1382,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // The channels read these through closures, so a load or unload reaches a
     // listing, the adapters and the routes without anything being rebuilt.
     loaded = answer.loaded;
-    failures = answer.failures;
+    alerts = answer.alerts;
     adapters = withHostAdapters(now.adapters);
     pluginTypes = pluginTriggerTypes(now.pluginTriggers);
     // An engine a plugin brought or took away is what the stored records are read
@@ -1396,10 +1406,10 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     if (answer.restart) markRestart();
     return answer;
   };
-  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, failures: didFail } = await loadPlugins(planned.plugins, { ...holding, set: pluginHoldings });
+  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, alerts: didAlert } = await loadPlugins(planned.plugins, { ...holding, set: pluginHoldings });
   // The channel built above starts answering manifests from here.
   loaded = didLoad;
-  failures = didFail;
+  alerts = didAlert;
   liveRoutes = registered;
   // And the two channels start answering adapters, which is what a stored
   // connector is checked against when it opens below.

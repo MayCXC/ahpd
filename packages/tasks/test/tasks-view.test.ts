@@ -79,7 +79,7 @@ async function announced(): Promise<{
   const records = memoryRecords();
   const { host: plugin, contribution, seal } = pluginHost(name, context(), {
     records: () => records,
-    problem: () => {},
+    alert: () => {},
   });
   await apply(plugin, {});
   seal();

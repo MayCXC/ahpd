@@ -350,7 +350,7 @@ it('reports a value outside the table, and loads anyway', () => {
   const { host } = pluginHost('bot', context, {
     sessions: () => memorySessions(),
     records: () => memoryRecords(),
-    problem: (line) => problems.push(line),
+    alert: (alert) => problems.push(alert.text),
   });
 
   apply(host, { root: join(root, 'bots'), mainTurnPostMessageAbsent: 'shout' });
