@@ -21,7 +21,7 @@ ahpd plugin install @ahpd/activepieces
 ahpd restart
 ```
 
-The pieces in the table below are dependencies of this package, so they arrive with it. Another piece arrives the same way, as a dependency of the plugin, and its package is named in `pieces`. There is no separate command that installs one.
+The pieces in the table below are dependencies of this package, so they arrive with it. A piece this package does not depend on is installed when its name is saved in `pieces`. The install goes into the plugin's own `installed/` folder, so a name that is not a dependency still arrives. Write a version after the name to pick one, as in `@activepieces/piece-postgres@0.5.1`; a name with no version installs the newest. The plugin says on its own row how each install ended, and a piece that still does not load is a warning there.
 
 Update, remove and one-run flags are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
 
@@ -35,7 +35,7 @@ In the configuration file, with three of the pieces named:
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `pieces` | - | The package of each piece the daemon offers, such as `@activepieces/piece-resend`. Required, and at least one |
+| `pieces` | - | The package of each piece the daemon offers, such as `@activepieces/piece-resend`. A version may follow the name, as in `@activepieces/piece-postgres@0.5.1`. Required, and at least one |
 
 An adapter is named `ap-` and the piece's own name: `ap-resend`, `ap-telegram-bot` and `ap-slack`. The plugin declares the contract `ap-*`, so a client sees every adapter it loads.
 

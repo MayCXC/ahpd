@@ -766,6 +766,16 @@ export interface Alert {
 }
 
 /**
+ * What one install answered: the version it left, or why npm could not install
+ * the package.
+ *
+ * `version` is read from the installed package's own `package.json`, so it is
+ * the version npm chose rather than the one that was written. `error` is one
+ * line of npm's own error, without a newline.
+ */
+export type InstallAnswer = { version: string } | { error: string };
+
+/**
  * The contribution surface, which is `HostOptions` named back.
  *
  * Every method that contributes a value is named `register*` (), and the set of kinds is closed, one
@@ -814,6 +824,34 @@ export interface PluginHost extends PluginContext {
    * without a newline, naming the item.
    */
   problem(line: string): void;
+  /**
+   * Where a package this plugin installs is kept: the absolute path of
+   * `installed/` inside the plugin's own folder.
+   *
+   * This is the folder `install` writes into, and the second place a plugin
+   * looks for a package it installs. It is nothing for a plugin with no folder
+   * of its own, such as one loaded from a `data:` or `https:` URL; `install`
+   * answers an error there.
+   */
+  installed?: string;
+  /**
+   * Install one npm package into this plugin's own `installed/` folder.
+   *
+   * `spec` is what npm takes: a package name, with `@<version>` after it when
+   * one version is asked for, such as `@activepieces/piece-postgres@0.5.1`.
+   * The version is read back from the package npm left, so the answer is what
+   * was installed rather than what was written.
+   *
+   * The install runs with `--ignore-scripts`, `--no-audit` and `--no-fund`, so
+   * a package's own install scripts never run. One install runs at a time for
+   * one plugin, and a second waits for the first: two npm runs in one folder
+   * would race on its `package.json`.
+   *
+   * Answers `{ version }` when npm installed the package, and `{ error }` with
+   * one line of npm's own error when it did not. A plugin with no folder of its
+   * own answers an error, because there is nowhere to install into.
+   */
+  install(spec: string): Promise<InstallAnswer>;
   /**
    * One agent's machine needs, read when called rather than at load.
    *

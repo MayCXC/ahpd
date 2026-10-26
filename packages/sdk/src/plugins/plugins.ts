@@ -17,7 +17,7 @@ import type { SessionConfigAnswerer } from '../types/completions.js';
 import type { ServedAdapter } from '../types/connectors.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from '../types/events.js';
 import type { HostOptions, HostTool } from '../types/host.js';
-import type { ChannelHandle, Contribution, LoaderContext, Alert, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
+import type { ChannelHandle, Contribution, LoaderContext, Alert, InstallAnswer, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
 import type { CollectionOptions, RecordCollection, RecordStore } from '../types/records.js';
 import type { SessionStore } from '../types/sessions.js';
 import type { Usage } from '../types/usage.js';
@@ -926,6 +926,21 @@ export interface HostRecordingOptions {
    * it add.
    */
   contracts?: PluginContracts;
+  /**
+   * Where a package a plugin installs is kept, handed to `host.installed`.
+   *
+   * The absolute path of `installed/` inside the plugin's own folder. Absent
+   * for a plugin with no folder, which is a plugin `install` cannot serve.
+   */
+  installed?: string;
+  /**
+   * How one package is installed, read when `install` is called.
+   *
+   * A function rather than a value because the install runs in the daemon and
+   * a plugin is handed none: a loader in a test gives a fake, and a host with
+   * no folder gives nothing at all.
+   */
+  install?: (spec: string) => Promise<InstallAnswer>;
 }
 
 /**
@@ -1108,6 +1123,23 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     // A problem is one kind of alert - a warning about an item the plugin went
     // without - so a plugin that says one today needs no change to say it.
     problem: (line) => { options.alert?.({ level: 'warning', text: line }); },
+    /*
+     * A host with no folder of its own answers an error rather than throwing:
+     * a plugin that installs a missing package is asking for something this
+     * host cannot do, and the answer is where the plugin says why. The plugin
+     * name is in the line, because the plugin did not write the folder and the
+     * reader of the alert did not write the name.
+     */
+    ...(options.installed === undefined ? {} : { installed: options.installed }),
+    install: async (spec) => {
+      if (typeof spec !== 'string' || spec.trim() === '') {
+        return { error: `plugin ${by} cannot install: install needs a package name` };
+      }
+      if (options.install === undefined) {
+        return { error: `plugin ${by} has no folder of its own to install into` };
+      }
+      return await options.install(spec);
+    },
     // Read from the live list, not a snapshot: the agents this host will have
     // are not all known while any one plugin is applying. An agent that
     // declares nothing answers an empty record, which is a machine with

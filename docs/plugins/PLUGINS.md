@@ -811,12 +811,16 @@ nothing behaves exactly as it did before the field existed.
 | `clearAlert(ref)` | Takes the alert with that `ref` off the plugin's row |
 | `parseYaml(text)` | A YAML text as data, read with the host's own YAML subset |
 | `stringifyYaml(value)` | A value as YAML text that `parseYaml` reads back the same |
+| `installed` | The absolute path of `installed/`, the folder inside the plugin's own folder where an install puts a package; nothing for a plugin with no folder of its own |
+| `install(spec)` | Installs one npm package into `installed/`, and answers `{ version }` or `{ error }` |
 
 `log` is stderr and a person reads it. `say` is stdout, which is what `ahpd status` parses, so it is where a plugin that made the host reachable somewhere new puts that address - a line only the log knows is an address nobody pastes. Say it while `listening` is being handled; the announcement is written once that event has been handled and a line offered after it is dropped.
 
 `problem(line)` is how a plugin that handles many items says which one it could not register: `ahpd start` and `ahpd restart` print each line as `skipped: <line>` before the line that says the daemon is up, beside the problems the loader found itself. Saying one costs the item and not the plugin, which keeps the rest of your contribution and does not fail the load. Unlike the two above it is on `PluginHost` and not on the event context, because an item is dropped while `apply` runs. The same line is a `warning` alert on the plugin's row.
 
 `alert(alert)` puts one alert on the plugin's row in the plugins channel: `{ level, text, ref? }`, where `level` is one of `notice`, `info`, `warning` and `error`. `ref` names what the alert is about, as `<kind>:<id>` such as `adapter:ap-postgres`. A client shows it beside that item, and an alert with the same `ref` replaces the one before it. `clearAlert(ref)` takes it out again. An alert raised after `apply` returned is on the row at once. The channel sends the row again, which is what a plugin holding a watch uses. A plugin holds at most 50 alerts, and the oldest goes first. A reload or an unload clears them.
+
+`install(spec)` installs one npm package a plugin needs but does not ship. `installed` is the folder it installs into: `installed/` inside the plugin's own folder. `spec` is what npm takes, so a version rides in the name: `@activepieces/piece-postgres@0.5.1`. A name with no version installs the newest version at the time of the install. npm runs with `--ignore-scripts`, `--no-audit` and `--no-fund`, so a package's own install script never runs. The first install writes an `installed/package.json` of its own, so npm never changes the plugin's own manifest or `node_modules`. A source plugin is in the pnpm workspace, and its `node_modules` is not npm's to change. One install runs at a time for one plugin, and a second waits for the first. The answer is `{ version }`, the version npm left in `node_modules`, or `{ error }`, one line of npm's own error. A plugin with no folder of its own answers `{ error }`. A spec that starts with `-`, or holds whitespace, a quote or `%`, answers `{ error }` and runs no npm.
 
 ### A plugin is a client of its own host
 

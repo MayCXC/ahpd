@@ -1,4 +1,7 @@
 import { fork } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { logoOf } from './logos.js';
 import { adapterOf, nameOf } from './mapping.js';
@@ -38,6 +41,122 @@ const childPath = (here: URL = new URL(import.meta.url)): string =>
 /** The piece packages named in the options. */
 const asked = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((one): one is string => typeof one === 'string' && one !== '') : [];
+
+/**
+ * One package name with an optional version after it, as npm writes it.
+ *
+ * The name is a package's, scoped or not; the version is whatever npm takes
+ * after the last `@`. A URL or a path matches none of this, because a package
+ * name holds no colon and no `/` before its scope.
+ */
+const PACKAGE = /^(@[^/@\s:]+\/[^/@\s:]+|[^/@\s:][^/@\s:]*?)(?:@([^@\s:]+))?$/u;
+
+/** One piece the options name. */
+interface Wanted {
+  /** What the child imports and npm installs: the package, without a version. */
+  package: string;
+  /** What the options wrote, which is what an install is asked for. */
+  spec: string;
+  /** The version written after the name, when one was. */
+  version?: string;
+  /** Whether the name is an npm package, rather than a URL or a path. */
+  named: boolean;
+}
+
+/** Split one written name into its package and the version after it. */
+const wanted = (written: string): Wanted => {
+  const found = PACKAGE.exec(written);
+  if (found === null) return { package: written, spec: written, named: false };
+  return {
+    package: found[1] as string,
+    spec: written,
+    named: true,
+    ...(found[2] === undefined ? {} : { version: found[2] }),
+  };
+};
+
+/** What a package's own `package.json` says, from the folder it sits in. */
+const manifestAt = (folder: string): Record<string, unknown> | undefined => {
+  try {
+    const found: unknown = JSON.parse(readFileSync(join(folder, 'package.json'), 'utf8'));
+    return typeof found === 'object' && found !== null ? found as Record<string, unknown> : undefined;
+  }
+  catch {
+    return undefined;
+  }
+};
+
+/** Where a folder's `node_modules` holds one package, and what that package says. */
+const manifestIn = (folder: string, packageName: string): Record<string, unknown> | undefined =>
+  manifestAt(join(folder, 'node_modules', ...packageName.split('/')));
+
+/** The plugin's own resolution, which is the one the child imports a piece by. */
+const own = createRequire(import.meta.url);
+
+/**
+ * What the plugin's own `node_modules` holds for one package.
+ *
+ * The file a package resolves to sits somewhere inside it, so the folder is
+ * found by walking up to the one whose `package.json` names the package. A
+ * package that is not there, or one Node cannot resolve without an `import`
+ * condition, answers nothing.
+ */
+const manifestOfOwn = (packageName: string): Record<string, unknown> | undefined => {
+  let at: string;
+  try {
+    at = own.resolve(packageName);
+  }
+  catch {
+    return undefined;
+  }
+  let folder = dirname(at);
+  for (;;) {
+    const manifest = manifestAt(folder);
+    if (manifest?.['name'] === packageName) return manifest;
+    const up = dirname(folder);
+    if (up === folder) return undefined;
+    folder = up;
+  }
+};
+
+/** The version one package's manifest says, if it says one. */
+const versionOf = (manifest: Record<string, unknown> | undefined): string | undefined =>
+  typeof manifest?.['version'] === 'string' ? manifest['version'] : undefined;
+
+/** What the plugin holds for one package now. */
+interface Found {
+  /** Whether the package is anywhere the child can import it from. */
+  present: boolean;
+  /** The version of the package that is there, when its manifest says one. */
+  version?: string;
+}
+
+/**
+ * Where one piece is now: the plugin's own `node_modules` first, then its
+ * `installed/` folder.
+ *
+ * The order is the one the child imports in, so a version written in the
+ * options is compared with the version the child would load.
+ */
+const foundPiece = (packageName: string, installed: string | undefined): Found => {
+  const manifests = [
+    ...(installed === undefined ? [] : [manifestIn(dirname(installed), packageName)]),
+    manifestOfOwn(packageName),
+    ...(installed === undefined ? [] : [manifestIn(installed, packageName)]),
+  ];
+  const manifest = manifests.find((one) => one !== undefined);
+  if (manifest === undefined) return { present: false };
+  return typeof manifest['version'] === 'string' ? { present: true, version: manifest['version'] } : { present: true };
+};
+
+/** One line the child wrote about a piece, as the package it names and the reason. */
+const failureOf = (line: string, pieces: Wanted[]): { package?: string; why: string } => {
+  for (const one of pieces) {
+    const lead = `${one.package}: `;
+    if (line.startsWith(lead)) return { package: one.package, why: line.slice(lead.length) };
+  }
+  return { why: line };
+};
 
 /**
  * The variables the child is given from the daemon's environment.
@@ -173,24 +292,88 @@ const awaited = async (answer: Promise<Answer>): Promise<Answer> => {
 };
 
 /** Run one action in the child, and answer its result. */
-const callAction = async (channel: Child, piece: string, call: RunCallArgs): Promise<unknown> => {
-  const answer = await awaited(channel.ask({ type: 'run', piece, ...call }));
+const callAction = async (channel: Child, piece: string, call: RunCallArgs, installed: string | undefined, installedFirst: boolean): Promise<unknown> => {
+  const answer = await awaited(channel.ask({
+    type: 'run',
+    piece,
+    ...call,
+    ...(installed === undefined ? {} : { installed }),
+    ...(installedFirst ? { installedFirst: true } : {}),
+  }));
   if (answer.type === 'ran') return answer.result;
   throw new Error(answer.type === 'failed' ? answer.message : 'the child answered a call with a description');
 };
 
 export const apply: Plugin['apply'] = async (host, options) => {
-  const pieces = asked(options['pieces']);
+  const pieces = asked(options['pieces']).map(wanted);
+  /*
+   * A piece that is not there, or not at the version the options wrote, is
+   * installed before the child is asked what the pieces are. One install at a
+   * time, in the order the options name them, and each answer is the plugin's
+   * news on its own row: the version npm left, or why it could not install
+   * one. A plugin with no folder of its own answers an error from `install`.
+   */
+  /*
+   * A name with a version is imported from `installed/` when that folder holds
+   * the version, even when the plugin ships the piece itself: the version the
+   * options wrote is the one that runs.
+   */
+  const fromInstalled = new Set<string>();
+  // A piece whose install failed: its error stays on the row, and no load
+  // warning with the same `ref` replaces it.
+  const notInstalled = new Set<string>();
+  for (const one of pieces) {
+    if (!one.named) continue;
+    if (one.version === undefined) {
+      if (foundPiece(one.package, host.installed).present) continue;
+    }
+    else {
+      if (host.installed !== undefined && versionOf(manifestIn(host.installed, one.package)) === one.version) {
+        fromInstalled.add(one.package);
+        continue;
+      }
+      const shipped = host.installed === undefined ? undefined : manifestIn(dirname(host.installed), one.package);
+      if (versionOf(shipped ?? manifestOfOwn(one.package)) === one.version) continue;
+    }
+    const answer = await host.install(one.spec);
+    if ('error' in answer) {
+      notInstalled.add(one.package);
+      host.alert({ level: 'error', ref: `piece:${one.package}`, text: `could not install ${one.spec}: ${answer.error}` });
+      continue;
+    }
+    if (one.version !== undefined) fromInstalled.add(one.package);
+    host.alert({ level: 'info', ref: `piece:${one.package}`, text: `installed ${one.package} ${answer.version}` });
+  }
+  const first = [...fromInstalled];
+
   const channel = child(host);
   host.registerClose(() => { channel.stop(); });
 
-  const answer = await channel.ask({ type: 'describe', pieces });
+  const answer = await channel.ask({
+    type: 'describe',
+    pieces: pieces.map((one) => one.package),
+    ...(host.installed === undefined ? {} : { installed: host.installed }),
+    ...(first.length === 0 ? {} : { installedFirst: first }),
+  });
   if (answer.type !== 'described') {
     const message = answer.type === 'failed' ? answer.message : 'the child answered a description with a run';
     host.problem(`${name}: ${message}`);
     return;
   }
-  for (const error of answer.errors) host.problem(`${name}: ${error}`);
+  /*
+   * A piece that still does not load is a warning on its own row, under the
+   * same `ref` an install's own line used: the name of the piece is what a
+   * person reads, and the last thing said about it is what is true now.
+   */
+  for (const error of answer.errors) {
+    const failed = failureOf(error, pieces);
+    if (failed.package !== undefined && notInstalled.has(failed.package)) continue;
+    host.alert({
+      level: 'warning',
+      ...(failed.package === undefined ? {} : { ref: `piece:${failed.package}` }),
+      text: failed.package === undefined ? `a piece did not load: ${failed.why}` : `${failed.package} did not load: ${failed.why}`,
+    });
+  }
   /*
    * Every logo is asked for at once, so one slow CDN does not hold the others:
    * a piece whose fetch fails still has its adapter, without the icon. A piece
@@ -204,7 +387,7 @@ export const apply: Plugin['apply'] = async (host, options) => {
   for (const [at, piece] of answer.pieces.entries()) {
     const logo = logos[at];
     if (logo?.problem !== undefined) host.problem(`${name}: ${logo.problem}`);
-    const mapped = adapterOf(piece, (call) => callAction(channel, piece.package, call), logo?.icon);
+    const mapped = adapterOf(piece, (call) => callAction(channel, piece.package, call, host.installed, fromInstalled.has(piece.package)), logo?.icon);
     for (const note of mapped.notes) host.problem(`${name}: ${note}`);
     if (mapped.adapter !== undefined) host.registerAdapter(mapped.adapter);
   }
