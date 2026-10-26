@@ -1,3 +1,6 @@
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { ActionDescription, Answer, AuthDescription, PieceDescription, PropDescription, Request, RunRequest, Store } from './wire.js';
 
 /**
@@ -140,19 +143,55 @@ const pieceOf = (module: Record<string, unknown>): Record<string, unknown> => {
 /** The pieces that loaded so far, by the specifier they were asked for by. */
 const loaded = new Map<string, Record<string, unknown>>();
 
+/** The file one package resolves to inside `installed/`, if it is there. */
+const fromInstalled = (spec: string, installed: string): string | undefined => {
+  try {
+    return createRequire(join(installed, 'package.json')).resolve(spec);
+  }
+  catch {
+    return undefined;
+  }
+};
+
+/**
+ * Import one piece by its package name.
+ *
+ * The name is imported as it is, so Node finds a piece the plugin depends on
+ * the way it finds any dependency. A piece the plugin installed is in the
+ * plugin's own `installed/` folder instead, which is not on that path, so a
+ * name that did not resolve is looked up there and imported from the file it
+ * resolves to. A name that neither holds is the first failure, because that is
+ * the line that says what the plugin's own resolution did.
+ */
+const imported = async (spec: string, installed: string | undefined, first: boolean): Promise<Record<string, unknown>> => {
+  if (first && installed !== undefined) {
+    const at = fromInstalled(spec, installed);
+    if (at !== undefined) return await import(pathToFileURL(at).href) as Record<string, unknown>;
+  }
+  try {
+    return await import(spec) as Record<string, unknown>;
+  }
+  catch (error) {
+    if (installed === undefined) throw error;
+    const at = fromInstalled(spec, installed);
+    if (at === undefined) throw error;
+    return await import(pathToFileURL(at).href) as Record<string, unknown>;
+  }
+};
+
 /** The piece one specifier names, loaded once and kept for the next call. */
-const loadedPiece = async (spec: string): Promise<Record<string, unknown>> => {
+const loadedPiece = async (spec: string, installed: string | undefined, first = false): Promise<Record<string, unknown>> => {
   const held = loaded.get(spec);
   if (held !== undefined) return held;
-  const module = await import(spec) as Record<string, unknown>;
+  const module = await imported(spec, installed, first);
   const piece = pieceOf(module);
   loaded.set(spec, piece);
   return piece;
 };
 
 /** Load one piece, once, and describe it. */
-const describePiece = async (spec: string): Promise<PieceDescription> => {
-  const piece = await loadedPiece(spec);
+const describePiece = async (spec: string, installed: string | undefined, first: boolean): Promise<PieceDescription> => {
+  const piece = await loadedPiece(spec, installed, first);
   const one: PieceDescription = {
     package: spec,
     displayName: typeof piece['displayName'] === 'string' ? piece['displayName'] : spec,
@@ -168,12 +207,12 @@ const describePiece = async (spec: string): Promise<PieceDescription> => {
 };
 
 /** Answer a `describe`: each piece that loaded, and one line for each that did not. */
-const describe = async (id: number, pieces: string[]): Promise<Answer> => {
+const describe = async (id: number, pieces: string[], installed: string | undefined, first: string[]): Promise<Answer> => {
   const found: PieceDescription[] = [];
   const errors: string[] = [];
   for (const spec of pieces) {
     try {
-      found.push(await describePiece(spec));
+      found.push(await describePiece(spec, installed, first.includes(spec)));
     } catch (error) {
       errors.push(`${spec}: ${reason(error)}`);
     }
@@ -258,7 +297,7 @@ const actionOf = (piece: Record<string, unknown>, name: string): Record<string, 
 
 /** Answer a `run`: the action's result, or the message of what it threw. */
 const answerRun = async (request: RunRequest): Promise<Answer> => {
-  const piece = await loadedPiece(request.piece);
+  const piece = await loadedPiece(request.piece, request.installed, request.installedFirst === true);
   const action = actionOf(piece, request.action);
   const perform = action['run'];
   if (typeof perform !== 'function') throw new Error(`the action ${request.action} cannot run`);
@@ -269,7 +308,7 @@ const answerRun = async (request: RunRequest): Promise<Answer> => {
 /** Answer one request from the parent. */
 const handle = async (request: Request): Promise<void> => {
   const answer = request.type === 'describe'
-    ? await describe(request.id, request.pieces)
+    ? await describe(request.id, request.pieces, request.installed, request.installedFirst ?? [])
     : await answerRun(request);
   process.send?.(answer);
 };

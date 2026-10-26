@@ -23,16 +23,18 @@
  * no backend at all.
  */
 
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename, dirname, extname, isAbsolute, join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { checkIcons, foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
-import type { Agent, AgentOwner, Alert, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginHost, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, AgentOwner, Alert, InstallAnswer, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginHost, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { fetchIcons, resolveIcons } from './icons.js';
 import { satisfies } from './compat.js';
+import { run as runProgram } from './install.js';
+import type { Runner } from './install.js';
 
 /** One spec, turned into a URL to import. */
 export interface Resolved {
@@ -181,13 +183,103 @@ const parseManifest = (dir: string): Record<string, unknown> | undefined => {
   }
 };
 
+/** The userinfo of any URL in a line, which is where a spec's credential is. */
+const USERINFO = /([a-zA-Z][\w+.-]*:\/\/)[^/@\s]+@/gu;
+
+/** One line with every URL's userinfo replaced, so no answer carries a credential. */
+const withoutUserinfo = (text: string): string => text.replace(USERINFO, '$1<set>@');
+
+/** The last line npm wrote to its standard error, which is where it says why it stopped. */
+const lastLineOf = (text: string): string | undefined =>
+  text.split('\n').map((one) => one.trim()).filter((one) => one !== '').at(-1);
+
+/**
+ * What a spec may hold: a package name, and a version or tag after `@`.
+ *
+ * A spec that starts with `-` is a flag to npm, and a later flag wins over the
+ * `--ignore-scripts` before it. Whitespace, quotes and `%` change what the
+ * Windows shell hands npm. So a spec is only the characters a name, a version,
+ * a range or a tag is written with.
+ */
+const SPEC = /^[A-Za-z0-9@][\w@/.~^*+:=-]*$/u;
+
+/**
+ * The package a spec names, with a version written after `@` taken off.
+ *
+ * npm takes a version after the name, as in `@scope/name@1.2.3` or `name@next`,
+ * and the package's own `package.json` is found under the name alone. A spec
+ * that names no package, such as a URL or a path, answers nothing.
+ */
+const packageNameOf = (spec: string): string | undefined => {
+  const scoped = /^(@[^/@\s]+\/[^/@\s]+)(?:@[^@\s]*)?$/.exec(spec);
+  if (scoped !== null) return scoped[1];
+  const plain = /^([^/@\s][^/@\s]*?)(?:@[^@\s]*)?$/.exec(spec);
+  return plain?.[1];
+};
+
+/** The version npm left in a plugin's `installed/` folder for one spec, or nothing. */
+const installedVersionOf = (folder: string, spec: string): string | undefined => {
+  const name = packageNameOf(spec);
+  if (name === undefined) return undefined;
+  const manifest = parseManifest(join(folder, 'node_modules', ...name.split('/')));
+  return typeof manifest?.['version'] === 'string' ? manifest['version'] : undefined;
+};
+
+/**
+ * One install at a time for one plugin.
+ *
+ * Two npm runs in one folder race on its `package.json` and `package-lock.json`,
+ * so the second waits for the first. A failed install does not stop the next
+ * one, because the queue is about the folder and not about what npm answered.
+ */
+const installing = new Map<string, Promise<unknown>>();
+const oneInstallAtATime = <T>(plugin: string, work: () => Promise<T>): Promise<T> => {
+  const before = installing.get(plugin) ?? Promise.resolve();
+  const next = before.then(work, work);
+  installing.set(plugin, next);
+  const forget = (): void => { if (installing.get(plugin) === next) installing.delete(plugin); };
+  next.then(forget, forget);
+  return next;
+};
+
+/**
+ * Install one package into a plugin's own `installed/` folder.
+ *
+ * The folder gets a `package.json` of its own before the first install, so npm
+ * writes there rather than into the plugin's own manifest or `node_modules`. A
+ * source plugin is in the pnpm workspace, and its `node_modules` is not npm's
+ * to change.
+ *
+ * npm runs with `--ignore-scripts`, `--no-audit` and `--no-fund`: this install
+ * is one package a person asked for, so no package's install script runs and
+ * the registry is not asked anything else. The answer is the version npm left
+ * in `node_modules`, or the last line npm wrote to its standard error.
+ */
+const installInto = async (plugin: string, folder: string, spec: string, npm: Runner): Promise<InstallAnswer> =>
+  oneInstallAtATime(plugin, async () => {
+    if (!SPEC.test(spec)) return { error: `${withoutUserinfo(spec)} is not a package npm can install` };
+    mkdirSync(folder, { recursive: true });
+    const manifest = join(folder, 'package.json');
+    if (!existsSync(manifest)) writeFileSync(manifest, '{\n  "name": "ahpd-installed",\n  "private": true\n}\n');
+    const done = await npm('npm', ['install', '--prefix', folder, '--ignore-scripts', '--no-audit', '--no-fund', spec]);
+    if (done.code !== 0) {
+      const said = lastLineOf(done.stderr);
+      return { error: said === undefined ? `npm ended with code ${String(done.code)}` : withoutUserinfo(said) };
+    }
+    const version = installedVersionOf(folder, spec);
+    return version === undefined
+      ? { error: `npm installed ${withoutUserinfo(spec)}, but its package.json answers no version` }
+      : { version };
+  });
+
 /**
  * The entry a directory's own manifest names, in the order it is looked for.
  *
- * `ahpd.entry` first, because that is the field added for exactly this; then the package's
- * own `exports["."]`; then `main`; then the conventional `index.js`. An entry
- * that resolves outside the directory is refused rather than followed, so a
- * manifest cannot point its own package at somebody else's code.
+ * `ahpd.entry` first, because that is the field added for exactly this; then
+ * the package's own `exports["."]`; then `main`; then the conventional
+ * `index.js`. An entry that resolves outside the directory is refused rather
+ * than followed, so a manifest cannot point its own package at somebody
+ * else's code.
  */
 export const entryOf = (dir: string): string => {
   const manifest = parseManifest(dir);
@@ -805,6 +897,13 @@ export interface LoadOneOptions {
    * network, and the same argument `fetch` takes otherwise.
    */
   fetcher?: typeof fetch;
+  /**
+   * How npm is run for a package a plugin installs, which is plan 64's runner.
+   *
+   * A parameter rather than the global process so a test fakes npm, and absent
+   * is the daemon's own runner.
+   */
+  run?: Runner;
 }
 
 /** What one `loadOne` managed: a plugin, or the reasons it is not one. */
@@ -1181,6 +1280,11 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   // a file inside a package still resolves against that package, as its
   // manifest's own icons do.
   const base = resolved.packageDir ?? (target === undefined ? undefined : (nearestManifest(target) ?? dirname(target)));
+  // Where a package this plugin installs is kept: `installed/` inside its own
+  // folder. A plugin with no folder has nowhere to install and nothing to tell
+  // the child about.
+  const installed = base === undefined ? undefined : join(base, 'installed');
+  const npm = options.run ?? runProgram;
   // A manifest icon that could not be read was dropped and said, and the load
   // says the same line beside its own.
   if (manifest?.iconProblems !== undefined) problems.push(...manifest.iconProblems);
@@ -1336,6 +1440,10 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     ...(options.sessions === undefined ? {} : { sessions: options.sessions }),
     ...(options.records === undefined ? {} : { records: options.records }),
     ...(options.collections === undefined ? {} : { collections: options.collections }),
+    // A plugin with a folder of its own can install a package into it; one
+    // without answers an error from the sdk's own default.
+    ...(installed === undefined ? {} : { installed }),
+    ...(installed === undefined ? {} : { install: (spec: string) => installInto(name, installed, spec, npm) }),
     // As configuration wrote it, which is what a host inside a machine loads.
     spec: said,
   });
@@ -1491,6 +1599,8 @@ export interface LoadOptions {
   alertsChanged?(): void;
   /** What reaches the network for an `https:` icon; the global `fetch` otherwise. */
   fetcher?: typeof fetch;
+  /** How npm is run for a package a plugin installs; the daemon's own runner otherwise. */
+  run?: Runner;
 }
 
 /** One host's worth of options, and what happened on the way to them. */
@@ -1834,6 +1944,7 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
       },
       clearAlert: (ref) => { if (current.get(id) === self) dropAlert(id, ref); },
       ...(options.fetcher === undefined ? {} : { fetcher: options.fetcher }),
+      ...(options.run === undefined ? {} : { run: options.run }),
     }, (counts.get(id) ?? 0) > 0 ? undefined : named);
     /*
      * The lines this load found, on the row as well as in the answer: the last

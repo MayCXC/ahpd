@@ -85,8 +85,23 @@ export interface DescribeRequest {
   type: 'describe';
   /** The id this request is answered by. */
   id: number;
-  /** One package specifier or file URL for each piece. */
+  /** One package name or file URL for each piece. */
   pieces: string[];
+  /**
+   * The plugin's own `installed/` folder, when it has one.
+   *
+   * A piece that is not one of the plugin's dependencies is installed there,
+   * so the child imports it from that folder when its own resolution does not
+   * find the package.
+   */
+  installed?: string;
+  /**
+   * The pieces the child imports from `installed/` before its own resolution.
+   *
+   * A name the options wrote with a version runs at that version, and the copy
+   * the plugin ships may be another one.
+   */
+  installedFirst?: string[];
 }
 
 /**
@@ -106,6 +121,15 @@ export interface RunRequest {
   piece: string;
   /** The name of the action to run. */
   action: string;
+  /**
+   * The plugin's own `installed/` folder, when it has one.
+   *
+   * Sent with every call, because a child started after an install still has
+   * to find a piece that lives there.
+   */
+  installed?: string;
+  /** Whether this piece is imported from `installed/` first, as `describe` was told. */
+  installedFirst?: boolean;
   /** The auth value the piece reads: a secret text, or the props of a custom auth. */
   auth: Record<string, unknown>;
   /** The input of the call, each prop by the name the piece reads it by. */

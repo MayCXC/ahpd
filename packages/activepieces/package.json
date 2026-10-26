@@ -92,9 +92,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^@activepieces/piece-[a-z0-9][a-z0-9-]*$"
+            "pattern": "^@activepieces/piece-[a-z0-9][a-z0-9-]*(?:@[^@\\s]+)?$"
           },
-          "description": "The package of each Activepieces piece this plugin offers, such as @activepieces/piece-resend."
+          "description": "The package of each Activepieces piece this plugin offers, such as @activepieces/piece-resend. A version may follow the name, as in @activepieces/piece-postgres@0.5.1; the newest version is installed when none is written."
         }
       },
       "required": ["pieces"]

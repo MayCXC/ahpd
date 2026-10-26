@@ -1,7 +1,7 @@
 ---
 title: A missing Activepieces piece installs when its name is saved
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-25
 revalidated: 2026-10-25
@@ -66,6 +66,9 @@ x-ahpd/plugins/options write -> reload -> apply -> host.install for each piece t
 | A piece taken out of the options stays installed | (defaulted) | 02 |
 | An install raises an alert with `ref` `piece:<name>`: `info` with the version when it ends, `error` with the npm error when it fails | Softov, 2026-10-25, the alert levels | 02 |
 | A piece that still does not load after its install is a `warning` alert with the same `ref` | Softov, 2026-10-25: an item that does not load while the rest do is a `warning` | 02 |
+| A piece whose install failed keeps its `error` alert, and gets no load `warning` | (defaulted: a warning with the same `ref` replaces the error, and the npm reason is lost) | 02 |
+| A version written for a piece the plugin ships is installed and runs from `installed/` | Softov, 2026-10-25: "Written version wins" | 02 |
+| `host.install` refuses a spec that starts with `-`, or holds whitespace, a quote or `%` | (defaulted: a later flag overrides `--ignore-scripts`, and the Windows shell reads those characters) | 01 |
 
 ## Proposed architecture
 
@@ -80,8 +83,8 @@ x-ahpd/plugins/options write -> reload -> apply -> host.install for each piece t
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A plugin installs a package into its folder](task-01-a-plugin-installs-a-package.md) | todo | - |
-| [02 - Activepieces installs a missing piece](task-02-activepieces-installs-a-missing-piece.md) | todo | 01 |
+| [01 - A plugin installs a package into its folder](task-01-a-plugin-installs-a-package.md) | implemented | - |
+| [02 - Activepieces installs a missing piece](task-02-activepieces-installs-a-missing-piece.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -91,13 +94,13 @@ x-ahpd/plugins/options write -> reload -> apply -> host.install for each piece t
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** finish plan 67, then [task-01-a-plugin-installs-a-package.md](task-01-a-plugin-installs-a-package.md).
+- **Done so far:** both tasks are implemented. The host has `install(spec)` and `installed`. A plugin's package installs into `installed/` with npm, one at a time. Activepieces reads a version after a piece name, and installs a piece that is missing or not at that version. It asks the child to describe the package names, with `installed` as a second place. Each install and each piece that does not load is an alert under `ref` `piece:<package>`.
+- **Next action:** run the two by-hand checks below in a test daemon.
 - **Open questions:** none.
-- **Watch out for:** never run npm in the plugin's own folder: for a source plugin that is `packages/activepieces` in the pnpm workspace. The child imports a piece by its name, so a name with a version must be cut to the package name before the import.
+- **Watch out for:** never run npm in the plugin's own folder. For a source plugin that is `packages/activepieces` in the pnpm workspace. The child imports a piece by its name, so a name with a version is cut to the package name before the child sees it. A piece with a version written is imported from `installed/` first when that folder holds the version, also when the plugin ships the piece. A name with no version reads the plugin's own `node_modules` first.
 
 ## Final verification checklist
 
 - [ ] In a test daemon, `@activepieces/piece-postgres@0.5.1` saved in the options shows a Postgres connector, and an `info` alert says 0.5.1.
 - [ ] A name that is not on npm gives an `error` alert with the npm error, and the other pieces still show.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

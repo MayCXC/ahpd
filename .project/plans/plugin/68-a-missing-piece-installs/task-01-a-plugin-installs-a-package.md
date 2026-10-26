@@ -1,6 +1,6 @@
 ---
 title: A plugin installs a package into its folder
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server, docs"
 refs:
@@ -18,7 +18,8 @@ A plugin calls `host.install(spec)`, and the package is installed into `installe
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `install(spec)` and `installed` on `PluginHost`, and the answer type.
 - `UPDATE: packages/sdk/src/plugins/plugins.ts` - the host option that runs an install.
 - `UPDATE: packages/server/src/plugins.ts` - `loadOne` gives the plugin `installed` under `base`, and runs npm there.
-- `CREATE: packages/server/test/plugin-install.test.ts` - the install call with a fake npm.
+- `UPDATE: packages/sdk/src/types/index.ts` - `InstallAnswer` on the public type surface.
+- `CREATE: packages/server/test/plugin-host-install.test.ts` - the install call with a fake npm.
 - `UPDATE: docs/plugins/PLUGINS.md` - `install` and `installed` in the `PluginHost` table.
 
 ## Steps
@@ -41,3 +42,12 @@ A plugin calls `host.install(spec)`, and the package is installed into `installe
 - The gate passes: `pnpm -s typecheck && pnpm -s build && pnpm -s boundary && pnpm -s test`.
 
 ## Resume
+
+- **Done so far:** `PluginHost` carries `installed?: string` and `install(spec): Promise<InstallAnswer>`, and `InstallAnswer` is `{ version } | { error }` on the public type surface. `pluginHost` answers an empty spec or a plugin with no folder with an error. A folder plugin is handed the path of `installed/` under its own folder. `loadOne` gives every plugin a host whose `install` runs npm as `npm install --prefix <installed> --ignore-scripts --no-audit --no-fund <spec>` through plan 64's runner. The first install writes `installed/package.json` with the name `ahpd-installed`. The version is read from `installed/node_modules/<name>/package.json`. A failed npm answers its last standard-error line, and a URL's userinfo in that line is masked. One install runs at a time per plugin, and a second waits for the first. `loadOne` and `pluginSet` take the runner as `run`, so a test fakes npm.
+  The plan's three checks pass in `plugin-host-install.test.ts` with 6 tests. The full gate ran: 428 files and 7067 tests, with 29 skipped and one failure, a 5 second timeout in `computer-plugin.test.ts` that passes alone.
+- **Next action:** none, this task is implemented.
+- **Files:** `packages/sdk/src/types/plugin.ts`, `packages/sdk/src/types/index.ts`, `packages/sdk/src/plugins/plugins.ts`, `packages/server/src/plugins.ts`, `packages/server/test/plugin-host-install.test.ts`, `docs/plugins/PLUGINS.md`.
+- **Open questions:** none.
+- **Departures:** the plan names `packages/server/test/plugin-install.test.ts`, and that file already exists for the `ahpd plugin install` command. The new test is `plugin-host-install.test.ts`. `installed` is optional on the host, because a plugin with no folder of its own has no path. `install` is always there, and answers the sdk's own error for one with no folder, which is step 8. The answer type is also exported from `types/index.ts`, which the Files list does not name. The runner is an option on `LoadOptions` and `LoadOneOptions`, so no test reaches the registry; `plugins.ts` imports `run` and `Runner` from `install.ts`. `install` refuses a spec that starts with `-`, or holds whitespace, a quote or `%`, and runs no npm for it.
+- **Watch out for:** `installed/` is what npm changes, and the plugin's own `node_modules` is not npm's to change. One plugin's installs are one chain, keyed by name: a failed install does not stop the next one.
+

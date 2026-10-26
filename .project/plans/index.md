@@ -407,7 +407,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [65 - A disabled plugin describes itself](plugin/65-a-disabled-plugin-describes-itself/plan.md) | medium | active 2026-10-25; four tasks, all implemented | plugin 64 | the ahpw plugin page for a disabled plugin; `definePlugin` |
 | [66 - A reopened bot chat keeps its mark](plugin/66-a-reopened-bot-chat-keeps-its-mark/plan.md) | high | active 2026-10-25; tasks 01 and 02 implemented | - | ahpw, which reads the mark from `_meta` and needs no change |
 | [67 - A plugin raises alerts, and its row carries them](plugin/67-a-plugin-raises-alerts/plan.md) | medium | active 2026-10-25; one task, implemented | - | ahpw draws the alerts and stops reading `loadProblem`, session c7 |
-| [68 - A missing Activepieces piece installs when its name is saved](plugin/68-a-missing-piece-installs/plan.md) | medium | planned 2026-10-25; two tasks, todo | plugin 67 | - |
+| [68 - A missing Activepieces piece installs when its name is saved](plugin/68-a-missing-piece-installs/plan.md) | medium | active 2026-10-25; two tasks, implemented | plugin 67 | - |
 
 Next free number in `plugin`: `69`.
 
