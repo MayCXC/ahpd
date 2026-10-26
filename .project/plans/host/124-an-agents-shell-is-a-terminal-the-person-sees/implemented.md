@@ -30,6 +30,14 @@ Claude and pi let the host's `bash` take the place of their own shell.
 - `pnpm boundary`, `pnpm typecheck` and `pnpm build` pass.
 - `pnpm test` fails on a Linux machine with no docker, in 35 files, on timeouts in the docker and process tests. The same 35 files fail on main on that machine.
 - A daemon built from this tree offers the six tools to a Claude session after a client pushes the key.
+- By hand from the built daemon on `node` 24.21.0 and `bun` 1.4.4, with `agent-acp` installed from this checkout's path.
+- In each run a client pushed the key and made an ACP agent record whose server calls the host's tools over its MCP endpoint.
+- The calls were `echo`, a kept folder and variable, `false`, a timeout, `list_bash`, `write_bash` with `read_bash`, and `bash_shutdown`.
+- On `node`, with `node-pty`, each call ran in one pseudoterminal and answered as the reference's tool does.
+- On `bun`, with `node-pty` kept from the daemon so its shells ran on pipes, each call answered the same.
+- On `bun` as installed on that machine, `node-pty` loads and every shell it starts exits at once with code 1.
+- The calls then answered `Shell exited with code`, and a shell started with `node-pty` alone under `bun` exits the same way.
+- The built headless terminal read bracketed paste and the alternate screen, on and off, under `node` and `bun`.
 
 ## Departures from the plan
 
