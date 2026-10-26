@@ -7,6 +7,7 @@ covers:
   - packages/server/src/update.ts
   - packages/server/src/install.ts
   - packages/server/src/wire.ts
+  - packages/server/src/pty.ts
   - packages/server/src/commands/**
   - .github/workflows/release.yml
   - .github/workflows/parts-bump.yml
@@ -33,6 +34,7 @@ refs:
   - "[code://packages/server/src/update.ts#L122-L156](../../packages/server/src/update.ts#L122-L156) - `refreshUpdate`, `checkingUpdates` and `updateLine`"
   - "[code://packages/server/src/commands/run.ts#L1144-L1148](../../packages/server/src/commands/run.ts#L1144-L1148) - the update refresh at start and every six hours"
   - "[code://packages/server/src/wire.ts#L47-L73](../../packages/server/src/wire.ts#L47-L73) - `lineFor` and the capture limits"
+  - "[code://packages/server/src/pty.ts#L140-L156](../../packages/server/src/pty.ts#L140-L156) - `pty`, the terminal binding: Bun's own on Bun, `node-pty` elsewhere"
   - "[code://.github/workflows/release.yml#L19](../../.github/workflows/release.yml#L19) - `PUBLISHED`, the packages a release publishes"
   - "[code://.github/workflows/release.yml#L58-L67](../../.github/workflows/release.yml#L58-L67) - the check that the tag and every version agree"
   - "[code://.github/workflows/release.yml#L130-L160](../../.github/workflows/release.yml#L130-L160) - the stage step"
@@ -196,3 +198,22 @@ THEN the agent CLI or runtime comes from `packages/computer/images/versions.json
 AND the image tag carries the version and a hash of the Dockerfile.
 A part can name environment variables in `updates`, which turn off the CLI's own self-update.
 A weekly workflow proposes a pull request when a part has a newer release.
+
+### A terminal is a pseudoterminal where the runtime has one
+
+WHEN the daemon starts on a Bun that has `Bun.Terminal`, on Linux or macOS
+THEN its terminals run under Bun's own pseudoterminal, the `terminal` option of `Bun.spawn`
+AND `node-pty` is neither probed nor loaded.
+The reason: on Bun, `node-pty` loads and every shell it starts dies at once.
+`Bun.Terminal` came with Bun 1.3.5.
+
+WHEN a terminal's process exits on Bun
+THEN its exit is said once `exited` resolves, after its whole output
+AND its terminal is closed, and input after that is dropped.
+
+WHEN it starts on a Bun without `Bun.Terminal`, or on Windows
+THEN its terminals run on pipes and say `isPty: false`.
+On Windows the store hands `cmd.exe` its line as one string, which this binding refuses, as `node-pty` does on Unix.
+
+WHEN it starts on Node or Deno
+THEN its terminals run under `node-pty` where a child of the same runtime survives loading it, and on pipes otherwise.

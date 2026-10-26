@@ -19,9 +19,8 @@ const SELF = fileURLToPath(import.meta.url);
  * `node-pty` is native code, and native code that does not match its runtime
  * does not throw: `dlopen` aborts the process, or the module panics on a
  * function the runtime does not implement, and neither is something a
- * `try/catch` around the import can hold. Bun's install of `node-pty` does
- * exactly this, which takes the whole daemon down over a feature that is
- * marked optional.
+ * `try/catch` around the import can hold. Either takes the whole daemon down
+ * over a feature that is marked optional.
  *
  * So the import is tried in a child of the same runtime first, and only
  * repeated here once the child has survived it. A crash is then an exit code.
@@ -32,13 +31,124 @@ const loadable = (): boolean => {
 };
 
 /**
+ * A pseudoterminal from Bun's own `terminal` option, in the shape the store takes.
+ *
+ * As Bun's "Terminal (PTY) support" gives it: the output is the terminal's
+ * `data`, the process is awaited with `exited`, and the terminal is closed
+ * after it,
+ * https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L318-L342.
+ * Bun's own tests read a terminal's whole output once `exited` has resolved,
+ * https://github.com/oven-sh/bun/blob/bun-v1.3.13/test/js/bun/terminal/terminal.test.ts#L959-L985,
+ * so the exit is said after the output, as the store says it on pipes.
+ *
+ * The terminal's `exit` callback is not passed. Up to Bun 1.3.13, a terminal
+ * that has one turns a start Bun refuses into a crash of Bun itself rather
+ * than a throw, and the whole output has arrived by the time `exited`
+ * resolves either way.
+ *
+ * Where Bun leaves a choice open, this makes the one `node-pty` makes, because
+ * the port is `node-pty`'s shape: arguments as one string are refused, `kill`
+ * sends `SIGHUP` when it names no signal, and a write once the terminal has
+ * closed does nothing.
+ */
+const bunTerminal = (Bun: BunRuntime): SpawnPty => (file, args, { cwd, cols, rows, env }) => {
+  // `node-pty`'s own refusal on Unix, the only systems this is handed out on:
+  // https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L50-L52
+  if (typeof args === 'string') throw new Error('args as a string is not supported on unix.');
+  const heard: ((data: string) => void)[] = [];
+  const ended: ((exit: { exitCode: number }) => void)[] = [];
+  const said = (data: string): void => { for (const listen of heard) listen(data); };
+  const gone = (exitCode: number): void => { for (const listen of ended) listen({ exitCode }); };
+  // One decoder for the whole stream, so a character split across two reads
+  // arrives whole and a read holding only its start says nothing, as with
+  // `node-pty`'s `setEncoding('utf8')`:
+  // https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L109-L111
+  const text = new TextDecoder();
+  /** Starts the subprocess, and answers nothing when Bun refuses to. */
+  const started = (): BunSubprocess | undefined => {
+    try {
+      return Bun.spawn([file, ...args], {
+        ...(cwd !== undefined ? { cwd } : {}),
+        env,
+        terminal: {
+          cols,
+          rows,
+          data: (_terminal, bytes) => {
+            const chunk = text.decode(bytes, { stream: true });
+            if (chunk !== '') said(chunk);
+          },
+        },
+      });
+    }
+    catch (error) {
+      /*
+       * A shell that fails to start, not a refusal: a directory that is not
+       * there is said in the terminal's own output with the exit code `127`,
+       * as the store says it on pipes, on a line ending in `\r\n` as each line
+       * a pseudoterminal writes does. Queued, because the store puts its
+       * listeners on after this call returns.
+       */
+      queueMicrotask(() => {
+        said(`${error instanceof Error ? error.message : String(error)}\r\n`);
+        gone(127);
+      });
+      return undefined;
+    }
+  };
+  const proc = started();
+  if (proc !== undefined) {
+    void proc.exited.then((exitCode) => {
+      proc.terminal.close();
+      gone(exitCode);
+    });
+  }
+  return {
+    onData: (listen) => { heard.push(listen); },
+    onExit: (listen) => { ended.push(listen); },
+    // Nothing once the terminal has closed, where Bun's `write` throws:
+    // `node-pty` makes its own `write` a no-op when its output closes,
+    // https://github.com/microsoft/node-pty/blob/v1.1.0/src/terminal.ts#L190-L195
+    write: (data) => { if (proc !== undefined && !proc.terminal.closed) proc.terminal.write(data); },
+    resize: (nextCols, nextRows) => { proc?.terminal.resize(nextCols, nextRows); },
+    // `SIGHUP` when nothing is named, as `node-pty` sends: an interactive shell
+    // ignores Bun's own default, `SIGTERM`, and the store's close names none.
+    // A signal the runtime refuses is swallowed, as `node-pty` swallows it.
+    // https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L249-L253
+    kill: (signal) => {
+      try { proc?.kill(signal ?? 'SIGHUP'); }
+      catch { /* a signal Bun does not know */ }
+    },
+  };
+};
+
+/**
  * The binding, if this machine has one that runs.
  *
  * With it, shells run under a real terminal and the shell's own OSC 133 marks
  * turn into command boundaries. Without it they run on pipes and the state
  * says `isPty: false`, which is what the protocol has that flag for.
+ *
+ * On Bun it is Bun's own, wherever Bun has `Bun.Terminal`, which came with
+ * 1.3.5, and on Linux and macOS. Up to 1.3.13 Bun documents its terminal for
+ * those two only; from 1.3.14 it has one on Windows, but this binding takes
+ * an argv, as `node-pty` does on Unix, and there the store hands `cmd.exe`
+ * its line as one string. So any other Bun gets pipes. `node-pty` is never loaded on Bun,
+ * whatever a probe says: on Bun 1.3.13 and 1.4.4 it loads, so the child below
+ * survives it, and every shell it starts dies of `SIGHUP` before printing
+ * anything. Everywhere else it is `node-pty`, where a child of the same
+ * runtime survives loading it.
+ *
+ * `platform` is handed in, as the terminal store's is, so a case on Linux can
+ * ask what a Windows machine would answer.
  */
-export const pty = async (): Promise<{ pty?: SpawnPty }> => {
+export const pty = async (platform: string = process.platform): Promise<{ pty?: SpawnPty }> => {
+  // Imported here rather than at the top, so the child below still loads
+  // nothing but `node-pty`.
+  const { runtime } = await import('@ahpd/sdk');
+  if (runtime() === 'bun') {
+    const Bun = (globalThis as unknown as { Bun: BunRuntime }).Bun;
+    return platform !== 'win32' && Bun.Terminal !== undefined ? { pty: bunTerminal(Bun) } : {};
+  }
   if (!loadable()) return {};
   try {
     const found = await import(/* @vite-ignore */ MODULE) as { spawn?: unknown };
@@ -60,3 +170,23 @@ if (process.argv[1] === SELF && process.argv[2] === '--probe') {
     process.exit(1);
   }
 }
+
+/*
+ * The shapes Bun hands back, named so the code above reads, as `Bun.spawn`
+ * and its `Terminal` are declared in "Terminal (PTY) support".
+ */
+
+/** `Bun.spawn` with a terminal, and `Bun.Terminal`, whose presence says Bun has one. */
+interface BunRuntime {
+  Terminal?: unknown;
+  spawn(cmd: string[], options: {
+    cwd?: string;
+    env: Record<string, string | undefined>;
+    terminal: { cols: number; rows: number; data(terminal: BunTerminal, data: Uint8Array): void };
+  }): BunSubprocess;
+}
+
+/** A subprocess `Bun.spawn` answered: `exited` resolves to its exit code. */
+interface BunSubprocess { terminal: BunTerminal; exited: Promise<number>; kill(signal?: number | string): void }
+
+interface BunTerminal { readonly closed: boolean; write(data: string): number; resize(cols: number, rows: number): void; close(): void }

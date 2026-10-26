@@ -8,7 +8,7 @@ Terms, one line each:
 | --- | --- |
 | a terminal | One shell process, as a channel: its own URI, its own state, its own actions |
 | the terminal store | The port that spawns shells - `TerminalStore`, pipes unless it was handed a pseudoterminal binding |
-| a pseudoterminal | A real terminal device, handed in as native code; what makes the shell's own marks readable |
+| a pseudoterminal | A real terminal device, handed in by the daemon: `node-pty`'s, or Bun's own on Bun; what makes the shell's own marks readable |
 | the claim | Who holds the terminal: a connection, or a session and the chat inside it |
 | the scrollback | Everything the shell has written, kept so a client subscribing later still sees it |
 | the root list | `terminals` on root state: every open terminal's `TerminalInfo` |
@@ -18,7 +18,7 @@ Terms, one line each:
 
 On the daemon's machine, which is the only place it can run: the store spawns a process locally, and there is no scheme for a shell somewhere else - a session in a machine runs its own commands inside that machine (see [COMPUTERS.md](../plugins/COMPUTERS.md)).
 
-A client's terminal starts in the directory it named, decoded from the `file:` URI it sent, and naming none gives the host's own directory. Any directory is accepted, `file:///etc` included: the reference host opens one wherever it is asked, and the connection's token is what decides who gets a shell rather than the path. A directory that is not there is a shell that fails to start, not a refusal - the failure is written into the terminal's own output and the exit code is `127`.
+A client's terminal starts in the directory it named, decoded from the `file:` URI it sent, and naming none gives the host's own directory. Any directory is accepted, `file:///etc` included: the reference host opens one wherever it is asked, and the connection's token is what decides who gets a shell rather than the path. A directory that is not there is a shell that fails to start, not a refusal - the failure is written into the terminal's own output and the exit code is `127`. Under `node-pty` it is `1`, which `node-pty`'s own child exits with, after writing the failure on Linux and writing nothing on macOS.
 
 What the directory decides is smaller: a command that ran in it may have moved it - a commit, a checkout, anything that wrote a file - so when the process exits this host refreshes the changeset of whichever session directory the terminal was in. A terminal outside every session's directory refreshes nothing.
 
@@ -28,7 +28,13 @@ What the directory decides is smaller: a command that ran in it may have moved i
 
 The store runs shells on pipes unless it was handed a pseudoterminal binding, and the state says which the client is reading: `isPty` and `supportsCommandDetection` are both false on pipes, because there is no terminal device and no shell running a prompt of its own to emit anything. Output is then plain text, and anything a client draws with cursor movement will not look right - said in the state rather than discovered. This is what the protocol's `isPty: false` is for.
 
-The daemon hands one in when the machine has it: `node-pty`'s `spawn`, loaded by name at runtime, because a native binding that does not match its runtime aborts the process rather than throwing and is nothing a `try`/`catch` can hold. So the import is tried in a child of the same runtime first and repeated here only once that child has survived it - `packages/server/src/pty.ts`. With it, shells run under a real terminal, and the shell's own marks become facts.
+The daemon hands one in when the machine has it, from `packages/server/src/pty.ts`. With it, shells run under a real terminal, and the shell's own marks become facts.
+
+On Node and Deno it is `node-pty`'s `spawn`, loaded by name at runtime, because a native binding that does not match its runtime aborts the process rather than throwing and is nothing a `try`/`catch` can hold. So the import is tried in a child of the same runtime first and repeated only once that child has survived it.
+
+On Bun it is Bun's own: `Bun.spawn` with its `terminal` option, as Bun's [Terminal (PTY) support](https://bun.com/docs/runtime/child-process) gives it, wherever Bun has `Bun.Terminal`, which came with Bun 1.3.5, and on Linux and macOS. Each member of the port is the one Bun documents: the output is the terminal's `data`, the exit code is what the subprocess's `exited` resolves to, which for a shell a signal ended is `128` plus the signal's number, and `write`, `resize` and `kill` are the terminal's and the subprocess's. The whole output has arrived by the time `exited` resolves, so the exit is said then, and the terminal is closed, as Bun's own example closes it. The terminal's `exit` callback is not used: up to Bun 1.3.13, a terminal that has one makes a start Bun refuses, such as a directory that is not there, crash Bun itself rather than throw. Where Bun leaves a choice open, the binding makes `node-pty`'s: arguments as one string are refused, `kill` sends `SIGHUP` when it names no signal, and input once the terminal has closed is dropped.
+
+Every other Bun runs shells on pipes: a Bun without `Bun.Terminal`, and Bun on Windows, where the store hands `cmd.exe` its line as one string, which the binding refuses. `node-pty` is never loaded on Bun: it loads there, so a child survives it, and every shell it starts dies at once.
 
 `TERM` follows the same answer: the daemon's own, or `xterm-256color` when it has none, under a pseudoterminal, and `dumb` without one.
 

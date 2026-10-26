@@ -400,7 +400,7 @@ Summarised by area rather than by method, one row per area:
 | Resources | 🧩 | `resources` port | Anywhere the store reaches, and a write needs no grant first |
 | Client resources | ✅ | the same ten `resource*`, outbound | A client publishes a scheme and this host routes to it by URI authority |
 | Resource watches | 🧩 | `resources` port | Watch lifetime follows the subscription; the protocol has no dispose |
-| Terminals | 🧩 | `terminals` port | A real PTY with OSC 133 command detection where `node-pty` loads, pipes otherwise |
+| Terminals | 🧩 | `terminals` port | A real PTY with OSC 133 command detection where `node-pty` loads, or Bun's own on Bun 1.3.5 or newer, pipes otherwise |
 | Changesets | 🧩 | `changes` port | The git implementation serves all four scopes and the working-tree operations |
 | Automations | 🧩 | `automations` port | Plus scheduled execution: cron in a named time zone, with nobody connected |
 | Annotations | ✅ | `annotations/*` | Client-origin: this host reduces and echoes, and refuses an id it does not hold |
