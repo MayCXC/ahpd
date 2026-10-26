@@ -1,6 +1,6 @@
 ---
 title: The plugin root loads first
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

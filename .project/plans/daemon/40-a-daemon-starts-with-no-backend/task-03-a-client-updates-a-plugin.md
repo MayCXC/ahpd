@@ -1,6 +1,6 @@
 ---
 title: A client updates a plugin
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

@@ -1,6 +1,6 @@
 ---
 title: The plugins name the oldest daemon
-status: implemented
+status: done
 depends: []
 layer: plugins, docs
 refs:

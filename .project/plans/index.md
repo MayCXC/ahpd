@@ -63,7 +63,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [37 - configure sets up one pi](daemon/37-configure-sets-up-one-pi/plan.md) | medium | active 2026-10-21; task 01 implemented | - | - |
 | [38 - configure offers the web UI](daemon/38-configure-offers-the-web-ui/plan.md) | medium | active 2026-10-21; task 01 implemented | - | - |
 | [39 - The update check encodes a scoped name](daemon/39-the-update-check-encodes-a-scoped-name/plan.md) | high | built 2026-10-21 (implemented.md); merged in #58 | - | - |
-| [40 - A daemon starts with no backend](daemon/40-a-daemon-starts-with-no-backend/plan.md) | high | active 2026-10-26; tasks 01 to 05 implemented, awaiting review | plugin 67 | - |
+| [40 - A daemon starts with no backend](daemon/40-a-daemon-starts-with-no-backend/plan.md) | high | built 2026-10-26 ([implemented.md](daemon/40-a-daemon-starts-with-no-backend/implemented.md)); checks by hand in [pending/daemon-40-old-plugin-checks.md](../pending/daemon-40-old-plugin-checks.md) | plugin 67 | - |
 
 Next free number in `daemon`: `40`.
 

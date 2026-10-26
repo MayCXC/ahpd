@@ -1,7 +1,7 @@
 ---
 title: A daemon starts with no backend
 domain: daemon
-status: active
+status: built
 priority: high
 created: 2026-10-26
 revalidated: 2026-10-26
@@ -80,11 +80,11 @@ Each run used XDG folders under the scratchpad, a prefix install and port 38911.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host starts with no agent](task-01-the-host-starts-with-no-agent.md) | implemented | - |
-| [02 - An old plugin's refusal names the fix](task-02-an-old-plugins-refusal-names-the-fix.md) | implemented | 01 |
-| [03 - A client updates a plugin](task-03-a-client-updates-a-plugin.md) | implemented | - |
-| [04 - The plugins name the oldest daemon](task-04-the-plugins-name-the-oldest-daemon.md) | implemented | - |
-| [05 - The plugin root loads first](task-05-the-plugin-root-loads-first.md) | implemented | - |
+| [01 - The host starts with no agent](task-01-the-host-starts-with-no-agent.md) | done | - |
+| [02 - An old plugin's refusal names the fix](task-02-an-old-plugins-refusal-names-the-fix.md) | done | 01 |
+| [03 - A client updates a plugin](task-03-a-client-updates-a-plugin.md) | done | - |
+| [04 - The plugins name the oldest daemon](task-04-the-plugins-name-the-oldest-daemon.md) | done | - |
+| [05 - The plugin root loads first](task-05-the-plugin-root-loads-first.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -93,8 +93,8 @@ Each run used XDG folders under the scratchpad, a prefix install and port 38911.
 
 ## Resume state
 
-- **Done so far:** tasks 01 to 05 implemented on the branch `daemon/40-a-daemon-starts-with-no-backend`.
-- **Next action:** Softov reviews the branch, then the checks by hand in the final checklist.
+- **Done so far:** built 2026-10-26 in PR #100, see [implemented.md](implemented.md).
+- **Next action:** the checks by hand in [daemon-40-old-plugin-checks.md](../../../pending/daemon-40-old-plugin-checks.md), on a 0.14.1 candidate.
 - **Open questions:** none.
 - **Watch out for:** never touch `~/.config/ahpd`. A test daemon gets XDG folders under a temp folder and a port other than 37537.
 
@@ -102,4 +102,4 @@ Each run used XDG folders under the scratchpad, a prefix install and port 38911.
 
 - [ ] 0.14.1 with a 0.13.0 agent plugin starts, lists no agent, and logs the refusal with `ahpd plugin update all`.
 - [ ] `x-ahpd/plugins/update` moves that plugin, and the agent appears after the reload.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

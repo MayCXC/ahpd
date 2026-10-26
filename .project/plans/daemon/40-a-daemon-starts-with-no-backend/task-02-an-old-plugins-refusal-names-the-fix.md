@@ -1,6 +1,6 @@
 ---
 title: An old plugin's refusal names the fix
-status: implemented
+status: done
 depends: [task-01-the-host-starts-with-no-agent.md]
 layer: server
 refs:
