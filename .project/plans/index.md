@@ -398,7 +398,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [55 - The connectors channel opens to a list reader, and a receive capability names its path](plugin/55-connectors-open-to-a-list-reader/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #69 | plugin 53, plugin 54 | - |
 | [56 - A steered bot chat message is its own turn](plugin/56-a-steered-bot-message-is-its-own-turn/plan.md) | high | planned 2026-10-22; one task, implemented | - | - |
 | [57 - A cofold transcript skips a run that a rewind dropped while it reads](plugin/57-a-transcript-skips-a-run-a-rewind-dropped/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #70 | - | - |
-| [58 - Plugins and adapters carry icons](plugin/58-plugins-and-adapters-carry-icons/plan.md) | medium | active 2026-10-24; tasks 01-05 merged; 06 todo, a shipped SVG for a large piece logo; 05 waits for icon curation | - | - |
+| [58 - Plugins and adapters carry icons](plugin/58-plugins-and-adapters-carry-icons/plan.md) | medium | active 2026-10-24; tasks 01-05 merged; 06 replaced by plugin 69; 05 waits for icon curation | - | - |
 | [59 - A plugin loads, unloads and reloads while the daemon runs](plugin/59-a-plugin-loads-and-unloads-live/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | - |
 | [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | proxy 04 |
 | [61 - A plugin icon has a dark variant](plugin/61-a-plugin-icon-has-a-dark-variant/plan.md) | medium | built 2026-10-24 ([implemented.md](plugin/61-a-plugin-icon-has-a-dark-variant/implemented.md)); merged in #86 | plugin 58 | - |
@@ -409,8 +409,10 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [66 - A reopened bot chat keeps its mark](plugin/66-a-reopened-bot-chat-keeps-its-mark/plan.md) | high | active 2026-10-25; tasks 01 and 02 implemented | - | ahpw, which reads the mark from `_meta` and needs no change |
 | [67 - A plugin raises alerts, and its row carries them](plugin/67-a-plugin-raises-alerts/plan.md) | medium | active 2026-10-25; one task, implemented | - | ahpw draws the alerts and stops reading `loadProblem`, session c7 |
 | [68 - A missing Activepieces piece installs when its name is saved](plugin/68-a-missing-piece-installs/plan.md) | medium | active 2026-10-25; two tasks, implemented | plugin 67 | - |
+| [69 - A plugin names a brand mark the host ships](plugin/69-a-plugin-names-a-host-mark/plan.md) | medium | planned 2026-10-26; four tasks | plugin 58 | ahpw reads the agents row's `icons`; Softov curates each mark |
+| [70 - An Activepieces action takes and writes a file](plugin/70-a-piece-action-takes-a-file/plan.md) | medium | planned 2026-10-26; three tasks | - | - |
 
-Next free number in `plugin`: `69`.
+Next free number in `plugin`: `71`.
 
 ## container
 
