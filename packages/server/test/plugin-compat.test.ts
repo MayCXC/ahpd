@@ -109,48 +109,28 @@ describe('a plugin that names the oldest sdk it needs', () => {
   });
 
   /*
-   * Each package's floor is the first sdk that exports what it imports: the
-   * four agents read `uriOf`, which 0.10 added, the computer reads `callTimes`,
-   * `startOf`, `withCallTimes` and `secretRef` (0.9) and `hasUsers` on its
-   * plugin context (0.10), and the tunnel reads nothing newer than 0.8.
+   * Each package's floor is 0.14, the first daemon that loads a plugin whose
+   * options and contracts are in its package.json: 0.13 reads them from the
+   * module, which no longer exports them. Without the floor, a 0.13 daemon's
+   * install would take a version it cannot load.
    */
-  it.each([
-    ['agent-acp', '>=0.10 <1'], ['agent-claude', '>=0.10 <1'], ['agent-cofold', '>=0.10 <1'], ['agent-pi', '>=0.10 <1'],
-    ['computer', '>=0.10 <1'], ['tunnel-devtunnel', '>=0.8 <1'],
-  ])(
-    'declares @ahpd/%s as taking any sdk from %s on',
-    (name, floor) => {
-      const manifest = JSON.parse(readFileSync(join(here, '../..', name, 'package.json'), 'utf8')) as {
-        peerDependencies: Record<string, string>;
-      };
-      expect(manifest.peerDependencies['@ahpd/sdk']).toBe(floor);
-      // The sdk this workspace builds is one every package on the list can be
-      // run against, whatever each floor is.
-      expect(satisfies(sdkVersion(), manifest.peerDependencies['@ahpd/sdk'] as string)).toBe(true);
-    },
-  );
+  const PLUGINS = [
+    'activepieces', 'agent-acp', 'agent-claude', 'agent-cofold', 'agent-pi', 'bot', 'computer', 'push', 'tasks',
+    'tunnel-devtunnel', 'webhook',
+  ];
 
-  /*
-   * The five that import a shared helper take an sdk that has it, and 0.9.0 is
-   * not one of those: without the floor, a plugin loaded beside a daemon on the
-   * older sdk would fail at its own import rather than be refused by name.
-   *
-   * `0.10.0` is the release that first ships `values.ts` and `records.ts`. The
-   * tunnel takes none of them, which is why it is not on this list.
-   */
-  const HELPER_SDK = '0.10.0';
-
-  it.each([
-    ['agent-acp'], ['agent-claude'], ['agent-cofold'], ['agent-pi'], ['computer'],
-  ])(
-    'refuses 0.9.0 for @ahpd/%s, which reads a helper 0.9.0 does not export',
+  it.each(PLUGINS)(
+    'declares @ahpd/%s as taking any sdk from 0.14 on, and not 0.13',
     (name) => {
       const manifest = JSON.parse(readFileSync(join(here, '../..', name, 'package.json'), 'utf8')) as {
         peerDependencies: Record<string, string>;
       };
       const range = manifest.peerDependencies['@ahpd/sdk'] as string;
-      expect(satisfies('0.9.0', range)).toBe(false);
-      expect(satisfies(HELPER_SDK, range)).toBe(true);
+      expect(range).toBe('>=0.14 <1');
+      expect(satisfies('0.13.0', range)).toBe(false);
+      // The sdk this workspace builds is one every package on the list can be
+      // run against.
+      expect(satisfies(sdkVersion(), range)).toBe(true);
     },
   );
 });

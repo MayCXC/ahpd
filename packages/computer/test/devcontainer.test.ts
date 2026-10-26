@@ -392,10 +392,10 @@ it.skipIf(!posix)('carries frames both ways, and the container\'s own noise as o
  * A host inside with nothing to run is refused before a container is built.
  *
  * The daemon bundles no backend and the host inside is one of the same
- * build - decision `the-daemon-bundles-no-agent` - so an empty list is a
- * process that exits on startup. Reported as the list nobody filled in,
- * rather than a minute of `devcontainer up` followed by a container whose
- * host closed for reasons the relay cannot see.
+ * build - decision `the-daemon-bundles-no-agent-and-starts-without-one` - so
+ * an empty list is a host that runs no session. Reported as the list nobody
+ * filled in, rather than a minute of `devcontainer up` followed by a
+ * container whose host refuses every session.
  */
 it('does not advertise the capability when no backend would be inside', async () => {
   wrote({ hostPresent: true });

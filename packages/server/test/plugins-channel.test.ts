@@ -21,6 +21,7 @@ import { apiOrigins } from '../src/commands/run.js';
 import { servedRegistry, type ServedFacts } from '../src/commands/served.js';
 import { apiHandler } from '../src/http.js';
 import type { Runner } from '../src/install.js';
+import { registry, type Fetch } from '../src/update.js';
 import { loadPlugins, pluginSet, type PluginSet } from '../src/plugins.js';
 import { pluginsChannel } from '../src/pluginschannel.js';
 
@@ -224,7 +225,7 @@ type Host = Awaited<ReturnType<typeof served>>['host'];
  * with what actually happened, and a second write of one plugin runs its new
  * text, as `ahpd plugin reload` does at the terminal.
  */
-const live = async ({ run }: { run?: Runner } = {}) => {
+const live = async ({ run, fetch, version }: { run?: Runner; fetch?: Fetch; version?: string } = {}) => {
   let set: PluginSet;
   let host: Host;
   let markRestart: () => void = () => {};
@@ -247,6 +248,8 @@ const live = async ({ run }: { run?: Runner } = {}) => {
     },
     restartNeeded: () => markRestart(),
     ...(run === undefined ? {} : { run }),
+    ...(fetch === undefined ? {} : { fetch }),
+    ...(version === undefined ? {} : { version: () => version }),
   });
   refresh = lists.refresh;
   const wire = servedRecords('ahpd', [lists.channel], lists.methods);
@@ -1043,5 +1046,91 @@ it('does not mark a restart for a refused command', async () => {
   expect(await cy.call('x-ahpd/plugins/options', { id: 'secret', key: 'retries', value: -1 }))
     .toMatchObject({ code: -32602 });
   expect((((await ana.root())['_meta'] ?? {}) as Bag)['ahpd.restartNeeded']).toBeUndefined();
+  await close();
+});
+
+/**
+ * A registry that holds each package's versions, written as `<version>` or
+ * `<version> <@ahpd/sdk peer range>`, the last one `latest`.
+ */
+const registryHolding = (packages: Record<string, string[]>): Fetch => async (url) => {
+  const versions = packages[String(url).slice(registry().length + 1)];
+  if (versions === undefined) return new Response('{"error":"Not found"}', { status: 404 });
+  return Response.json({
+    'dist-tags': { latest: versions.at(-1) },
+    versions: Object.fromEntries(versions.map((held) => {
+      const [at, range] = held.split(' ');
+      return [at as string, range === undefined ? {} : { peerDependencies: { '@ahpd/sdk': range } }];
+    })),
+  });
+};
+
+/**
+ * `demo` installed from the registry at 1.0.0 and named in `plugins`, with a
+ * runner whose next install lands `next`.
+ */
+const installedDemo = async (next: string) => {
+  const manifests: Record<string, Record<string, unknown>> = { demo: { version: '1.0.0' } };
+  const { runner, calls } = fakeNpm({ demo: '^1.0.0' }, { esm: true, manifests });
+  await runner('npm', ['install', '--prefix', join(home, 'ahpd'), 'demo']);
+  manifests['demo'] = { version: next };
+  calls.length = 0;
+  writeFileSync(config, JSON.stringify({ plugins: [...held().plugins, 'demo'] }));
+  return { runner, calls };
+};
+
+it('updates a plugin to the version that fits this daemon, and loads it again', async () => {
+  const { runner, calls } = await installedDemo('1.1.0');
+  const { host, users, close } = await live({
+    run: runner,
+    version: '0.14.1',
+    fetch: registryHolding({ demo: ['1.0.0 >=0.10', '1.1.0 >=0.14', '2.0.0 >=0.15'] }),
+  });
+  const ana = await as(host, users, 'ana');
+  const jo = await as(host, users, 'jo');
+  expect((await ana.rows())['demo']).toMatchObject({ version: '1.0.0', loaded: true });
+
+  expect(await jo.call('x-ahpd/plugins/update', { id: 'demo' })).toEqual({
+    result: { id: 'demo', from: '1.0.0', to: '1.1.0', restart: false },
+  });
+  // The newest version whose range admits 0.14.1, in the plugin root.
+  expect(calls[0]?.argv.slice(0, 3)).toEqual(['install', '--prefix', join(home, 'ahpd')]);
+  expect(calls[0]?.argv.at(-1)).toBe('demo@1.1.0');
+  expect((await ana.rows())['demo']).toMatchObject({ version: '1.1.0', loaded: true });
+  await close();
+});
+
+it('answers the id alone when the plugin is already at the version that fits', async () => {
+  const { runner } = await installedDemo('1.0.0');
+  const { host, users, close } = await live({
+    run: runner,
+    version: '0.14.1',
+    fetch: registryHolding({ demo: ['1.0.0 >=0.10'] }),
+  });
+  const jo = await as(host, users, 'jo');
+
+  expect(await jo.call('x-ahpd/plugins/update', { id: 'demo' })).toEqual({ result: { id: 'demo', restart: false } });
+  await close();
+});
+
+it('refuses an update of a plugin nobody configured, or one named by its path', async () => {
+  const { runner, calls } = fakeNpm({});
+  const { host, users, close } = await live({ run: runner, fetch: registryHolding({}) });
+  const jo = await as(host, users, 'jo');
+
+  expect(await jo.call('x-ahpd/plugins/update', { id: 'nobody' })).toMatchObject({ code: -32602, message: expect.stringMatching(/no plugin nobody/) });
+  // `declared` is a folder the configuration names, which npm did not install.
+  expect(await jo.call('x-ahpd/plugins/update', { id: 'declared' })).toMatchObject({ code: -32602, message: expect.stringMatching(/is not installed in/) });
+  expect(calls).toEqual([]);
+  await close();
+});
+
+it('refuses an update to a role without plugin:install', async () => {
+  const { runner, calls } = await installedDemo('1.1.0');
+  const { host, users, close } = await live({ run: runner, fetch: registryHolding({ demo: ['1.1.0'] }) });
+  const ha = await as(host, users, 'ha');
+
+  expect(await ha.call('x-ahpd/plugins/update', { id: 'demo' })).toMatchObject({ code: -32009 });
+  expect(calls).toEqual([]);
   await close();
 });

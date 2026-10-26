@@ -46,7 +46,7 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
    */
   const {
     agents, cancelRun, changed, channelKind, daemonKey, decided, declaresConfigKey,
-    dir, dirOf, dispatch, first, homeOf, kept, learned, log, marks, marksOf, meantBy, names, options,
+    dir, dirOf, dispatch, homeOf, kept, learned, log, marks, marksOf, meantBy, names, options,
     ownerFor, owners, past, permitted, presence, relayed, restart, retool,
     rootConfig, served, sessionFor, sessions, starting, summaryMoved, terminals, toolDefinitions,
     value, waitingFor,

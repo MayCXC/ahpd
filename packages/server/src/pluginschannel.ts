@@ -23,9 +23,10 @@ import type { Alert, Grant, Loaded, PluginMethod, PluginSpec, RecordsChannel, Re
 import type { Applied } from './applyplugins.js';
 import { maskOption, SET, withoutSpecSecrets, withoutUserinfoIn } from './commands/config.js';
 import {
-  enableNames, installPlugins, oneAtATime, pluginRoot, removePlugins, run as runProgram, setPluginEnabled, setPluginOption, specsIn,
+  enableNames, installPlugins, oneAtATime, packageOf, pluginRoot, removePlugins, run as runProgram, setPluginEnabled, setPluginOption, specsIn,
+  updatePlugins,
 } from './install.js';
-import type { Runner } from './install.js';
+import type { Moved, Runner } from './install.js';
 import { describePlugin, sourceOf, optionsSchemaLoaded, optionsSchemaOf, pluginIdOf, schemaOf } from './plugins.js';
 import type { Fetch } from './update.js';
 import { version } from './version.js';
@@ -139,7 +140,7 @@ export interface PluginsChannelOptions {
 export interface PluginsChannel {
   /** `x-ahpd-plugins`. */
   channel: RecordsChannel;
-  /** `x-ahpd/plugins/install`, `remove`, `write`, `source`, `enable`, `disable`, `options`, `apply` and `reload`, by name. */
+  /** `x-ahpd/plugins/install`, `remove`, `write`, `source`, `enable`, `disable`, `options`, `apply`, `reload` and `update`, by name. */
   methods: Record<string, PluginMethod>;
   /** Refresh the channel. */
   refresh(): Promise<void>;
@@ -713,6 +714,47 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     },
   };
 
+  /**
+   * Move one installed plugin to the version that fits this daemon, as
+   * `ahpd plugin update <name>` does, and load it again.
+   *
+   * The way a client fixes a plugin an update of the daemon left behind. The
+   * grant is `plugin:install`, because the new version is code the daemon runs.
+   * A plugin the configuration names by its path is refused, because npm did
+   * not install it; one npm installed from git or a URL is left as installed.
+   */
+  const updateMethod: PluginMethod = {
+    grant: 'plugin:install' as Grant,
+    describe: () => ({
+      title: 'Update a plugin',
+      description: 'Takes `id`, the plugin as a row answers it, moves its package to the newest version whose `@ahpd/sdk` range admits this daemon, and loads it again. Answers `{ id, from, to }`, or `{ id }` when nothing moved, and `restart: true` when the plugin holds a port or a URI scheme.',
+    }),
+    handle: (params) => {
+      const name = `${DOMAIN}/update`;
+      const id = idParam(name, params);
+      const spec = specOf(id);
+      if (spec === undefined) throw new RpcError(INVALID_PARAMS, `${name}: no plugin ${id} is configured`);
+      const packageName = packageOf(sourceOf(spec));
+      let moved: Moved | undefined;
+      return changed(async () => {
+        try {
+          const all = await updatePlugins([packageName], {
+            configDir: where.configDir,
+            version: daemonVersion(),
+            run: npm,
+            fetch: registryFetch,
+            say,
+          });
+          moved = all.find((one) => one.name === packageName);
+        }
+        catch (error) {
+          throw new RpcError(INVALID_PARAMS, withoutUserinfoIn(reason(error)));
+        }
+        return moved === undefined ? { id } : { id, ...(moved.from === undefined ? {} : { from: moved.from }), ...(moved.to === undefined ? {} : { to: moved.to }) };
+      }, () => (moved === undefined ? undefined : [id]));
+    },
+  };
+
   return {
     channel,
     methods: {
@@ -725,6 +767,7 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
       [`${DOMAIN}/options`]: optionsMethod,
       [`${DOMAIN}/apply`]: applyMethod,
       [`${DOMAIN}/reload`]: reloadMethod,
+      [`${DOMAIN}/update`]: updateMethod,
     },
     refresh: channel.refresh,
   };

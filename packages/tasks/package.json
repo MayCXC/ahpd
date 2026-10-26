@@ -55,7 +55,7 @@
     "test": "cd ../.. && vitest run packages/tasks/test"
   },
   "peerDependencies": {
-    "@ahpd/sdk": ">=0.10 <1"
+    "@ahpd/sdk": ">=0.14 <1"
   },
   "devDependencies": {
     "@ahpd/sdk": "workspace:*",

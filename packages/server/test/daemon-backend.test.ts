@@ -7,10 +7,11 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 /*
  * What a daemon with no backend does.
  *
- * The daemon bundles none of its own - decision `the-daemon-bundles-no-agent` -
- * so "no agent is configured" is an ordinary configuration, not an impossible
- * one, and what it costs has to be a startup that stops and says so rather
- * than a host that accepts clients it can never answer.
+ * The daemon bundles none of its own - decision
+ * `the-daemon-bundles-no-agent-and-starts-without-one` - so "no agent is
+ * configured" is an ordinary configuration, not an impossible one. The daemon
+ * starts anyway and says what fixes it, because a client can install the
+ * plugin over the daemon's own channel.
  *
  * A process, because `main.ts` runs the daemon on import and the exit code is
  * half of what is being checked.
@@ -58,9 +59,11 @@ const run = async (config: Record<string, unknown>, named = true, written = true
   });
 };
 
-it('refuses to start when nothing contributed a backend, and names the fix', async () => {
+it('starts when nothing contributed a backend, and names the fix', async () => {
   const { code, said, path } = await run({});
-  expect(code).toBe(1);
+  // Announced, then ended the way a host on stdio ends: the peer left.
+  expect(said).toContain('ahpd over stdio');
+  expect(code).toBe(0);
   expect(said).toContain('No backend is loaded');
   // Started on a pipe, so it is offered no configuration and asked nothing.
   expect(said).not.toContain('Run ahpd configure now?');
@@ -76,7 +79,7 @@ it('refuses to start when nothing contributed a backend, and names the fix', asy
 
 it('names the command that installs Claude Code, and npm i as the other way', async () => {
   const { code, said, path } = await run({}, false);
-  expect(code).toBe(1);
+  expect(code).toBe(0);
   // The file read is the default one, so the command needs no flag to edit it.
   expect(said).toContain('ahpd plugin install @ahpd/agent-claude ');
   expect(said).not.toContain('--config-file');
@@ -87,26 +90,43 @@ it('names the command that installs Claude Code, and npm i as the other way', as
 
 it('names the command with the file the daemon was started with', async () => {
   const { code, said, path } = await run({});
-  expect(code).toBe(1);
+  expect(code).toBe(0);
   // Without the flag the command would name the plugin in a file this daemon
   // does not read.
   expect(said).toContain(`ahpd plugin install @ahpd/agent-claude --config-file ${path}`);
   expect(said).toContain('npm i in');
 });
 
-it('asks nothing when there is no configuration file and no terminal, and refuses as it did', async () => {
+it('asks nothing when there is no configuration file and no terminal, and starts', async () => {
   const { code, said } = await run({}, false, false);
-  expect(code).toBe(1);
+  expect(code).toBe(0);
   // Nothing was written, so the offer was open; stdin is a pipe, so it was not
-  // put, and the run ends where a first run has always ended.
+  // put, and the run says what a first run is missing.
   expect(said).not.toContain('Run ahpd configure now?');
   expect(said).toContain('No backend is loaded');
   expect(said).toContain('ahpd plugin install @ahpd/agent-claude ');
 });
 
+it('names the update when the plugins it was given loaded no backend', async () => {
+  // A plugin of the release before 0.14, which wrote its options in
+  // ahpd.options: what a daemon updated by npm meets in its plugin folder.
+  const old = join(home, 'old-agent');
+  mkdirSync(old);
+  writeFileSync(join(old, 'package.json'), JSON.stringify({
+    name: 'old-agent', version: '0.13.0', type: 'module', ahpd: { entry: './index.mjs', options: { paths: {} } },
+  }));
+  writeFileSync(join(old, 'index.mjs'), 'export function apply() {}\n');
+  const { code, said } = await run({ plugins: [old] });
+  expect(code).toBe(0);
+  expect(said).toContain('No backend is loaded');
+  expect(said).toContain('ahpd plugin update all');
+  // The plugin is installed, so installing it is not the fix.
+  expect(said).not.toContain('ahpd plugin install');
+});
+
 it('starts when a plugin brought one', async () => {
   const { code, said } = await run({ plugins: [join(REPO, 'packages/server/test/fixtures/plugin-echo')] });
-  // It got as far as announcing itself, which is past the refusal, and then
+  // It got as far as announcing itself, and then
   // ended the way a host on stdio ends: the peer at the other end left.
   expect(said).toContain('ahpd over stdio');
   expect(said).toContain('plugins echo-plugin');

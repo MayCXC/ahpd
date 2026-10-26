@@ -32,7 +32,7 @@ let home: string;
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), 'ahpd-plugins-stdio-'));
   mkdirSync(join(home, 'ahpd'), { recursive: true });
-  // A backend, because a daemon that could serve nothing refuses to start; the
+  // A backend, so the daemon has an agent to serve; the
   // echo fixture is this suite's example agent.
   writeFileSync(join(home, 'config.json'), JSON.stringify({
     plugins: ['./packages/server/test/fixtures/plugin-echo'],

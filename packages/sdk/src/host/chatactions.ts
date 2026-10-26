@@ -163,7 +163,7 @@ export function chatAction(
   const {
     admitted, beginOrRun, beginTurn, beside, byChat, charge, charged, chatAgent, chatConfig, connections,
     contributedDefaults, decided,
-    described, dispatch, drafts, fire, first, kept, known, leadOf, lifeOf, lives, log, messageAttachments,
+    described, dispatch, drafts, fire, kept, known, leadOf, lifeOf, lives, log, messageAttachments,
     messageFrom, modelIn, names, ownerFor, owners, past, pluginsMoved, principalFor, propertyOf, putIn, renameChat,
     restart, restartChat, restarting, rootConfig, served, sessionFor, sessionMachines, sessions, spawn, starting,
     statusOf, subagents, summaryMoved, value, waitingFor, wake, hold,

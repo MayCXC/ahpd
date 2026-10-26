@@ -949,9 +949,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * No backend of its own.
      *
      * Every agent this daemon serves is a plugin's, `@ahpd/agent-claude`
-     * included - decision `the-daemon-bundles-no-agent`. A configuration that
-     * names none is refused below rather than built into a host that could not
-     * answer a turn.
+     * included - decision `the-daemon-bundles-no-agent-and-starts-without-one`.
+     * A configuration that names none still starts, and says so below.
      */
     agents: [],
     /*
@@ -1530,15 +1529,24 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   /*
    * A daemon with no backend, said in the words of the thing that fixes it.
    *
-   * `createHost` refuses this too, but its sentence is written for an embedder
-   * holding a `HostOptions`, and the person reading this log wrote a
-   * configuration file instead. The command carries `--config-file` when this
-   * run was given one, so it names the plugin in the file this daemon reads.
+   * The daemon still starts - decision
+   * `the-daemon-bundles-no-agent-and-starts-without-one` - because a client
+   * installs and updates plugins over its own channel, and a daemon that
+   * exited could not be fixed from one. The command carries `--config-file`
+   * when this run was given one, so it names the plugin in the file this
+   * daemon reads.
    */
   if (started.agents.length === 0) {
-    const install = `ahpd plugin install @ahpd/agent-claude${options.configFile === undefined ? '' : ` --config-file ${options.configFile}`}`;
-    stamp(`No backend is loaded, so this host could serve nothing. Run ${install} to install Claude Code and add it to "plugins" in ${options.configFile ?? configPath()}, or run npm i in ${configDir()} and add the package to "plugins" yourself.`);
-    process.exit(1);
+    const flag = options.configFile === undefined ? '' : ` --config-file ${options.configFile}`;
+    /*
+     * Plugins named and none of them a backend is, after an update, plugins
+     * from the release before this one: the refusals above say which. Moving
+     * them is the fix, and installing one the file already names is not.
+     */
+    if (planned.plugins.length > 0)
+      stamp(`No backend is loaded, so no session can start until one is. The plugins in ${options.configFile ?? configPath()} loaded none; if they are from an older release, run ahpd plugin update all, or update them from a client.`);
+    else
+      stamp(`No backend is loaded, so no session can start until one is. Run ahpd plugin install @ahpd/agent-claude${flag} to install Claude Code and add it to "plugins" in ${options.configFile ?? configPath()}, or run npm i in ${configDir()} and add the package to "plugins" yourself.`);
   }
 
   /*
