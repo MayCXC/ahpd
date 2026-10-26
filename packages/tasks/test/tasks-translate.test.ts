@@ -62,7 +62,7 @@ async function served() {
   const problems: string[] = [];
   const { host, contribution, seal } = pluginHost(name, context(), {
     records: () => records,
-    problem: (line) => { problems.push(line); },
+    alert: (alert) => { problems.push(alert.text); },
   });
   await apply(host, {});
   seal();

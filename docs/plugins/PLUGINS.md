@@ -806,13 +806,17 @@ nothing behaves exactly as it did before the field existed.
 | `configDir` | The folder the daemon keeps its own configuration in, where a plugin that has to keep a record puts its file |
 | `log(line)` | One line to the daemon's log |
 | `say(line)` | One line in what the daemon announces about itself |
-| `problem(line)` | One item of your own you dropped, said before the daemon says it started |
+| `problem(line)` | One item of your own you dropped, said before the daemon says it started, and a `warning` alert on the plugin's row |
+| `alert(alert)` | One alert to show on the plugin's row: a `level`, a `text` and an optional `ref` |
+| `clearAlert(ref)` | Takes the alert with that `ref` off the plugin's row |
 | `parseYaml(text)` | A YAML text as data, read with the host's own YAML subset |
 | `stringifyYaml(value)` | A value as YAML text that `parseYaml` reads back the same |
 
 `log` is stderr and a person reads it. `say` is stdout, which is what `ahpd status` parses, so it is where a plugin that made the host reachable somewhere new puts that address - a line only the log knows is an address nobody pastes. Say it while `listening` is being handled; the announcement is written once that event has been handled and a line offered after it is dropped.
 
-`problem(line)` is how a plugin that handles many items says which one it could not register: `ahpd start` and `ahpd restart` print each line as `skipped: <line>` before the line that says the daemon is up, beside the problems the loader found itself. Saying one costs the item and not the plugin, which keeps the rest of your contribution and does not fail the load. Unlike the two above it is on `PluginHost` and not on the event context, because an item is dropped while `apply` runs.
+`problem(line)` is how a plugin that handles many items says which one it could not register: `ahpd start` and `ahpd restart` print each line as `skipped: <line>` before the line that says the daemon is up, beside the problems the loader found itself. Saying one costs the item and not the plugin, which keeps the rest of your contribution and does not fail the load. Unlike the two above it is on `PluginHost` and not on the event context, because an item is dropped while `apply` runs. The same line is a `warning` alert on the plugin's row.
+
+`alert(alert)` puts one alert on the plugin's row in the plugins channel: `{ level, text, ref? }`, where `level` is one of `notice`, `info`, `warning` and `error`. `ref` names what the alert is about, as `<kind>:<id>` such as `adapter:ap-postgres`. A client shows it beside that item, and an alert with the same `ref` replaces the one before it. `clearAlert(ref)` takes it out again. An alert raised after `apply` returned is on the row at once. The channel sends the row again, which is what a plugin holding a watch uses. A plugin holds at most 50 alerts, and the oldest goes first. A reload or an unload clears them.
 
 ### A plugin is a client of its own host
 
@@ -1271,7 +1275,7 @@ with it:
 | --- | --- |
 | `version` | The version the plugin's package.json declares, when it has one |
 | `loaded` | Whether this daemon loaded it at its start |
-| `loadProblem` | The line saying why it did not load, with the userinfo of any URL and each `writeOnly` option value an error quoted answered `<set>` |
+| `alerts` | What the plugin or its loader said about it, each an `{ level, text, ref? }` alert: `error` for the line that says it did not load and `warning` for the rest. Every text has the userinfo of any URL and each `writeOnly` option value an error quoted answered `<set>`. Empty when the plugin has none |
 | `optionsSchema` | The form a client draws and the values `x-ahpd/plugins/options` is checked against, read from the manifest with no import, so a plugin switched off carries it too |
 
 Reading the channel needs `plugin:list`.

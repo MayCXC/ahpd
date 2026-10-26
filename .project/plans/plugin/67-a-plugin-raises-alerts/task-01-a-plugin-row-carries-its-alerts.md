@@ -1,6 +1,6 @@
 ---
 title: A plugin row carries its alerts
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server, docs"
 refs:
@@ -56,3 +56,11 @@ refs:
 - The Activepieces row then has one `warning` alert.
 
 ## Resume
+
+- **Done so far:** `Alert`, `PluginHost.alert` and `clearAlert` are in the sdk, and `problem(line)` raises a `warning` alert with no `ref`. The plugin set keeps alerts by id. One with the same `ref` replaces the one before it, and a plugin holds at most 50. The oldest goes first, and a reload or an unload clears them. Every loader line about a plugin is an alert. It is an `error` for the line that says it did not load, and a `warning` for the rest. An alert raised after the load answered calls `alertsChanged`. `loadPlugins` and `applyPlugins` answer `alerts`. The row carries `alerts`, masked by `loadProblemOf`, and no `loadProblem`. The three tests the plan names are in `plugins-channel.test.ts`. `run.ts` replaces its alerts list and refreshes the channel when one arrives late.
+  The full gate passes: 425 files and 7026 tests, with 29 skipped.
+- **Next action:** none, this task is implemented.
+- **Files:** `packages/sdk/src/types/plugin.ts`, `packages/sdk/src/types/index.ts`, `packages/sdk/src/plugins/plugins.ts`, `packages/server/src/plugins.ts`, `packages/server/src/applyplugins.ts`, `packages/server/src/pluginschannel.ts`, `packages/server/src/commands/run.ts`, `packages/server/test/plugins-channel.test.ts`, `packages/server/test/plugin-load.test.ts`, `packages/tasks/test/tasks-meta.test.ts`, `packages/tasks/test/tasks-view.test.ts`, `packages/tasks/test/tasks-channel.test.ts`, `packages/tasks/test/tasks-plugin.test.ts`, `packages/tasks/test/tasks-approve.test.ts`, `packages/tasks/test/tasks-harnesses.test.ts`, `packages/tasks/test/tasks-plans.test.ts`, `packages/tasks/test/tasks-tasks.test.ts`, `packages/tasks/test/tasks-translate.test.ts`, `packages/bot/test/bot-chat.test.ts`, `packages/bot/test/bot-names.test.ts`, `packages/bot/test/bot-post.test.ts`, `packages/bot/test/bot-provider.test.ts`, `packages/sdk/test/plugin-host.test.ts`, `docs/plugins/PLUGINS.md`.
+- **Open questions:** none.
+- **Departures:** a plugin's `problem` line stays in the load's `problems` as well as on its row. So `ahpd start` and `ahpd restart` still print it as `skipped:`, and `daemon.json.skipped` still carries it; two end-to-end CLI tests assert that. Step 4 of the Files takes the line option out of the sdk. `loadOne` then hands `apply` a frozen copy of the host, with `problem` wrapped. The line goes to the loader and the host raises the alert. The set keeps the line once. A line said after `apply` returned still goes to the log as well as the row. The Files list does not name `run.ts`, `types/index.ts` or the tests of tasks, bot and sdk. The `Alert` export and the `alert` option need them. An alert with an existing `ref` is appended as the newest rather than left where it was. The two by-hand checks in the plan's checklist were not run.
+- **Watch out for:** `row.problem` is the spec's config problem and stays. `alerts` is `[]` when a plugin has none. Each load has its own token, so a host that outlives its unload raises nothing. The channel reads a copy of the alerts, so a late alert has to be written back before a refresh. `run.ts` does that.

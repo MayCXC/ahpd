@@ -160,7 +160,7 @@ function made(
     // The loader hands a plugin the host's own map; this is the same wire, so a
     // case can say who the agents are.
     ...(over.agentOwners === undefined ? {} : { agentOwners: over.agentOwners }),
-    problem: (line) => { reported.push(line); },
+    alert: (alert) => { reported.push(alert.text); },
     // The grant a wake's start of a back session asks for, which the daemon's
     // entry for this plugin holds: a bot's work runs in the bot's own folder,
     // and a folder is trusted only where the plugin may ask for that.

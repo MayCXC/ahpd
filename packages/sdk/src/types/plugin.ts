@@ -744,6 +744,28 @@ export interface PluginContext {
 export type LoaderContext = Omit<PluginContext, 'parseYaml' | 'stringifyYaml'> & Partial<Pick<PluginContext, 'parseYaml' | 'stringifyYaml'>>;
 
 /**
+ * One thing a plugin wants a person to read, beside the plugin's row.
+ *
+ * An alert is the plugin's own answer to "what is wrong here", where `log` is a
+ * line for whoever keeps the daemon's log: a client draws it on the plugin's
+ * page, so the person who saves an option sees what the plugin made of it.
+ *
+ * `level` says how bad it is, and `text` names it in one sentence. `ref` names
+ * what the alert is about as `<kind>:<id>`, such as `adapter:ap-postgres`: an
+ * alert with the same `ref` replaces the one before it, and clearing a `ref`
+ * takes it away. An alert with no `ref` is a line of its own and is never
+ * replaced.
+ */
+export interface Alert {
+  /** How bad it is: `notice` and `info` are news, `warning` and `error` are trouble. */
+  level: 'notice' | 'info' | 'warning' | 'error';
+  /** What it says, in one sentence. */
+  text: string;
+  /** What it is about, as `<kind>:<id>`, which two alerts share to replace one another. */
+  ref?: string;
+}
+
+/**
  * The contribution surface, which is `HostOptions` named back.
  *
  * Every method that contributes a value is named `register*` (), and the set of kinds is closed, one
@@ -758,13 +780,34 @@ export type LoaderContext = Omit<PluginContext, 'parseYaml' | 'stringifyYaml'> &
  */
 export interface PluginHost extends PluginContext {
   /**
+   * One thing this plugin wants a person to read, on the plugin's own row.
+   *
+   * This is the way a plugin says what it found: a piece that did not load, an
+   * install that ended, a record it could not read. The alert is kept by the
+   * daemon and served on the plugin's row, so a client shows it on the plugin's
+   * page. An alert with a `ref` replaces the one before it with the same `ref`,
+   * which is how a plugin keeps one line about one item.
+   *
+   * Said at any time: while `apply` runs, or long after it returned. A daemon
+   * holds at most fifty alerts for one plugin, and drops the oldest first.
+   */
+  alert(alert: Alert): void;
+  /**
+   * Take away the alert whose `ref` is this one, if the plugin raised it.
+   *
+   * Nothing happens when no alert has that `ref`, so a plugin may clear one in
+   * a closing path without asking first.
+   */
+  clearAlert(ref: string): void;
+  /**
    * One item of this plugin's own was skipped, and why.
    *
-   * Where `log` is a line for a person reading the daemon's log, this is one
-   * the person who ran `ahpd start` or `ahpd restart` is shown before the
-   * success line, because it is a thing the daemon started without rather than
-   * a thing that went wrong in it: the preset a plugin dropped, the variant it
-   * could not read, the machine profile nothing holds.
+   * This raises a `warning` alert with no `ref`, which is the plugin's row and
+   * nothing else: where `log` is a line for a person reading the daemon's log,
+   * this is what a client shows on the plugin's page, because it is a thing the
+   * daemon started without rather than a thing that went wrong in it: the
+   * preset a plugin dropped, the variant it could not read, the machine profile
+   * nothing holds.
    *
    * It costs the item and not the plugin - saying one is never a failure, and
    * a plugin that said one keeps everything else it registered. One line,

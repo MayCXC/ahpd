@@ -122,7 +122,7 @@ async function hostOf(extra: Partial<HostOptions> = {}, withPlan = true): Promis
   if (withPlan) await plans.put({ ...plan() });
   const { host: plugin, contribution, seal } = pluginHost(name, context(), {
     records: () => records,
-    problem: () => {},
+    alert: () => {},
   });
   await apply(plugin, {});
   seal();

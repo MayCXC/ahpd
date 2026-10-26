@@ -1,7 +1,7 @@
 ---
 title: A plugin raises alerts, and its row carries them
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-25
 revalidated: 2026-10-25
@@ -78,7 +78,7 @@ host.alert / host.problem / a loader line -> plugin set, alerts by id -> x-ahpd/
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A plugin row carries its alerts](task-01-a-plugin-row-carries-its-alerts.md) | todo | - |
+| [01 - A plugin row carries its alerts](task-01-a-plugin-row-carries-its-alerts.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -87,13 +87,13 @@ host.alert / host.problem / a loader line -> plugin set, alerts by id -> x-ahpd/
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-plugin-row-carries-its-alerts.md](task-01-a-plugin-row-carries-its-alerts.md).
+- **Done so far:** [task-01](task-01-a-plugin-row-carries-its-alerts.md) is implemented. The sdk has `Alert`, `alert` and `clearAlert`. The plugin set keeps the alerts by id. The row carries `alerts`, masked, and no `loadProblem`.
+- **Next action:** run the two by-hand checks below, and let session c7 draw the alerts in ahpw.
 - **Open questions:** none.
-- **Watch out for:** `row.problem` is a different field, and it stays. It is the config problem of the spec. ahpw compares `loadProblem` with `problem` to show one of them.
+- **Watch out for:** `row.problem` is a different field, and it stays: it is the config problem of the spec. A plugin's `problem` line is still printed by `ahpd start` as `skipped:`, and it is also a `warning` alert on the row. One raised after `apply` returned is on the row and in the log.
 
 ## Final verification checklist
 
 - [ ] With a piece name that does not exist in the Activepieces options, the row carries one `warning` alert that names the piece.
 - [ ] A plugin that throws in `apply` has one `error` alert and no `loadProblem`.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

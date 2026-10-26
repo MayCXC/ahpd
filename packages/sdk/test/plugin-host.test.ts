@@ -671,7 +671,7 @@ const LOOPING_CONTEXT: LoaderContext = {
 const looping = (problems: string[], lines: string[] = []) => pluginHost(
   'fixture',
   { ...LOOPING_CONTEXT, log: (line) => lines.push(line) },
-  { problem: (line) => problems.push(line) },
+  { alert: (alert) => problems.push(alert.text) },
 ).host;
 
 it('registers what builds, and says one line for each entry it dropped', async () => {

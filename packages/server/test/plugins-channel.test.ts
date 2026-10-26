@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { createHost, fileResources, fileUsers, servedRecords, type PluginSpec, type Users } from '@ahpd/sdk';
+import { createHost, fileResources, fileUsers, servedRecords, type PluginHost, type PluginSpec, type Users } from '@ahpd/sdk';
 import { echo } from '../../../examples/echo/agent.js';
 import { applyPlugins } from '../src/applyplugins.js';
 import { SET } from '../src/commands/config.js';
@@ -180,10 +180,10 @@ const writing = (word: string, marker: string): string => [
 /** A host serving the plugins channel, over plugins loaded from the file. */
 const served = async ({ load = true, run }: { load?: boolean; run?: Runner } = {}) => {
   let loaded: Awaited<ReturnType<typeof loadPlugins>>['loaded'] = [];
-  let failures: Record<string, string> = {};
+  let alerts: Awaited<ReturnType<typeof loadPlugins>>['alerts'] = {};
   if (load) {
     const specs = held().plugins as Parameters<typeof loadPlugins>[0];
-    ({ loaded, failures } = await loadPlugins(specs, {
+    ({ loaded, alerts } = await loadPlugins(specs, {
       base: { path: home, agents: [echo({ path: home })] },
       configDir: fixtures,
       cwd: here,
@@ -195,7 +195,7 @@ const served = async ({ load = true, run }: { load?: boolean; run?: Runner } = {
     configFile: config,
     where: { configDir: fixtures, cwd: here },
     loaded: () => loaded,
-    failures: () => failures,
+    alerts: () => alerts,
     restartNeeded: () => markRestart(),
     ...(run === undefined ? {} : { run }),
   });
@@ -233,7 +233,7 @@ const live = async ({ run }: { run?: Runner } = {}) => {
     configFile: config,
     where: { configDir: fixtures, cwd: here },
     loaded: () => set.loaded(),
-    failures: () => set.failures(),
+    alerts: () => set.alerts(),
     apply: async (reload?: string[]) => {
       const answer = await applyPlugins({
         set,
@@ -264,7 +264,7 @@ const live = async ({ run }: { run?: Runner } = {}) => {
     methods: wire.methods,
     users,
   };
-  const where = { configDir: fixtures, cwd: here, log: () => {} };
+  const where = { configDir: fixtures, cwd: here, log: () => {}, alertsChanged: () => { void refresh(); } };
   set = pluginSet({ base, ...where });
   const first = await loadPlugins(held().plugins as PluginSpec[], { base, ...where, set });
   host = createHost(first.options);
@@ -350,7 +350,7 @@ it('lists two configured plugins, one with the manifest its package.json declare
   expect(declared['state']).toBe('ready');
   expect(declared['version']).toBe('1.0.0');
   expect(declared['loaded']).toBe(true);
-  expect(declared['loadProblem']).toBeUndefined();
+  expect(declared['alerts']).toEqual([]);
   expect(declared['manifest']).toEqual({
     description: 'Declares its manifest in its package.json.',
     categories: ['tool'],
@@ -481,7 +481,7 @@ it('describes a switched-off plugin whose module throws on import, and says noth
   expect(row['loaded']).toBe(false);
   expect(row['problem']).toBeUndefined();
   // The module was never imported, so there is no load problem to report.
-  expect(row['loadProblem']).toBeUndefined();
+  expect(row['alerts']).toEqual([]);
   expect(row['manifest']).toEqual({
     description: 'Throws when it is imported.',
     contracts: { tools: ['broken_tool'] },
@@ -512,7 +512,11 @@ it('lists an enabled plugin that failed to load with its manifest and its proble
   const row = (await ana.rows())['broken-plugin'] as Bag;
   expect(row['state']).toBe('ready');
   expect(row['loaded']).toBe(false);
-  expect(row['loadProblem']).toContain('the broken fixture throws when imported');
+  // One alert, and it is the line that says the plugin did not load.
+  const alerts = row['alerts'] as Bag[];
+  expect(alerts).toHaveLength(1);
+  expect(alerts[0]?.['level']).toBe('error');
+  expect(String(alerts[0]?.['text'])).toContain('the broken fixture throws when imported');
   expect(row['title']).toBe('Broken');
   expect(row['manifest']).toEqual({
     description: 'Throws when it is imported.',
@@ -852,7 +856,10 @@ it('serves the problem a plugin that failed to load left, with its URL userinfo 
 
   const row = (await ana.rows())[`https://${SET}@example.invalid/p.tgz`] as Bag;
   expect(row['loaded']).toBe(false);
-  expect(row['loadProblem']).toContain(`https://${SET}@example.invalid/p.tgz`);
+  const alerts = row['alerts'] as Bag[];
+  expect(alerts).toHaveLength(1);
+  expect(alerts[0]?.['level']).toBe('error');
+  expect(String(alerts[0]?.['text'])).toContain(`https://${SET}@example.invalid/p.tgz`);
   expect(JSON.stringify(row)).not.toContain('sk-live-2');
   await close();
 });
@@ -868,11 +875,76 @@ it('serves a plugin whose apply throws as not loaded, and its problem without th
   expect(row['loaded']).toBe(false);
   // The error names what the plugin was handed, so the non-secret option is
   // still there and the credential is not.
-  expect(row['loadProblem']).toContain('the secret fixture threw');
-  expect(row['loadProblem']).toContain('in eu');
-  expect(row['loadProblem']).not.toContain('sk-live-3');
+  const alerts = row['alerts'] as Bag[];
+  expect(alerts).toHaveLength(1);
+  expect(alerts[0]?.['level']).toBe('error');
+  expect(String(alerts[0]?.['text'])).toContain('the secret fixture threw');
+  expect(String(alerts[0]?.['text'])).toContain('in eu');
+  expect(String(alerts[0]?.['text'])).not.toContain('sk-live-3');
   expect(JSON.stringify(row)).not.toContain('sk-live-3');
   await close();
+});
+
+it('lists what a plugin said in apply as a warning alert, and loads it all the same', async () => {
+  writeFileSync(config, JSON.stringify({ plugins: ['./fixtures/plugin-skips/index.ts'] }));
+  const { host, users, close } = await served();
+  const ana = await as(host, users, 'ana');
+
+  const row = (await ana.rows())['skips'] as Bag;
+  // The plugin said one thing and was loaded: an item skipped costs the item.
+  expect(row['loaded']).toBe(true);
+  expect(row['alerts']).toEqual([{
+    level: 'warning',
+    text: 'presets.router reads OPENROUTER_API_KEY, which the daemon\'s environment does not have',
+  }]);
+  await close();
+});
+
+it('replaces an alert with the same ref, clears it by ref, and sends the row again', async () => {
+  writeFileSync(config, JSON.stringify({ plugins: ['./fixtures/plugin-after/index.ts'] }));
+  const { host, users, close } = await live();
+  const ana = await as(host, users, 'ana');
+  await ana.rows();
+
+  // Said after `apply` returned, which is the moment a plugin holding a watch
+  // alerts: there is no load answer left for the line to join.
+  const after = (globalThis as Record<string, unknown>).__pluginAfterHost as PluginHost;
+  after.alert({ level: 'warning', text: 'the store could not be read', ref: 'store' });
+  after.alert({ level: 'notice', text: 'the store was read again', ref: 'store' });
+  await wait(50);
+
+  expect(ana.heard(URI)).toContain('changed after');
+  const row = (await ana.rows())['after'] as Bag;
+  // The second alert replaced the first: one ref is one alert.
+  expect(row['alerts']).toEqual([{ level: 'notice', text: 'the store was read again', ref: 'store' }]);
+
+  after.clearAlert('store');
+  await wait(50);
+  expect(((await ana.rows())['after'] as Bag)['alerts']).toEqual([]);
+  await close();
+});
+
+it('keeps the newest fifty alerts on a plugin, and a reload clears its row and drops the old host', async () => {
+  writeFileSync(config, JSON.stringify({ plugins: ['./fixtures/plugin-after/index.ts'] }));
+  const base = { path: home, agents: [echo({ path: home })] };
+  const set = pluginSet({ base, configDir: fixtures, cwd: here, log: () => {} });
+  const first = await loadPlugins(['./fixtures/plugin-after/index.ts'], { base, configDir: fixtures, cwd: here, log: () => {}, set });
+  expect(first.problems).toEqual([]);
+
+  const after = (globalThis as Record<string, unknown>).__pluginAfterHost as PluginHost;
+  for (let at = 0; at < 60; at += 1) after.alert({ level: 'info', text: `alert ${String(at)}` });
+  const alerts = set.alerts()['after'] ?? [];
+  // A plugin that alerts in a loop drops its oldest: the newest fifty stay.
+  expect(alerts).toHaveLength(50);
+  expect(alerts[0]?.text).toBe('alert 10');
+  expect(alerts.at(-1)?.text).toBe('alert 59');
+
+  await applyPlugins({ set, configFile: config, reload: ['after'], log: () => {} });
+  // A reload starts a clean row: what the last load raised is not this one's.
+  expect(set.alerts()['after']).toBeUndefined();
+  // The host the last load had is not this plugin any more: what it says now is dropped.
+  after.alert({ level: 'error', text: 'from the old load' });
+  expect(set.alerts()['after']).toBeUndefined();
 });
 
 it('lists a switched-off plugin with the schema its package.json declares, and imports nothing', async () => {
@@ -891,7 +963,7 @@ it('lists a switched-off plugin with the schema its package.json declares, and i
     const row = (await ana.rows())['marker-off'] as Bag;
     expect(row['state']).toBe('disabled');
     expect(row['loaded']).toBe(false);
-    expect(row['loadProblem']).toBeUndefined();
+    expect(row['alerts']).toEqual([]);
     expect(row['optionsSchema']).toEqual({ type: 'object', properties: { level: { type: 'integer' } } });
     expect(existsSync(marker)).toBe(false);
     await close();

@@ -517,16 +517,19 @@ describe('a problem line a plugin says', () => {
 
   it('is carried in the load\'s problems when it is said while applying, and not logged as well', async () => {
     delete (globalThis as Record<string, unknown>).__pluginLateProblemHost;
-    const { lines, problems, loaded } = await logged(['./fixtures/plugin-late-problem/index.ts']);
+    const { lines, problems, loaded, alerts } = await logged(['./fixtures/plugin-late-problem/index.ts']);
 
     expect(loaded.map((one) => one.name)).toEqual(['late-problem']);
     expect(problems).toEqual(['late-problem: said while applying']);
+    // The same line is on the plugin's row, once: the loader tells it for the
+    // log and the host raises it as an alert, and the set keeps one of them.
+    expect(alerts['late-problem']).toEqual([{ level: 'warning', text: 'late-problem: said while applying' }]);
     // The daemon writes the problems of a load itself, so the loader writing
     // this one too would put the same line in the log twice.
     expect(lines).not.toContain('late-problem: said while applying');
   });
 
-  it('goes to the log when it is said after apply returned', async () => {
+  it('goes to the log when it is said after apply returned, and onto the row', async () => {
     delete (globalThis as Record<string, unknown>).__pluginLateProblemHost;
     const { lines, problems } = await logged(['./fixtures/plugin-late-problem/index.ts']);
 
@@ -536,7 +539,8 @@ describe('a problem line a plugin says', () => {
     host.problem('late-problem: said after apply returned');
 
     expect(lines).toContain('late-problem: said after apply returned');
-    // And it joins no answer, because there is no answer left to join.
+    // And it joins no answer, because there is no answer left to join. Where
+    // it shows instead is the row, which `plugins-channel.test.ts` reads.
     expect(problems).toEqual(['late-problem: said while applying']);
   });
 });

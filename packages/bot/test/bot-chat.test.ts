@@ -94,7 +94,7 @@ function made() {
   const { host: plugin, contribution } = pluginHost('bot', context, {
     sessions: () => sessions,
     records: () => records,
-    problem: () => {},
+    alert: () => {},
   });
   apply(plugin, { root: bots });
 

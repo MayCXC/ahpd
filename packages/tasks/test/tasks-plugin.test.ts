@@ -61,7 +61,7 @@ describe('the tasks plugin', () => {
 
   it('reports a wrong kind through the host when apply reads it', async () => {
     const problems: string[] = [];
-    const { host, seal } = pluginHost(name, context(), { problem: (line) => { problems.push(line); } });
+    const { host, seal } = pluginHost(name, context(), { alert: (alert) => { problems.push(alert.text); } });
     await apply(host, { sweepAfterDays: 'soon' });
     seal();
     expect(problems).toEqual([
@@ -71,7 +71,7 @@ describe('the tasks plugin', () => {
 
   it('says nothing for the options it was written for', async () => {
     const problems: string[] = [];
-    const { host, seal } = pluginHost(name, context(), { problem: (line) => { problems.push(line); } });
+    const { host, seal } = pluginHost(name, context(), { alert: (alert) => { problems.push(alert.text); } });
     await apply(host, { requireApproval: true, sweepAfterDays: 30 });
     seal();
     expect(problems).toEqual([]);
