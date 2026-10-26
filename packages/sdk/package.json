@@ -54,7 +54,8 @@
     "test": "cd ../.. && node tools/schema.mjs && vitest run packages/sdk/test"
   },
   "dependencies": {
-    "@microsoft/agent-host-protocol": "^1.0.0"
+    "@microsoft/agent-host-protocol": "^1.0.0",
+    "@xterm/headless": "^6.0.0"
   },
   "optionalDependencies": {
     "ws": "^8.18.0"

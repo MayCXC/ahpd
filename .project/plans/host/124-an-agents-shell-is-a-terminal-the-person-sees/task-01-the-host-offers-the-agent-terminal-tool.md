@@ -18,6 +18,8 @@ A command runs in a terminal the session holds, and the call answers as the refe
 
 - `CREATE: packages/sdk/src/types/shells.ts` - `ManagedShell`, `ShellCommandResult`, `HeldShell` and `Shells`, the reference's shapes.
 - `CREATE: packages/sdk/src/host/shells.ts` - the session's shells: acquire, run, hold, read, write and shut down.
+- `CREATE: packages/sdk/src/host/headlessterminal.ts` - the reference's headless terminal over `@xterm/headless`.
+- `UPDATE: packages/sdk/package.json` - `@xterm/headless` as a dependency, with `pnpm-lock.yaml` from `pnpm add`.
 - `CREATE: packages/sdk/src/tools/shell.ts` - the six tools, their descriptions and their answers.
 - `UPDATE: packages/sdk/src/host/terminals.ts:266` - `heldShell`, before `heldOutputs`: a terminal with no command and the caller's claim.
 - `UPDATE: packages/sdk/src/host/tooling.ts:472` - `terminalToolOn` beside `contributingTo`, and the call id from `run` into `toolContext`.
@@ -45,7 +47,7 @@ A command runs in a terminal the session holds, and the call answers as the refe
 
 1. Copy the reference's `shellTypeForExecutable`, `isZsh`, history prefix, sentinel and `prepareOutputForModel` into `host/shells.ts`.
 2. Open each shell with `heldShell`, claimed by the session, the chat, the turn and the call.
-3. Keep what each shell says, with a count of what came before it.
+3. Feed each shell's headless terminal with what the shell says, and count what it says during a command.
 4. Latch that a shell marks its commands at its first `terminal/commandExecuted` or `terminal/commandFinished`.
 5. End a command at its `D` mark when the shell marks, and at the sentinel when it does not.
 6. End it as the reference does on the alternate screen, an exit, a narrowed claim and the timeout.
@@ -58,11 +60,13 @@ A command runs in a terminal the session holds, and the call answers as the refe
 
 ## Validation
 
-- `packages/sdk/test/shell-tools.test.ts` holds 16 cases.
+- `packages/sdk/test/shell-tools.test.ts` holds 17 cases.
 - Its cases on pipes check the switch, the claim, a kept shell, an exit code, a timeout and the background.
 - They also check read, write, shutdown, the other shell, the session's end and the grants.
 - Its cases on a fake pseudoterminal check the carriage return, the marks, bracketed paste and the alternate screen.
+- One more fake case fills the scrollback before its first command.
 - Turn off the marks, the paste, the release of a held shell or the alternate screen, and its case fails.
+- Read a command's output from the length the content had when it began, and the full scrollback's case fails.
 - `packages/sdk/test/toolserver.test.ts` checks that a request's `_meta` names the call to the tool.
 - `packages/sdk/test/root-config.test.ts` checks the key's property against the reference's.
 - `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
@@ -72,4 +76,4 @@ A command runs in a terminal the session holds, and the call answers as the refe
 Done 2026-10-26.
 The terminal's scrollback keeps its last 200,000 characters and drops the oldest.
 Once it is full, a length measured into it no longer names a place.
-The shells keep their own count for that reason.
+A command counts what the terminal says after it begins, and reads its output back from the end.

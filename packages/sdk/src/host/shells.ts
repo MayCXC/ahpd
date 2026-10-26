@@ -9,19 +9,19 @@
  * A shell is a terminal on the root list, claimed by the session, so the person
  * in the session watches the command run and can type into it or stop it.
  *
- * The reference reads three things off machinery this host does not have, and
- * each is read here from what the terminal says instead. Its shell integration
- * is a script it injects; this host injects none, so a command's end is the
- * shell's own OSC 133 mark once the shell has marked a command, and the
- * reference's sentinel until then. Its alternate screen and its bracketed
- * paste mode are its terminal emulator's; this host keeps no emulator, so
- * both are the last switch the output made.
+ * The reference's shell integration is a script it injects, and this host
+ * injects none: a command's end is the shell's own OSC 133 mark once the
+ * shell has marked a command, and the reference's sentinel until then. The
+ * alternate screen and bracketed paste are read off a headless terminal fed
+ * with what each shell says, as the reference reads them.
  */
 
 import { posix, win32 } from 'node:path';
 import { MARKS, shellOf } from '../machines/terminals.js';
 import { localPath } from '../resources/fileuri.js';
 import { ROOT } from './channels.js';
+import { createHeadlessTerminal } from './headlessterminal.js';
+import type { HeadlessTerminal } from './headlessterminal.js';
 import type { Bag } from '../types/common.js';
 import type { Claim, Terminal } from '../types/terminals.js';
 import type { HeldShell, ManagedShell, ShellCommandResult, ShellType, Shells } from '../types/shells.js';
@@ -56,24 +56,12 @@ const NON_INTERACTIVE_ENV: Record<string, string> = {
   DEBIAN_FRONTEND: 'noninteractive',
 };
 
-/*
- * The switches to the alternate screen and back, and to bracketed paste and
- * back: DECSET and DECRST 1049, 1047, 47 and 2004
- * (https://invisible-island.net/xterm/ctlseqs/ctlseqs.html).
+/**
+ * The scrollback each shell's headless terminal keeps: none, as the
+ * reference's `HEADLESS_TERMINAL_SCROLLBACK`. The screen is all it is asked
+ * about, and the output a model reads comes from the terminal's own content.
  */
-const ALT_BUFFER_ON = ['\x1b[?1049h', '\x1b[?1047h', '\x1b[?47h'];
-const ALT_BUFFER_OFF = ['\x1b[?1049l', '\x1b[?1047l', '\x1b[?47l'];
-const BRACKETED_PASTE_ON = ['\x1b[?2004h'];
-const BRACKETED_PASTE_OFF = ['\x1b[?2004l'];
-
-/** The longest switch to the alternate screen, which is how far back a chunk is read for one it splits. */
-const ALT_BUFFER_LONGEST = Math.max(...ALT_BUFFER_ON.map((one) => one.length));
-
-/** Where the last of some sequences starts in a text, or -1. */
-const lastOf = (text: string, sequences: readonly string[]): number => Math.max(...sequences.map((one) => text.lastIndexOf(one)));
-
-/** Whether the last switch in some output turned a mode on rather than off. */
-const switchedOn = (text: string, on: readonly string[], off: readonly string[]): boolean => lastOf(text, on) > lastOf(text, off);
+const HEADLESS_TERMINAL_SCROLLBACK = 0;
 
 /*
  * VS Code's `removeAnsiEscapeCodes`
@@ -193,46 +181,30 @@ export const prepareOutputForModel = (raw: string): string => {
   return text.length > SHELL_COMMAND_MAX_OUTPUT_BYTES ? text.substring(text.length - SHELL_COMMAND_MAX_OUTPUT_BYTES) : text;
 };
 
-/** The most of a shell's output kept for its commands: the cap on a terminal's own scrollback. */
-const KEPT = 200_000;
-
 /**
- * What a shell has said, counted from its start.
+ * The command last written to a shell.
  *
- * The terminal keeps a scrollback of its own and drops its oldest text as more
- * arrives, so once that is full a length measured into it no longer names a
- * place. A command's output is read from here instead: the newest text, and how
- * much came before it.
+ * The reference takes the length of the terminal's content when a command
+ * starts and reads the content from there, clamped once its manager has
+ * trimmed it. This host's terminal keeps its last 200,000 characters and,
+ * once it holds that many, drops one for each it takes, so a length taken at
+ * the start stops naming the place the command began. The place is counted
+ * back from the end instead, by what the terminal has said since: while
+ * nothing has been dropped that is the reference's offset, and once something
+ * has it is the reference's clamp.
  */
-interface Said {
-  /** The newest text, at most `KEPT` characters. */
-  text: string;
-  /** How many characters came before `text`. */
-  dropped: number;
+interface Started {
+  /** How many characters the terminal has said since the command was written. */
+  received: number;
+  /** The sentinel that ends it, when the shell marks no commands. */
+  sentinel?: string;
 }
-
-/** Keep what a shell just said, and drop what falls past the cap. */
-const hear = (said: Said, data: string): void => {
-  said.text += data;
-  const over = said.text.length - KEPT;
-  if (over > 0) {
-    said.text = said.text.substring(over);
-    said.dropped += over;
-  }
-};
-
-/** How many characters a shell has said. */
-const endOf = (said: Said): number => said.dropped + said.text.length;
-
-/** What a shell said from one count to another, or to now, as far as it is still kept. */
-const slice = (said: Said, from: number, to: number = endOf(said)): string =>
-  said.text.substring(Math.max(0, from - said.dropped), Math.max(0, to - said.dropped));
 
 /** What a session keeps of one shell before its terminal is open. */
 interface Heard {
   listeners: Set<(action: Bag) => void>;
-  /** Everything the shell has said. */
-  said: Said;
+  /** The shell's screen, fed with what it says. */
+  screen: HeadlessTerminal;
   /**
    * Whether the shell marks its own commands.
    *
@@ -241,8 +213,7 @@ interface Heard {
    * command ends at the shell's own mark rather than at a sentinel.
    */
   marks: boolean;
-  /** The command last written: where its output starts, and the sentinel that ends it when the shell marks none. */
-  command?: { at: number; sentinel?: string };
+  command?: Started;
 }
 
 /** One shell as a session holds it. */
@@ -251,9 +222,19 @@ interface Entry extends Heard {
   terminal: Terminal;
 }
 
-/** Fold one action of a shell's terminal into what is kept of it, then tell whoever is waiting. */
+/**
+ * Fold one action of a shell's terminal into what is kept of it, then tell
+ * whoever is waiting. The screen is fed what the terminal says, resized with
+ * it and wiped with it, as the reference's manager feeds its own.
+ */
 const observe = (kept: Heard, action: Bag): void => {
-  if (action.type === 'terminal/data') hear(kept.said, String(action.data ?? ''));
+  if (action.type === 'terminal/data') {
+    const data = String(action.data ?? '');
+    void kept.screen.writePtyData(data);
+    if (kept.command !== undefined) kept.command.received += data.length;
+  }
+  else if (action.type === 'terminal/resized') kept.screen.resize(Number(action.cols), Number(action.rows));
+  else if (action.type === 'terminal/cleared') kept.screen.clear();
   else if (action.type === 'terminal/commandExecuted' || action.type === 'terminal/commandFinished') kept.marks = true;
   for (const listen of [...kept.listeners]) listen(action);
 };
@@ -268,7 +249,7 @@ export interface HostShells {
 
 export function createShells(ctx: HostContext): HostShells {
   const { options, terminals, dispatch, log } = ctx;
-  const sessions = new Map<string, Shells>();
+  const sessions = new Map<string, Shells & { dispose(): void }>();
 
   /**
    * The directory a new shell starts in: the session's first working
@@ -280,7 +261,7 @@ export function createShells(ctx: HostContext): HostShells {
     return first === undefined ? options.path : localPath(first);
   };
 
-  const sessionShells = (session: string): Shells => {
+  const sessionShells = (session: string): Shells & { dispose(): void } => {
     const entries = new Map<string, Entry>();
     /** The shells running a command, which no other command may use. */
     const busy = new Set<string>();
@@ -305,19 +286,39 @@ export function createShells(ctx: HostContext): HostShells {
     };
 
     /**
+     * What the terminal's content holds between two points of a command, each
+     * a count of what the terminal had said since the command was written, or
+     * to the end. A point the terminal has dropped reads as the content's start.
+     */
+    const between = (shell: ManagedShell, started: Started, from: number, to: number = started.received): string => {
+      const full = content(shell);
+      const at = (point: number): number => Math.max(0, full.length - (started.received - point));
+      return full.substring(at(from), at(to));
+    };
+
+    /**
+     * Whether a command is written inside the bracketed paste marks.
+     *
+     * The reference's `sendText`: only when the command asks for it, and only
+     * once the screen has caught up with what the shell said and shows the
+     * mode on.
+     */
+    const pasted = async (entry: Entry, asked: boolean): Promise<boolean> => {
+      if (!asked) return false;
+      await entry.screen.whenPtyDataFlushed();
+      return entry.screen.isBracketedPasteMode();
+    };
+
+    /**
      * Text as a shell reads it.
      *
      * The reference's `formatTerminalText`. Under a pseudoterminal a line ends
      * in a carriage return, which is what the line discipline reads as Enter;
-     * a shell on pipes reads a newline, so on pipes the newline stays. A paste
-     * is wrapped in the bracketed paste marks only where the shell turned that
-     * mode on, which is what the reference asks its emulator.
+     * a shell on pipes reads a newline, so on pipes the newline stays.
      */
     const formatted = (entry: Entry, text: string, execute: boolean, paste: boolean): string => {
       const end = entry.terminal.state().isPty === true ? '\r' : '\n';
-      const wrapped = paste && switchedOn(entry.said.text, BRACKETED_PASTE_ON, BRACKETED_PASTE_OFF)
-        ? `\x1b[200~${text}\x1b[201~`
-        : text;
+      const wrapped = paste ? `\x1b[200~${text}\x1b[201~` : text;
       const body = wrapped.replace(/\r?\n/gu, end);
       return execute && !body.endsWith(end) ? `${body}${end}` : body;
     };
@@ -350,7 +351,13 @@ export function createShells(ctx: HostContext): HostShells {
         ...(claim.turnId !== undefined ? { turnId: claim.turnId } : {}),
         ...(claim.toolCallId !== undefined ? { toolCallId: claim.toolCallId } : {}),
       };
-      const kept: Heard = { listeners: new Set(), said: { text: '', dropped: 0 }, marks: false };
+      // The store's own size for a terminal that names none, which `heldShell`
+      // does not; a resize reaches the screen with the terminal's.
+      const kept: Heard = {
+        listeners: new Set(),
+        screen: createHeadlessTerminal({ cols: 80, rows: 24, scrollback: HEADLESS_TERMINAL_SCROLLBACK }),
+        marks: false,
+      };
       const terminal = ctx.heldShell(shells, {
         cwd: whereOf(session),
         claim: wanted,
@@ -401,10 +408,10 @@ export function createShells(ctx: HostContext): HostShells {
       // Asked once, before the command is written, as the reference asks.
       const marked = entry.marks;
       const sentinel = marked ? undefined : crypto.randomUUID().replaceAll('-', '');
-      const at = endOf(entry.said);
-      entry.command = { at, ...(sentinel !== undefined ? { sentinel } : {}) };
-      /** The output a timeout or an exit hands back: the scrollback where the shell marks, the command's own otherwise. */
-      const partial = (): string => prepareOutputForModel(marked ? content(shell) : slice(entry.said, at));
+      const started: Started = { received: 0, ...(sentinel !== undefined ? { sentinel } : {}) };
+      entry.command = started;
+      /** The output a timeout or an exit hands back: the content where the shell marks, the command's own otherwise. */
+      const partial = (): string => prepareOutputForModel(marked ? content(shell) : between(shell, started, 0));
       const result = new Promise<ShellCommandResult>((resolve) => {
         let done = false;
         const stops: (() => void)[] = [];
@@ -431,21 +438,14 @@ export function createShells(ctx: HostContext): HostShells {
               return;
             }
             case 'terminal/data': {
-              const data = String(action.data ?? '');
-              const chunkAt = endOf(entry.said) - data.length;
-              // From a little before the chunk, for a switch two chunks split.
-              const recent = slice(entry.said, Math.max(at, chunkAt - ALT_BUFFER_LONGEST + 1));
-              if (ALT_BUFFER_ON.some((one) => recent.includes(one))) {
-                log(`the command in ${shell.id} entered the alternate screen`);
-                finish({ status: 'altBuffer', output: '' });
-                return;
-              }
               if (sentinel !== undefined) {
-                const parsed = parseSentinel(slice(entry.said, at), sentinel);
+                const parsed = parseSentinel(between(shell, started, 0), sentinel);
                 if (parsed.found) finish({ status: 'completed', exitCode: parsed.exitCode, output: prepareOutputForModel(parsed.before) });
                 return;
               }
               if (!starting && ended === undefined) return;
+              const data = String(action.data ?? '');
+              const chunkAt = started.received - data.length;
               // The marks the terminal announced are in this chunk: it reads
               // a chunk for its marks before it says the chunk.
               for (const found of data.matchAll(MARKS)) {
@@ -456,7 +456,7 @@ export function createShells(ctx: HostContext): HostShells {
                   opened = chunkAt + found.index + found[0].length;
                 }
                 else if (mark === 'D' && ended !== undefined && !starting) {
-                  const output = slice(entry.said, opened ?? at, chunkAt + found.index);
+                  const output = between(shell, started, opened ?? 0, chunkAt + found.index);
                   finish({ status: 'completed', exitCode: ended.exitCode ?? 0, output: prepareOutputForModel(output) });
                   return;
                 }
@@ -485,12 +485,17 @@ export function createShells(ctx: HostContext): HostShells {
           finish({ status: 'timeout', output: partial() });
         }, timeoutMs);
         stops.push(() => { clearTimeout(timer); });
-        // The reference's alternate screen settles at once on a terminal
-        // already showing it.
-        if (switchedOn(entry.said.text, ALT_BUFFER_ON, ALT_BUFFER_OFF)) finish({ status: 'altBuffer', output: '' });
+        // The reference's `registerAltBufferHandler`, which settles at once
+        // on a screen already showing the alternate one.
+        void entry.screen.createAltBufferPromise(stops).then(() => {
+          if (done) return;
+          log(`the command in ${shell.id} entered the alternate screen`);
+          finish({ status: 'altBuffer', output: '' });
+        });
       });
       const line = `${prefixForHistorySuppression(shell.shellType)}${command}`;
-      entry.terminal.write(formatted(entry, line, true, shouldUseBracketedPasteMode(command)));
+      const paste = await pasted(entry, shouldUseBracketedPasteMode(command));
+      entry.terminal.write(formatted(entry, line, true, paste));
       if (sentinel !== undefined) entry.terminal.write(formatted(entry, sentinelCommand(sentinel, shell.shellType), true, false));
       return await result;
     };
@@ -512,7 +517,7 @@ export function createShells(ctx: HostContext): HostShells {
         busy.delete(shell.id);
       };
       const ended = (): boolean => command?.sentinel !== undefined
-        && parseSentinel(slice(entry.said, command.at), command.sentinel).found;
+        && parseSentinel(between(shell, command, 0), command.sentinel).found;
       const stop = listen(entry, (action) => {
         if (action.type === 'terminal/exited') free();
         else if (command?.sentinel === undefined) {
@@ -532,6 +537,7 @@ export function createShells(ctx: HostContext): HostShells {
       held.delete(id);
       entries.delete(id);
       busy.delete(id);
+      entry.screen.dispose();
       // The reference's `disposeTerminal`: the process ends and the row goes.
       if (entry.terminal.exitCode() === undefined) entry.terminal.close();
       if (terminals.get(entry.shell.terminalUri) === entry.terminal) {
@@ -562,6 +568,11 @@ export function createShells(ctx: HostContext): HostShells {
         if (entry !== undefined) entry.terminal.write(formatted(entry, text, false, false));
       },
       shutdown,
+      // The screens go with the session; its terminals are closed by its teardown.
+      dispose: () => {
+        for (const entry of entries.values()) entry.screen.dispose();
+        entries.clear();
+      },
     };
   };
 
@@ -575,6 +586,9 @@ export function createShells(ctx: HostContext): HostShells {
       }
       return found;
     },
-    forgetSession: (uri) => { sessions.delete(uri); },
+    forgetSession: (uri) => {
+      sessions.get(uri)?.dispose();
+      sessions.delete(uri);
+    },
   };
 }

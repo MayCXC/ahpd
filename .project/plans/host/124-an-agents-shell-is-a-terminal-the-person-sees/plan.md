@@ -66,7 +66,9 @@ root/configChanged enableCustomTerminalTool -> tooling lists the six tools -> ba
 | A shell is a terminal on the root list, claimed by the session, the chat, the turn and the call | https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotShellTools.ts#L167-L230 | 01 |
 | The claim names the turn the call runs in, where the reference names the call twice | (defaulted: the reference's tool handler has no turn id, and this host has one) | 01 |
 | A command ends at the shell's `D` mark once the shell has marked a command, and at the reference's sentinel before that | https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/shared/shellCommandExecution.ts#L191-L201 | 01 |
-| The alternate screen and bracketed paste are read off the output, because this host keeps no terminal emulator | (defaulted: DECSET and DECRST 1049, 1047, 47 and 2004 are what an emulator reads) | 01 |
+| The alternate screen and bracketed paste are read off a headless terminal fed with the shell's output | https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/agentHostHeadlessTerminal.ts | 01 |
+| `@xterm/headless` is a dependency of the sdk at `^6.0.0`, the stable release with the API the reference calls | (defaulted: the reference declares `^6.1.0-beta.303`, and that range resolves to a beta less than two weeks old) | 01 |
+| A command's output is the terminal's content from where the command began, counted back from the end | https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/shared/shellCommandExecution.ts#L300-L321, and this host's terminal drops its oldest character for each new one once it holds 200,000 | 01 |
 | A shell held past its call is released at its sentinel when it has no marks | (defaulted: the reference waits for a mark that a shell with none never sends) | 01 |
 | Each tool acts as the person who sent the turn, with the grant of a client's own terminal action | (defaulted: a host tool acts as that person, as the session tools do) | 01 |
 | `BoundTool.run` takes the call's id, and every backend that knows it passes it | (defaulted: the claim needs the id a client reads in `chat/toolCallStart`) | 01 |
@@ -80,7 +82,7 @@ root/configChanged enableCustomTerminalTool -> tooling lists the six tools -> ba
 
 - **Data flow** - a call goes from the backend's handler to `BoundTool.run` with its id, then to the tool, `ToolCall.shells()` and the session's shells.
 - **Event flow** - the terminal's actions reach the session's shells through `heldShell`'s `watch`, after the host routes them.
-- **State flow** - the session's shells keep what each shell said, with a running count, because the terminal's scrollback slides.
+- **State flow** - each shell has a headless terminal fed with what it says, and each command counts what the terminal has said since it began.
 - **Layer responsibilities** - sdk: the shells, the tools, the switch and the call id. agent-claude and agent-pi: their shell steps aside. agent-cofold: passes the call id.
 - **Source-of-truth files** - [`code://packages/sdk/src/host/shells.ts`](../../../../packages/sdk/src/host/shells.ts), [`code://packages/sdk/src/tools/shell.ts`](../../../../packages/sdk/src/tools/shell.ts).
 

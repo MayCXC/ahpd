@@ -256,9 +256,11 @@ describe('the agent terminal tool under a pseudoterminal', () => {
    * `echo` prints its argument, `false` fails, `vim` opens the alternate
    * screen and takes every line after it, and the sentinel's own line prints
    * the sentinel with the last code. With `marks` it marks each command in
-   * OSC 133, and with `paste` its prompt turns bracketed paste on.
+   * OSC 133, with `paste` its prompt turns bracketed paste on, and with
+   * `flood` it says that many characters before its first prompt. The
+   * switches reach the shell's headless terminal as a real shell's would.
    */
-  const fakeShell = (options: { marks?: boolean; paste?: boolean } = {}): { spawn: SpawnPty; typed: string[] } => {
+  const fakeShell = (options: { marks?: boolean; paste?: boolean; flood?: number } = {}): { spawn: SpawnPty; typed: string[] } => {
     const typed: string[] = [];
     const spawn: SpawnPty = () => {
       let listen: ((data: string) => void) | undefined;
@@ -270,7 +272,11 @@ describe('the agent terminal tool under a pseudoterminal', () => {
       const opened = options.marks === true ? '\x1b]133;C\x07' : '';
       const closed = (code: number): string => (options.marks === true ? `\x1b]133;D;${String(code)}\x07` : '');
       const pty: Pty = {
-        onData: (to) => { listen = to; prompt(); },
+        onData: (to) => {
+          listen = to;
+          if (options.flood !== undefined) say('x'.repeat(options.flood));
+          prompt();
+        },
         onExit: (to) => { exit = to; },
         write: (data) => {
           typed.push(data);
@@ -341,6 +347,23 @@ describe('the agent terminal tool under a pseudoterminal', () => {
     const plain = await hosted(true, shellTerminals({ pty: typing.spawn }));
     await plain.call('bash', { command: 'echo one\necho two' });
     expect(typing.typed[0]).toBe(' echo one\recho two\r');
+  });
+
+  /*
+   * A terminal keeps its last 200,000 characters and, once full, drops one for
+   * each it takes, so the place a command began is read back from the end.
+   */
+  it('reads a command\'s output once the terminal has dropped what came before it', async () => {
+    const fake = fakeShell({ flood: 250_000 });
+    const on = await hosted(true, shellTerminals({ pty: fake.spawn }));
+    const first = await on.call('bash', { command: 'echo first' });
+    expect(text(first)).toMatch(/^Shell ID: \S+\nExit code: 0\n/u);
+    expect(text(first)).toContain('first');
+    expect(text(first)).not.toContain('xxx');
+    const second = await on.call('bash', { command: 'echo second' });
+    expect(text(second)).toMatch(/^Shell ID: \S+\nExit code: 0\n/u);
+    expect(text(second)).toContain('second');
+    expect(text(second)).not.toContain('first');
   });
 
   it('answers a command that opens the alternate screen, and keeps its shell', async () => {

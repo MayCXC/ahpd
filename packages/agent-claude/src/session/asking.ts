@@ -550,7 +550,9 @@ export function createAsking(ctx: SessionContext): Asking {  /**
      * to approve. Nothing is announced either, as with an allow list: the row
      * the assistant message carries is already `not-needed`, and there is no
      * question for a client to draw. The host's shell, where it takes the
-     * place of `Bash`, runs the same commands and is read by the same rules.
+     * place of `Bash`, runs the same commands and is read by the same rules,
+     * as the reference reads its own shell tool's calls as shell requests
+     * (`copilotAgentSession.ts#L7535-L7553` at VS Code `122ec4fe4431`).
      */
     if (toolName === 'Bash' || toolName === HOST_SHELL_TOOL) {
       const written = ctx.unprefixed.get(id);
