@@ -160,7 +160,7 @@ An element that is this host's adaptation names the primitive of this host that 
 | `docs/sdk/TOOLS.md`, `TERMINALS.md`, `HOST.md` and `AHP.md` | each page's sections for a host tool, a way in, and a root config key | 01 |
 | The two READMEs | `packages/agent-claude/README.md`'s tasks section, and `packages/agent-pi/README.md`'s tools line | 02 |
 | `specs/host-tools.md` scenarios | the spec's `WHEN`, `THEN` and `AND` form | 01 |
-| The CHANGELOG under `0.15.0 - unreleased` | `git://3fabd578`, which wrote `0.14.0 - unreleased` before that release | 01 |
+| The CHANGELOG under `0.14.1 - unreleased` | `git://3fabd578`, which wrote `0.14.0 - unreleased` before that release; [code://.project/plans/daemon/40-a-daemon-starts-with-no-backend/plan.md#L26](../../../../.project/plans/daemon/40-a-daemon-starts-with-no-backend/plan.md#L26), "This ships as 0.14.1" | 01 |
 | The decision, `proposed` | the do-spec skill: a decision is written with the maintainer's agreement | 01 |
 
 ## Proposed architecture
