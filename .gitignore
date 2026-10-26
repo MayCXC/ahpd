@@ -22,3 +22,6 @@ dist
 # The documentation site that `pnpm docs:build` writes, and its cache.
 /docs/.vitepress/dist
 /docs/.vitepress/cache
+
+# Packages a plugin installs with host.install, such as Activepieces pieces.
+/packages/*/installed

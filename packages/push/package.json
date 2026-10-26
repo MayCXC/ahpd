@@ -1,6 +1,6 @@
 {
   "name": "@ahpd/push",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "type": "module",
   "description": "Expo push notifications for the ahpd daemon: a push: resource provider a device registers with, and the sender that tells it when a session needs a person",
   "keywords": [
