@@ -90,6 +90,8 @@ export function fakePi() {
   ];
   let settle = true;
   let leaf = 'entry-1';
+  /** The entry the fake says a turn's prompt went under, or nothing. */
+  let prompted: string | undefined;
   let moves = true;
   /** Whether the model the session is on takes an image, as pi's `input` says. */
   let takes = true;
@@ -123,6 +125,7 @@ export function fakePi() {
      */
     useEnv: async (env) => { asked.push({ kind: 'useEnv', env: { ...env } }); },
     leaf: () => leaf,
+    promptAfter: (entryId) => { asked.push({ kind: 'promptAfter', entryId }); return prompted; },
     close: () => { asked.push({ kind: 'close' }); },
   };
   return {
@@ -132,6 +135,7 @@ export function fakePi() {
     raise: (event: AgentSessionEvent) => { listener?.(event); },
     hold: () => { settle = false; },
     setLeaf: (next: string) => { leaf = next; },
+    setPrompted: (next: string | undefined) => { prompted = next; },
     refuseRewind: () => { moves = false; },
     /** The session's model takes no image, so a picture goes by its path. */
     noImages: () => { takes = false; },

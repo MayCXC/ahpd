@@ -49,9 +49,10 @@ const temp = (): string => {
 /** Where every case works: a real folder, because a shell starts in it. */
 const DIR = tmpdir();
 
-/** Every output a session's folder keeps, as the files hold them. */
+/** Every output a session's folder keeps, as the files hold them: its `terminals` folder, beside the chats' local turns. */
 const keptIn = (store: SessionStore, id: string): Bag[] => {
-  const folder = store.attachmentsDir?.(id);
+  const session = store.attachmentsDir?.(id);
+  const folder = session === undefined ? undefined : join(session, 'terminals');
   if (folder === undefined || !existsSync(folder)) return [];
   return readdirSync(folder, { recursive: true, encoding: 'utf8' })
     .filter((name) => name.endsWith('.json'))

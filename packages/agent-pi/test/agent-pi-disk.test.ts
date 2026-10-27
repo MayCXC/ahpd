@@ -6,7 +6,7 @@ import { DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../../sdk/src/tools/clientcalls.
 import { piAgent } from '../src/agent.js';
 import { loadPi } from '../src/pi.js';
 import { piSession } from '../src/session.js';
-import { resumeOrCreate } from '../src/backend.js';
+import { promptOf, resumeOrCreate } from '../src/backend.js';
 import { answer, driveCall, fakePi, opened, root, sessionOnDisk, settled, streamed } from './fake-pi.js';
 
 // A session from disk -------------------------------------------------------
@@ -105,6 +105,19 @@ it('answers where a turn from pi file ended, once the session is resumed', async
   expect(session.endPoint?.(disk.first)).toBe(disk.firstEnd);
   expect(session.endPoint?.(disk.second)).toBe(disk.secondEnd);
   session.close();
+});
+
+it('finds the prompt pi wrote after an entry, which is the id a turn from pi file has', async () => {
+  const sessionDir = join(root, 'pi');
+  const disk = await sessionOnDisk(sessionDir);
+  const { SessionManager } = await loadPi();
+  const branch = SessionManager.open(disk.file, sessionDir, root).getBranch();
+  expect(promptOf(branch, undefined)).toBe(disk.first);
+  expect(promptOf(branch, disk.firstEnd)).toBe(disk.second);
+  expect(promptOf(branch, disk.secondEnd)).toBeUndefined();
+  expect(promptOf(branch, 'not-on-the-branch')).toBeUndefined();
+  const turns = await piAgent({ sessionDir }, [root]).transcript?.(disk.id);
+  expect(turns?.map((turn) => turn.id)).toEqual([disk.first, disk.second]);
 });
 
 it('keeps the turns from pi file in the record of a session resumed and run again', async () => {

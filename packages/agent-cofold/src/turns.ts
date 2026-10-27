@@ -224,6 +224,14 @@ export const createTurns = (
           session: sessionId,
           workspace: where,
           input,
+          /*
+           * The prompt stored under the turn's own id, so the turn read back
+           * from cofold's store is the turn a client knows: a turn that
+           * follows is anchored by it, and a restart finds it there.
+           * `RunArgs.messageId` in npm://@cofold/agents@0.4.0: "A client that
+           * supplies it can match run.started to its send."
+           */
+          messageId: turnId,
           // Kept on the run record, which is where a rebuilt turn reads its model.
           ...(opened.reference !== undefined ? { model: opened.reference } : {}),
         });

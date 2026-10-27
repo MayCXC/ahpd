@@ -315,7 +315,7 @@ export function createSleep(ctx: HostContext): Sleep {
     const other = lead === undefined || lead.one.uri === chatUriFor(named) ? undefined : lead;
     const back = other === undefined
       ? undefined
-      : await other.agent.transcript?.(other.one.backendId, at, ctx.outputsFor(named, other.one.uri));
+      : await ctx.transcriptOf(other.agent, other.one.backendId, at, named, other.one.uri);
     // A host that closed while this resume read its record starts no agent.
     if (ctx.closed) throw new Error(CLOSING);
     /*
@@ -355,7 +355,7 @@ export function createSleep(ctx: HostContext): Sleep {
     // its own, resumed the way a chat restarted on its own is.
     for (const { one, agent } of served) {
       if (one.default === true) continue;
-      const own = await agent.transcript?.(one.backendId, at, ctx.outputsFor(named, one.uri));
+      const own = await ctx.transcriptOf(agent, one.backendId, at, named, one.uri);
       if (ctx.closed) throw new Error(CLOSING);
       spawn(
         agent,

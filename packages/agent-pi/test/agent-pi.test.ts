@@ -133,6 +133,27 @@ it('opens a turn with no part, before anything streams into it', async () => {
   expect((session.chatState().turns as Bag[])[0]?.responseParts).toEqual([]);
 });
 
+it('names a turn by the entry pi wrote its prompt under, read after the entry the turn began on', async () => {
+  // The id a turn has when it is read back from pi's file, so what the host
+  // keeps against the turn - a `!` turn after it, anchored to it - is found.
+  const recorded: [string, string][] = [];
+  const { session, pi } = opened({ onTurnRecorded: (turnId, entryId) => { recorded.push([turnId, entryId]); } });
+  pi.setLeaf('entry-before');
+  pi.setPrompted('entry-prompt');
+  session.begin('t1', 'hello');
+  await settled();
+  expect(pi.asked).toContainEqual({ kind: 'promptAfter', entryId: 'entry-before' });
+  expect(recorded).toEqual([['t1', 'entry-prompt']]);
+});
+
+it('names no turn whose prompt pi has no entry for', async () => {
+  const recorded: [string, string][] = [];
+  const { session } = opened({ onTurnRecorded: (turnId, entryId) => { recorded.push([turnId, entryId]); } });
+  session.begin('t1', 'hello');
+  await settled();
+  expect(recorded).toEqual([]);
+});
+
 it('skips a call the model was still writing when the turn stopped, in the snapshot too', async () => {
   const { session, pi } = opened();
   pi.hold();
