@@ -144,6 +144,16 @@ AND the answer is `Shell ID: <id>`, then `Exit code: <n>` and the output.
 A code other than 0 is a failed call.
 The shell keeps its folder and its variables for the next call.
 
+### The call shows its terminal
+
+WHEN a call of `bash` is given its shell while its chat has a turn open
+THEN the call's content shows the shell's terminal: `type` `terminal`, the terminal's URI as `resource` and `Bash` as `title`
+AND the terminal says `isPty: false` where the shell runs on pipes
+AND each content the backend writes for the call, and the result it completes the call with, keep the terminal
+AND a command that finished sets its code on the terminal as `result.exitCode`.
+WHEN a client subscribes to the chat after
+THEN the call's content in the chat's state shows the same terminal.
+
 ### A command ends before it finishes
 
 WHEN the timeout passes

@@ -17,6 +17,7 @@
  */
 
 import { posix, win32 } from 'node:path';
+import { aboutCall } from '../automations/calllinks.js';
 import { MARKS, shellOf } from '../machines/terminals.js';
 import { localPath } from '../resources/fileuri.js';
 import { ROOT } from './channels.js';
@@ -72,6 +73,39 @@ const CSI_SEQUENCE = /(?:\x1b\[|\x9b)[=?>!]?[\d;:]*["$#'* ]?[a-zA-Z@^`{}|~]/;
 const OSC_SEQUENCE = /(?:\x1b\]|\x9d).*?(?:\x1b\\|\x07|\x9c)/;
 const ESC_SEQUENCE = /\x1b(?:[ #%\(\)\*\+\-\.\/]?[a-zA-Z0-9\|}~@])/;
 const CONTROL_SEQUENCES = new RegExp(`(?:${[CSI_SEQUENCE.source, OSC_SEQUENCE.source, ESC_SEQUENCE.source].join('|')})`, 'g');
+
+/**
+ * The name a shell's terminal and its calls go by.
+ *
+ * The reference's `shellDisplayName`, which titles the terminal it makes
+ * (copilotShellTools.ts#L204) and the terminal a call shows (#L262).
+ */
+const shellDisplayName = (shellType: ShellType): string => (shellType === 'bash' ? 'Bash' : 'PowerShell');
+
+/** Whether a call's content already shows this terminal. */
+const shows = (content: readonly Bag[], resource: unknown): boolean =>
+  content.some((one) => one.type === 'terminal' && one.resource === resource);
+
+/**
+ * A call's content with its terminal on it.
+ *
+ * Laid after whatever the call holds, as the reference pushes it onto the
+ * call's content (copilotAgentSession.ts#L2267-L2271); where the content
+ * already shows the terminal, the command's exit is set on it, as the
+ * reference sets a shell's exit on the block it finds (mapSessionEvents.ts
+ * #L237-L240). The content handed in is answered as it is when nothing moved.
+ */
+const showing = (content: Bag[], block: Bag): Bag[] => {
+  if (!shows(content, block.resource)) return [...content, block];
+  if (block.result === undefined) return content;
+  let moved = false;
+  const next = content.map((one) => {
+    if (one.type !== 'terminal' || one.resource !== block.resource || one.result === block.result) return one;
+    moved = true;
+    return { ...one, result: block.result };
+  });
+  return moved ? next : content;
+};
 
 /** A string with every terminal control sequence taken out. */
 export const removeAnsiEscapeCodes = (text: string): string => (text ? text.replace(CONTROL_SEQUENCES, '') : text);
@@ -220,6 +254,22 @@ interface Heard {
 interface Entry extends Heard {
   shell: ManagedShell;
   terminal: Terminal;
+  /** The call the shell was last given to, by its chat and id, when that call named itself. */
+  call?: string;
+}
+
+/**
+ * A tool call this host gave a shell, and the terminal it shows.
+ *
+ * The reference's `_toolCallShells` (copilotShellTools.ts#L258-L270), from a
+ * call to its shell, kept as the block the call's content carries: the
+ * terminal, its title, and the command's exit once the command has one.
+ */
+interface Called {
+  /** The session whose shells the call ran in, which forgets it. */
+  session: string;
+  /** The call's terminal content. */
+  block: Bag;
 }
 
 /**
@@ -243,13 +293,33 @@ const observe = (kept: Heard, action: Bag): void => {
 export interface HostShells {
   /** One session's shells, or nothing where this host has no terminal store. */
   of(session: string): Shells | undefined;
-  /** Forget a session's shells. Its terminals are closed with the session. */
+  /** Forget a session's shells, and the calls they ran for. Its terminals are closed with the session. */
   forgetSession(uri: string): void;
+  /**
+   * A tool call action with its call's terminal kept on its content.
+   *
+   * A backend writes the content of its own calls, and the terminal of a call
+   * this host gave a shell is not in what it writes: a content change of that
+   * call is passed on with the terminal laid after the backend's content, and
+   * its completion with the terminal and the command's exit in its result, as
+   * the reference keeps the terminal on the call it completes
+   * (copilotAgentSession.ts#L9417-L9422). Every other action, and an action of
+   * a call no shell was given to, is returned as it is.
+   */
+  withTerminal(chat: string, action: Bag): Bag;
+  /**
+   * A live chat's turns with each call this host gave a shell showing its
+   * terminal, so a client that subscribes late reads what the wire said. A
+   * copy where anything moved; the turns passed in are the backend's own.
+   */
+  stampedTerminals(chat: string, turns: Bag[]): Bag[];
 }
 
 export function createShells(ctx: HostContext): HostShells {
   const { options, terminals, dispatch, log } = ctx;
   const sessions = new Map<string, Shells & { dispose(): void }>();
+  /** Every call a shell was given, by its chat and id. */
+  const calls = new Map<string, Called>();
 
   /**
    * The directory a new shell starts in: the session's first working
@@ -324,10 +394,46 @@ export function createShells(ctx: HostContext): HostShells {
     };
 
     /**
+     * Tie a call to the shell it was given, and show the shell on the call.
+     *
+     * The reference's `_trackToolCall` (copilotShellTools.ts#L258-L265), which
+     * runs whether the shell is taken again or made (#L189, #L219), and its
+     * session's answer to it (copilotAgentSession.ts#L2261-L2280): the call's
+     * content gains the terminal, so a client draws the call as that terminal
+     * while the command runs. Written the way this host writes a worker's link
+     * on the call that spawned it (spawn.ts, `openSubagent`): with what the
+     * call already holds, and only while its chat has a turn open. The chat is
+     * the one the tool was bound to, which is a session's own chat. A terminal
+     * on pipes says `isPty: false`, as the reference's terminals that are not
+     * pseudoterminals do (copilotAgentSession.ts#L11972-L11977), and a
+     * pseudoterminal says nothing, as the reference's own do.
+     */
+    const associate = (claim: { chat: string; toolCallId?: string }, entry: Entry): void => {
+      if (claim.toolCallId === undefined) {
+        delete entry.call;
+        return;
+      }
+      const key = aboutCall(claim.chat, claim.toolCallId);
+      const block: Bag = {
+        type: 'terminal',
+        resource: entry.shell.terminalUri,
+        title: shellDisplayName(entry.shell.shellType),
+        ...(entry.terminal.state().isPty === true ? {} : { isPty: false }),
+      };
+      calls.set(key, { session, block });
+      entry.call = key;
+      const turnId = ctx.links.turnOf(claim.chat);
+      if (turnId === undefined) return;
+      const content = showing(ctx.links.contentOf(claim.chat, claim.toolCallId) ?? [], block);
+      dispatch(claim.chat, { type: 'chat/toolCallContentChanged', turnId, toolCallId: claim.toolCallId, content });
+    };
+
+    /**
      * An idle shell, or a new one claimed by the call that asked.
      *
      * The reference's `getOrCreateShell`. A shell taken again keeps the claim
-     * it was opened with, as the reference's does.
+     * it was opened with, as the reference's does, and is shown on the call
+     * that took it, as a new one is.
      */
     const acquire = (claim: { chat: string; turnId?: string; toolCallId?: string }): HeldShell => {
       for (const entry of entries.values()) {
@@ -339,6 +445,7 @@ export function createShells(ctx: HostContext): HostShells {
         // A command is already running there, and sharing it would interleave both.
         if (busy.has(entry.shell.id)) continue;
         busy.add(entry.shell.id);
+        associate(claim, entry);
         return reference(entry.shell);
       }
       const shells = options.terminals;
@@ -361,14 +468,16 @@ export function createShells(ctx: HostContext): HostShells {
       const terminal = ctx.heldShell(shells, {
         cwd: whereOf(session),
         claim: wanted,
-        name: shellType === 'bash' ? 'Bash' : 'PowerShell',
+        name: shellDisplayName(shellType),
         env: NON_INTERACTIVE_ENV,
         watch: (action) => { observe(kept, action); },
       });
       const shell: ManagedShell = { id, terminalUri: terminal.uri, shellType, executable };
-      entries.set(id, Object.assign(kept, { shell, terminal }));
+      const entry: Entry = Object.assign(kept, { shell, terminal });
+      entries.set(id, entry);
       busy.add(id);
       log(`made the ${shellType} shell ${id} for ${session} (${terminal.uri}, ${executable})`);
+      associate(claim, entry);
       return reference(shell);
     };
 
@@ -497,7 +606,27 @@ export function createShells(ctx: HostContext): HostShells {
       const paste = await pasted(entry, shouldUseBracketedPasteMode(command));
       entry.terminal.write(formatted(entry, line, true, paste));
       if (sentinel !== undefined) entry.terminal.write(formatted(entry, sentinelCommand(sentinel, shell.shellType), true, false));
-      return await result;
+      const answer = await result;
+      exited(entry, answer);
+      return answer;
+    };
+
+    /**
+     * Set a completed command's exit on the terminal its call shows.
+     *
+     * The protocol's `ToolResultTerminalContent.result` (`@microsoft/agent-host-protocol`
+     * 1.0.0, `dist/types/channels-chat/state.d.ts#L1541-L1544`): filled in on
+     * the completed result when the command exits, and the command's exit
+     * rather than the terminal's, so a command that completed sets it and one
+     * that timed out, went on in the background or outlived its shell does
+     * not. The code is the one the call's answer names, as the reference words
+     * a completed command (copilotShellTools.ts#L333).
+     */
+    const exited = (entry: Entry, answer: ShellCommandResult): void => {
+      if (answer.status !== 'completed' || entry.call === undefined) return;
+      const called = calls.get(entry.call);
+      if (called === undefined) return;
+      called.block = { ...called.block, result: { exitCode: answer.exitCode ?? 0 } };
     };
 
     /**
@@ -576,6 +705,10 @@ export function createShells(ctx: HostContext): HostShells {
     };
   };
 
+  /** The terminal a call's content should show, when a shell was given to that call. */
+  const calledIn = (chat: string, toolCallId: unknown): Called | undefined =>
+    (typeof toolCallId === 'string' ? calls.get(aboutCall(chat, toolCallId)) : undefined);
+
   return {
     of: (session) => {
       if (options.terminals === undefined) return undefined;
@@ -589,6 +722,46 @@ export function createShells(ctx: HostContext): HostShells {
     forgetSession: (uri) => {
       sessions.get(uri)?.dispose();
       sessions.delete(uri);
+      for (const [key, called] of calls) if (called.session === uri) calls.delete(key);
+    },
+    withTerminal: (chat, action) => {
+      if (action.type !== 'chat/toolCallContentChanged' && action.type !== 'chat/toolCallComplete') return action;
+      const called = calledIn(chat, action.toolCallId);
+      if (called === undefined) return action;
+      if (action.type === 'chat/toolCallContentChanged') {
+        const content = Array.isArray(action.content) ? action.content as Bag[] : [];
+        const shown = showing(content, called.block);
+        return shown === content ? action : { ...action, content: shown };
+      }
+      const result = action.result as Bag | undefined;
+      if (typeof result !== 'object' || result === null) return action;
+      const content = Array.isArray(result.content) ? result.content as Bag[] : [];
+      const shown = showing(content, called.block);
+      return shown === content ? action : { ...action, result: { ...result, content: shown } };
+    },
+    stampedTerminals: (chat, turns) => {
+      if (calls.size === 0) return turns;
+      return turns.map((turn) => {
+        const parts = Array.isArray(turn.responseParts) ? turn.responseParts as Bag[] : undefined;
+        if (parts === undefined) return turn;
+        let touched = false;
+        const next = parts.map((part) => {
+          const call = part.toolCall as Bag | undefined;
+          // The states whose content a call's terminal is written into: a
+          // running call's own, and the result a completed call carries, or
+          // one whose result waits to be confirmed.
+          if (call === undefined || (call.status !== 'running' && call.status !== 'completed'
+            && call.status !== 'pending-result-confirmation')) return part;
+          const called = calledIn(chat, call.toolCallId);
+          if (called === undefined) return part;
+          const content = Array.isArray(call.content) ? call.content as Bag[] : [];
+          const shown = showing(content, called.block);
+          if (shown === content) return part;
+          touched = true;
+          return { ...part, toolCall: { ...call, content: shown } };
+        });
+        return touched ? { ...turn, responseParts: next } : turn;
+      });
     },
   };
 }

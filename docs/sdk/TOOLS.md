@@ -68,6 +68,8 @@ Under PowerShell the set is `powershell`, `read_powershell`, `write_powershell`,
 
 Every answer of the shell starts with `Shell ID: <id>`. A shell is a terminal on the root list, titled `Bash` or `PowerShell`, opened in the session's first working directory and claimed by the session, the chat, the turn and the call that opened it. It is kept between calls, so a command finds the folder and the variables the last one left. A call takes an idle shell or opens another, because two commands in one shell would mix their input and their output. The shell's environment carries the reference's settings for a terminal nobody answers: no pager, `LC_ALL=C.UTF-8`, `GIT_TERMINAL_PROMPT=0` and `DEBIAN_FRONTEND=noninteractive`.
 
+The call shows its shell, as the reference's do. When a call gets its shell, the host writes the shell's terminal into the call's content. The terminal is `type` `terminal`, with the terminal's URI as `resource` and `Bash` or `PowerShell` as `title`. Where the shell runs on pipes, it also says `isPty: false`. A client draws the call as that terminal and can follow the command while it runs. The backend writes the rest of its call. The host keeps the terminal on each content the backend writes for the call, and on the result it completes the call with. A command that finished also gives the terminal its code, as `result: { exitCode }`. A client that subscribes later reads the same calls. A call a subagent makes shows no terminal. A host tool is bound to its session's chat, and a subagent's call is drawn in the worker's chat.
+
 A command ends in one of five ways, each the reference's, and each is what the call answers.
 
 | How it ended | The answer |

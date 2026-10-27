@@ -9,11 +9,13 @@ refs:
 
 A client that pushes `enableCustomTerminalTool` gives every session the reference host's agent terminal tool.
 An agent's commands then run in terminals the session holds, which the person in the session can watch, type into and stop.
+Each call shows its shell's terminal in its content, so a client draws the call as that terminal.
 Claude and pi let the host's `bash` take the place of their own shell.
 
 ## What was built
 
-- [`code://packages/sdk/src/host/shells.ts`](../../../../packages/sdk/src/host/shells.ts) - each session's shells, with the reference's two ways to end a command.
+- [`code://packages/sdk/src/host/shells.ts`](../../../../packages/sdk/src/host/shells.ts) - each session's shells, with the reference's two ways to end a command, and the terminal each call shows.
+- [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) and [`code://packages/sdk/src/host/snapshots.ts`](../../../../packages/sdk/src/host/snapshots.ts) - a call's terminal kept on the wire and in a live chat's state.
 - [`code://packages/sdk/src/tools/shell.ts`](../../../../packages/sdk/src/tools/shell.ts) - the six tools, with the reference's names, schemas, descriptions and answers.
 - [`code://packages/sdk/src/types/shells.ts`](../../../../packages/sdk/src/types/shells.ts) - the shapes the two share.
 - [`code://packages/sdk/src/host/headlessterminal.ts`](../../../../packages/sdk/src/host/headlessterminal.ts) - each shell's screen, over `@xterm/headless`.
@@ -47,7 +49,6 @@ Claude and pi let the host's `bash` take the place of their own shell.
 - The reference's headless terminal also answers cursor position queries. This host's terminals answer none, so the shells' screens write nothing back.
 - The reference names the call as the turn in the claim. This host names the turn the call runs in.
 - The reference's macOS `--login`, its shell integration variables and its zsh fixups are not here, because this host's terminals take none of them.
-
-## Left for later
-
-- The terminal in the call's own content - see [deferred.md](deferred.md).
+- The reference's session holds its calls' content and adds the terminal to it. Here a backend writes its own calls. The host writes the terminal on the call as it writes a worker's link, and `dispatch` keeps it there.
+- The reference follows a call a subagent makes by its parent call's id. A host tool here is bound to its session's chat, so a call a subagent makes shows no terminal.
+- The reference's own shell tool gives its terminal no `result`. Here a completed command sets its code there, as the protocol's `ToolResultTerminalContent.result` describes.

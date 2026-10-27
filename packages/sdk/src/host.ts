@@ -770,7 +770,7 @@ export function createHost(options: HostOptions): Host {
    * against the text is sent ahead of it.
    */
   const dispatch = (channel: string, given: Record<string, unknown>, origin = applying): void => {
-    const action = ctx.withWorkerUri(channel, given);
+    const action = ctx.shells.withTerminal(channel, ctx.withWorkerUri(channel, given));
     /*
      * A session's customizations are two halves, and one action carries both.
      *

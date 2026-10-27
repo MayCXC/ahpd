@@ -356,10 +356,12 @@ export function createSnapshots(ctx: HostContext): Snapshots {
       }
       if (Array.isArray(state.turns)) {
         const turns = linkedTurns(talking.uri, state.turns as Bag[], restored);
-        state.turns = ctx.withSender(talking.uri, ctx.stampedCalls(talking.uri, turns));
+        const shown = ctx.shells.stampedTerminals(channel, turns);
+        state.turns = ctx.withSender(talking.uri, ctx.stampedCalls(talking.uri, shown));
       }
       if (typeof state.activeTurn === 'object' && state.activeTurn !== null) {
-        state.activeTurn = ctx.withSender(talking.uri, ctx.stampedCalls(talking.uri, [state.activeTurn as Bag]))[0];
+        const shown = ctx.shells.stampedTerminals(channel, [state.activeTurn as Bag]);
+        state.activeTurn = ctx.withSender(talking.uri, ctx.stampedCalls(talking.uri, shown))[0];
       }
       // The attachments the clients sent, back on the messages that carry them:
       // a `chat` attachment reaches a backend as a pointer, and the reference

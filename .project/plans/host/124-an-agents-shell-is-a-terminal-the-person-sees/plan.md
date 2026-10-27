@@ -34,6 +34,9 @@ refs:
   - "[code://packages/sdk/src/host/lifecycle.ts#L1382-L1389](../../../../packages/sdk/src/host/lifecycle.ts#L1382-L1389) - a `!` command's folder and claim"
   - "[code://packages/sdk/src/tools/session.ts#L280-L282](../../../../packages/sdk/src/tools/session.ts#L280-L282) - `allowed`, the session tools' refusal by grant"
   - "[code://packages/sdk/src/host/gate.ts#L86-L87](../../../../packages/sdk/src/host/gate.ts#L86-L87) - the grants a client's terminal methods ask"
+  - https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L2261-L2280 - the reference puts a call's terminal on the call's content
+  - https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L9417-L9422 - and keeps it on the call it completes
+  - "[code://packages/sdk/src/host/spawn.ts#L463-L487](../../../../packages/sdk/src/host/spawn.ts#L463-L487) - a worker's link written on the call that spawned it, the pattern for content this host puts on a backend's call"
 ---
 
 ## Goal
@@ -88,6 +91,10 @@ root/configChanged enableCustomTerminalTool -> tooling lists the six tools -> ba
 | pi takes the host's `bash` in place of its own by name | npm://@earendil-works/pi-coding-agent@^1.3.0, `docs/containerization.md` | 02 |
 | cofold and an ACP agent keep their own shell beside the host's | https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotShellTools.ts#L450, `overridesBuiltInTool`, which replaces a built-in tool of the same name; npm://@cofold/agents@0.4.0 has no tool named `bash`, and an ACP agent's tools are the agent's own | 02 |
 | The tool is not the four `ahp_terminal_*` tools of this host's own | [decisions/the-agent-terminal-tool-is-the-reference-hosts.md](../../../decisions/the-agent-terminal-tool-is-the-reference-hosts.md) | 01 |
+| A call shows its shell's terminal in its content, built with the tool | Aaron, 2026-10-27, on the proposal that a call show its terminal: "the proposal makes sense to me what are you basing the idea off of and why would we save it for an upstream conversation"; https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L2261-L2280 | 03 |
+| The host writes the terminal on the backend's call, the way it writes a worker's link | [code://packages/sdk/src/host/spawn.ts#L463-L487](../../../../packages/sdk/src/host/spawn.ts#L463-L487) | 03 |
+| The terminal stays on the call's later content and on the call it completes | https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L9417-L9422 | 03 |
+| A completed command's code is the terminal's `result.exitCode` | npm://@microsoft/agent-host-protocol@^1.0.0, `ToolResultTerminalContent.result` in `dist/types/channels-chat/state.d.ts`, filled in when the command exits | 03 |
 
 ## What decided each element
 
@@ -162,12 +169,24 @@ An element that is this host's adaptation names the primitive of this host that 
 | `specs/host-tools.md` scenarios | the spec's `WHEN`, `THEN` and `AND` form | 01 |
 | The CHANGELOG under `0.14.1 - unreleased` | `git://3fabd578`, which wrote `0.14.0 - unreleased` before that release; [code://.project/plans/daemon/40-a-daemon-starts-with-no-backend/plan.md#L26](../../../../.project/plans/daemon/40-a-daemon-starts-with-no-backend/plan.md#L26), "This ships as 0.14.1" | 01 |
 | The decision, `proposed` | the do-spec skill: a decision is written with the maintainer's agreement | 01 |
+| A call's terminal recorded on both ways a shell is acquired | `VS` `node/copilot/copilotShellTools.ts#L189`, `#L219`, `#L258-L265` | 03 |
+| The block: `terminal`, the shell's terminal, `Bash` or `PowerShell` | `VS` `node/copilot/copilotShellTools.ts#L262`, `node/copilot/copilotAgentSession.ts#L2267-L2271` | 03 |
+| `isPty: false` on pipes, and nothing on a pseudoterminal | `VS` `node/copilot/copilotAgentSession.ts#L11972-L11977` and `#L9456-L9462` mark a terminal that is not a pseudoterminal, and `#L2267-L2271` marks none | 03 |
+| Written as `chat/toolCallContentChanged` with what the call holds, while its chat has a turn open | adaptation: the backend writes its own calls, so the host writes on one as it writes a worker's link, [`code://packages/sdk/src/host/spawn.ts#L463-L487`](../../../../packages/sdk/src/host/spawn.ts#L463-L487) | 03 |
+| Calls keyed by their chat and id | adaptation: `aboutCall`, the links index's key, [`code://packages/sdk/src/automations/calllinks.ts#L59`](../../../../packages/sdk/src/automations/calllinks.ts#L59) | 03 |
+| The terminal kept on the call's later content and its completion | `VS` `node/copilot/copilotAgentSession.ts#L9417-L9422`; adaptation: rewritten in `dispatch` beside `withWorkerUri`, [`code://packages/sdk/src/host.ts#L773`](../../../../packages/sdk/src/host.ts#L773), since the reducer builds a completed call from its result alone | 03 |
+| The exit set on a block the content already holds | `VS` `node/copilot/mapSessionEvents.ts#L237-L240` | 03 |
+| The code of a completed command only | the protocol's `ToolResultTerminalContent.result`, "the command's exit, not the terminal's", `dist/types/channels-chat/state.d.ts#L1541-L1544` at 1.0.0; the code as the call's answer names it, `VS` `node/copilot/copilotShellTools.ts#L333` | 03 |
+| `result` holds the code alone | the reference's own tool answers in text and gives its terminal no `result`, `VS` `node/copilot/copilotShellTools.ts#L313-L319`; the protocol's `preview` and `truncated` are optional, and the call's answer carries the output | 03 |
+| A live chat's turns stamped for a late subscriber | adaptation: a chat's state is its backend's, and `stampedCalls` stamps a spawning call there the same way, [`code://packages/sdk/src/host/snapshots.ts#L357-L365`](../../../../packages/sdk/src/host/snapshots.ts#L357-L365) | 03 |
+| A session's calls forgotten with its shells | adaptation: `forgetSession`, which the session's deletion already calls | 03 |
+| `shell-call-terminal.test.ts`, a backend that writes its own calls | [`code://packages/sdk/test/subagent-link.test.ts`](../../../../packages/sdk/test/subagent-link.test.ts) | 03 |
 
 ## Proposed architecture
 
 - **Data flow** - a call goes from the backend's handler to `BoundTool.run` with its id, then to the tool, `ToolCall.shells()` and the session's shells.
-- **Event flow** - the terminal's actions reach the session's shells through `heldShell`'s `watch`, after the host routes them.
-- **State flow** - each shell has a headless terminal fed with what it says, and each command counts what the terminal has said since it began.
+- **Event flow** - the terminal's actions reach the session's shells through `heldShell`'s `watch`, after the host routes them. A call's terminal goes on the call as `chat/toolCallContentChanged`, and `dispatch` keeps it on the call's later actions.
+- **State flow** - each shell has a headless terminal fed with what it says, and each command counts what the terminal has said since it began. The host keeps, by chat and call id, the terminal each call shows, with a completed command's code.
 - **Layer responsibilities** - sdk: the shells, the tools, the switch and the call id. agent-claude and agent-pi: their shell steps aside. agent-cofold: passes the call id.
 - **Source-of-truth files** - [`code://packages/sdk/src/host/shells.ts`](../../../../packages/sdk/src/host/shells.ts), [`code://packages/sdk/src/tools/shell.ts`](../../../../packages/sdk/src/tools/shell.ts).
 
@@ -177,22 +196,23 @@ An element that is this host's adaptation names the primitive of this host that 
 | --- | --- | --- |
 | [01 - The host offers the agent terminal tool](task-01-the-host-offers-the-agent-terminal-tool.md) | done | - |
 | [02 - Each backend gives the host its shell](task-02-each-backend-gives-the-host-its-shell.md) | done | 01 |
+| [03 - A call shows its terminal](task-03-a-call-shows-its-terminal.md) | done | 01 |
 
 ## Risks and tradeoffs
 
 - A command that reads its standard input takes the sentinel's line where the shell has no marks, and the call waits for its timeout. The reference has the same sentinel.
-- The reference shows a terminal in the call's own content, and this host does not yet - see [deferred.md](deferred.md).
+- A call a subagent makes shows no terminal. A host tool is bound to its session's chat. The backend draws a subagent's call in the worker's chat, which the tool is not told. The reference follows such a call by its parent call's id.
 
 ## Resume state
 
-- **Done so far:** both tasks, 2026-10-26.
+- **Done so far:** tasks 01 and 02, 2026-10-26; task 03, 2026-10-27.
 - **Next action:** Softov reads [decisions/the-agent-terminal-tool-is-the-reference-hosts.md](../../../decisions/the-agent-terminal-tool-is-the-reference-hosts.md).
-- **Open questions:**
-  1. Does the call show its terminal in its content, as the reference's does - proposed: yes, as a later plan, see [deferred.md](deferred.md).
+- **Open questions:** none.
 - **Watch out for:** a shell on pipes reads its commands from its input. A test that types into one reaches the shell, not a running command.
 
 ## Final verification checklist
 
 - [x] `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
 - [x] A daemon from this tree offers the six tools after a client pushes `enableCustomTerminalTool`.
+- [x] A call of `bash` shows its terminal on the wire while it runs and on the call it completes.
 - [x] `plans/index.md` updated.
