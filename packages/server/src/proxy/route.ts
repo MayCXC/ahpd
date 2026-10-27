@@ -20,10 +20,10 @@
  * never be made is refused before anything is spent finding that out.
  */
 
-import type { ProviderConnector, ProviderModel } from '@ahpd/sdk';
+import type { ModelProvider, ProviderConnector, ProviderModel } from '@ahpd/sdk';
 import type { ProxyCaller } from './caller.js';
 import { prefixOf, type ModelCatalog } from './catalog.js';
-import { CALLER_PATHS, UPSTREAM_PATHS, type Refusal } from './dialects.js';
+import { callerPathOf, kindOf, upstreamFor, type Refusal } from './dialects.js';
 import { DIALECTS, type Dialect, type ModelEntry, type ProxyConfiguration } from './providers.js';
 
 /** One connector a call may go to, with everything the call needs. */
@@ -61,6 +61,8 @@ export interface RouteOptions {
    * is allowed when absent. A promise, because a policy store is read.
    */
   allowed?(entry: ModelEntry): string | undefined | Promise<string | undefined>;
+  /** The caller path, when a dialect answers at more than one and each goes to its own upstream path. */
+  callerPath?: string;
 }
 
 /** Where a caller stands among connector owners: the person and the team a connector may be theirs. */
@@ -130,17 +132,50 @@ const inOrder = (connectors: readonly ProviderConnector[], places: Places): Prov
 const usableFor = (entry: ModelEntry, providers: readonly ProviderConnector[], places: Places): ProviderConnector[] =>
   inOrder(namedBy(entry, providers), places);
 
+/**
+ * One connector a caller may use, by its id, or nothing when they may not.
+ *
+ * A Responses follow-up names its connector in the id rather than in the
+ * table, so it is checked the same way an entry's connectors are: the id must
+ * be open, and the connector must be the caller's own, their team's or the
+ * host's.
+ */
+export const connectorForCaller = (
+  id: string,
+  providers: readonly ProviderConnector[],
+  caller?: ProxyCaller,
+): ProviderConnector | undefined => {
+  const found = providers.find((one) => one.id === id);
+  if (found === undefined) return undefined;
+  return inOrder([found], placesOf(caller))[0];
+};
+
 /** Whether a connector's provider speaks one dialect. */
 const speaks = (connector: ProviderConnector, dialect: Dialect): boolean => connector.provider.accepts.includes(dialect);
+
+/**
+ * Another dialect of the same kind that a connector speaks, which a 404 names.
+ *
+ * A chat call is not told to call `/rerank`, and a count is not told to call
+ * chat, so the hint stays among the dialects that do the same work.
+ */
+const otherKind = (dialect: Dialect, spoken: (one: Dialect) => boolean): Dialect | undefined =>
+  DIALECTS.find((one) => one !== dialect && kindOf(one) === kindOf(dialect) && spoken(one));
 
 /**
  * An endpoint and a dialect's path, joined with exactly one slash.
  *
  * `https://openrouter.ai/api/v1` gives `.../api/v1/chat/completions`, and
- * `https://api.anthropic.com` gives `.../v1/messages`.
+ * `https://api.anthropic.com` gives `.../v1/messages`. A connector's `paths`
+ * replaces the dialect's path, and a caller path that has one of its own, such
+ * as an image edit, names it.
  */
-export const upstreamUrl = (endpoint: string, dialect: Dialect): string =>
-  `${endpoint.replace(/\/+$/u, '')}${UPSTREAM_PATHS[dialect]}`;
+export const upstreamUrl = (
+  endpoint: string,
+  dialect: Dialect,
+  callerPath: string = callerPathOf(dialect),
+  paths?: ModelProvider['paths'],
+): string => `${endpoint.replace(/\/+$/u, '')}${upstreamFor(dialect, callerPath, paths)}`;
 
 /** The same provider named twice, once. */
 const distinct = (names: readonly string[]): string[] => [...new Set(names)];
@@ -152,8 +187,7 @@ const distinct = (names: readonly string[]): string[] => [...new Set(names)];
  * `openrouter/anthropic/claude-sonnet-5.5` is OpenRouter's own
  * `anthropic/claude-sonnet-5.5`. Nothing when either side is empty.
  */
-const fetchedName = (name: string): { prefix: string; id: string } | undefined => {
-  const at = name.indexOf('/');
+export const fetchedName = (name: string): { prefix: string; id: string } | undefined => {  const at = name.indexOf('/');
   if (at <= 0 || at === name.length - 1) return undefined;
   return { prefix: name.slice(0, at), id: name.slice(at + 1) };
 };
@@ -180,8 +214,8 @@ const fetchedRoute = async (name: string, fetched: { prefix: string; id: string 
 
   const speaking = named.filter((one) => speaks(one, dialect));
   if (speaking.length === 0) {
-    const other = DIALECTS.find((one) => one !== dialect && named.some((connector) => speaks(connector, one)));
-    const where = other === undefined ? '' : ` is served in ${other}, not ${dialect}: call POST ${CALLER_PATHS[other]}`;
+    const other = otherKind(dialect, (one) => named.some((connector) => speaks(connector, one)));
+    const where = other === undefined ? '' : ` is served in ${other}, not ${dialect}: call POST ${callerPathOf(other)}`;
     return { refusal: { status: 404, message: `model ${name}${where}`, code: 'model_not_found' } };
   }
 
@@ -210,7 +244,7 @@ const fetchedRoute = async (name: string, fetched: { prefix: string; id: string 
         connector: one.id,
         provider: one.adapter,
         entry: { provider: one.adapter, id: fetched.id, ...(price === undefined ? {} : { price }) },
-        url: upstreamUrl(one.provider.endpoint, dialect),
+        url: upstreamUrl(one.provider.endpoint, dialect, options.callerPath, one.provider.paths),
         ...(one.provider.key === undefined ? {} : { key: one.provider.key }),
         ...(model === undefined ? {} : { model }),
       };
@@ -251,8 +285,8 @@ export async function route(proxy: ProxyConfiguration, name: string, dialect: Di
 
   const speaking = known.filter((entry) => namedBy(entry, options.providers).some((one) => speaks(one, dialect)));
   if (speaking.length === 0) {
-    const other = DIALECTS.find((one) => one !== dialect && known.some((entry) => namedBy(entry, options.providers).some((connector) => speaks(connector, one))));
-    const where = other === undefined ? '' : ` is served in ${other}, not ${dialect}: call POST ${CALLER_PATHS[other]}`;
+    const other = otherKind(dialect, (one) => known.some((entry) => namedBy(entry, options.providers).some((connector) => speaks(connector, one))));
+    const where = other === undefined ? '' : ` is served in ${other}, not ${dialect}: call POST ${callerPathOf(other)}`;
     return { refusal: { status: 404, message: `model ${name}${where}`, code: 'model_not_found' } };
   }
 
@@ -279,7 +313,7 @@ export async function route(proxy: ProxyConfiguration, name: string, dialect: Di
         connector: one.id,
         provider: one.adapter,
         entry,
-        url: upstreamUrl(one.provider.endpoint, dialect),
+        url: upstreamUrl(one.provider.endpoint, dialect, options.callerPath, one.provider.paths),
         ...(one.provider.key === undefined ? {} : { key: one.provider.key }),
         ...(model === undefined ? {} : { model }),
       });

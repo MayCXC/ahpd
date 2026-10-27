@@ -63,7 +63,18 @@ export interface Capability {
 export type ConnectorOwner = 'host' | `team:${string}` | `user:${string}`;
 
 /** The APIs a model provider is called in, as the proxy writes them. */
-export const MODEL_DIALECTS = ['anthropic-messages', 'openai-chat'] as const;
+export const MODEL_DIALECTS = [
+  'anthropic-messages',
+  'openai-chat',
+  'anthropic-count-tokens',
+  'openai-input-tokens',
+  'openai-embeddings',
+  'openai-responses',
+  'openai-images',
+  'openai-speech',
+  'openai-transcriptions',
+  'rerank',
+] as const;
 
 /** One of those APIs. */
 export type ModelDialect = (typeof MODEL_DIALECTS)[number];
@@ -112,6 +123,15 @@ export interface ModelProvider {
   endpoint: string;
   /** The APIs the provider is called in. A call passes through in one of them. */
   accepts: ModelDialect[];
+  /**
+   * The upstream path for one dialect, when the provider serves it somewhere
+   * other than the proxy's usual path.
+   *
+   * A dialect has one path on the proxy's side, such as `/images/generations`,
+   * and a provider that serves all of them at one path names it here, as
+   * OpenRouter names `/images`.
+   */
+  paths?: Partial<Record<ModelDialect, string>>;
   /** The key a call goes out with; absent when the provider takes none. */
   key?: string;
   /**

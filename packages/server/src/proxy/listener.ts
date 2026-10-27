@@ -26,11 +26,12 @@ import { foreign, guarded, isUnder, json, originRefusal, PROXY_PREFIX, type ApiO
 import { callerName, callerOf, type ProxyCaller, type SessionCaller } from './caller.js';
 import { prefixOf, type ModelCatalog } from './catalog.js';
 import {
-  dialectAt, dialectOfHeaders, keyHeader, MODELS_PATH, modelList, refusalBody, ROOT_MODELS_PATH, ROOT_PATHS, usageReader,
-  type Refusal, type Tokens,
+  dialectAt, dialectOfHeaders, dialectRow, isRootPath, keyHeader, MODELS_PATH, modelList, refusalBody, ROOT_MODELS_PATH,
+  upstreamFor, usageReader, type Refusal, type Tokens, type Units,
 } from './dialects.js';
 import { DIALECTS, type Dialect, type ModelEntry, type ModelPrice, type ProxyConfiguration } from './providers.js';
-import { route, type Candidate } from './route.js';
+import { decodeResponseId, rewriteAnswer } from './responseids.js';
+import { connectorForCaller, fetchedName, route, upstreamUrl, type Candidate } from './route.js';
 
 /** How long a provider has to send its status and headers. A local model loading its weights is slow to start. */
 export const HEADERS_TIMEOUT_MS = 120_000;
@@ -140,8 +141,11 @@ const ACCOUNT_LIMITS = ['x-ratelimit-', 'anthropic-ratelimit-'];
 const connectionNamed = (from: Headers): Set<string> =>
   new Set((from.get('connection') ?? '').split(',').map((one) => one.trim().toLowerCase()).filter((one) => one !== ''));
 
+/** How the body a call sends is written, which decides its `content-type`. */
+export type SentBody = 'json' | 'form' | 'none';
+
 /** The headers a call goes upstream with: the caller's own, less this host's, plus the provider's key. */
-export const upstreamHeaders = (from: Headers, dialect: Dialect, key: string | undefined): Headers => {
+export const upstreamHeaders = (from: Headers, dialect: Dialect, key: string | undefined, sent: SentBody = 'json'): Headers => {
   const out = new Headers();
   const named = connectionNamed(from);
   for (const [name, value] of from) {
@@ -151,7 +155,10 @@ export const upstreamHeaders = (from: Headers, dialect: Dialect, key: string | u
     out.append(name, value);
   }
   if (key !== undefined) out.set(...keyHeader(dialect, key));
-  if (!out.has('content-type')) out.set('content-type', 'application/json');
+  // A form's boundary is the new form's, which `fetch` sets; a body-less call
+  // names no type at all.
+  if (sent !== 'json') out.delete('content-type');
+  else if (!out.has('content-type')) out.set('content-type', 'application/json');
   return out;
 };
 
@@ -168,8 +175,25 @@ const returnedHeaders = (from: Headers): Headers => {
   return out;
 };
 
+/** A call's body once it is read: a JSON object or a form, and the model it names. */
+interface JsonBody {
+  kind: 'json';
+  body: Record<string, unknown>;
+  model: string;
+}
+
+/** A multipart body, with the model its form field names. */
+interface FormBody {
+  kind: 'form';
+  form: FormData;
+  model: string;
+}
+
+/** What one call sent. */
+type CallBody = JsonBody | FormBody;
+
 /** The body a caller sent, or the refusal for one too large or not a call. */
-const bodyOf = async (request: Request, limit: number): Promise<{ body: Record<string, unknown>; model: string } | { refusal: Refusal }> => {
+const bodyOf = async (request: Request, limit: number): Promise<CallBody | { refusal: Refusal }> => {
   const tooLarge: Refusal = { status: 413, message: `The request body is larger than ${String(limit)} bytes` };
   const declared = Number(request.headers.get('content-length') ?? '');
   if (Number.isFinite(declared) && declared > limit) return { refusal: tooLarge };
@@ -188,8 +212,26 @@ const bodyOf = async (request: Request, limit: number): Promise<{ body: Record<s
       chunks.push(value);
     }
   }
+  const bytes = Buffer.concat(chunks);
+  const type = (request.headers.get('content-type') ?? '').toLowerCase();
+  if (type.startsWith('multipart/form-data')) {
+    let form: FormData;
+    try {
+      form = await new Request('http://proxy.invalid/', {
+        method: 'POST',
+        headers: { 'content-type': request.headers.get('content-type') ?? '' },
+        body: bytes,
+      }).formData();
+    }
+    catch { return { refusal: { status: 400, message: 'The request body is not a form' } }; }
+    const model = form.get('model');
+    if (typeof model !== 'string' || model === '') {
+      return { refusal: { status: 400, message: 'The request body names no model: set model to <maker>/<name>' } };
+    }
+    return { kind: 'form', form, model };
+  }
   let body: unknown;
-  try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+  try { body = JSON.parse(bytes.toString('utf8')); }
   catch { return { refusal: { status: 400, message: 'The request body is not JSON' } }; }
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return { refusal: { status: 400, message: 'The request body is not a JSON object' } };
@@ -198,7 +240,15 @@ const bodyOf = async (request: Request, limit: number): Promise<{ body: Record<s
   if (typeof model !== 'string' || model === '') {
     return { refusal: { status: 400, message: 'The request body names no model: set model to <maker>/<name>' } };
   }
-  return { body: body as Record<string, unknown>, model };
+  return { kind: 'json', body: body as Record<string, unknown>, model };
+};
+
+/** The same form with the provider's model id set, so the caller's fields and files are sent unchanged. */
+const formBody = (from: FormData, model: string): FormData => {
+  const form = new FormData();
+  for (const [name, value] of from) form.append(name, value);
+  form.set('model', model);
+  return form;
 };
 
 /** The system's error code behind a failed fetch, when it gave one. */
@@ -266,27 +316,42 @@ const zoneOf = (wanted: string | undefined): string => {
 };
 
 /**
- * What a call costs by the entry's price, in dollars per million tokens.
+ * What a call costs by the entry's price.
  *
- * Cache reads and writes are charged at the input price until there are cache
- * prices, so the figure is never under what the call could have cost. The
- * amount is split into what was sent and what came back.
+ * Tokens are priced per million, cache reads and writes at the input price
+ * until there are cache prices, so the figure is never under what the call
+ * could have cost. A speech call is priced per million characters of its input,
+ * and a transcription by its minutes of audio when it reports seconds.
  *
- * Nothing when the entry has no price or no tokens were read, and nothing when
- * a side has tokens and the price does not name it: a side priced at nothing is
+ * Nothing when the entry has no price or the answer reported nothing to charge,
+ * and nothing when what was reported has no price: a side priced at nothing is
  * free, a side with no price at all is not priced.
  */
-const costOf = (entry: ModelEntry, tokens: Tokens): Cost | undefined => {
+const costOf = (entry: ModelEntry, tokens: Tokens, units: Units = {}): Cost | undefined => {
   const price = entry.price;
   if (price === undefined) return undefined;
   const read = tokens.input !== undefined || tokens.output !== undefined || tokens.cache !== undefined;
-  if (!read) return undefined;
-  const prompt = (tokens.input ?? 0) + (tokens.cache?.read ?? 0) + (tokens.cache?.write ?? 0);
-  const answer = tokens.output ?? 0;
-  if ((prompt > 0 && price.input === undefined) || (answer > 0 && price.output === undefined)) return undefined;
-  const input = (prompt * (price.input ?? 0)) / 1_000_000;
-  const output = (answer * (price.output ?? 0)) / 1_000_000;
-  return { amount: input + output, currency: 'usd', from: 'price', input, output };
+  if (read) {
+    const prompt = (tokens.input ?? 0) + (tokens.cache?.read ?? 0) + (tokens.cache?.write ?? 0);
+    const answer = tokens.output ?? 0;
+    if ((prompt > 0 && price.input === undefined) || (answer > 0 && price.output === undefined)) return undefined;
+    const input = (prompt * (price.input ?? 0)) / 1_000_000;
+    const output = (answer * (price.output ?? 0)) / 1_000_000;
+    return { amount: input + output, currency: 'usd', from: 'price', input, output };
+  }
+  const characters = units.characters ?? 0;
+  if (characters > 0) {
+    if (price.characters === undefined) return undefined;
+    const amount = (characters * price.characters) / 1_000_000;
+    return { amount, currency: 'usd', from: 'price', input: amount, output: 0 };
+  }
+  const seconds = units.seconds ?? 0;
+  if (seconds > 0) {
+    if (price.minutes === undefined) return undefined;
+    const amount = (seconds / 60) * price.minutes;
+    return { amount, currency: 'usd', from: 'price', input: amount, output: 0 };
+  }
+  return undefined;
 };
 
 /**
@@ -526,7 +591,7 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
    * received the call. Only a failure in `NEVER_ARRIVED` is retried, which is
    * why `retry` is set from the error's code and not from the failure.
    */
-  const attempt = async (request: Request, dialect: Dialect, body: Record<string, unknown>, candidate: Candidate): Promise<Attempt> => {
+  const attempt = async (request: Request, dialect: Dialect, call: CallBody, candidate: Candidate): Promise<Attempt> => {
     if (request.signal.aborted) return { kind: 'failed', why: 'not tried, the caller hung up', status: 502, retry: false, sent: false };
     const controller = new AbortController();
     const hangUp = (): void => { controller.abort(); };
@@ -534,10 +599,14 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, headersTimeout);
     try {
+      const sent = call.kind === 'form' ? 'form' : 'json';
+      const body = call.kind === 'form'
+        ? formBody(call.form, candidate.entry.id)
+        : JSON.stringify({ ...call.body, model: candidate.entry.id });
       const response = await send(candidate.url, {
         method: 'POST',
-        headers: upstreamHeaders(request.headers, dialect, candidate.key),
-        body: JSON.stringify({ ...body, model: candidate.entry.id }),
+        headers: upstreamHeaders(request.headers, dialect, candidate.key, sent),
+        body,
         signal: controller.signal,
         // A redirect would carry the key to wherever it points.
         redirect: 'error',
@@ -557,8 +626,33 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
     }
   };
 
+  /** What a follow-up for an id that is not the caller's answers, whether it was forged or belongs to somebody else. */
+  const NO_SUCH_RESPONSE: Refusal = { status: 404, message: 'No such response', code: 'not_found' };
+
+  /**
+   * The entry one connector serves a name under, when a route did not name it.
+   *
+   * A Responses follow-up names its connector, so the model it was made with
+   * has to be read from the table or from a fetched `<prefix>/<id>`. Nothing
+   * when that connector serves neither spelling of the name.
+   */
+  const entryFor = (
+    proxy: ProxyConfiguration,
+    name: string,
+    connector: ProviderConnector,
+    catalog?: ModelCatalog,
+  ): ModelEntry | undefined => {
+    const written = proxy.models[name] ?? [];
+    const byTable = written.find((entry) => entry.provider === connector.id || entry.provider === connector.adapter);
+    if (byTable !== undefined) return byTable;
+    const fetched = fetchedName(name);
+    if (fetched === undefined || prefixOf(connector) !== fetched.prefix) return undefined;
+    const price = catalog?.priceOf(connector, fetched.id);
+    return { provider: connector.adapter, id: fetched.id, ...(price === undefined ? {} : { price }) };
+  };
+
   /** A call: the caller, the body, the route, then each candidate until one answers. */
-  const call = async (request: Request, dialect: Dialect): Promise<Response> => {
+  const call = async (request: Request, dialect: Dialect, callerPath: string): Promise<Response> => {
     const refuse = (refusal: Refusal, headers?: Record<string, string>): Response => refusalBody(dialect, refusal, headers);
     if (request.method !== 'POST') return refuse({ status: 405, message: `${new URL(request.url).pathname} takes POST` }, { allow: 'POST' });
 
@@ -568,20 +662,57 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
 
     const read = await bodyOf(request, maxBody);
     if ('refusal' in read) return refuse(read.refusal);
-    const { body, model: name } = read;
+    const name = read.model;
 
     const proxy = options.proxy();
     const charged = chargedAs(caller, options, proxy);
     const check = policyFor(options, charged, name, zone);
     const catalog = options.catalog?.();
-    const routed = await route(proxy, name, dialect, {
-      providers: options.providers(),
+    const providers = options.providers();
+    let routed = await route(proxy, name, dialect, {
+      providers,
       caller,
+      callerPath,
       ...(catalog === undefined ? {} : { catalog }),
       ...(check === undefined ? {} : { allowed: check.allowed }),
     });
+
+    /*
+     * A create that continues a response carries its connector in the id, and
+     * the state is at that provider only: the call is pinned to it, with no
+     * fallback, and the provider's own id goes out in place of the proxy's.
+     */
+    if (dialect === 'openai-responses' && read.kind === 'json' && typeof read.body['previous_response_id'] === 'string') {
+      const decoded = decodeResponseId(read.body['previous_response_id']);
+      if (decoded === undefined) return refuse(NO_SUCH_RESPONSE);
+      const connector = connectorForCaller(decoded.connector, providers, caller);
+      if (connector === undefined || !connector.provider.accepts.includes('openai-responses')) return refuse(NO_SUCH_RESPONSE);
+      const matched = 'candidates' in routed ? routed.candidates.find((one) => one.connector === connector.id) : undefined;
+      const entry = matched?.entry ?? entryFor(proxy, name, connector, catalog);
+      if (entry === undefined) return refuse(NO_SUCH_RESPONSE);
+      if (matched === undefined && check !== undefined) {
+        const refused = await check.allowed(entry);
+        if (refused !== undefined) return refuse({ status: 403, message: refused });
+      }
+      const model = catalog?.modelOf(connector, entry.id);
+      routed = {
+        candidates: [{
+          connector: connector.id,
+          provider: connector.adapter,
+          entry,
+          url: upstreamUrl(connector.provider.endpoint, dialect, callerPath, connector.provider.paths),
+          ...(connector.provider.key === undefined ? {} : { key: connector.provider.key }),
+          ...(model === undefined ? {} : { model }),
+        }],
+      };
+      read.body['previous_response_id'] = decoded.id;
+    }
     if ('refusal' in routed) return refuse(routed.refusal);
 
+    const row = dialectRow(dialect);
+    const characters = dialect === 'openai-speech' && read.kind === 'json' && typeof read.body['input'] === 'string'
+      ? read.body['input'].length
+      : undefined;
     const at = new Date().toISOString();
     const left: Left[] = [];
     const who = callerName(caller);
@@ -596,7 +727,7 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
 
     for (const [index, candidate] of routed.candidates.entries()) {
       const last = index === routed.candidates.length - 1;
-      const tried = await attempt(request, dialect, body, candidate);
+      const tried = await attempt(request, dialect, read, candidate);
       if (tried.kind === 'failed') {
         // A call that never went out is not the connector's failure.
         if (tried.sent) noted(candidate.connector, { ok: false, error: tried.why });
@@ -638,10 +769,14 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
         continue;
       }
       if (response.status >= 400 || left.length > 0) said(`${candidate.connector} answered ${String(response.status)}`);
-      return streamed(request, dialect, response, controller, (tokens, providerCost) => {
+      const answer = dialect === 'openai-responses' ? await rewriteAnswer(response, candidate.connector) : response;
+      return streamed(request, dialect, answer, controller, (tokens, providerCost, units) => {
+        if (row.record === false) return;
         const pools = check?.keysOf(candidate.entry);
         record(options, charged, {
           at, name, candidate, tokens,
+          ...(characters === undefined ? {} : { characters }),
+          ...(units.seconds === undefined ? {} : { seconds: units.seconds }),
           ...(providerCost === undefined ? {} : { providerCost }),
           ...(pools === undefined ? {} : { pools }),
         });
@@ -667,7 +802,7 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
     dialect: Dialect,
     response: Response,
     controller: AbortController,
-    done: (tokens: Tokens, providerCost: Cost | undefined) => void,
+    done: (tokens: Tokens, providerCost: Cost | undefined, units: Units) => void,
     cut: (why: string) => void,
   ): Response => {
     const usage = usageReader(dialect, response.headers.get('content-type'));
@@ -677,7 +812,7 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
       if (finished) return;
       finished = true;
       request.signal.removeEventListener('abort', hangUp);
-      done(usage.tokens(), usage.cost());
+      done(usage.tokens(), usage.cost(), usage.units());
     };
     const upstream = response.body;
     if (upstream === null) {
@@ -721,6 +856,96 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
       },
     }, { highWaterMark: 0 });
     return new Response(body, { status: response.status, statusText: response.statusText, headers: returnedHeaders(response.headers) });
+  };
+
+  /** One Responses follow-up: the id it names and the operation after it. */
+  interface FollowUp {
+    /** The proxy id, encoded as the caller sees it. */
+    id: string;
+    /** The operation, which is empty on a plain response. */
+    suffix: '' | '/cancel' | '/input_items';
+  }
+
+  /**
+   * The follow-up a path names, or nothing when it is not one.
+   *
+   * The create paths are exact rows and are answered before this, so only an
+   * id, or an id and `/cancel` or `/input_items`, reaches here.
+   */
+  const followUpAt = (path: string): FollowUp | undefined => {
+    const match = /^(?:\/v1)?\/responses\/([^/]+)(\/cancel|\/input_items)?$/u.exec(path);
+    if (match === null || match[1] === undefined) return undefined;
+    try {
+      return { id: decodeURIComponent(match[1]), suffix: (match[2] ?? '') as FollowUp['suffix'] };
+    }
+    catch {
+      return undefined;
+    }
+  };
+
+  /**
+   * One follow-up, sent to the connector its id names.
+   *
+   * The id is decoded here, and the connector is used only when it is open and
+   * the caller may use it. Any other id is the same 404, so a forged id and
+   * another person's id say the same thing. There is no fallback: the state is
+   * at that provider only.
+   */
+  const follow = async (request: Request, followUp: FollowUp): Promise<Response> => {
+    const refuse = (refusal: Refusal, headers?: Record<string, string>): Response =>
+      refusalBody('openai-responses', refusal, headers);
+    const allow = followUp.suffix === '/cancel' ? 'POST' : followUp.suffix === '/input_items' ? 'GET' : 'GET, DELETE';
+    const allowed = followUp.suffix === '/cancel'
+      ? request.method === 'POST'
+      : followUp.suffix === '/input_items'
+        ? request.method === 'GET'
+        : request.method === 'GET' || request.method === 'DELETE';
+    if (!allowed) {
+      return refuse({ status: 405, message: `${new URL(request.url).pathname} takes ${allow}` }, { allow });
+    }
+
+    const called = await callerOf(request, options, 'proxy:call');
+    if ('refusal' in called) return refuse(called.refusal);
+    const decoded = decodeResponseId(followUp.id);
+    if (decoded === undefined) return refuse(NO_SUCH_RESPONSE);
+    const connector = connectorForCaller(decoded.connector, options.providers(), called.caller);
+    if (connector === undefined || !connector.provider.accepts.includes('openai-responses')) return refuse(NO_SUCH_RESPONSE);
+
+    const base = upstreamFor('openai-responses', '/responses', connector.provider.paths);
+    const url = `${connector.provider.endpoint.replace(/\/+$/u, '')}${base}/${encodeURIComponent(decoded.id)}${followUp.suffix}`;
+    const controller = new AbortController();
+    const hangUp = (): void => { controller.abort(); };
+    request.signal.addEventListener('abort', hangUp, { once: true });
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, headersTimeout);
+    let response: Response;
+    try {
+      response = await send(url, {
+        method: request.method,
+        headers: upstreamHeaders(request.headers, 'openai-responses', connector.provider.key, 'none'),
+        signal: controller.signal,
+        redirect: 'error',
+      });
+    }
+    catch (error) {
+      if (timedOut) return refuse({ status: 504, message: 'the provider sent no answer in time' });
+      if (request.signal.aborted) return refuse({ status: 502, message: 'the call was left before the provider answered' });
+      return refuse({ status: 502, message: `the provider could not be reached (${failureOf(error)})` });
+    }
+    finally {
+      clearTimeout(timer);
+      request.signal.removeEventListener('abort', hangUp);
+    }
+
+    options.note?.(connector.id, { ok: response.ok, status: response.status });
+    if (response.status === 401 || response.status === 403) {
+      await refusalWords(response, connector.provider.key === undefined ? [] : [connector.provider.key]);
+      return refuse({ status: 502, message: `the connector ${connector.id} refused this host's key` });
+    }
+    const answer = await rewriteAnswer(response, connector.id);
+    return streamed(request, 'openai-responses', answer, controller, () => undefined, (why) => {
+      say(`proxy: ${connector.id} ${why}`);
+    });
   };
 
   /** `GET /v1/models` and `GET /models`: the names this caller could call now. */
@@ -791,15 +1016,18 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
   };
 
   return guarded(async (request, path) => {
-    if (!isUnder(path, PROXY_PREFIX) && !ROOT_PATHS.includes(path)) return options.otherwise(request);
+    if (!isUnder(path, PROXY_PREFIX) && !isRootPath(path)) return options.otherwise(request);
     const dialect = dialectAt(path);
+    const followUp = dialect === undefined ? followUpAt(path) : undefined;
+    const refusalDialect = dialect ?? (followUp === undefined ? undefined : 'openai-responses');
     const refused = refusedGuard(request);
     if (refused !== undefined) {
-      return dialect === undefined && path !== MODELS_PATH && path !== ROOT_MODELS_PATH
+      return refusalDialect === undefined && path !== MODELS_PATH && path !== ROOT_MODELS_PATH
         ? json(403, { message: refused })
-        : refusalBody(dialect ?? dialectOfHeaders(request.headers), { status: 403, message: refused });
+        : refusalBody(refusalDialect ?? dialectOfHeaders(request.headers), { status: 403, message: refused });
     }
-    if (dialect !== undefined) return call(request, dialect);
+    if (dialect !== undefined) return call(request, dialect, path);
+    if (followUp !== undefined) return follow(request, followUp);
     if (path === MODELS_PATH || path === ROOT_MODELS_PATH) return models(request, path);
     return refusalBody('openai-chat', { status: 404, message: `Nothing is served at ${path}`, code: 'not_found' });
   });
@@ -815,6 +1043,10 @@ interface Answered {
   candidate: Candidate;
   /** What its answer reported. */
   tokens: Tokens;
+  /** Characters of a speech input, when the call is speech. */
+  characters?: number;
+  /** Seconds of audio a transcription reported, when it did. */
+  seconds?: number;
   /** The cost its answer reported, when the provider gave one. */
   providerCost?: Cost;
   /** The policy keys the check chose for this entry, when it was charged. */
@@ -834,7 +1066,10 @@ const record = (options: ProxyOptions, charged: Charged, call: Answered): void =
   const provider = call.providerCost;
   // The entry's price is what the pools are charged, so it wins; a call no
   // price names is charged what the provider said it cost.
-  const cost = costOf(call.candidate.entry, call.tokens) ?? provider;
+  const cost = costOf(call.candidate.entry, call.tokens, {
+    ...(call.characters === undefined ? {} : { characters: call.characters }),
+    ...(call.seconds === undefined ? {} : { seconds: call.seconds }),
+  }) ?? provider;
   const session = charged.session;
   const entry: ModelUse = {
     at: call.at,

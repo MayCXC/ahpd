@@ -27,6 +27,10 @@ export interface ModelPrice {
   input?: number;
   /** Dollars per million tokens the model writes. */
   output?: number;
+  /** Dollars per million characters of a speech input. */
+  characters?: number;
+  /** Dollars per minute of audio transcribed. */
+  minutes?: number;
 }
 
 /** One provider's serving of a model name. */
@@ -84,7 +88,12 @@ export const modelEntrySchema: JsonSchema = {
     id: { type: 'string', minLength: 1 },
     price: {
       type: 'object',
-      properties: { input: { type: 'number', minimum: 0 }, output: { type: 'number', minimum: 0 } },
+      properties: {
+        input: { type: 'number', minimum: 0 },
+        output: { type: 'number', minimum: 0 },
+        characters: { type: 'number', minimum: 0 },
+        minutes: { type: 'number', minimum: 0 },
+      },
     },
   },
   required: ['provider', 'id'],

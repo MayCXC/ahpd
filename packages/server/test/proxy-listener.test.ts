@@ -13,10 +13,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { memoryPolicies, type Grant, type ProviderConnector, type ProviderModel, type Users } from '@ahpd/sdk';
+import { memoryPolicies, type Grant, type ModelDialect, type ProviderConnector, type ProviderModel, type Users } from '@ahpd/sdk';
 import { modelCatalog, type ModelCatalog } from '../src/proxy/catalog.js';
 import {
-  answerJson, fakeProvider, isAnthropicError, isOpenAiError, MARKER, memoryUsage, people, providerConnector, ROOT_TOKEN, send,
+  answerJson, fakeProvider, isAnthropicError, isOpenAiError, MARKER, memoryUsage, pause, people, providerConnector, ROOT_TOKEN, send,
   serveProxy, type People, type ProviderFixture, type Served, type ServeOptions,
 } from './fixtures/proxy-harness.js';
 
@@ -527,6 +527,56 @@ describe('the OpenAI paths answer at the root as they do under /v1', () => {
     expect((await send(served.port, '/messages', { headers: asRoot, body: CALL })).status).toBe(418);
     expect((await send(served.port, '/chat/completions/more', { headers: asRoot, body: CALL })).status).toBe(418);
     expect((await send(served.port, '/models/more', { headers: asRoot })).status).toBe(418);
+  });
+});
+
+describe('a count call charges nothing and records nothing', () => {
+  /** A connector that has both counters, and a table name it serves. */
+  const counters = (endpoint: string) => ({
+    proxy: { models: { 'fake/model': [{ provider: 'fake', id: 'fake-model' }] } },
+    providers: [{
+      id: 'fake',
+      adapter: 'fake',
+      endpoint,
+      accepts: ['anthropic-messages', 'anthropic-count-tokens', 'openai-chat', 'openai-input-tokens'] as ModelDialect[],
+    }],
+  });
+
+  it('answers both counters at their paths, rewrites the model, and writes no usage record', async () => {
+    const fake = await fakeProvider(answerJson(200, { input_tokens: 9 }));
+    fakes.push(fake);
+    const usage = memoryUsage();
+    const served = await proxy({ ...counters(fake.endpoint), usage: () => usage });
+
+    const anthropic = await send(served.port, '/v1/messages/count_tokens', {
+      headers: asRoot, body: { model: 'fake/model', messages: [{ role: 'user', content: 'hi' }] },
+    });
+    expect(anthropic.status).toBe(200);
+    expect(anthropic.json).toEqual({ input_tokens: 9 });
+
+    for (const path of ['/responses/input_tokens', '/v1/responses/input_tokens']) {
+      const got = await send(served.port, path, { headers: asRoot, body: { model: 'fake/model', input: 'hi' } });
+      expect(got.status, path).toBe(200);
+      expect(got.json).toEqual({ input_tokens: 9 });
+    }
+
+    expect(fake.received.map((one) => one.url)).toEqual([
+      '/v1/v1/messages/count_tokens',
+      '/v1/responses/input_tokens',
+      '/v1/responses/input_tokens',
+    ]);
+    expect(fake.received.map((one) => (JSON.parse(one.body) as { model: string }).model)).toEqual([
+      'fake-model', 'fake-model', 'fake-model',
+    ]);
+
+    // The count is not a model call, so it costs nothing and leaves no record.
+    await pause(20);
+    expect(usage.entries).toEqual([]);
+  });
+
+  it('keeps the Anthropic count path under /v1 only', async () => {
+    const served = await proxy();
+    expect((await send(served.port, '/messages/count_tokens', { headers: asRoot, body: CALL })).status).toBe(418);
   });
 });
 

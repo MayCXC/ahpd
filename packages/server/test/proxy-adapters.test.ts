@@ -95,17 +95,24 @@ describe('the host provider adapters', () => {
     const adapters = four();
     expect(adapters['openrouter']!.provider!(connector('openrouter', { key: 'sk-or' }))).toEqual({
       endpoint: 'https://openrouter.ai/api/v1',
-      accepts: ['openai-chat'],
+      accepts: [
+        'openai-chat', 'openai-embeddings', 'openai-responses', 'openai-images', 'openai-speech', 'openai-transcriptions',
+        'rerank',
+      ],
+      paths: { 'openai-images': '/images' },
       key: 'sk-or',
     });
     expect(adapters['anthropic']!.provider!(connector('anthropic', { key: 'sk-an' }))).toEqual({
       endpoint: 'https://api.anthropic.com',
-      accepts: ['anthropic-messages'],
+      accepts: ['anthropic-messages', 'anthropic-count-tokens'],
       key: 'sk-an',
     });
     expect(adapters['openai']!.provider!(connector('openai', { key: 'sk-oa', endpoint: 'https://gateway.test/v1/' }))).toEqual({
       endpoint: 'https://gateway.test/v1',
-      accepts: ['openai-chat'],
+      accepts: [
+        'openai-chat', 'openai-input-tokens', 'openai-embeddings', 'openai-responses', 'openai-images', 'openai-speech',
+        'openai-transcriptions',
+      ],
       key: 'sk-oa',
     });
   });

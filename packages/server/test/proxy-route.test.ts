@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Principal, ProviderConnector } from '@ahpd/sdk';
+import type { ModelDialect, Principal, ProviderConnector } from '@ahpd/sdk';
 import type { ProxyCaller } from '../src/proxy/caller.js';
 import { modelCatalog } from '../src/proxy/catalog.js';
 import { proxyConfiguration, type ModelEntry } from '../src/proxy/providers.js';
@@ -77,7 +77,7 @@ const refused = (answer: Routed) => {
 };
 
 /** A route over the host's connectors. */
-const over = (name: string, dialect: 'openai-chat' | 'anthropic-messages', options: Partial<RouteOptions> = {}) =>
+const over = (name: string, dialect: ModelDialect, options: Partial<RouteOptions> = {}) =>
   route(TABLE, name, dialect, { providers: CONNECTORS, ...options });
 
 describe('route', () => {
@@ -322,6 +322,55 @@ describe('a name the file does not hold', () => {
   });
 });
 
+describe('a count call', () => {
+  /** The connectors that have a counter, and one that does not. */
+  const COUNTERS: ProviderConnector[] = [
+    {
+      id: 'anthropic', adapter: 'anthropic', owner: 'host',
+      provider: { endpoint: 'https://api.anthropic.com', accepts: ['anthropic-messages', 'anthropic-count-tokens'], key: MARKER },
+    },
+    {
+      id: 'openai', adapter: 'openai', owner: 'host',
+      provider: { endpoint: 'https://api.openai.com/v1', accepts: ['openai-chat', 'openai-input-tokens'], key: MARKER },
+    },
+    {
+      id: 'openrouter-main', adapter: 'openrouter', owner: 'host',
+      provider: { endpoint: 'https://openrouter.ai/api/v1', accepts: ['openai-chat'], key: MARKER },
+    },
+  ];
+
+  /** A name each of the three connectors serves. */
+  const table = proxyConfiguration({
+    models: {
+      'm/x': [
+        { provider: 'anthropic', id: 'claude' },
+        { provider: 'openai', id: 'gpt' },
+        { provider: 'openrouter', id: 'openrouter-model' },
+      ],
+    },
+  });
+
+  it('routes to the connector that has a counter, at its own count path', async () => {
+    const [anthropic] = routed(await route(table, 'm/x', 'anthropic-count-tokens', { providers: COUNTERS }));
+    expect(anthropic?.connector).toBe('anthropic');
+    expect(anthropic?.url).toBe('https://api.anthropic.com/v1/messages/count_tokens');
+
+    const [openai] = routed(await route(table, 'm/x', 'openai-input-tokens', { providers: COUNTERS }));
+    expect(openai?.connector).toBe('openai');
+    expect(openai?.url).toBe('https://api.openai.com/v1/responses/input_tokens');
+  });
+
+  it('answers 404 for a name only a connector without a counter serves', async () => {
+    const refusal = refused(await route(
+      proxyConfiguration({ models: { 'm/x': [{ provider: 'openrouter', id: 'openrouter-model' }] } }),
+      'm/x',
+      'openai-input-tokens',
+      { providers: [COUNTERS[2]!] },
+    ));
+    expect(refusal.status).toBe(404);
+  });
+});
+
 describe('upstreamUrl', () => {
   it('joins an endpoint and the dialect\'s path with one slash', () => {
     expect(upstreamUrl('https://openrouter.ai/api/v1', 'openai-chat')).toBe('https://openrouter.ai/api/v1/chat/completions');
@@ -329,5 +378,11 @@ describe('upstreamUrl', () => {
     expect(upstreamUrl('https://api.anthropic.com', 'anthropic-messages')).toBe('https://api.anthropic.com/v1/messages');
     expect(upstreamUrl('https://api.anthropic.com/', 'anthropic-messages')).toBe('https://api.anthropic.com/v1/messages');
     expect(upstreamUrl('https://api.anthropic.com//', 'anthropic-messages')).toBe('https://api.anthropic.com/v1/messages');
+  });
+
+  it('uses the caller path, and a connector\'s own path, when the dialect has one', () => {
+    expect(upstreamUrl('https://api.openai.com/v1', 'openai-images', '/v1/images/edits')).toBe('https://api.openai.com/v1/images/edits');
+    expect(upstreamUrl('https://openrouter.ai/api/v1', 'openai-images', '/v1/images/generations', { 'openai-images': '/images' }))
+      .toBe('https://openrouter.ai/api/v1/images');
   });
 });
