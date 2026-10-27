@@ -2,6 +2,17 @@
 
 What changed in each release of the `@ahpd/*` packages. Every package carries the same version. Releases before 0.11.0 are in the git history.
 
+## 0.14.1 - unreleased
+
+### Upgrading
+
+- A terminal's `terminal/data` no longer carries the shell's OSC 133 and OSC 7 marks, as the protocol requires of a server. A client that read command boundaries or the directory from the marks reads `terminal/commandExecuted`, `terminal/commandFinished` and `terminal/cwdChanged`.
+- `terminal/commandDetectionAvailable` goes out with the shell's first OSC 133 mark rather than when the terminal opens, and `supportsCommandDetection` is false until then. A shell that prints no marks never announces it.
+
+### Terminals
+
+- The output a shell printed before a mark goes out before the mark's action, so the output between `terminal/commandExecuted` and `terminal/commandFinished` is the command's. A mark that arrives in two reads is still read and taken out. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#command-boundaries).
+
 ## 0.14.0 - 2026-10-26
 
 ### Upgrading

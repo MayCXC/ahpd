@@ -72,9 +72,9 @@ A terminal's title is the caller's `name`, or the shell's own basename. A `!` co
 
 ## Command boundaries
 
-Only under a pseudoterminal, and this host says so twice: `terminal/commandDetectionAvailable` once at the start, and `supportsCommandDetection` on the state. A client MUST check before relying on the boundaries.
+Only under a pseudoterminal, and only once the shell has marked one: a shell may print no marks at all. From the first mark this host says so twice, with `terminal/commandDetectionAvailable` once and with `supportsCommandDetection` on the state. A client MUST check before relying on the boundaries.
 
-The shell prints them itself, mixed into its output, and this host reads them out and leaves the rest alone - the bytes still reach the client whole, because this is a reader and not a filter. OSC 133 gives the boundaries: `A` before the prompt, `C` where a command starts and `D;<code>` when it finished, and OSC 7 gives the directory. From those: `terminal/commandExecuted` with the command line read back off what was typed since the prompt, `terminal/commandFinished` with the shell's own exit code and the duration since `C`, and `terminal/cwdChanged`.
+The shell prints the marks itself, mixed into its output, and this host takes them out of it before the output goes to the client, as the protocol requires of a server: a client would otherwise count them as output. OSC 133 gives the boundaries: `A` before the prompt, `C` where a command starts and `D;<code>` when it finished, and OSC 7 gives the directory. From those: `terminal/commandExecuted` with the command line read back off what was typed since the prompt, `terminal/commandFinished` with the shell's own exit code and the duration since `C`, and `terminal/cwdChanged`. Each goes out where its mark stood, after the output printed before it, so the output between a command's `terminal/commandExecuted` and its `terminal/commandFinished` is that command's. A mark that arrives in two reads of the pseudoterminal is held for the second, up to 1,024 characters, and anything still held when the shell exits goes out as output.
 
 The command line can only be read that way because the input is watched as well: a shell echoes what was typed, but the echo arrives as output, so the bytes of `terminal/input` are what a `C` mark is read against.
 

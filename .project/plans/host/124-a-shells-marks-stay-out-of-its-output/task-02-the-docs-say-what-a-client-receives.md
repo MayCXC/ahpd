@@ -1,6 +1,6 @@
 ---
 title: The docs say what a client receives
-status: todo
+status: done
 depends:
   - task-01-the-store-takes-the-marks-out-in-order.md
 layer: "docs"
@@ -32,3 +32,9 @@ refs:
 - `node .agents/skills/do-spec/scripts/lint-prose.mjs .project/plans/host/124-a-shells-marks-stay-out-of-its-output` prints nothing.
 
 ## Resume
+
+Done 2026-10-27.
+"Command boundaries" in `docs/sdk/TERMINALS.md` says that the marks come out, where each action goes, and when detection starts.
+The rows in `docs/sdk/AHP.md` for `terminal/data` and the three command actions say the same.
+The changelog has the change under `0.14.1 - unreleased`, in "Upgrading" and in "Terminals".
+"What a client sees" still says that `content` is one part, which [deferred.md](deferred.md) sets aside.

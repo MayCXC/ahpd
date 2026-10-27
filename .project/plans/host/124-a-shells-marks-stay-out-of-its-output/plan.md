@@ -78,7 +78,7 @@ pty data -> read -> said (terminal/data) and meant (terminal/commandExecuted, te
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The store takes the marks out, in the order they came](task-01-the-store-takes-the-marks-out-in-order.md) | done | - |
-| [02 - The docs say what a client receives](task-02-the-docs-say-what-a-client-receives.md) | todo | 01 |
+| [02 - The docs say what a client receives](task-02-the-docs-say-what-a-client-receives.md) | done | 01 |
 
 ## Risks and tradeoffs
 
