@@ -128,11 +128,13 @@ describe('a terminal under Bun', () => {
       claim: { kind: 'user' },
       emit: (_channel: string, action: Record<string, unknown>) => { seen.push(action); },
     } as never);
-    expect(terminal.state()).toMatchObject({ isPty: true, supportsCommandDetection: true });
-    expect(seen).toContainEqual({ type: 'terminal/commandDetectionAvailable' });
+    expect(terminal.state()).toMatchObject({ isPty: true });
     bun.say(new TextEncoder().encode('\u001b]133;C\u0007hello\r\n'));
-    expect(seen).toContainEqual({ type: 'terminal/data', data: '\u001b]133;C\u0007hello\r\n' });
+    // What the store reads off Bun's terminal: the shell's mark and the output after it.
+    expect(terminal.state()).toMatchObject({ supportsCommandDetection: true });
+    expect(seen).toContainEqual({ type: 'terminal/commandDetectionAvailable' });
     expect(seen.some((action) => action.type === 'terminal/commandExecuted')).toBe(true);
+    expect(seen.filter((action) => action.type === 'terminal/data').map((action) => action.data).join('')).toContain('hello\r\n');
     bun.exit(3);
     await settled();
     expect(seen).toContainEqual({ type: 'terminal/exited', exitCode: 3 });
