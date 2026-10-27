@@ -530,6 +530,9 @@ export function createTooling(ctx: HostContext): Tooling {
     ? []
     : actionTools(options.adapters ?? {}, options.connectors.run, {
       bindings: sessionBindings,
+      // The store owns a session's folder, and the folder is what an action
+      // reads a file from and writes one to.
+      attachmentsDir: (uri) => kept.attachmentsDir?.(idOf(uri)),
       principalOf: (uri) => {
         const owner = kept.owner(idOf(uri));
         const person = principalFor(owner);

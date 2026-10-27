@@ -7,8 +7,8 @@ import type { Adapter, PluginHost } from '@ahpd/sdk';
  *
  * The plugin names a piece by its package, so this is the whole path a daemon
  * takes: `apply` forks the child, the child requires each package, and each
- * piece becomes an adapter. The counts are the piece's own, less an action that
- * needs a file, which the plugin does not offer.
+ * piece becomes an adapter. The counts are the piece's own: every action it
+ * declares is offered, and an action that takes a file takes a string.
  */
 
 /** The packages the plugin ships. */
@@ -47,11 +47,11 @@ const AUTH: Record<string, [string[], string[]]> = {
   'ap-whatsapp': [['access_token', 'businessAccountId', 'app_secret'], ['access_token', 'businessAccountId']],
 };
 
-/** Each adapter's actions: the piece's own, less those that need a file. */
+/** Each adapter's actions: every action the piece declares. */
 const ACTIONS: Record<string, number> = {
-  'ap-airtable': 33, 'ap-discord': 61, 'ap-github': 93, 'ap-hubspot': 53, 'ap-jira-cloud': 75,
-  'ap-linear': 58, 'ap-notion': 37, 'ap-resend': 58, 'ap-sendgrid': 8, 'ap-slack': 72,
-  'ap-smtp': 1, 'ap-stripe': 98, 'ap-telegram-bot': 41, 'ap-whatsapp': 22,
+  'ap-airtable': 34, 'ap-discord': 61, 'ap-github': 93, 'ap-hubspot': 54, 'ap-jira-cloud': 77,
+  'ap-linear': 58, 'ap-notion': 37, 'ap-resend': 58, 'ap-sendgrid': 8, 'ap-slack': 73,
+  'ap-smtp': 1, 'ap-stripe': 98, 'ap-telegram-bot': 41, 'ap-whatsapp': 23,
 };
 
 /** What the host kept, for the whole file. */
@@ -115,16 +115,24 @@ describe('the pieces are adapters', () => {
     expect(schema).not.toHaveProperty('scope');
   });
 
-  it('leaves out each action that needs a file, and reports it', () => {
-    expect(adapter('ap-slack').capabilities.map((one) => one.name)).not.toContain('uploadFile');
-    expect([...problems].sort()).toEqual([
-      expect.stringContaining('ap-airtable: the action airtable_upload_file_to_column needs a file'),
-      expect.stringContaining('ap-hubspot: the action upload-file needs a file'),
-      expect.stringContaining('ap-jira-cloud: the action add_issue_attachment needs a file'),
-      expect.stringContaining('ap-jira-cloud: the action upload_attachment needs a file'),
-      expect.stringContaining('ap-slack: the action uploadFile needs a file'),
-      expect.stringContaining('ap-whatsapp: the action upload_media needs a file'),
-    ]);
+  it('offers each action that needs a file, with the file as a string', () => {
+    const TAKING: [string, string][] = [
+      ['ap-airtable', 'airtable_upload_file_to_column'],
+      ['ap-hubspot', 'upload-file'],
+      ['ap-jira-cloud', 'add_issue_attachment'],
+      ['ap-jira-cloud', 'upload_attachment'],
+      ['ap-slack', 'uploadFile'],
+      ['ap-whatsapp', 'upload_media'],
+    ];
+    for (const [name, action] of TAKING) {
+      const found = adapter(name).capabilities.find((one) => one.name === action);
+      expect(found, `${name} ${action}`).toBeDefined();
+      const properties = Object.values((found?.input?.['properties'] ?? {}) as Record<string, Record<string, unknown>>);
+      const files = properties.filter((one) => String(one['description'] ?? '').includes('An https: URL'));
+      expect(files, `${name} ${action}`).not.toHaveLength(0);
+      for (const one of files) expect(one['type'], `${name} ${action}`).toBe('string');
+    }
+    expect(problems).toEqual([]);
   });
 
   it('gives ap_resend_send_email the inputs a send needs', () => {

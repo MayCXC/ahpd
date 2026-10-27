@@ -1,10 +1,14 @@
-import { dirname } from 'node:path';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { actionToolName, actionTools } from '../src/connectors/actions.js';
 import { connectorsChannel } from '../src/connectors/channel.js';
 import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
 import { memoryRecords } from '../src/resources/records.js';
+import { idOf } from '../src/sessions/catalog.js';
+import { fileSessions } from '../src/sessions/sessions.js';
 import { sdkVersion } from '../src/version.js';
 import { claude, createHost, hello, machine, peer, resetSdk, sessionQueries, settle } from './support/host.js';
 import { directory, signIn } from './users-gate-helpers.js';
@@ -38,6 +42,8 @@ interface Ran {
   action: string;
   input: Record<string, unknown>;
   config: Record<string, unknown>;
+  /** The session's attachments folder, when the call carried one. */
+  files?: string;
 }
 
 /** A vault that is a map, enough for one secret. */
@@ -68,8 +74,14 @@ const adapterOf = (ran: Ran[]): ServedAdapter => ({
     },
   ],
   open: () => undefined,
-  run: async (connector: Connector, action: string, input: Record<string, unknown>) => {
-    ran.push({ id: connector.id, action, input, config: connector.config });
+  run: async (connector: Connector, action: string, input: Record<string, unknown>, call?: { files?: string }) => {
+    ran.push({
+      id: connector.id,
+      action,
+      input,
+      config: connector.config,
+      ...(call?.files === undefined ? {} : { files: call.files }),
+    });
     return { id: 'msg-1', to: input.to };
   },
 });
@@ -276,6 +288,32 @@ describe('an action offered as a tool', () => {
     expect(JSON.stringify(tools)).not.toContain('sk-very-secret');
     expect(said(answer)).not.toContain('sk-very-secret');
   });
+
+  it("hands the adapter the calling session's attachments folder", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-action-files-'));
+    try {
+      const store = fileSessions({ dir });
+      const { put, start, ran } = await world({ sessions: store });
+      await put('account-123');
+      await start('ahp-session:/one', { work: 'connectors://ap-resend/account-123' });
+
+      await call('ap_resend_send_email', { to: 'ana@example.com' });
+
+      expect(ran[0]?.files).toBe(store.attachmentsDir?.(idOf('ahp-session:/one')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('hands the adapter no folder when the session store keeps none', async () => {
+    const { put, start, ran } = await world();
+    await put('account-123');
+    await start('ahp-session:/one', { work: 'connectors://ap-resend/account-123' });
+
+    await call('ap_resend_send_email', { to: 'ana@example.com' });
+
+    expect(ran[0]).not.toHaveProperty('files');
+  });
 });
 
 describe('building the action tools', () => {
@@ -291,6 +329,7 @@ describe('building the action tools', () => {
     const two = { ...adapterOf(ran), name: 'ap_resend' };
     const tools = actionTools({ 'ap_resend': two, 'ap-resend': one }, async () => undefined, {
       bindings: () => ({}),
+      attachmentsDir: () => undefined,
       principalOf: () => undefined,
       onProblem: (message) => { problems.push(message); },
     });
@@ -305,6 +344,7 @@ describe('building the action tools', () => {
     const runs: string[] = [];
     const [tool] = actionTools({ 'ap-resend': { ...adapterOf(ran), name: 'ap-resend' } }, async (id) => { runs.push(id); }, {
       bindings: () => ({ work: 'connectors://ap-resend/account-123' }),
+      attachmentsDir: () => undefined,
       principalOf: () => 'nobody',
       onProblem: () => undefined,
     });
@@ -318,6 +358,7 @@ describe('building the action tools', () => {
     const { run: _run, ...quiet } = adapterOf(ran);
     const tools = actionTools({ quiet }, async () => undefined, {
       bindings: () => ({}),
+      attachmentsDir: () => undefined,
       principalOf: () => undefined,
       onProblem: () => undefined,
     });

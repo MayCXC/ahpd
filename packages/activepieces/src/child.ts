@@ -1,6 +1,8 @@
+import { mkdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { basename, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { fileOf } from './files.ts';
 import type { ActionDescription, Answer, AuthDescription, PieceDescription, PropDescription, Request, RunRequest, Store } from './wire.js';
 
 /**
@@ -255,16 +257,105 @@ const refused = (what: string): Record<string, unknown> =>
     },
   });
 
+/** The characters a written file's name may not hold, each written as `-`. */
+const UNSAFE_NAME = /[^A-Za-z0-9._-]+/gu;
+
+/** The longest a written file's name is, its extension included. */
+const LONGEST_NAME = 80;
+
+/** The bytes a piece writes, or the refusal when it hands something else. */
+const bytesOf = (data: unknown): Buffer => {
+  if (Buffer.isBuffer(data)) return data;
+  if (data instanceof Uint8Array) return Buffer.from(data);
+  if (typeof data === 'string') return Buffer.from(data);
+  throw new Error('a file is written from bytes');
+};
+
+/**
+ * A file's name as one path segment, or `file` when nothing is left.
+ *
+ * The same length the host's own attachments are named to, and cut before the
+ * extension so the extension survives the cut.
+ */
+const safeName = (named: string): string => {
+  const base = basename(named).replace(UNSAFE_NAME, '-').replace(/^-+|-+$/gu, '');
+  const extension = extname(base);
+  const stem = base.slice(0, base.length - extension.length);
+  const held = `${stem.slice(0, Math.max(0, LONGEST_NAME - extension.length))}${extension}`;
+  return held === '' || held === '.' || held === '..' ? 'file' : held;
+};
+
+/**
+ * The `files` service one call runs with.
+ *
+ * `write` puts the bytes in the call's folder, under the basename of the name
+ * the piece asked for, and answers the absolute path. A name another call
+ * already wrote gets a number before its extension. The file is created with
+ * `wx`, so an existing file is never replaced.
+ */
+const filesIn = (folder: string): Record<string, unknown> => ({
+  write: async (asked: { fileName?: unknown; data?: unknown }): Promise<string> => {
+    const named = safeName(typeof asked.fileName === 'string' ? asked.fileName : 'file');
+    const bytes = bytesOf(asked.data);
+    const extension = extname(named);
+    const stem = named.slice(0, named.length - extension.length);
+    await mkdir(folder, { recursive: true, mode: 0o700 });
+    for (let count = 0; ; count++) {
+      const path = resolve(folder, count === 0 ? named : `${stem}-${String(count)}${extension}`);
+      try {
+        await writeFile(path, bytes, { flag: 'wx', mode: 0o400 });
+        return path;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'EEXIST') continue;
+        // The path stays out of the message: the folder is the host's, and a
+        // piece is not told where a session keeps its files.
+        throw new Error('the file could not be written');
+      }
+    }
+  },
+});
+
+/** The names of the action's props that are files. */
+const fileProps = (action: Record<string, unknown>): string[] => {
+  const props = action['props'];
+  if (!isRecord(props)) return [];
+  return Object.entries(props)
+    .filter(([, prop]) => isRecord(prop) && prop['type'] === 'FILE')
+    .map(([name]) => name);
+};
+
+/**
+ * The call's input, with each `FILE` value turned into the `ApFile` a piece
+ * reads.
+ *
+ * A value is an `https:` URL, a `data:` URI, or the name of a session
+ * attachment. A URL that is not public is refused, and so is a name that
+ * leaves the folder. The message never names the folder or the bytes.
+ */
+const withFiles = async (action: Record<string, unknown>, request: RunRequest): Promise<Record<string, unknown>> => {
+  const input = { ...request.input };
+  for (const name of fileProps(action)) {
+    const value = input[name];
+    if (value === undefined) continue;
+    if (typeof value !== 'string') {
+      throw new Error(`the file prop ${name} is an https: URL, a data: URI or the name of an attachment`);
+    }
+    input[name] = await fileOf(value, request.files);
+  }
+  return input;
+};
+
 /**
  * The context one action runs with, built from the request alone.
  *
  * A piece reads `auth` and `propsValue`, and may keep a value in `store`. The
  * rest is a stub: the plugin runs one action, not a flow, so a piece that
- * reaches for a file, a connection or the server is told that it is not here.
+ * reaches for a connection or the server is told that it is not here. `files`
+ * writes into the call's folder, and a call with no folder refuses it.
  */
-const contextOf = (request: RunRequest): Record<string, unknown> => ({
+const contextOf = (request: RunRequest, input: Record<string, unknown>): Record<string, unknown> => ({
   auth: request.auth,
-  propsValue: request.input,
+  propsValue: input,
   store: storeOf(request.connector),
   step: { name: request.action },
   project: { id: request.connector, externalId: async () => request.connector },
@@ -283,7 +374,7 @@ const contextOf = (request: RunRequest): Record<string, unknown> => ({
     createWaitpoint: async () => notOffered('waitpoints'),
     waitForWaitpoint: () => notOffered('waitpoints'),
   },
-  files: refused('files'),
+  files: request.files === undefined ? refused('files') : filesIn(request.files),
   connections: refused('connections'),
   server: refused('server'),
 });
@@ -301,7 +392,8 @@ const answerRun = async (request: RunRequest): Promise<Answer> => {
   const action = actionOf(piece, request.action);
   const perform = action['run'];
   if (typeof perform !== 'function') throw new Error(`the action ${request.action} cannot run`);
-  const result = await (perform as (context: Record<string, unknown>) => unknown)(contextOf(request));
+  const input = await withFiles(action, request);
+  const result = await (perform as (context: Record<string, unknown>) => unknown)(contextOf(request, input));
   return { type: 'ran', id: request.id, result: result === undefined ? null : result };
 };
 

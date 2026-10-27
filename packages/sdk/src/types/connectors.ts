@@ -285,8 +285,13 @@ export interface Adapter {
    * action's result, which the host passes on. An adapter with no `run` offers
    * no action tool, and an adapter with `run` and no `action` capability runs
    * nothing either.
+   *
+   * `call.files` is the folder where one session's attachments are kept, when
+   * its store keeps one. An adapter that reads or writes a file reads it there.
+   * It is absent on a session with no folder, and on every call from a host
+   * that keeps none.
    */
-  run?(connector: Connector, action: string, input: Record<string, unknown>): Promise<unknown>;
+  run?(connector: Connector, action: string, input: Record<string, unknown>, call?: { files?: string }): Promise<unknown>;
 }
 
 /** One adapter as the fold keeps it, with the plugin that registered it. */

@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apply } from '../src/plugin.js';
@@ -129,5 +132,29 @@ describe('an action runs in the child', () => {
     expect(await run(connector('work'), 'remember', { text: 'kept' })).toEqual({ before: null });
     expect(await run(connector('work'), 'recall', {})).toEqual({ text: 'kept' });
     expect(await run(connector('other'), 'recall', {})).toEqual({ text: null });
+  });
+
+  it("writes a file into the call's folder, and reads it back by its name", async () => {
+    const one = await started();
+    const run = running(one);
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-run-'));
+    try {
+      const written = await run(connector('work'), 'write', { name: 'notes.txt', text: 'hello' }, { files: dir });
+
+      expect(written).toEqual({ path: join(dir, 'notes.txt') });
+      expect(readFileSync(join(dir, 'notes.txt'), 'utf8')).toBe('hello');
+      expect(await run(connector('work'), 'read', { file: 'notes.txt' }, { files: dir }))
+        .toMatchObject({ filename: 'notes.txt', text: 'hello' });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a file write when the call names no folder', async () => {
+    const one = await started();
+    const failed = await running(one)(connector('work'), 'write', { name: 'notes.txt', text: 'hello' })
+      .catch((error: unknown) => error);
+
+    expect((failed as Error).message).toBe('this plugin does not offer files');
   });
 });

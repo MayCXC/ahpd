@@ -52,15 +52,21 @@ export function entryOf(auth: AuthDescription | AuthDescription[] | undefined): 
 /**
  * The JSON Schema of one prop, or nothing when the prop is not a value.
  *
- * A `MARKDOWN` prop is text a builder UI shows, and a `FILE` prop is a file the
- * child has no way to receive, so neither is in the input. An optional file is
- * dropped; a required one is the action's, and `inputOf` drops the action.
+ * A `MARKDOWN` prop is text a builder UI shows, so it is not in the input. A
+ * `FILE` prop is a string: an `https:` URL, a `data:` URI, or the name of a
+ * session attachment, which the child turns into the file a piece reads.
  */
 export function propOf(prop: PropDescription): Record<string, unknown> | undefined {
-  if (prop.type === 'MARKDOWN' || prop.type === 'FILE') return undefined;
+  if (prop.type === 'MARKDOWN') return undefined;
   const schema: Record<string, unknown> = { title: prop.displayName };
   const described = prop.description !== undefined && prop.description !== '';
   switch (prop.type) {
+    case 'FILE':
+      schema['type'] = 'string';
+      schema['description'] = described
+        ? `${prop.description ?? ''} An https: URL, a data: URI or the name of a session attachment.`
+        : 'An https: URL, a data: URI or the name of a session attachment.';
+      break;
     case 'NUMBER':
       schema['type'] = 'number';
       break;
@@ -91,16 +97,15 @@ export function propOf(prop: PropDescription): Record<string, unknown> | undefin
     default:
       schema['type'] = 'string';
   }
-  if (described && prop.type !== 'DROPDOWN') schema['description'] = prop.description;
+  if (described && prop.type !== 'DROPDOWN' && prop.type !== 'FILE') schema['description'] = prop.description;
   return schema;
 }
 
-/** The input schema of one action, or nothing when the action needs a file. */
-export function inputOf(props: Record<string, PropDescription>): Record<string, unknown> | undefined {
+/** The input schema of one action, each prop by the name the piece reads it by. */
+export function inputOf(props: Record<string, PropDescription>): Record<string, unknown> {
   const properties: Record<string, unknown> = {};
   const required: string[] = [];
   for (const [name, prop] of Object.entries(props)) {
-    if (prop.type === 'FILE' && prop.required) return undefined;
     const schema = propOf(prop);
     if (schema === undefined) continue;
     properties[name] = schema;
@@ -174,6 +179,8 @@ export interface RunCallArgs {
   auth: Record<string, unknown>;
   /** The input of the call. */
   input: Record<string, unknown>;
+  /** The calling session's attachments folder, when it has one. */
+  files?: string;
 }
 
 /** The one who runs a call, which the plugin answers with its child. */
@@ -202,17 +209,12 @@ export function adapterOf(piece: PieceDescription, run?: RunCall, icon?: Icon): 
   const notes: string[] = [];
   const capabilities: Capability[] = [];
   for (const action of piece.actions) {
-    const input = inputOf(action.props);
-    if (input === undefined) {
-      notes.push(`${name}: the action ${action.name} needs a file, which this plugin does not offer`);
-      continue;
-    }
     capabilities.push({
       type: 'action',
       name: action.name,
       title: action.displayName,
       description: descriptionOf(action),
-      input,
+      input: inputOf(action.props),
     });
   }
 
@@ -228,7 +230,13 @@ export function adapterOf(piece: PieceDescription, run?: RunCall, icon?: Icon): 
     open: () => undefined,
   };
   if (run !== undefined) {
-    adapter.run = (connector, action, input) => run({ connector: connector.id, action, auth: authOf(entry, connector), input });
+    adapter.run = (connector, action, input, call) => run({
+      connector: connector.id,
+      action,
+      auth: authOf(entry, connector),
+      input,
+      ...(call?.files === undefined ? {} : { files: call.files }),
+    });
   }
   return { adapter, notes };
 }

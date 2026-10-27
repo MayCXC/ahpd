@@ -138,9 +138,11 @@ export interface ConnectorsChannel {
    * that name and have a `run`, and the reader has to pass `mayRead` - the
    * same answer a listing gives, asked again at each call so a remove or a
    * lost grant takes hold at once. A reader of nothing is the daemon itself,
-   * as it is for a read. The answer is the adapter's own, passed on unchanged.
+   * as it is for a read. `files` is the calling session's attachments folder,
+   * when its store keeps one, which the adapter's `run` gets as `call.files`.
+   * The answer is the adapter's own, passed on unchanged.
    */
-  run(id: string, reader: Principal | undefined, action: string, input: Record<string, unknown>): Promise<unknown>;
+  run(id: string, reader: Principal | undefined, action: string, input: Record<string, unknown>, files?: string): Promise<unknown>;
   /**
    * Record the outcome of one call for one connector, as `run` and a host part
    * do.
@@ -452,6 +454,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     reader: Principal | undefined,
     action: string,
     input: Record<string, unknown>,
+    files?: string,
   ): Promise<unknown> => {
     const entry = open.get(id);
     if (entry === undefined) throw new Error(`${id} is not an open connector`);
@@ -465,7 +468,9 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       throw new Error(`${id} is not ${reader.id}'s to use`);
     }
     try {
-      const answer = await adapter.run(entry.connector, action, input);
+      // A call with no folder is handed no `call`, so an adapter that reads
+      // `call.files` sees the same absence a host with no store gives.
+      const answer = await adapter.run(entry.connector, action, input, files === undefined ? undefined : { files });
       note(id, { ok: true });
       return answer;
     } catch (error) {
