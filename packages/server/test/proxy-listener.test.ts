@@ -13,7 +13,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { memoryPolicies, type Grant, type ModelDialect, type ProviderConnector, type ProviderModel, type Users } from '@ahpd/sdk';
+import { memoryPolicies, type Grant, type ModelDialect, type ModelUse, type ProviderConnector, type ProviderModel, type Users } from '@ahpd/sdk';
 import { modelCatalog, type ModelCatalog } from '../src/proxy/catalog.js';
 import {
   answerJson, fakeProvider, isAnthropicError, isOpenAiError, MARKER, memoryUsage, pause, people, providerConnector, ROOT_TOKEN, send,
@@ -527,6 +527,37 @@ describe('the OpenAI paths answer at the root as they do under /v1', () => {
     expect((await send(served.port, '/messages', { headers: asRoot, body: CALL })).status).toBe(418);
     expect((await send(served.port, '/chat/completions/more', { headers: asRoot, body: CALL })).status).toBe(418);
     expect((await send(served.port, '/models/more', { headers: asRoot })).status).toBe(418);
+  });
+});
+
+describe('an embeddings call is charged its prompt tokens', () => {
+  it('answers at /embeddings and /v1/embeddings, and records its input tokens and cost', async () => {
+    const fake = await fakeProvider(answerJson(200, {
+      object: 'list',
+      data: [{ object: 'embedding', index: 0, embedding: [0.1] }],
+      usage: { prompt_tokens: 1000, total_tokens: 1000 },
+    }));
+    fakes.push(fake);
+    const usage = memoryUsage();
+    const served = await proxy({
+      proxy: { models: { 'fake/model': [{ provider: 'fake', id: 'fake-model', price: { input: 3 } }] } },
+      providers: [{ id: 'fake', adapter: 'fake', endpoint: fake.endpoint, accepts: ['openai-embeddings'] }],
+      usage: () => usage,
+    });
+
+    for (const path of ['/embeddings', '/v1/embeddings']) {
+      const got = await send(served.port, path, { headers: asRoot, body: { model: 'fake/model', input: 'hello' } });
+      expect(got.status, path).toBe(200);
+      expect(got.json).toMatchObject({ object: 'list' });
+    }
+    expect(fake.received.map((one) => one.url)).toEqual(['/v1/embeddings', '/v1/embeddings']);
+    expect(fake.received.every((one) => (JSON.parse(one.body) as { model: string }).model === 'fake-model')).toBe(true);
+
+    await pause(20);
+    const [entry] = usage.entries as ModelUse[];
+    expect(entry?.model).toEqual({ name: 'fake/model', provider: 'fake', connector: 'fake', input: 1000 });
+    expect(entry?.cost).toMatchObject({ from: 'price', currency: 'usd' });
+    expect(entry?.cost?.amount).toBeCloseTo((1000 * 3) / 1_000_000, 12);
   });
 });
 
