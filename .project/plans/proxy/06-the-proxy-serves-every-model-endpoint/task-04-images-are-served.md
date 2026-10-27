@@ -1,6 +1,6 @@
 ---
 title: Images are served
-status: doing
+status: implemented
 depends: [task-01-tokens-are-counted.md]
 layer: "server"
 refs:
