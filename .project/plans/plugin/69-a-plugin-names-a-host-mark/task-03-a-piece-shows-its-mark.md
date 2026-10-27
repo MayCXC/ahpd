@@ -1,6 +1,6 @@
 ---
 title: An Activepieces piece shows its mark
-status: implemented
+status: done
 depends: [task-01-the-host-resolves-a-mark.md]
 layer: "activepieces"
 refs:

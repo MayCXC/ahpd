@@ -1,6 +1,6 @@
 ---
 title: A written file lands in the attachments
-status: implemented
+status: done
 depends: [task-01-a-call-carries-the-attachments.md]
 layer: "activepieces"
 refs:

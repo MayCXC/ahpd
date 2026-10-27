@@ -1,6 +1,6 @@
 ---
 title: An adapter falls back to its plugin's icon
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

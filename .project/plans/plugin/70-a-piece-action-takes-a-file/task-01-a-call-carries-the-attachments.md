@@ -1,6 +1,6 @@
 ---
 title: An action call carries the attachments folder
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

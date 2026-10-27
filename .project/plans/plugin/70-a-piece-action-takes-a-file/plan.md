@@ -1,7 +1,7 @@
 ---
 title: An Activepieces action takes and writes a file
 domain: plugin
-status: active
+status: built
 priority: medium
 created: 2026-10-26
 revalidated: 2026-10-26
@@ -86,9 +86,9 @@ tool call (actions.ts, knows the session) -> channel run (no session today) -> A
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An action call carries the attachments folder](task-01-a-call-carries-the-attachments.md) | implemented | - |
-| [02 - A FILE prop takes a URL, a data URI or a name](task-02-a-file-prop-takes-a-string.md) | implemented | 01 |
-| [03 - A written file lands in the attachments](task-03-a-written-file-is-an-attachment.md) | implemented | 01 |
+| [01 - An action call carries the attachments folder](task-01-a-call-carries-the-attachments.md) | done | - |
+| [02 - A FILE prop takes a URL, a data URI or a name](task-02-a-file-prop-takes-a-string.md) | done | 01 |
+| [03 - A written file lands in the attachments](task-03-a-written-file-is-an-attachment.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -98,10 +98,10 @@ tool call (actions.ts, knows the session) -> channel run (no session today) -> A
 
 ## Resume state
 
-- **Done so far:** all three tasks are implemented. `Adapter.run` takes the calling session's attachments folder in an optional `call`. The action tool reads it from the session store, so no caller names one. An Activepieces action with a `FILE` prop is offered, with the prop as a string. The child turns an `https:` URL, a `data:` URI or an attachment name into the `ApFile` the piece reads. The guarded fetch reads only `https:` and refuses any loopback, link-local, private or unspecified address in either family. It reads an IPv4 address written as IPv6 as the IPv4 address it holds. It connects to the address that was checked, and checks each redirect again. A piece that calls `files.write` lands its file in the session's attachments folder, and the output carries the path. A name already written takes a number, and a call with no folder refuses the write. A URL answer is read to 32 MB. The size comes from `content-length`, or is counted as the bytes arrive. A request that takes over 30 s is ended, and its socket with it. A refusal names a host and never a URL's path or query. The shared, benchmarking, multicast and reserved ranges are refused too, and so is a NAT64 address whose IPv4 address is refused. A written file's name is cut at 80 characters with its extension kept. The tests cover every refused range with a fake lookup and no network, and each form of a value. They also cover a path and a link that leave the folder. A write, a clash, a name with a path in it and a call with no folder are covered too.
-- **Next action:** none. The plan is implemented, and nothing is committed.
+- **Done so far:** all three tasks are done, and the plan is merged in #103. See [implemented.md](implemented.md).
+- **Next action:** Softov runs the by-hand check in `.project/pending/plugin-70-file-checks.md`.
 - **Open questions:** none.
-- **Watch out for:** never put the folder path or a file's bytes in a problem line or a log. The by-hand check in a test daemon was not run: it needs a real piece and the network.
+- **Watch out for:** never put the folder path or a file's bytes in a problem line or a log.
 
 ## Final verification checklist
 

@@ -1,7 +1,7 @@
 ---
 title: A plugin names a brand mark the host ships
 domain: plugin
-status: active
+status: built
 priority: medium
 created: 2026-10-26
 revalidated: 2026-10-26
@@ -93,10 +93,10 @@ acp template { icon: { src: "mark:<name>" } } -> loader resolves -> template ico
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host resolves a mark](task-01-the-host-resolves-a-mark.md) | implemented | - |
-| [02 - An adapter falls back to its plugin's icon](task-02-an-adapter-takes-its-plugin-icon.md) | implemented | - |
-| [03 - An Activepieces piece shows its mark](task-03-a-piece-shows-its-mark.md) | implemented | 01 |
-| [04 - An ACP agent shows its vendor's mark](task-04-an-acp-agent-shows-its-mark.md) | implemented | 01 |
+| [01 - The host resolves a mark](task-01-the-host-resolves-a-mark.md) | done | - |
+| [02 - An adapter falls back to its plugin's icon](task-02-an-adapter-takes-its-plugin-icon.md) | done | - |
+| [03 - An Activepieces piece shows its mark](task-03-a-piece-shows-its-mark.md) | done | 01 |
+| [04 - An ACP agent shows its vendor's mark](task-04-an-acp-agent-shows-its-mark.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -106,10 +106,10 @@ acp template { icon: { src: "mark:<name>" } } -> loader resolves -> template ico
 
 ## Resume state
 
-- **Done so far:** all four tasks are implemented. The server resolves `{ "src": "mark:<name>" }` against `packages/server/icons/`, sending `<name>-dark.svg` with `theme: "dark"` where it exists, and drops an unknown or malformed name with one problem line. The folder holds the Jira, Linear, Resend and WhatsApp marks. It also holds the Gemini, Copilot, OpenCode, Cursor, Qwen and Cline marks, with dark files where the mark is black. An adapter with no icon is sent its plugin's icons. The Activepieces plugin answers `mark:` for Jira, Linear, Resend and WhatsApp before it reads the cache or the CDN. An ACP template names its vendor's mark, and the loader resolves it into `icons`. The agents row sends the record's own icon or its matching template's icons. `PLUGINS.md` and `activepieces.md` describe all of it, and the curation file has a row for each mark.
-- **Next action:** Softov runs the four by-hand checks, which need his daemon and ahpw, then the plan closes with `implemented.md`.
-- **Open questions:** the mark dsh should show; a mark for kilo, goose, pi, devin, amp and omp, for which no clear source and licence was found; and whether the black Resend mark needs a dark file.
-- **Watch out for:** plan 58 task 06 is dropped by this plan. ahpw must read a row's `icons` before `icon`, or a record shows no dark file.
+- **Done so far:** all four tasks are done, and the plan is merged in #102. See [implemented.md](implemented.md).
+- **Next action:** Softov runs the by-hand checks in `.project/pending/plugin-69-mark-checks.md`.
+- **Open questions:** none. What waits is in [deferred.md](deferred.md).
+- **Watch out for:** ahpw must read a row's `icons` before `icon`, or a record shows no dark file.
 
 ## Final verification checklist
 
@@ -117,5 +117,5 @@ acp template { icon: { src: "mark:<name>" } } -> loader resolves -> template ico
 - [ ] The Jira, Linear, Resend and WhatsApp connectors show their marks, and the CDN is not fetched for them.
 - [ ] A webhook connector with no adapter icon shows the webhook plugin's icon.
 - [ ] Softov's existing Codex record shows the OpenAI mark in ahpw, in light and dark.
-- [ ] Each new mark has a row in `.project/pending/plugin-58-icon-curation.md`.
-- [ ] `plans/index.md` updated.
+- [x] Each new mark has a row in `.project/pending/plugin-58-icon-curation.md`.
+- [x] `plans/index.md` updated.

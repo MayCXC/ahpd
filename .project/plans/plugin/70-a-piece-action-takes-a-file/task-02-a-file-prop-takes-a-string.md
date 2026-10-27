@@ -1,6 +1,6 @@
 ---
 title: A FILE prop takes a URL, a data URI or a name
-status: implemented
+status: done
 depends: [task-01-a-call-carries-the-attachments.md]
 layer: "activepieces"
 refs:

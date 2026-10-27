@@ -1,6 +1,6 @@
 ---
 title: An ACP agent shows its vendor's mark
-status: implemented
+status: done
 depends: [task-01-the-host-resolves-a-mark.md]
 layer: "sdk, server, agent-acp"
 refs:
