@@ -371,6 +371,42 @@ describe('a shell under a pseudoterminal', () => {
     expect(done?.exitCode).toBe(2);
   });
 
+  it('gives a client that subscribes late the parts one watching from the start built', () => {
+    const { spawn, say } = fakePty();
+    const { terminal, seen } = opened(spawn);
+    const start = terminal.state();
+    say(`${osc('133;A')}$ `);
+    terminal.write('make');
+    say(`make\r\n${osc('133;C')}built\r\n${osc('133;D;0')}${osc('133;A')}$ `);
+    terminal.write('make test');
+    say(`make test\r\n${osc('133;C')}2 failed\r\n${osc('133;D;1')}`);
+    // What a client that watched every action has, through the protocol
+    // package's own reducer, is what the snapshot hands one arriving now.
+    const watched = seen.reduce<unknown>((now, action) => terminalReducer(now as never, action as never), start) as
+      { content: unknown[] };
+    expect(terminal.state().content).toEqual(watched.content);
+    expect(terminal.state().content.filter((part) => part.type === 'command')).toHaveLength(2);
+  });
+
+  it('keeps the last 200,000 characters, whole parts from the front first', () => {
+    const { spawn, say } = fakePty();
+    const { terminal } = opened(spawn);
+    const sizeOf = () => terminal.state().content
+      .map((part) => (part.type === 'command' ? part.output : part.value).length)
+      .reduce((all, one) => all + one, 0);
+    terminal.write('cat old');
+    say(`${osc('133;C')}${'o'.repeat(150_000)}${osc('133;D;0')}`);
+    say('n'.repeat(100_000));
+    // Over the cap: the command, the oldest part, goes whole.
+    expect(terminal.state().content).toEqual([{ type: 'unclassified', value: 'n'.repeat(100_000) }]);
+    say('m'.repeat(150_000));
+    // One part over the cap keeps its newest characters.
+    expect(sizeOf()).toBe(200_000);
+    const [only] = terminal.state().content as { type: string; value: string }[];
+    expect(only?.value.endsWith('m'.repeat(150_000))).toBe(true);
+    expect(only?.value.startsWith('n'.repeat(50_000))).toBe(true);
+  });
+
   it('says what it held as the start of a mark when the shell exits', () => {
     const { spawn, say, exit } = fakePty();
     const { seen } = opened(spawn);

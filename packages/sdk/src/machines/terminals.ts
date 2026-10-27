@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams, type SpawnOptions } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { basename, win32 } from 'node:path';
+import { terminalReducer, type TerminalContentPart } from '@microsoft/agent-host-protocol';
 import { localPath, uriOf } from '../resources/fileuri.js';
 import { shellEnvOf, type ShellEnv } from './shellenv.js';
 import type { Pty, SpawnPty, Terminal, TerminalOptions, TerminalStore } from '../types/terminals.js';
@@ -315,17 +316,48 @@ export function createTerminal(
   let settle: ((exit: { exitCode?: number; signal?: string }) => void) | undefined;
   const gone = new Promise<{ exitCode?: number; signal?: string }>((resolve) => { settle = resolve; });
   /**
-   * Everything written so far, so a client that subscribes late sees it.
+   * Everything written so far, so a client that subscribes late sees it, in
+   * the parts a client watching from the start built from the same actions.
+   *
+   * The protocol package's own `terminalReducer` folds each action in, as
+   * `spawn.ts` folds a chat's with `chatReducer`: a hand-rolled folder would
+   * be a second answer to what a terminal action means.
    *
    * Capped: a terminal left running `tail -f` for a day is a host holding a
-   * day of output for a client that may never come back.
+   * day of output for a client that may never come back. Past the cap, whole
+   * parts go from the front and then the first part's text, as the reference
+   * host trims its content
+   * (https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/agentHostTerminalManager.ts#L831-L853).
    */
-  let buffered = '';
+  let content: TerminalContentPart[] = [];
+  /** The characters `content` holds. */
+  let size = 0;
   const KEEP = 200_000;
 
+  const sizeOf = (part: TerminalContentPart): number => (part.type === 'command' ? part.output.length : part.value.length);
+  const tell = (action: { type: string } & Record<string, unknown>): void => {
+    try {
+      content = terminalReducer({ content } as never, action as never).content;
+    }
+    catch { /* an action the reducer will not take leaves the content as it was */ }
+    if (action.type === 'terminal/data') size += String(action.data).length;
+    if (action.type === 'terminal/cleared') size = 0;
+    if (size > KEEP) {
+      const parts = [...content];
+      while (size > KEEP && parts.length > 1) size -= sizeOf(parts.shift() as TerminalContentPart);
+      const head = parts[0];
+      if (size > KEEP && head !== undefined) {
+        const excess = size - KEEP;
+        parts[0] = head.type === 'command' ? { ...head, output: head.output.slice(excess) } : { ...head, value: head.value.slice(excess) };
+        size -= excess;
+      }
+      content = parts;
+    }
+    emit('terminal', action);
+  };
+
   const said = (data: string): void => {
-    buffered = (buffered + data).slice(-KEEP);
-    emit('terminal', { type: 'terminal/data', data });
+    tell({ type: 'terminal/data', data });
   };
 
   /*
@@ -413,19 +445,19 @@ export function createTerminal(
       const path = localPath(body);
       if (path !== '' && path !== where) {
         where = path;
-        emit('terminal', { type: 'terminal/cwdChanged', cwd: uriOf(path) });
+        tell({ type: 'terminal/cwdChanged', cwd: uriOf(path) });
       }
       return;
     }
     if (!detected) {
       detected = true;
-      emit('terminal', { type: 'terminal/commandDetectionAvailable' });
+      tell({ type: 'terminal/commandDetectionAvailable' });
     }
     const mark = body.split(';')[0];
     if (mark === 'A') { typed = ''; return; }
     if (mark === 'C') {
       command = { id: `c${String(Date.now())}`, line: typed.trim(), at: Date.now() };
-      emit('terminal', {
+      tell({
         type: 'terminal/commandExecuted',
         commandId: command.id,
         commandLine: command.line,
@@ -435,7 +467,7 @@ export function createTerminal(
     }
     if (mark !== 'D' || command === undefined) return;
     const code = Number(body.split(';')[1]);
-    emit('terminal', {
+    tell({
       type: 'terminal/commandFinished',
       commandId: command.id,
       ...(Number.isFinite(code) ? { exitCode: code } : {}),
@@ -549,7 +581,7 @@ export function createTerminal(
   const ended = (): void => {
     if (announced) return;
     announced = true;
-    emit('terminal', { type: 'terminal/exited', exitCode });
+    tell({ type: 'terminal/exited', exitCode });
     // The same moment, for a caller waiting rather than watching: the code is
     // set before this runs, so what resolves here is what the event carried.
     settle?.({
@@ -603,9 +635,10 @@ export function createTerminal(
       cwd: uriOf(cwd),
       cols,
       rows,
-      // One part, because without command detection there are no boundaries
-      // to divide the output at. The protocol's shape, not a flat string.
-      content: buffered === '' ? [] : [{ type: 'unclassified', value: buffered }],
+      // The parts a client watching from the start built: one `unclassified`
+      // part where the shell marks nothing, and a `command` part for each
+      // command it marks. The protocol's shape, not a flat string.
+      content: [...content],
       claim,
       // Detection once the shell has marked a boundary, which only a shell
       // running its own prompt under a pseudoterminal does. VT sequences for
@@ -695,25 +728,24 @@ export function createTerminal(
       terminal?.resize(nextCols, nextRows);
       cols = nextCols;
       rows = nextRows;
-      emit('terminal', { type: 'terminal/resized', cols, rows });
+      tell({ type: 'terminal/resized', cols, rows });
     },
 
     // The scrollback and nothing else. `cols`, `rows`, `title` and `claim` are
     // untouched, which is what the reference suite checks for.
     clear: () => {
-      buffered = '';
-      emit('terminal', { type: 'terminal/cleared' });
+      tell({ type: 'terminal/cleared' });
     },
 
     setTitle: (next) => {
       if (next === title) return;
       title = next;
-      emit('terminal', { type: 'terminal/titleChanged', title });
+      tell({ type: 'terminal/titleChanged', title });
     },
 
     setClaim: (next) => {
       claim = next;
-      emit('terminal', { type: 'terminal/claimed', claim });
+      tell({ type: 'terminal/claimed', claim });
     },
 
     close: () => {
