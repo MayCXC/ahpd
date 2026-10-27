@@ -5,6 +5,7 @@ refs:
   - "[code://packages/sdk/src/host/shells.ts](../../../../packages/sdk/src/host/shells.ts)"
   - "[code://packages/sdk/src/tools/shell.ts](../../../../packages/sdk/src/tools/shell.ts)"
   - "[code://packages/sdk/test/shell-tools.test.ts](../../../../packages/sdk/test/shell-tools.test.ts)"
+  - "[code://packages/sdk/test/shell-call-terminal.test.ts](../../../../packages/sdk/test/shell-call-terminal.test.ts)"
 ---
 
 A client that pushes `enableCustomTerminalTool` gives every session the reference host's agent terminal tool.
@@ -40,6 +41,14 @@ Claude and pi let the host's `bash` take the place of their own shell.
 - On `bun` as installed on that machine, `node-pty` loads and every shell it starts exits at once with code 1.
 - The calls then answered `Shell exited with code`, and a shell started with `node-pty` alone under `bun` exits the same way.
 - The built headless terminal read bracketed paste and the alternate screen, on and off, under `node` and `bun`.
+- `packages/sdk/test/shell-call-terminal.test.ts`: 4 cases, a backend's call of `bash` on a real shell over pipes.
+- Four pieces of the call's terminal were each taken out once: the rewrite in `dispatch`, the write on acquire, the stamp and the exit. Each time, the cases that check it failed.
+- With the call's terminal, `pnpm test` failed in 29 files on that machine, all in the docker, daemon and process tests.
+- Those 29 files were run again without the change, and the ones that still failed alone fail the same way without it.
+- By hand from the built daemon on `bun` 1.4.4, on pipes, with an ACP agent that reports its call of `bash`.
+- The agent ran the call through the host's endpoint, and the host wrote the terminal on the call.
+- The backend's completion went out with the answer and the terminal, with `exitCode` 0.
+- A client that subscribed after read the terminal on the call.
 
 ## Departures from the plan
 
