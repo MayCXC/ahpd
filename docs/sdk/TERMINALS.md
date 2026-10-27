@@ -28,7 +28,7 @@ What the directory decides is smaller: a command that ran in it may have moved i
 
 The store runs shells on pipes unless it was handed a pseudoterminal binding, and the state says which the client is reading: `isPty` and `supportsCommandDetection` are both false on pipes, because there is no terminal device and no shell running a prompt of its own to emit anything. Output is then plain text, and anything a client draws with cursor movement will not look right - said in the state rather than discovered. This is what the protocol's `isPty: false` is for.
 
-The daemon hands one in when the machine has it: `node-pty`'s `spawn`, loaded by name at runtime, because a native binding that does not match its runtime aborts the process rather than throwing and is nothing a `try`/`catch` can hold. So the import is tried in a child of the same runtime first and repeated here only once that child has survived it - `packages/server/src/pty.ts`. With it, shells run under a real terminal, and the shell's own marks become facts.
+The daemon hands one in when the machine has it: `node-pty`'s `spawn`, loaded by name at runtime, because a native binding that does not match its runtime aborts the process rather than throwing and is nothing a `try`/`catch` can hold. So the import is tried in a child of the same runtime first and repeated here only once that child has survived it - `packages/server/src/pty.ts`. With it, shells run under a real terminal, and the shell's own marks become facts. A shell opened to sit in is started with VS Code's shell integration, which marks every command - [Command boundaries](#command-boundaries).
 
 `TERM` follows the same answer: the daemon's own, or `xterm-256color` when it has none, under a pseudoterminal, and `dumb` without one.
 
@@ -58,7 +58,7 @@ Every terminal gets the host's environment, then the caller's variables over it,
 
 ## What a client sees
 
-The channel's state is `title`, `cwd`, `cols`, `rows`, `content`, `claim`, `isPty`, `supportsCommandDetection` and `lifecycle`. `content` is one `unclassified` part, because without command detection there are no boundaries to divide the output at - and it is the protocol's shape rather than a flat string.
+The channel's state is `title`, `cwd`, `cols`, `rows`, `content`, `claim`, `isPty`, `supportsCommandDetection` and `lifecycle`. `content` is one `unclassified` part, the protocol's shape rather than a flat string. The boundaries a shell marks reach a client as actions while it watches, and are not kept.
 
 The exit code is inside `lifecycle`: `{ status: 'running' }` while the process is there, `{ status: 'exited', exitCode }` once it is gone. That is what 0.9.0 requires and it is not optional there, so a client reading it on an older-shaped terminal would read a process that never exits. This host negotiates down to 0.5.1, so it also sends the flat `exitCode` every version before 0.9.0 reads.
 
@@ -74,13 +74,23 @@ A terminal's title is the caller's `name`, or the shell's own basename. A `!` co
 
 ## Command boundaries
 
-Only under a pseudoterminal, and this host says so twice: `terminal/commandDetectionAvailable` once at the start, and `supportsCommandDetection` on the state. A client MUST check before relying on the boundaries.
+Only under a pseudoterminal, and only once the shell has marked something. This host says so twice: `terminal/commandDetectionAvailable` with the shell's first mark, and `supportsCommandDetection` on the state from then on. A shell with no integration never marks, and a client MUST check before relying on the boundaries.
 
-The shell prints them itself, mixed into its output, and this host reads them out and leaves the rest alone - the bytes still reach the client whole, because this is a reader and not a filter. OSC 133 gives the boundaries: `A` before the prompt, `C` where a command starts and `D;<code>` when it finished, and OSC 7 gives the directory. From those: `terminal/commandExecuted` with the command line read back off what was typed since the prompt, `terminal/commandFinished` with the shell's own exit code and the duration since `C`, and `terminal/cwdChanged`.
+A shell opened to sit in, a client's or an agent's, starts with VS Code's shell integration, as every terminal the reference host opens does. VS Code's `getShellIntegrationInjection` answers what to start it with. Bash gets `--init-file` and VS Code's script. Zsh gets a folder of its own as `ZDOTDIR`, holding VS Code's four startup files, which read the person's own. Fish and PowerShell get their scripts the same way. On macOS, zsh and bash start as login shells, as the reference starts them. The scripts are VS Code's, unchanged, in `packages/sdk/shellintegration/`.
 
-The command line can only be read that way because the input is watched as well: a shell echoes what was typed, but the echo arrives as output, so the bytes of `terminal/input` are what a `C` mark is read against.
+A shell given a command runs it and exits with no prompt to mark, so it starts as it was asked. So does a shell the injection does not know, such as `sh`, and every shell on pipes.
 
-The agent terminal tool reads the same marks. Once an agent's shell has marked a command, the tool ends each next command at its `D`, with that code and the output between the `C` and the `D`. Before that, and always on pipes, it ends a command at the reference's sentinel line.
+VS Code's scripts mark each prompt and command in OSC 633. Each command line comes with a nonce the terminal gave the script, so a line some program prints cannot pass for the shell's. Other shells mark in OSC 133: `A` before the prompt, `C` where a command starts and `D;<code>` when it finished. OSC 7 gives the directory.
+
+This host reads both into `terminal/commandExecuted`, `terminal/commandFinished` with the shell's own exit code and the duration since `C`, and `terminal/cwdChanged`. Once a shell has written OSC 633, its commands are read from those marks alone. A shell that writes OSC 133 as well then reports each command once.
+
+The OSC 633 marks are taken out of the bytes a client is sent, as the reference takes them out, because the actions carry them. OSC 133 and OSC 7 stay in: for those this is a reader and not a filter. Each action goes out where its mark stands. So the `terminal/data` between a command's `terminal/commandExecuted` and its `terminal/commandFinished` is the command's output, as the protocol defines it.
+
+An OSC 133 command line is read back off what was typed since the prompt. The shell echoes what was typed, but the echo arrives as output, so the bytes of `terminal/input` are what a `C` mark is read against.
+
+The agent terminal tool reads the same actions. Once the terminal has announced command detection, the tool ends each command at its `D`, with that code and the output between the two actions. A new shell is given up to ten seconds to say something before its first command, as the reference's terminal manager waits. Where the terminal has announced nothing, and always on pipes, the tool ends a command at the reference's sentinel line.
+
+A zsh a session holds also gets the reference's fixups for an agent's shell: `NO_BANG_HIST` and `INTERACTIVE_COMMENTS`. It gets an empty `PROMPT_EOL_MARK` as well, which is this host's own. Zsh writes that mark, a `%`, before the integration's `D` whatever the output was, so every command's output would end with it.
 
 ## Configuration keys
 

@@ -171,10 +171,15 @@ THEN the answer is `Shell exited with code <n>` and the output.
 
 ### The shell's own marks end a command
 
-WHEN a shell has marked a command in OSC 133
-THEN the next command ends at its `D` mark, with the code the mark carries
-AND the output is what lies between its `C` and its `D`.
-WHEN a shell has marked no command
+WHEN the host opens a shell under a pseudoterminal
+THEN the shell starts with VS Code's shell integration, which marks each command in OSC 633
+AND the terminal announces command detection with the shell's first mark.
+WHEN the shell has not said anything yet
+THEN its first command waits for it, ten seconds at most.
+WHEN the terminal has announced command detection
+THEN a command ends at the shell's `D` mark, with the code the mark carries
+AND the output is what the terminal said between the command's `terminal/commandExecuted` and its `terminal/commandFinished`, with no echo and no prompt.
+WHEN the terminal has announced none, or the shell runs on pipes
 THEN the reference's sentinel line follows the command, and its echo ends the command.
 
 ### A backend's own shell steps aside

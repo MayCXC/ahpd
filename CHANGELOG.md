@@ -6,10 +6,17 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 
 ### Tools
 
-- The reference host's agent terminal tool: `bash`, `read_bash`, `write_bash`, `bash_shutdown` and `list_bash`, or the `powershell` set under PowerShell, with a tool under the other shell's name that points at the right one. They carry VS Code's names, schemas, descriptions and answers, and are offered while a client turns on `enableCustomTerminalTool` in root config, never under Windows. An agent's commands run in shells the session keeps, which are terminals on the root list claimed by the call that opened them, so the person in the session can watch, type into and stop them. Each call shows its shell's terminal in its content, as the reference's calls do. A completed call keeps it, with the code of a command that finished. See [docs/sdk/TOOLS.md](docs/sdk/TOOLS.md#the-agent-terminal-tool).
+- The reference host's agent terminal tool: `bash`, `read_bash`, `write_bash`, `bash_shutdown` and `list_bash`, or the `powershell` set under PowerShell, with a tool under the other shell's name that points at the right one. They carry VS Code's names, schemas, descriptions and answers, and are offered while a client turns on `enableCustomTerminalTool` in root config, never under Windows. An agent's commands run in shells the session keeps, which are terminals on the root list claimed by the call that opened them, so the person in the session can watch, type into and stop them. Each call shows its shell's terminal in its content, as the reference's calls do. A completed call keeps it, with the code of a command that finished. Under a pseudoterminal a call answers with the command's output alone and the code of the shell's own `D` mark. See [docs/sdk/TOOLS.md](docs/sdk/TOOLS.md#the-agent-terminal-tool).
 - Claude denies its own `Bash` while the host offers its shell, and aliases the name to it; pi takes the host's `bash` in place of its own. A `HostTool` and a `BoundTool` may say `overridesBuiltInTool`, the reference's mark for that.
 - A host tool is told the call it runs for: `BoundTool.run` takes `{ toolCallId }`, which Claude, pi and cofold pass, and the tools endpoint reads from a request's `_meta['claudecode/toolUseId']`.
 - `@ahpd/sdk` depends on `@xterm/headless`, which reads each agent shell's screen as the reference reads it.
+
+### Terminals
+
+- A shell opened to sit in under a pseudoterminal starts with VS Code's shell integration, as the reference host's do: bash, zsh, fish and PowerShell. VS Code's scripts ship unchanged in `@ahpd/sdk`, under `shellintegration/`. On macOS, zsh and bash start as login shells. A shell given a command, a shell the integration does not know and a shell on pipes start as before. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#command-boundaries).
+- The marks the scripts write, OSC 633, become `terminal/commandExecuted`, `terminal/commandFinished` and `terminal/cwdChanged`, and are taken out of the bytes a client is sent. A command line counts only with the nonce the terminal gave its script.
+- `terminal/commandDetectionAvailable` goes out with a shell's first mark rather than when the terminal opens, and `supportsCommandDetection` is false until then.
+- A command's output reaches a client between its `terminal/commandExecuted` and its `terminal/commandFinished`, also when one read holds the output and both marks.
 
 ## 0.14.0 - 2026-10-26
 
