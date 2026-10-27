@@ -1,6 +1,6 @@
 ---
 title: List every provider under its own id
-status: todo
+status: doing
 depends: []
 layer: "agent-cofold"
 refs:
@@ -43,7 +43,7 @@ The model list has the models of every file provider, each id as `<provider id>/
 
 ## Resume
 
-- **Done so far:** nothing.
+- **Done so far:** nothing yet.
 - **Next action:** step 1.
 - **Files:** none yet.
 - **Open questions:** none.

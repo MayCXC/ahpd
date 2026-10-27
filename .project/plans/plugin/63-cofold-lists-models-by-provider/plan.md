@@ -1,7 +1,7 @@
 ---
 title: agent-cofold lists models under their provider id
 domain: plugin
-status: planned
+status: active
 priority: high
 created: 2026-10-24
 revalidated: 2026-10-27
@@ -73,7 +73,7 @@ turn -> modelOf -> connectionOf(strict=true) -> the provider the reference names
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - List every provider under its own id](task-01-list-every-provider-under-its-id.md) | todo | - |
+| [01 - List every provider under its own id](task-01-list-every-provider-under-its-id.md) | doing | - |
 | [02 - The cofold prefix names only an unowned endpoint](task-02-cofold-prefix-only-unowned-endpoint.md) | todo | 01 |
 | [03 - The README says how models are listed](task-03-readme-says-how-models-are-listed.md) | todo | 02 |
 | [04 - A new Cofold session picks a model](task-04-a-new-session-picks-a-model.md) | todo | - |
@@ -85,9 +85,9 @@ turn -> modelOf -> connectionOf(strict=true) -> the provider the reference names
 
 ## Resume state
 
-- **Done so far:** nothing.
+- **Done so far:** nothing yet; task 01 is doing.
 - **Reopened:** 2026-10-27, a new Cofold session showed no Model picker in ahpw. Task 04 removes `model` from the session schema.
-- **Next action:** task 01. Task 04 depends on no other task.
+- **Next action:** task 01, starting at step 1. Task 04 depends on no other task.
 - **Open questions:** none.
 - **Watch out for:** `infoOf` searches every catalogue by reference already, so it needs no change. Keep the five-second catalogue limit per provider, and ask the providers in parallel.
 
