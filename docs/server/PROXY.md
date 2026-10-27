@@ -72,6 +72,8 @@ A client makes one with `x-ahpd/connectors/put`. This is the host's OpenRouter a
 { "id": "openrouter-main", "adapter": "openrouter", "owner": "host", "config": { "key": "sk-or-..." } }
 ```
 
+An OpenRouter connector may also be made by signing in, and then no key is typed. `x-ahpd/connectors/signin` answers a URL a person opens, and `x-ahpd/connectors/signin-finish` takes the pasted code and stores the key the exchange answers. The sign-in and the exchange use OpenRouter's public URLs, and a connector's `endpoint` moves neither.
+
 An `openai-compatible` server, such as a model on this machine, needs no key unless it asks for one:
 
 ```json

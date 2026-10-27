@@ -412,7 +412,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [68 - A missing Activepieces piece installs when its name is saved](plugin/68-a-missing-piece-installs/plan.md) | medium | active 2026-10-25; two tasks, implemented | plugin 67 | - |
 | [69 - A plugin names a brand mark the host ships](plugin/69-a-plugin-names-a-host-mark/plan.md) | medium | active 2026-10-26; tasks 01-04 merged in #102, 05 and 06 merged in #104; checks by hand in [pending/plugin-69-mark-checks.md](../pending/plugin-69-mark-checks.md) | plugin 58 | ahpw reads the agents row's `icons`; Softov curates each mark and runs the by-hand checks |
 | [70 - An Activepieces action takes and writes a file](plugin/70-a-piece-action-takes-a-file/plan.md) | medium | built 2026-10-26 ([implemented.md](plugin/70-a-piece-action-takes-a-file/implemented.md)); merged in #103 | - | - |
-| [71 - A connector signs in with its provider](plugin/71-a-connector-signs-in-with-its-provider/plan.md) | medium | planned 2026-10-27; two tasks | - | the ahpw Connect button |
+| [71 - A connector signs in with its provider](plugin/71-a-connector-signs-in-with-its-provider/plan.md) | medium | active 2026-10-27; tasks 01 and 02 implemented; check by hand in [pending/plugin-71-sign-in-checks.md](../pending/plugin-71-sign-in-checks.md) | - | the ahpw Connect button |
 
 
 Next free number in `plugin`: `72`.

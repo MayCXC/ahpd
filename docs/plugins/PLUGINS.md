@@ -637,12 +637,15 @@ host.registerAdapter({
   connector's id and a local server's models are `local/llama-3`. A list that
   cannot be read keeps the one it had, and one line is written to the log. An
   adapter with no `models` serves only the names a person writes in the file.
+- `signIn` is optional, and says how a person signs in to the provider in place of typing its key. `title` is the label a client prints. `field` is the `writeOnly` field the exchange fills; a field the schema does not keep is refused at registration. `url(challenge, state)` is where a person signs in, and `exchange(code, verifier)` answers the value for `field`. The host makes the PKCE verifier and the S256 challenge, so a plugin never sees a verifier. An exchange that refuses with `HTTP <status>` alone is shown to the caller with that status, and any other message is hidden.
 - An adapter whose connectors serve models declares a `models` capability. The
   capability tells a client that the proxy may call a connector of it; the
   `provider` member says where. The host lists the open connectors whose adapter
   has `provider` to the proxy, with the owner of each, and the proxy chooses
   among them. The host itself ships four: `openrouter`, `anthropic`, `openai`
   and `openai-compatible` - [The model proxy](../server/PROXY.md#adding-a-provider).
+
+`openrouter` is the one the host ships with a `signIn`. A person signs in on OpenRouter's page, pastes the code, and the host exchanges it for the key. Both URLs are OpenRouter's public ones, so a connector's `endpoint` moves neither the sign-in nor the exchange.
 
 The `@ahpd/activepieces` plugin makes one adapter for each Activepieces piece its `pieces` option names, and runs the actions of each in a child process - [activepieces.md](activepieces.md).
 
@@ -1353,7 +1356,8 @@ command marks nothing.
 
 A read-only channel. One row for each adapter the loaded plugins register, keyed
 by the adapter's name, holding `name`, `title`, `description`, `schema`,
-`capabilities` and the `plugin` that registered it. Nothing on it is an instance
+`capabilities` and the `plugin` that registered it, and a `signIn` holding its
+`title` and `field` when the adapter declares one. Nothing on it is an instance
 of anything: the connectors made from an adapter are on `x-ahpd-connectors`.
 A row shows as soon as the plugin registers the adapter, before any connector of
 it exists. Reading the channel needs `connector:list`.
@@ -1374,13 +1378,19 @@ A row also carries a `health` when the host knows one, and no `health` key when 
 
 `connector:list` opens the channel, and reads the caller's own connectors, their teams' and the host's, and no other person's. `connector:all` reads every row, and is admitted without `connector:list`. A caller with neither grant reads no connector, its own included, and is refused the subscription. A subscribe also takes `?owner=me`, which narrows the listing to the caller's own connectors.
 
-Two commands change a connector, and a third checks one:
+Five commands serve a connector:
 
 | Method | Grant | What it does |
 | --- | --- | --- |
 | `x-ahpd/connectors/put` | `connector:put`, and the owner's | Makes or changes `{ id, adapter, owner, title?, config }`, moves each `writeOnly` value to the vault, writes the record and opens it. Answers the row, with the check it waited for |
 | `x-ahpd/connectors/remove` | `connector:remove`, and the owner's | Closes `{ id }`, takes its secrets out of the vault and takes the record out |
 | `x-ahpd/connectors/check` | `connector:put`, and the owner's | Runs the check of `{ id }` again and answers the row. It refuses a connector that is not ready, or one whose adapter has no `check` |
+| `x-ahpd/connectors/signin` | `connector:put`, and the owner's | Starts a sign-in for `{ id, adapter, owner, title?, config }`, checks what a put checks except the field the adapter's `signIn` names, and answers `{ url, state }`. It refuses an adapter with no `signIn` |
+| `x-ahpd/connectors/signin-finish` | `connector:put`, and the owner's | Takes `{ state, code }`, asks the put's owner checks again, exchanges the code through the adapter and runs the put with the key. Answers the row |
+
+A sign-in is served for an adapter that declares `signIn`, and it fills the one field that adapter names. The start makes a PKCE verifier and a state, and keeps both the verifier and the put's params in memory for ten minutes. It answers the URL the adapter builds from the S256 challenge and the state. The finish refuses a state this host never made, one that has expired, and one another caller started. It uses a state once, and only its starter can use it, so a stranger cannot burn it.
+
+The put's grant and the owner's rule are asked again before the exchange, because ten minutes is long enough for both to change. The host keeps at most ten started sign-ins for one caller, and drops the oldest first. A failed exchange is answered with the adapter's title and the vendor's `HTTP <status>` alone. No row, error, problem line or log carries the code, the verifier, the state or the key.
 
 The owner narrows the grant. A `host` connector needs `connector:put` to be made
 and `connector:remove` to be removed, and `connector:host` beside either. A

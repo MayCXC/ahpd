@@ -215,6 +215,37 @@ export interface ConnectorHealth {
 }
 
 /**
+ * How a person signs in to a provider, as one adapter declares it.
+ *
+ * The host builds the PKCE values: a verifier it keeps, the S256 challenge and
+ * a state. The adapter puts the challenge in its vendor's sign-in URL, and
+ * runs the exchange against the code a person pastes back. The answer is the
+ * value of one field the adapter's schema marks `writeOnly`, which the put
+ * path moves to the vault.
+ *
+ * Neither half is handed a secret. The code belongs to the person, the verifier
+ * stays in the host's memory, and the key is answered once and stored as
+ * `{ "$secret": "<name>" }`.
+ */
+export interface SignIn {
+  /** What a client prints on the button. */
+  title: string;
+  /** The field of the adapter's schema the exchange fills: one marked `writeOnly`. */
+  field: string;
+  /** Where a person signs in, given the challenge and the state the host made. */
+  url(challenge: string, state: string): string;
+  /**
+   * Exchange the code a person pasted for the field's value.
+   *
+   * The host gives it the code and the verifier it kept, and waits no longer
+   * than ten seconds. A refusal whose message is `HTTP <status>` alone is
+   * answered to the caller with that status. Any other message is not shown,
+   * so it may name the vendor but never the code, the verifier or the key.
+   */
+  exchange(code: string, verifier: string): Promise<string>;
+}
+
+/**
  * One adapter a plugin offers.
  *
  * The name is the adapter's identity and is a slug, because it is also the
@@ -260,6 +291,14 @@ export interface Adapter {
    * a connector of this adapter adds no model name of its own.
    */
   models?(connector: Connector): Promise<ProviderModel[]>;
+  /**
+   * How a person signs in to this adapter's provider, when it has one.
+   *
+   * The field it names is one the schema marks `writeOnly`, and a sign-in fills
+   * it with the value the exchange answers. Absent, a connector of this adapter
+   * is made by a put alone.
+   */
+  signIn?: SignIn;
   /**
    * Start answering for one connector.
    *
