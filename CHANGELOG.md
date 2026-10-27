@@ -4,9 +4,18 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 
 ## 0.14.1 - unreleased
 
+### Upgrading
+
+- A terminal's `terminal/data` no longer carries the shell's OSC 133 and OSC 7 marks, as the protocol requires of a server. A client that read command boundaries or the directory from the marks reads `terminal/commandExecuted`, `terminal/commandFinished` and `terminal/cwdChanged`.
+- `terminal/commandDetectionAvailable` goes out with the shell's first OSC 133 mark rather than when the terminal opens, and `supportsCommandDetection` is false until then. A shell that prints no marks never announces it.
+
 ### Daemon
 
 - On Bun, a terminal is a pseudoterminal with OSC 133 command detection: Bun's own, through the `terminal` option of `Bun.spawn`, from Bun 1.3.5 on Linux and macOS and from Bun 1.3.14 on Windows, where it is ConPTY. `node-pty` is never loaded on Bun, where it loads but every shell it starts dies at once. Node and Deno keep `node-pty` where it loads. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#pipes-or-a-pseudoterminal).
+
+### Terminals
+
+- The output a shell printed before a mark goes out before the mark's action, so the output between `terminal/commandExecuted` and `terminal/commandFinished` is the command's. A mark that arrives in two reads is still read and taken out. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#command-boundaries).
 
 ## 0.14.0 - 2026-10-26
 

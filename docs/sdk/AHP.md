@@ -300,7 +300,7 @@ A client older than 1.140 that still pushes one of the three has that key refuse
 
 | action | origin | ahpd | Notes |
 | --- | :---: | :---: | --- |
-| `terminal/data` | host | ✅ | Every byte the shell wrote, and the same bytes are kept as scrollback so a client subscribing late sees what happened. Capped, because a terminal left running `tail -f` is a host holding a day of output for a client that may never come back. |
+| `terminal/data` | host | ✅ | Every byte the shell wrote except its OSC 133 and OSC 7 marks, which the protocol keeps out of the output, and the same bytes are kept as scrollback so a client subscribing late sees what happened. Capped, because a terminal left running `tail -f` is a host holding a day of output for a client that may never come back. |
 | `terminal/input` | client | ✅ | Under pipes a `^C` is turned into a signal to the process group, because there is no line discipline to do it; under a pseudoterminal the byte is written through and the discipline does it. |
 | `terminal/resized` | both | ✅ | A pseudoterminal is told and sends `SIGWINCH` itself. Without one the size is kept because the state reports it and a client draws to it. |
 | `terminal/claimed` | both | ✅ | Who the terminal belongs to - a client, or a session that opened it for a `!` command. |
@@ -308,9 +308,9 @@ A client older than 1.140 that still pushes one of the three has that key refuse
 | `terminal/cwdChanged` | host | ✅ | Read out of the shell's own OSC 7, so it is a fact rather than a guess. Under a pseudoterminal only. |
 | `terminal/exited` | host | ✅ | Announced when the pipes drain rather than when the process goes: between the two there is output written and not yet read, which is exactly what a `!` command reads back. |
 | `terminal/cleared` | both | ✅ | Drops the scrollback and keeps the size, the title and the claim - a client clears a terminal to stop reading what is there, not to give it up. Nothing reaches the process, which has no notion of its own output being discarded. |
-| `terminal/commandDetectionAvailable` | host | ✅ | Said once at the start, under a pseudoterminal. A client MUST check this before relying on command boundaries. |
-| `terminal/commandExecuted` | host | ✅ | From the shell's OSC 133 `C` mark, with the command line read back off what was typed since the prompt. |
-| `terminal/commandFinished` | host | ✅ | From the `D` mark, with the shell's own exit code and the duration since `C`. |
+| `terminal/commandDetectionAvailable` | host | ✅ | Said once, with the shell's first OSC 133 mark: a shell under a pseudoterminal may print none, and then it is never said. A client MUST check this before relying on command boundaries. |
+| `terminal/commandExecuted` | host | ✅ | From the shell's OSC 133 `C` mark, said where the mark stood, with the command line read back off what was typed since the prompt. |
+| `terminal/commandFinished` | host | ✅ | From the `D` mark, said after the output printed before it, so that output is the command's; with the shell's own exit code and the duration since `C`. |
 
 ### `changeset/*` — 8 of 8 🧩
 
