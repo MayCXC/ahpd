@@ -1,7 +1,7 @@
 ---
 title: A shell's marks stay out of its output
 domain: host
-status: planned
+status: built
 priority: high
 created: 2026-10-27
 revalidated: 2026-10-27
@@ -88,13 +88,13 @@ pty data -> read -> said (terminal/data) and meant (terminal/commandExecuted, te
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-27, and task 01 done the same day.
-- **Next action:** [task-02-the-docs-say-what-a-client-receives.md](task-02-the-docs-say-what-a-client-receives.md).
+- **Done so far:** planned and built 2026-10-27; see [implemented.md](implemented.md), and [deferred.md](deferred.md) for what waits.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** this plan changes two cases in `packages/sdk/test/pty.test.ts`: detection at the start, and the marks in the data.
 
 ## Final verification checklist
 
-- [ ] `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
-- [ ] The cases in `packages/sdk/test/pty.test.ts` hold the removal, the order, the split mark and the first mark.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
+- [x] The cases in `packages/sdk/test/pty.test.ts` hold the removal, the order, the split mark and the first mark.
+- [x] `plans/index.md` updated.
