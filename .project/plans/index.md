@@ -250,10 +250,11 @@ Reference: [00-host.md](host/00-host.md)
 | [118 - A connector action runs as a tool](host/118-a-connector-action-runs-as-a-tool/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #73 | plugin 53 | plugin 50 |
 | [119 - A row counts the work while a turn runs](host/119-a-row-counts-the-work-while-a-turn-runs/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #74 | - | - |
 | [120 - A bot session starts with its actions](host/120-a-bot-session-starts-with-its-actions/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #78 | host 118 | - |
+| [121 - Every schema a client draws names every value](host/121-every-schema-names-every-value/plan.md) | high | planned 2026-10-26 | - | scena draws `additionalProperties` |
 | [122 - Agents are records on their own channel](host/122-agents-are-records-on-their-own-channel/plan.md) | high | active 2026-10-24; merged in #89, waits on the check by hand | - | - |
 | [123 - Agent kinds on their own channel](host/123-agent-kinds-on-their-own-channel/plan.md) | high | active 2026-10-25; tasks 02 and 03 implemented, wait on Softov | host 122 | ahpw plugins 08 |
 
-Next free number in `host`: `121`.
+Next free number in `host`: `124`.
 
 ## claude
 
@@ -394,9 +395,9 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [52 p14 - A bot session has a Front, Backs and wakes](plugin/52-p14-a-bot-session-has-a-front-and-backs/plan.md) | medium | draft 2026-10-22; merged from 52 p4, p6, p9, p11 and p7's permission mode; tasks not written | 52 p3, host 107 | - |
 | [52 - The computer and bot listings answer the caller's own](plugin/52-the-computer-and-bot-listings-answer-the-callers-own/plan.md) | medium | built 2026-10-21 (implemented.md); merged in #59 | host 112 | - |
 | [53 - A client sees the plugins and the connectors](plugin/53-a-client-sees-plugins-and-connectors/plan.md) | medium | active 2026-10-22; sixteen tasks, all implemented, awaiting review | plugin 44, plugin 48 | ahpw connectors and plugins pages, the UI component tree, connector actions as tools |
-| [54 - A webhook takes what real senders send](plugin/54-a-webhook-takes-what-real-senders-send/plan.md) | high | planned 2026-10-22; seven tasks, 01 to 07 implemented, awaiting review | plugin 48, plugin 53 | - |
+| [54 - A webhook takes what real senders send](plugin/54-a-webhook-takes-what-real-senders-send/plan.md) | high | planned 2026-10-22; seven tasks implemented, merged in #67, awaiting the close | plugin 48, plugin 53 | - |
 | [55 - The connectors channel opens to a list reader, and a receive capability names its path](plugin/55-connectors-open-to-a-list-reader/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #69 | plugin 53, plugin 54 | - |
-| [56 - A steered bot chat message is its own turn](plugin/56-a-steered-bot-message-is-its-own-turn/plan.md) | high | planned 2026-10-22; one task, implemented | - | - |
+| [56 - A steered bot chat message is its own turn](plugin/56-a-steered-bot-message-is-its-own-turn/plan.md) | high | planned 2026-10-22; one task implemented, merged in #66, awaiting the close | - | - |
 | [57 - A cofold transcript skips a run that a rewind dropped while it reads](plugin/57-a-transcript-skips-a-run-a-rewind-dropped/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #70 | - | - |
 | [58 - Plugins and adapters carry icons](plugin/58-plugins-and-adapters-carry-icons/plan.md) | medium | active 2026-10-24; tasks 01-05 merged; 06 replaced by plugin 69; 05 waits for icon curation | - | - |
 | [59 - A plugin loads, unloads and reloads while the daemon runs](plugin/59-a-plugin-loads-and-unloads-live/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | - |
