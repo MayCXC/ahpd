@@ -119,7 +119,7 @@ GET /responses/{id} -> decode id -> connector, original id -> may the caller use
 | [04 - Images are served](task-04-images-are-served.md) | implemented | 01 |
 | [05 - Audio is served](task-05-audio-is-served.md) | implemented | 04 |
 | [06 - Rerank is served](task-06-rerank-is-served.md) | implemented | 01 |
-| [07 - The docs list every endpoint](task-07-the-docs-list-every-endpoint.md) | todo | 01-06 |
+| [07 - The docs list every endpoint](task-07-the-docs-list-every-endpoint.md) | doing | 01-06 |
 
 ## Risks and tradeoffs
 
@@ -131,7 +131,7 @@ GET /responses/{id} -> decode id -> connector, original id -> may the caller use
 ## Resume state
 
 - **Done so far:** task 01 is implemented. A dialect is one row with its caller paths, upstream path, family, kind and usage reader. `anthropic-count-tokens` and `openai-input-tokens` answer at their paths, `ModelProvider.paths` replaces an upstream path, and a count call writes no usage record.
-- **Next action:** [task-07-the-docs-list-every-endpoint.md](task-07-the-docs-list-every-endpoint.md).
+- **Next action:** [task-07-the-docs-list-every-endpoint.md](task-07-the-docs-list-every-endpoint.md) is doing: the endpoint table, the Responses ids and the new prices.
 - **Task 06:** `rerank` answers at `/rerank`, `/v1/rerank` and `/v2/rerank`, reads `usage.total_tokens` or `meta.billed_units.input_tokens`, and `openrouter` accepts it.
 - **Task 05:** speech bytes pass through and are charged by the characters of `input`; a transcription is charged by tokens or by `usage.seconds` at `price.minutes`. `ModelPrice` carries `characters` and `minutes`.
 - **Task 04:** a multipart body is read with `Request.formData()`, its `model` is rewritten, and it is sent as `FormData`. Image usage reads `input_tokens`/`output_tokens` and the chat shape, and OpenRouter sends images to `/images`.
