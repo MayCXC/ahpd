@@ -1,0 +1,36 @@
+---
+title: A shell's marks stay out of its output - implemented
+date: 2026-10-27
+refs:
+  - git://c71d2bb4
+  - "[code://packages/sdk/src/machines/terminals.ts](../../../../packages/sdk/src/machines/terminals.ts)"
+  - "[code://packages/sdk/test/pty.test.ts](../../../../packages/sdk/test/pty.test.ts)"
+---
+
+A shell under a pseudoterminal reaches the client without its OSC 133 and OSC 7 marks, as the protocol requires of a server.
+The action of each mark goes out where the mark stood, so the output of a command lies between its two actions.
+Command detection goes out with the first OSC 133 mark, and a shell that prints no marks never announces it.
+A client that subscribes late reads the parts that a client watching from the start built.
+
+## What was built
+
+- [`code://packages/sdk/src/machines/terminals.ts`](../../../../packages/sdk/src/machines/terminals.ts) - `HELD`, `OPENERS` and `unfinished` beside `MARKS`; `meant` and `read` in `createTerminal`; `detected` on the state.
+  The exit says what was held, and `tell` folds each action into `content` through `terminalReducer` and trims past `KEEP`.
+- [`code://packages/sdk/test/pty.test.ts`](../../../../packages/sdk/test/pty.test.ts) - the cases for detection, removal, order through the protocol reducer, a split mark, the exit, the parts of a late client and the cap.
+- [`code://docs/sdk/TERMINALS.md`](../../../../docs/sdk/TERMINALS.md) and [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - what a client receives.
+
+## Verified
+
+- `packages/sdk/test/pty.test.ts`: 32 of 32 pass, and seven of the new cases fail on the store before this change.
+- `pty.test.ts`, `host-terminals.test.ts`, `host-output-terminals.test.ts`, `conformance.test.ts` and `wire.test.ts`: 99 of 99 pass.
+- `pnpm boundary`, `pnpm typecheck` and `pnpm build` pass.
+- A full run of `packages/sdk` has failures outside the terminal cases, which change from run to run.
+  The store before this change has them too.
+
+## Departures from the plan
+
+- none.
+
+## Left for later
+
+- none.

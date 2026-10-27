@@ -19,7 +19,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, realpathSync } from 'node:fs';
 import { isAbsolute, join, resolve, win32 } from 'node:path';
 import { readJsonObject, writeJsonAtomic } from '@ahpd/sdk';
 import type { PluginSpec } from '@ahpd/sdk';
@@ -627,16 +627,24 @@ const manifestIn = (root: string, name: string): Record<string, unknown> | undef
   return existsSync(file) ? readEntry(file) : undefined;
 };
 
+/** The real path of a path, or the path itself where it is not there. */
+const realOf = (path: string): string => {
+  try { return realpathSync(path); }
+  catch { return path; }
+};
+
 /**
  * The package name npm wrote for each source, out of the root's dependencies
  * before and after the install.
  *
  * A registry name is its own package, with any version or tag left off. Every
  * other source is named by the dependency npm added for it: npm writes a path
- * as a `file:` spec relative to the root, and every other kind as it was
- * given. A source npm recorded under a spec this cannot read is the one
- * dependency left over when there is only one, which is how a git shorthand
- * npm rewrites is still named.
+ * as a `file:` spec from the root's real path, to a folder's real path or to a
+ * tarball's path as given, and every other kind as it was given. A path and
+ * its spec are therefore compared as real paths, so a symbolic link on the way
+ * to the root or to the source names the same package. A source npm recorded
+ * under a spec this cannot read is the one dependency left over when there is
+ * only one, which is how a git shorthand npm rewrites is still named.
  *
  * Nothing here throws: a source with no dependency to name it answers
  * `undefined`, and the caller decides whether that is a refusal (it enables
@@ -650,16 +658,19 @@ const namesInstalled = (
 ): (string | undefined)[] => {
   const added = after.filter(([name]) => !before.has(name));
   const claimed = new Set<string>();
+  const realRoot = realOf(root);
   return sources.map((source) => {
     if (isRegistryName(source)) return packageOf(source);
     // Everything the root names, newly added first: installing a source the
     // root already holds moves no dependency, and it still names the package.
     const open = [...added, ...after.filter(([name]) => before.has(name))].filter(([name]) => !claimed.has(name));
     // A path is resolved against the working directory npm ran in, as npm
-    // read it; the `file:` spec it wrote is relative to the root.
-    const here = resolve(process.cwd(), source);
+    // read it. npm wrote its `file:` spec from the root's real path, so the
+    // spec is resolved there, and both ends are compared as real paths:
+    // https://github.com/npm/cli/blob/v11.19.0/workspaces/arborist/lib/arborist/build-ideal-tree.js#L524-L565
+    const here = realOf(resolve(process.cwd(), source));
     const named = open.find(([, spec]) => spec === source)
-      ?? open.find(([, spec]) => spec.startsWith('file:') && resolve(root, spec.slice('file:'.length)) === here)
+      ?? open.find(([, spec]) => spec.startsWith('file:') && realOf(resolve(realRoot, spec.slice('file:'.length))) === here)
       ?? (added.filter(([name]) => !claimed.has(name)).length === 1 ? added.find(([name]) => !claimed.has(name)) : undefined);
     if (named === undefined) return undefined;
     claimed.add(named[0]);

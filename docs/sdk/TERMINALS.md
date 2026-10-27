@@ -8,7 +8,7 @@ Terms, one line each:
 | --- | --- |
 | a terminal | One shell process, as a channel: its own URI, its own state, its own actions |
 | the terminal store | The port that spawns shells - `TerminalStore`, pipes unless it was handed a pseudoterminal binding |
-| a pseudoterminal | A real terminal device, handed in as native code; what makes the shell's own marks readable |
+| a pseudoterminal | A real terminal device, handed in by the daemon: `node-pty`'s, or Bun's own on Bun; what makes the shell's own marks readable |
 | the claim | Who holds the terminal: a connection, or a session and the chat inside it |
 | the scrollback | Everything the shell has written, kept so a client subscribing later still sees it |
 | the root list | `terminals` on root state: every open terminal's `TerminalInfo` |
@@ -18,7 +18,7 @@ Terms, one line each:
 
 On the daemon's machine, which is the only place it can run: the store spawns a process locally, and there is no scheme for a shell somewhere else - a session in a machine runs its own commands inside that machine (see [COMPUTERS.md](../plugins/COMPUTERS.md)).
 
-A client's terminal starts in the directory it named, decoded from the `file:` URI it sent, and naming none gives the host's own directory. Any directory is accepted, `file:///etc` included: the reference host opens one wherever it is asked, and the connection's token is what decides who gets a shell rather than the path. A directory that is not there is a shell that fails to start, not a refusal - the failure is written into the terminal's own output and the exit code is `127`.
+A client's terminal starts in the directory it named, decoded from the `file:` URI it sent, and naming none gives the host's own directory. Any directory is accepted, `file:///etc` included: the reference host opens one wherever it is asked, and the connection's token is what decides who gets a shell rather than the path. A directory that is not there is a shell that fails to start, not a refusal - the failure is written into the terminal's own output and the exit code is `127`. Under `node-pty` it is `1`, which `node-pty`'s own child exits with, after writing the failure on Linux and writing nothing on macOS.
 
 What the directory decides is smaller: a command that ran in it may have moved it - a commit, a checkout, anything that wrote a file - so when the process exits this host refreshes the changeset of whichever session directory the terminal was in. A terminal outside every session's directory refreshes nothing.
 
@@ -26,9 +26,15 @@ What the directory decides is smaller: a command that ran in it may have moved i
 
 ## Pipes, or a pseudoterminal
 
-The store runs shells on pipes unless it was handed a pseudoterminal binding, and the state says which the client is reading: `isPty` and `supportsCommandDetection` are both false on pipes, because there is no terminal device and no shell running a prompt of its own to emit anything. Output is then plain text, and anything a client draws with cursor movement will not look right - said in the state rather than discovered. This is what the protocol's `isPty: false` is for.
+The store runs shells on pipes unless it was handed a pseudoterminal binding, and the state says which the client is reading: `isPty` and `supportsCommandDetection` are both false on pipes, because there is no terminal device and no shell running a prompt of its own to emit anything. Output is then plain text, and anything a client draws with cursor movement will not look right - said in the state rather than discovered. This is what the protocol's `isPty: false` is for. Each pipe is decoded as one UTF-8 stream with the stream's own `setEncoding('utf8')`, as `node-pty` reads its terminal, so a character whose bytes arrive in two reads reaches the client whole.
 
-The daemon hands one in when the machine has it: `node-pty`'s `spawn`, loaded by name at runtime, because a native binding that does not match its runtime aborts the process rather than throwing and is nothing a `try`/`catch` can hold. So the import is tried in a child of the same runtime first and repeated here only once that child has survived it - `packages/server/src/pty.ts`. With it, shells run under a real terminal, and the shell's own marks become facts.
+The daemon hands one in when the machine has it, from `packages/server/src/pty.ts`. With it, shells run under a real terminal, and the shell's own marks become facts.
+
+On Node and Deno it is `node-pty`'s `spawn`, loaded by name at runtime, because a native binding that does not match its runtime aborts the process rather than throwing and is nothing a `try`/`catch` can hold. So the import is tried in a child of the same runtime first and repeated only once that child has survived it.
+
+On Bun it is Bun's own: `Bun.spawn` with its `terminal` option, as Bun's [Terminal (PTY) support](https://bun.com/docs/runtime/child-process) gives it, wherever Bun makes a terminal. That is Linux and macOS from Bun 1.3.5, which brought `Bun.Terminal`, and Windows, through ConPTY, from Bun 1.3.14. The daemon makes one terminal and closes it at start to see that Bun can. Each member of the port is the one Bun documents: the output is the terminal's `data`, the exit code is what the subprocess's `exited` resolves to, which for a shell a signal ended is `128` plus the signal's number, and `write`, `resize` and `kill` are the terminal's and the subprocess's. The whole output has arrived by the time `exited` resolves, so the exit is said then, and the terminal is closed, as Bun's own example closes it. The terminal's `exit` callback is not used: up to Bun 1.3.13, a terminal that has one makes a start Bun refuses, such as a directory that is not there, crash Bun itself rather than throw. Where Bun leaves a choice open, the binding makes `node-pty`'s, whose terminal is one thing on Unix and another on Windows. On Unix, arguments as one string are refused, and `kill` sends `SIGHUP` when it names no signal. On Windows, `cmd.exe` gets its line as the command line after the file, written as it is, which is how the store hands it the line on pipes too, and `kill` takes no signal and ends the process. On both, input once the terminal has closed is dropped.
+
+Every other Bun runs shells on pipes: a Bun without `Bun.Terminal`, and a Bun that cannot make one, such as Bun 1.3.13 on Windows. `node-pty` is never loaded on Bun: it loads there, so a child survives it, and every shell it starts dies at once.
 
 `TERM` follows the same answer: the daemon's own, or `xterm-256color` when it has none, under a pseudoterminal, and `dumb` without one.
 
@@ -56,7 +62,7 @@ Every terminal gets the host's environment, then the caller's variables over it,
 
 ## What a client sees
 
-The channel's state is `title`, `cwd`, `cols`, `rows`, `content`, `claim`, `isPty`, `supportsCommandDetection` and `lifecycle`. `content` is one `unclassified` part, because without command detection there are no boundaries to divide the output at - and it is the protocol's shape rather than a flat string.
+The channel's state is `title`, `cwd`, `cols`, `rows`, `content`, `claim`, `isPty`, `supportsCommandDetection` and `lifecycle`. `content` holds the parts a client watching from the start built from the same actions, because this host folds each action it sends through the protocol package's own `terminalReducer`: an `unclassified` part for output no command claims, and a `command` part with its line, output, exit code and duration for each command the shell marks. A shell that marks nothing has one `unclassified` part, and a client subscribing late reads the same parts as one that watched.
 
 The exit code is inside `lifecycle`: `{ status: 'running' }` while the process is there, `{ status: 'exited', exitCode }` once it is gone. That is what 0.9.0 requires and it is not optional there, so a client reading it on an older-shaped terminal would read a process that never exits. This host negotiates down to 0.5.1, so it also sends the flat `exitCode` every version before 0.9.0 reads.
 
@@ -64,7 +70,7 @@ The exit code is inside `lifecycle`: `{ status: 'running' }` while the process i
 
 A process killed by a signal reports `128`, with the signal named beside it, because a runtime that reports no exit code leaves nothing else to say and reporting nothing reads as still running. The name is what makes it readable: a caller told only `128` cannot tell somebody's SIGINT from a program that chose to exit 128.
 
-The scrollback is everything written so far, capped at 200,000 characters - a terminal left running `tail -f` for a day is a host holding a day of output for a client that may never come back. A client subscribing late is sent it, so a terminal watched from the middle still shows what happened before it arrived. `clear` drops the scrollback and keeps the size, the title and the claim: a client clears a terminal to stop reading what is there, not to give it up. Nothing reaches the process, which has no notion of its own output having been discarded.
+The scrollback is everything written so far, capped at 200,000 characters - a terminal left running `tail -f` for a day is a host holding a day of output for a client that may never come back. Past the cap, whole parts go from the front first, and then the oldest characters of the first part that is left, as the reference host trims its own. A client subscribing late is sent it, so a terminal watched from the middle still shows what happened before it arrived. `clear` drops the scrollback and keeps the size, the title and the claim: a client clears a terminal to stop reading what is there, not to give it up. Nothing reaches the process, which has no notion of its own output having been discarded.
 
 Size defaults to 80 columns and 24 rows. `resize` records the new size and tells a pseudoterminal about it, which sends `SIGWINCH` itself; on pipes nothing is signalled and the size is kept because the state reports it and a client draws to it. `^C` is the other half of the same difference: a pseudoterminal has a line discipline that sees the byte and signals the foreground group, so the byte is written through and nothing clever happens. Pipes have none, so the byte would arrive as input and the command would run on - a terminal a runaway command cannot be stopped in. This host turns it into `SIGINT` to the child's own process group, named by the child's pid and only when there is one: to `kill` group `0` would mean every process in this process's group, so a shell that never started would signal the host.
 
@@ -72,9 +78,9 @@ A terminal's title is the caller's `name`, or the shell's own basename. A `!` co
 
 ## Command boundaries
 
-Only under a pseudoterminal, and this host says so twice: `terminal/commandDetectionAvailable` once at the start, and `supportsCommandDetection` on the state. A client MUST check before relying on the boundaries.
+Only under a pseudoterminal, and only once the shell has marked one: a shell may print no marks at all. From the first mark this host says so twice, with `terminal/commandDetectionAvailable` once and with `supportsCommandDetection` on the state. A client MUST check before relying on the boundaries.
 
-The shell prints them itself, mixed into its output, and this host reads them out and leaves the rest alone - the bytes still reach the client whole, because this is a reader and not a filter. OSC 133 gives the boundaries: `A` before the prompt, `C` where a command starts and `D;<code>` when it finished, and OSC 7 gives the directory. From those: `terminal/commandExecuted` with the command line read back off what was typed since the prompt, `terminal/commandFinished` with the shell's own exit code and the duration since `C`, and `terminal/cwdChanged`.
+The shell prints the marks itself, mixed into its output, and this host takes them out of it before the output goes to the client, as the protocol requires of a server: a client would otherwise count them as output. OSC 133 gives the boundaries: `A` before the prompt, `C` where a command starts and `D;<code>` when it finished, and OSC 7 gives the directory. From those: `terminal/commandExecuted` with the command line read back off what was typed since the prompt, `terminal/commandFinished` with the shell's own exit code and the duration since `C`, and `terminal/cwdChanged`. Each goes out where its mark stood, after the output printed before it, so the output between a command's `terminal/commandExecuted` and its `terminal/commandFinished` is that command's. A mark that arrives in two reads of the pseudoterminal is held for the second, up to 1,024 characters, and anything still held when the shell exits goes out as output.
 
 The command line can only be read that way because the input is watched as well: a shell echoes what was typed, but the echo arrives as output, so the bytes of `terminal/input` are what a `C` mark is read against.
 

@@ -1,7 +1,8 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { fittingVersion, installPlugins, isPackageName, launch, packageOf, pinned, removePlugins, run as realRun, updatePlugins } from '../src/install.js';
 import type { Ran, Runner } from '../src/install.js';
 import { registry } from '../src/update.js';
@@ -385,6 +386,43 @@ it('takes a path and a tarball URL the same way, naming each by what npm added',
   })).toEqual(['demo', 'other']);
   expect(calls.find((one) => one.argv[0] === 'install')?.argv.slice(-2)).toEqual([plugin, tarball]);
   expect(read().plugins).toEqual(['demo', 'other']);
+});
+
+it('names a path by what npm added when the root is reached through a symbolic link', async () => {
+  // npm writes the `file:` spec from the root's real path, so it climbs out of
+  // the folder the link points at. The sdk pin is added beside it, as npm adds
+  // it on a first install, so the path is named by its spec and not by being
+  // the one dependency added.
+  const real = join(root, 'deep', 'er', 'ahpd');
+  mkdirSync(real, { recursive: true });
+  // A junction on Windows, which links a folder with no privilege and resolves as a link does.
+  symlinkSync(real, configDir, posix ? 'dir' : 'junction');
+  const plugin = join(root, 'my-plugin');
+  mkdirSync(plugin);
+  const { runner } = fake({}, { demo: '0.1.0' }, {
+    added: { '@ahpd/sdk': '^0.8.0', demo: 'file:../../../my-plugin' },
+    manifests: { demo: { ahpd: {} } },
+  });
+  expect(await installPlugins([plugin], {
+    configDir, configFile, version: '0.8.0', enable: true, run: runner, fetch: aPlugin, say,
+  })).toEqual(['demo']);
+  expect(read().plugins).toEqual(['demo']);
+});
+
+it('names a path by what npm added when the path goes through a symbolic link', async () => {
+  // npm takes a folder's real path before it writes the spec, so a path given
+  // through a link is written as the folder the link points at.
+  const away = join(root, 'deep', 'er');
+  mkdirSync(join(away, 'my-plugin'), { recursive: true });
+  symlinkSync(away, join(root, 'link'), posix ? 'dir' : 'junction');
+  const { runner } = fake({}, { demo: '0.1.0' }, {
+    added: { '@ahpd/sdk': '^0.8.0', demo: 'file:../deep/er/my-plugin' },
+    manifests: { demo: { ahpd: {} } },
+  });
+  expect(await installPlugins([join(root, 'link', 'my-plugin')], {
+    configDir, configFile, version: '0.8.0', enable: true, run: runner, fetch: aPlugin, say,
+  })).toEqual(['demo']);
+  expect(read().plugins).toEqual(['demo']);
 });
 
 it('uninstalls and refuses a source whose package has no ahpd field', async () => {

@@ -64,8 +64,10 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [38 - configure offers the web UI](daemon/38-configure-offers-the-web-ui/plan.md) | medium | active 2026-10-21; task 01 implemented | - | - |
 | [39 - The update check encodes a scoped name](daemon/39-the-update-check-encodes-a-scoped-name/plan.md) | high | built 2026-10-21 (implemented.md); merged in #58 | - | - |
 | [40 - A daemon starts with no backend](daemon/40-a-daemon-starts-with-no-backend/plan.md) | high | built 2026-10-26 ([implemented.md](daemon/40-a-daemon-starts-with-no-backend/implemented.md)); checks by hand in [pending/daemon-40-old-plugin-checks.md](../pending/daemon-40-old-plugin-checks.md) | plugin 67 | - |
+| [41 - A terminal under Bun is a pseudoterminal](daemon/41-a-terminal-under-bun-is-a-pseudoterminal/plan.md) | high | built 2026-10-26 ([implemented.md](daemon/41-a-terminal-under-bun-is-a-pseudoterminal/implemented.md)); checks on Windows in [pending/daemon-41-windows-checks.md](../pending/daemon-41-windows-checks.md) | - | - |
+| [42 - A plugin installs from a path through a symbolic link](daemon/42-a-plugin-installs-from-a-path-through-a-symlink/plan.md) | medium | built 2026-10-26 ([implemented.md](daemon/42-a-plugin-installs-from-a-path-through-a-symlink/implemented.md)) | - | - |
 
-Next free number in `daemon`: `40`.
+Next free number in `daemon`: `43`.
 
 ## host
 
@@ -253,8 +255,10 @@ Reference: [00-host.md](host/00-host.md)
 | [121 - Every schema a client draws names every value](host/121-every-schema-names-every-value/plan.md) | high | active 2026-10-27; tasks 01 to 05 implemented | - | scena draws `additionalProperties` |
 | [122 - Agents are records on their own channel](host/122-agents-are-records-on-their-own-channel/plan.md) | high | active 2026-10-24; merged in #89, waits on the check by hand | - | - |
 | [123 - Agent kinds on their own channel](host/123-agent-kinds-on-their-own-channel/plan.md) | high | active 2026-10-25; tasks 02 and 03 implemented, wait on Softov | host 122 | ahpw plugins 08 |
+| [124 - A shell's marks stay out of its output](host/124-a-shells-marks-stay-out-of-its-output/plan.md) | high | built 2026-10-27 ([implemented.md](host/124-a-shells-marks-stay-out-of-its-output/implemented.md)) | - | - |
+| [125 - A split character arrives whole](host/125-a-split-character-arrives-whole/plan.md) | medium | built 2026-10-27 ([implemented.md](host/125-a-split-character-arrives-whole/implemented.md)) | - | - |
 
-Next free number in `host`: `124`.
+Next free number in `host`: `126`.
 
 ## claude
 

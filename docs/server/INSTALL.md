@@ -58,7 +58,7 @@ npm 12 skips install scripts by default. `node-pty` needs its script to build th
 npm config set allow-scripts=node-pty --location=user
 ```
 
-Without it, terminals fall back to pipes (`isPty: false`).
+Without it, terminals fall back to pipes (`isPty: false`). On Bun the terminal is Bun's own and `node-pty` is never loaded, so the script makes no difference there.
 :::
 
 ## Runtimes
@@ -82,6 +82,8 @@ deno run -A "$(npm root -g)/@ahpd/server/dist/main.js"
 :::
 
 Node needs the optional `ws` dependency, which npm installs. Bun and Deno use their built-in servers.
+
+A terminal is a pseudoterminal on Node and Deno where `node-pty` loads, and on Bun through Bun's own: from 1.3.5 on Linux and macOS, and from 1.3.14 on Windows. Anywhere else it runs on pipes. See [TERMINALS.md](../sdk/TERMINALS.md#pipes-or-a-pseudoterminal).
 
 Before they install, `install.sh` and `install.ps1` print one line for each of Node, Bun and Deno: the version, and whether ahpd runs on it.
 
