@@ -1,6 +1,6 @@
 ---
 title: Embeddings are served
-status: todo
+status: doing
 depends: [task-01-tokens-are-counted.md]
 layer: "server"
 refs:
