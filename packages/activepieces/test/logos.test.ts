@@ -131,4 +131,25 @@ describe('logoOf', () => {
     expect(logo).toEqual({});
     expect(fake.calls).toEqual([]);
   });
+
+  it('answers the host mark of a piece in the table, before the cache and the CDN', async () => {
+    mkdirSync(join(home, 'activepieces', 'icons'), { recursive: true });
+    writeFileSync(cache('ap-whatsapp', 'svg'), '<svg/>');
+    const failing = (async () => { throw new Error('a marked piece must not fetch'); }) as unknown as typeof fetch;
+
+    const logo = await logoOf('ap-whatsapp', 'https://cdn.activepieces.com/pieces/whatsapp.png', home, failing);
+
+    expect(logo).toEqual({ icon: { src: 'mark:whatsapp' } });
+  });
+
+  it('fetches the CDN logo of a piece with no mark', async () => {
+    const body = Buffer.from('the logo');
+    const fake = fetcher(body, { contentType: 'image/svg+xml' });
+
+    const logo = await logoOf('ap-demo', 'https://example.com/demo.svg', home, fake.answer);
+
+    expect(fake.calls).toEqual(['https://example.com/demo.svg']);
+    expect(logo.problem).toBeUndefined();
+    expect(logo.icon).toEqual({ src: `data:image/svg+xml;base64,${body.toString('base64')}`, contentType: 'image/svg+xml' });
+  });
 });

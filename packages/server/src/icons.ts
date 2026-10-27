@@ -5,7 +5,9 @@
  * and a client cannot read a file: what reaches it is a `data:` URI, read here
  * once rather than at each subscription. A `data:` URI is already something a
  * client can draw, so it is passed on as it is. An `https:` URL is fetched at
- * load, because a client never contacts the server a plugin names.
+ * load, because a client never contacts the server a plugin names. A brand mark
+ * the host ships is named as `mark:<name>` and read from the server's `icons`
+ * folder, with a `<name>-dark.svg` beside it where the mark has one.
  *
  * An icon is decoration, so nothing here refuses: an icon that cannot be read,
  * fetched or is too large is dropped and said in one line, and the plugin that
@@ -15,10 +17,20 @@
 
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { extname, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Icon } from '@ahpd/sdk';
 
 /** The most one icon may be, in bytes, whether it is a file, a `data:` URI or a fetched body. */
 export const ICON_LIMIT = 32 * 1024;
+
+/**
+ * Where the brand marks the host ships are kept.
+ *
+ * Resolved beside this module rather than against the daemon's working folder,
+ * as the proxy adapters resolve theirs, so a `mark:` source reads the same
+ * files wherever the daemon was started.
+ */
+const MARK_FOLDER = fileURLToPath(new URL('../icons/', import.meta.url));
 
 /** How long one fetch of an `https:` icon may take before the icon is given up. */
 const ICON_TIMEOUT_MS = 5_000;
@@ -57,6 +69,37 @@ const extrasOf = (held: Record<string, unknown>): Partial<Icon> => ({
 /** Whether a path is the base folder or somewhere under it. */
 const inside = (at: string, base: string): boolean => at === base || at.startsWith(base + sep);
 
+/** Whether a name is one a mark is read by: lowercase letters, digits and `-`, so it names no folder. */
+const isMarkName = (name: string): boolean => /^[a-z0-9-]+$/u.test(name);
+
+/**
+ * One mark file as a client draws it, or the line that keeps it away.
+ *
+ * Nothing is answered when the file is not there: the light file's absence is
+ * the caller's unknown-mark line, and the dark file is optional. A file that is
+ * there but cannot be drawn is a line of its own.
+ */
+const markOf = (name: string, theme?: 'dark'): { icon: Icon } | { problem: string } | undefined => {
+  const at = resolve(MARK_FOLDER, theme === 'dark' ? `${name}-dark.svg` : `${name}.svg`);
+  let found: ReturnType<typeof statSync>;
+  try {
+    found = statSync(at);
+  }
+  catch {
+    return undefined;
+  }
+  if (!found.isFile()) return { problem: `the mark ${name} is not a file` };
+  if (found.size > ICON_LIMIT) return { problem: `the mark ${name} is larger than ${ICON_LIMIT / 1024} KB` };
+  let bytes: Buffer;
+  try {
+    bytes = readFileSync(at);
+  }
+  catch {
+    return { problem: `the mark ${name} could not be read` };
+  }
+  return { icon: drawn(bytes, 'image/svg+xml', theme === undefined ? {} : { theme }) };
+};
+
 /** One icon as a client draws it, with the type it is sent as. */
 const drawn = (bytes: Buffer, contentType: string, held: Partial<Icon>): Icon => {
   // An SVG is scalable, so an icon that names no size means every size.
@@ -86,6 +129,36 @@ export function resolveIcons(icons: unknown, base: string | undefined, by: strin
     if (!isRecord(held) || typeof held['src'] !== 'string' || held['src'].trim() === '') continue;
     const src = held['src'];
     const extras = extrasOf(held);
+
+    /*
+     * A mark is a brand drawing the host ships beside this module, named as
+     * `mark:<name>` rather than carried by the plugin, so one WhatsApp mark
+     * serves every plugin that needs it. The name is a file name and never a
+     * path, and the file is kept under 32 KB like any other icon.
+     */
+    if (src.startsWith('mark:')) {
+      const name = src.slice('mark:'.length);
+      if (!isMarkName(name)) {
+        problem(`${by}: the icon ${src} is not a mark of lowercase letters, digits and -`);
+        continue;
+      }
+      const light = markOf(name);
+      if (light === undefined) {
+        problem(`${by}: the mark ${name} is not one the host ships`);
+        continue;
+      }
+      if ('problem' in light) {
+        problem(`${by}: ${light.problem}`);
+        continue;
+      }
+      kept.push(light.icon);
+      // A dark file is sent beside the light one where it exists, so a mark
+      // that does not read on a dark background has a second drawing.
+      const dark = markOf(name, 'dark');
+      if (dark !== undefined && 'icon' in dark) kept.push(dark.icon);
+      else if (dark !== undefined) problem(`${by}: ${dark.problem}`);
+      continue;
+    }
 
     // Kept for `fetchIcons`, which reads it once at load: what a client
     // receives is the body as a `data:` URI, never the URL.

@@ -1,6 +1,6 @@
 ---
 title: An ACP agent shows its vendor's mark
-status: todo
+status: implemented
 depends: [task-01-the-host-resolves-a-mark.md]
 layer: "sdk, server, agent-acp"
 refs:
@@ -49,3 +49,10 @@ A record with no icon is sent with the icons of its engine's template whose `com
 - By hand: the agents channel row of Softov's Codex record carries the OpenAI icons, with no edit to the record.
 
 ## Resume
+
+- **Done so far:** `AgentTemplate` in `packages/sdk/src/types/agents.ts` carries `icons?: Icon[]`, the resolved form a client reads. The loader in `packages/server/src/plugins.ts` resolves each engine template's `icon` with `resolveIcons` and `fetchIcons`, against the plugin's package, and sets `icons`; the template keeps `icon`. The agents row in `packages/sdk/src/agents/channel.ts` sends `icons` as `[icon]` when the record has its own icon, otherwise the icons of the engine's template whose `config.command` equals the record's, and leaves the key out when neither applies. `packages/agent-acp/src/presets.ts` has a `MARKS` table and each template with a mark carries `icon: { src: "mark:<name>" }`: codex reuses `openai`, and gemini, copilot, opencode, cursor, qwen and cline name their own. The host ships `gemini.svg`, `copilot.svg` with `copilot-dark.svg`, `opencode.svg` with `opencode-dark.svg`, `cursor.svg` with `cursor-dark.svg`, `qwen.svg`, and `cline.svg` with `cline-dark.svg`, each from Simple Icons under CC0 1.0. `agents-channel.test.ts` has three new cases: a record with its own icon, one that takes its template's by command, and one that matches no template. `plugin-icons.test.ts` has a case for a template's mark resolved at load.
+- **Next action:** Softov adds the three by-hand checks, which need his daemon and ahpw.
+- **Files:** `packages/sdk/src/types/agents.ts`, `packages/server/src/plugins.ts`, `packages/sdk/src/agents/channel.ts`, `packages/agent-acp/src/presets.ts`, `packages/server/icons/{gemini,copilot,copilot-dark,opencode,opencode-dark,cursor,cursor-dark,qwen,cline,cline-dark}.svg`, `packages/sdk/test/agents-channel.test.ts`, `packages/server/test/plugin-icons.test.ts`, `docs/plugins/PLUGINS.md`, `.project/pending/plugin-58-icon-curation.md`, this task file.
+- **Open questions:** the mark for dsh, and marks for kilo, goose, pi, devin, amp and omp, for which no clear source and licence was found.
+- **Departures:** `docs/plugins/PLUGINS.md` gained a sentence about a template's `icons` and a paragraph about the agents row's `icons`, which the Files list does not name. Kilo, goose, pi, devin, amp and omp show the engine's icon, and dsh has a curation row that asks for its mark.
+- **Watch out for:** a record matches a template only when its own `config.command` is a string equal to the template's. A record whose command was edited keeps the engine's icon.

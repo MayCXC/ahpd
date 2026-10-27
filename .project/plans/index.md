@@ -409,7 +409,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [66 - A reopened bot chat keeps its mark](plugin/66-a-reopened-bot-chat-keeps-its-mark/plan.md) | high | active 2026-10-25; tasks 01 and 02 implemented | - | ahpw, which reads the mark from `_meta` and needs no change |
 | [67 - A plugin raises alerts, and its row carries them](plugin/67-a-plugin-raises-alerts/plan.md) | medium | active 2026-10-25; one task, implemented | - | ahpw draws the alerts and stops reading `loadProblem`, session c7 |
 | [68 - A missing Activepieces piece installs when its name is saved](plugin/68-a-missing-piece-installs/plan.md) | medium | active 2026-10-25; two tasks, implemented | plugin 67 | - |
-| [69 - A plugin names a brand mark the host ships](plugin/69-a-plugin-names-a-host-mark/plan.md) | medium | planned 2026-10-26; four tasks | plugin 58 | ahpw reads the agents row's `icons`; Softov curates each mark |
+| [69 - A plugin names a brand mark the host ships](plugin/69-a-plugin-names-a-host-mark/plan.md) | medium | active 2026-10-26; four tasks, all implemented | plugin 58 | ahpw reads the agents row's `icons`; Softov curates each mark and runs the by-hand checks |
 | [70 - An Activepieces action takes and writes a file](plugin/70-a-piece-action-takes-a-file/plan.md) | medium | planned 2026-10-26; three tasks | - | - |
 
 Next free number in `plugin`: `71`.

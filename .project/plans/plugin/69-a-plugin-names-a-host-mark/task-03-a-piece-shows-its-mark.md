@@ -1,6 +1,6 @@
 ---
 title: An Activepieces piece shows its mark
-status: todo
+status: implemented
 depends: [task-01-the-host-resolves-a-mark.md]
 layer: "activepieces"
 refs:
@@ -38,3 +38,10 @@ A piece with no mark keeps its CDN logo.
 - By hand: with the config-dev pieces, the adapters channel rows for Jira, Linear, Resend and WhatsApp have a `data:image/svg+xml` icon.
 
 ## Resume
+
+- **Done so far:** `packages/activepieces/src/logos.ts` holds a `MARKS` table from `ap-jira-cloud`, `ap-linear`, `ap-resend` and `ap-whatsapp` to their mark names, and `logoOf` answers `{ icon: { src: "mark:<name>" } }` before it reads the cache, so a marked piece makes no fetch. `plugin.ts` needed no change, because the icon `logoOf` answers already reaches the adapter. `logos.test.ts` has two new cases: a marked piece with a cache file and a fetcher that throws still answers the mark, and a piece with no mark fetches its CDN logo once. `docs/plugins/activepieces.md` says the four pieces show a host mark instead of their CDN logo. Plan 58 task 06 is `dropped`, names this task, and its plan says so in the Tasks table and the Resume state.
+- **Next action:** none; the four marks come from task 01.
+- **Files:** `packages/activepieces/src/logos.ts`, `packages/activepieces/test/logos.test.ts`, `docs/plugins/activepieces.md`, `.project/plans/plugin/58-plugins-and-adapters-carry-icons/task-06-a-large-logo-has-a-shipped-svg.md`, `.project/plans/plugin/58-plugins-and-adapters-carry-icons/plan.md`, this task file.
+- **Open questions:** none.
+- **Departures:** the Files list names `packages/activepieces/src/plugin.ts:383-390`, but no change was needed there: `logoOf`'s icon is already handed to `adapterOf`.
+- **Watch out for:** the mark table is read before the cache, so a cached CDN logo never wins over a mark.

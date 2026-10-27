@@ -31,8 +31,10 @@ export interface AgentTemplate {
   name: string;
   /** One line about it. */
   description?: string;
-  /** What a client draws beside it. */
+  /** What a client draws beside it, as the engine declared it. */
   icon?: Icon;
+  /** The icons a client draws beside it, with each `src` resolved by the host. */
+  icons?: Icon[];
   /** The model a record made from it starts on. */
   model?: string;
   /** The engine's own values it starts with. */

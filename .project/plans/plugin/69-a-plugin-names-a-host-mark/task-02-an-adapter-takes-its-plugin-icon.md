@@ -1,6 +1,6 @@
 ---
 title: An adapter falls back to its plugin's icon
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -32,3 +32,10 @@ An adapter whose plugin has no icon is sent with none, and the client draws its 
 - `pnpm -s typecheck && pnpm -s build && pnpm -s boundary && pnpm -s test` passes.
 
 ## Resume
+
+- **Done so far:** `AdaptersChannelOptions` in `packages/sdk/src/connectors/adapters.ts` takes an optional `pluginIcons(name)`, and `rowOf` sends an adapter's own icons, else the icons its plugin registered, and leaves the key out when there are none. `packages/server/src/commands/run.ts` gives the adapters channel the same `pluginIcons` the engines channel has, read from the loaded plugin's manifest. `adapters-channel.test.ts` has two new cases: an adapter with no icon takes its plugin's, and one whose plugin has none carries no `icons` key.
+- **Next action:** none; task 03 builds on task 01, not this one.
+- **Files:** `packages/sdk/src/connectors/adapters.ts`, `packages/server/src/commands/run.ts`, `packages/sdk/test/adapters-channel.test.ts`, this task file.
+- **Open questions:** none.
+- **Departures:** none.
+- **Watch out for:** an adapter's own icon wins over its plugin's, and an empty list on the adapter is treated as none.
