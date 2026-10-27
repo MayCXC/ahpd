@@ -1,6 +1,6 @@
 ---
 title: The store takes the marks out, in the order they came
-status: todo
+status: done
 depends: []
 layer: "sdk"
 refs:
@@ -42,3 +42,11 @@ Each action goes out where its mark stood, and detection goes out with the first
 - `pnpm boundary`, `pnpm typecheck` and `pnpm build` pass.
 
 ## Resume
+
+Done 2026-10-27.
+`meant` and `read` replace `marked`, and `unfinished` holds back a split mark up to `HELD` characters.
+The cases in `packages/sdk/test/pty.test.ts` pass, 30 of 30.
+On the store before this change, five of the new cases fail, so they test the change.
+The case for the held text passes there too, because that store holds nothing back.
+In a full run of `packages/sdk`, the failures outside these cases change from run to run, and the store before this change has them too.
+`listen.test.ts`, `wire.test.ts` and `shellenv.test.ts` pass alone, 46 of 46.

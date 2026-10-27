@@ -77,7 +77,7 @@ pty data -> read -> said (terminal/data) and meant (terminal/commandExecuted, te
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The store takes the marks out, in the order they came](task-01-the-store-takes-the-marks-out-in-order.md) | todo | - |
+| [01 - The store takes the marks out, in the order they came](task-01-the-store-takes-the-marks-out-in-order.md) | done | - |
 | [02 - The docs say what a client receives](task-02-the-docs-say-what-a-client-receives.md) | todo | 01 |
 
 ## Risks and tradeoffs
@@ -88,8 +88,8 @@ pty data -> read -> said (terminal/data) and meant (terminal/commandExecuted, te
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-27.
-- **Next action:** [task-01-the-store-takes-the-marks-out-in-order.md](task-01-the-store-takes-the-marks-out-in-order.md).
+- **Done so far:** planned 2026-10-27, and task 01 done the same day.
+- **Next action:** [task-02-the-docs-say-what-a-client-receives.md](task-02-the-docs-say-what-a-client-receives.md).
 - **Open questions:** none.
 - **Watch out for:** this plan changes two cases in `packages/sdk/test/pty.test.ts`: detection at the start, and the marks in the data.
 

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { terminalReducer } from '@microsoft/agent-host-protocol';
 import type { SpawnOptions } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -17,27 +18,29 @@ import type { Pty, SpawnPty, Terminal } from '../src/types/terminals.js';
  * than needing native code to have been built.
  */
 
-/** A pseudoterminal that says whatever a test tells it to. */
+/** A pseudoterminal that says whatever a test tells it to, and exits when told. */
 function fakePty(): {
   spawn: SpawnPty;
   say: (data: string) => void;
+  exit: (exitCode: number) => void;
   typed: string[];
   started: { shell: string; args: string[] | string }[];
 } {
   let listen: ((data: string) => void) | undefined;
+  let gone: ((exit: { exitCode: number }) => void) | undefined;
   const typed: string[] = [];
   const started: { shell: string; args: string[] | string }[] = [];
   const spawn: SpawnPty = (shell, args) => {
     started.push({ shell, args });
     return {
       onData: (to) => { listen = to; },
-      onExit: () => {},
+      onExit: (to) => { gone = to; },
       write: (data) => { typed.push(data); },
       resize: () => {},
       kill: () => {},
     };
   };
-  return { spawn, say: (data) => listen?.(data), typed, started };
+  return { spawn, say: (data) => listen?.(data), exit: (exitCode) => gone?.({ exitCode }), typed, started };
 }
 
 const opened = (pty?: SpawnPty) => {
@@ -54,6 +57,10 @@ const opened = (pty?: SpawnPty) => {
 
 /** An OSC sequence, the way a shell integration script writes one. */
 const osc = (body: string) => `\u001b]${body}\u0007`;
+
+/** Everything a terminal sent its client as output, joined. */
+const dataOf = (seen: Record<string, unknown>[]) =>
+  seen.filter((one) => one.type === 'terminal/data').map((one) => String(one.data)).join('');
 
 /**
  * `/tmp`, absolute on this system: `F:\tmp` on Windows, where a path with no
@@ -249,15 +256,23 @@ describe('the line a pipe spawn is given', () => {
 });
 
 describe('a shell under a pseudoterminal', () => {
-  it('says it is one, and that command detection works', () => {
-    const { spawn } = fakePty();
+  it('says it is one, and announces command detection with the first mark', () => {
+    const { spawn, say } = fakePty();
     const { terminal, seen } = opened(spawn);
-    const state = terminal.state() as { isPty?: boolean; supportsCommandDetection?: boolean };
-    expect(state.isPty).toBe(true);
-    // A client MUST check this before relying on command boundaries, so it is
-    // announced as well as reported.
-    expect(state.supportsCommandDetection).toBe(true);
-    expect(seen.some((one) => one.type === 'terminal/commandDetectionAvailable')).toBe(true);
+    const state = () => terminal.state() as { isPty?: boolean; supportsCommandDetection?: boolean };
+    const announced = () => seen.filter((one) => one.type === 'terminal/commandDetectionAvailable');
+    expect(state().isPty).toBe(true);
+    // A shell may print no marks at all. The protocol sends this when shell
+    // integration becomes available, and a client MUST NOT assume detection
+    // before it, so neither the action nor the state says so yet.
+    expect(state().supportsCommandDetection).toBe(false);
+    expect(announced()).toHaveLength(0);
+    say(osc('133;A'));
+    expect(state().supportsCommandDetection).toBe(true);
+    expect(announced()).toHaveLength(1);
+    // Once.
+    say(osc('133;A'));
+    expect(announced()).toHaveLength(1);
   });
 
   it('reads the command boundaries the shell prints', () => {
@@ -289,6 +304,8 @@ describe('a shell under a pseudoterminal', () => {
     // The host part of the URI is dropped: the path is on this machine, and
     // that is what a client opens.
     expect(moved?.cwd).toBe(elsewhere);
+    // A directory says nothing about where commands begin and end.
+    expect(seen.some((one) => one.type === 'terminal/commandDetectionAvailable')).toBe(false);
   });
 
   it('reads a directory whose name was encoded, and answers it encoded', () => {
@@ -311,15 +328,58 @@ describe('a shell under a pseudoterminal', () => {
     expect(moved()).toEqual([mine, elsewhere]);
   });
 
-  it('still passes the bytes through, because a client is drawing them', () => {
+  it('takes its marks out of the output, and passes every other sequence on', () => {
     const { spawn, say } = fakePty();
     const { seen } = opened(spawn);
-    say(osc('133;C') + 'hello');
-    const data = seen.filter((one) => one.type === 'terminal/data').map((one) => String(one.data));
-    expect(data.join('')).toContain('hello');
-    // A reader, not a filter: the marks reach the client too, which is drawing
-    // a terminal and parses them itself.
-    expect(data.join('')).toContain('133;C');
+    const title = '\u001b]0;build\u0007';
+    say(`${osc('133;A')}$ ${osc('133;B')}`);
+    say(`${osc('133;C')}hello${title}\r\n${osc(`7;${uriOf(tmp)}`)}`);
+    // The other terminator a sequence may end with.
+    say('\u001b]133;D;0\u001b\\');
+    // A server MUST NOT include shell integration escape sequences in
+    // `terminal/data`, which a client would count as output. A title is not
+    // one, and the client drawing the terminal needs it.
+    expect(dataOf(seen)).toBe(`$ hello${title}\r\n`);
+  });
+
+  it('keeps a command\'s output inside its command, as the protocol reads it', () => {
+    const { spawn, say } = fakePty();
+    const { terminal, seen } = opened(spawn);
+    const start = terminal.state();
+    say(`${osc('133;A')}$ `);
+    terminal.write('ls');
+    // One chunk: the command starts, prints, ends, and the next prompt draws.
+    say(`ls\r\n${osc('133;C')}total 8\r\n${osc('133;D;0')}${osc('133;A')}$ `);
+    // Replayed through the protocol package's own reducer, which is what a
+    // client runs: the output between the pair is the command's.
+    const state = seen.reduce<unknown>((now, action) => terminalReducer(now as never, action as never), start) as
+      { content: { type: string; value?: string; output?: string; commandLine?: string; exitCode?: number; isComplete?: boolean }[] };
+    const ran = state.content.find((part) => part.type === 'command');
+    expect(ran).toMatchObject({ commandLine: 'ls', output: 'total 8\r\n', exitCode: 0, isComplete: true });
+    expect(state.content.at(-1)).toMatchObject({ type: 'unclassified', value: '$ ' });
+  });
+
+  it('reads a mark that two chunks split, and keeps it out of the output', () => {
+    const { spawn, say } = fakePty();
+    const { terminal, seen } = opened(spawn);
+    terminal.write('make');
+    say('out\u001b]13');
+    say('3;C\u0007more\u001b');
+    say(']133;D;2\u001b\\');
+    expect(dataOf(seen)).toBe('outmore');
+    const done = seen.find((one) => one.type === 'terminal/commandFinished') as { exitCode?: number } | undefined;
+    expect(done?.exitCode).toBe(2);
+  });
+
+  it('says what it held as the start of a mark when the shell exits', () => {
+    const { spawn, say, exit } = fakePty();
+    const { seen } = opened(spawn);
+    say('bye\u001b]133;');
+    exit(0);
+    // The start of a mark that never finished was output after all, and it
+    // goes out before the exit does.
+    expect(dataOf(seen)).toBe('bye\u001b]133;');
+    expect(seen.at(-1)?.type).toBe('terminal/exited');
   });
 
   it('is not one when no binding was given', () => {

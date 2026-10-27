@@ -229,14 +229,47 @@ const argvLine = (kind: ShellKind, argv: string[], windowsPowerShell = false): s
  * OSC 133 is the command-boundary convention every shell integration script
  * writes - `A` before the prompt, `B` where the command starts, `C` where its
  * output does, `D;<code>` when it finished - and OSC 7 is the directory. They
- * arrive mixed into the output, so this reads them out and leaves the rest
- * alone: the bytes still go to the client, which is drawing a terminal and
- * needs them.
+ * arrive mixed into the output, and this takes them out of it: a server MUST
+ * NOT include shell integration escape sequences in `terminal/data`, which a
+ * client would otherwise count as output
+ * (https://microsoft.github.io/agent-host-protocol/specification/terminal-channel).
+ * The rest of the bytes go to the client, which is drawing a terminal.
  *
  * Only under a pseudoterminal, because only then is there a shell running its
  * own prompt to emit them.
  */
 const MARKS = /\u001b\](133|7);([^\u0007\u001b]*)(?:\u0007|\u001b\\)/g;
+
+/**
+ * The most of a chunk's end held back as the start of a mark.
+ *
+ * The reference host's bound on an escape sequence it holds for the next
+ * chunk, so one that never finishes cannot hold back output
+ * (https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/copilot/copilotNonPtyShellTerminals.ts#L59-L60).
+ */
+const HELD = 1024;
+
+/** How each mark the store reads begins. */
+const OPENERS = ['\u001b]133;', '\u001b]7;'];
+
+/**
+ * Where a mark that the next chunk may finish starts, at the end of `data`.
+ *
+ * A pseudoterminal hands output over in whatever pieces it read, so one mark
+ * can arrive in two. What could still become one is held, and the answer is
+ * `data.length` when nothing could: an open sequence that is not a mark, such
+ * as a title, goes on to the client, which joins the pieces itself.
+ */
+const unfinished = (data: string): number => {
+  const start = data.lastIndexOf('\u001b]');
+  if (start !== -1 && data.length - start <= HELD) {
+    const rest = data.slice(start);
+    const open = !rest.includes('\u0007') && !rest.includes('\u001b\\');
+    if (open && OPENERS.some((opener) => rest.startsWith(opener) || opener.startsWith(rest))) return start;
+  }
+  // A lone escape at the very end can be the start of either.
+  return data.endsWith('\u001b') ? data.length - 1 : data.length;
+};
 
 /**
  * Open one.
@@ -358,48 +391,81 @@ export function createTerminal(
   let command: { id: string; line: string; at: number } | undefined;
   /** What has been typed since the prompt, so the command line can be read back. */
   let typed = '';
+  /**
+   * Whether the shell has marked a command boundary.
+   *
+   * A shell under a pseudoterminal may print no marks at all, and the protocol
+   * sends `terminal/commandDetectionAvailable` when shell integration becomes
+   * available, so it goes out with the first OSC 133 mark and the state
+   * reports it from then on - as the reference host announces it with the
+   * first sequence a terminal writes
+   * (https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/agentHostTerminalManager.ts#L709-L715).
+   */
+  let detected = false;
+  /** The end of the last chunk, while it may be the start of a mark. */
+  let held = '';
+
+  /** Say what one mark meant. */
+  const meant = (kind: string | undefined, body: string): void => {
+    if (kind === '7') {
+      // `file://host/path`, per the convention. The host part is dropped:
+      // the path is on this machine, and that is what a client opens.
+      const path = localPath(body);
+      if (path !== '' && path !== where) {
+        where = path;
+        emit('terminal', { type: 'terminal/cwdChanged', cwd: uriOf(path) });
+      }
+      return;
+    }
+    if (!detected) {
+      detected = true;
+      emit('terminal', { type: 'terminal/commandDetectionAvailable' });
+    }
+    const mark = body.split(';')[0];
+    if (mark === 'A') { typed = ''; return; }
+    if (mark === 'C') {
+      command = { id: `c${String(Date.now())}`, line: typed.trim(), at: Date.now() };
+      emit('terminal', {
+        type: 'terminal/commandExecuted',
+        commandId: command.id,
+        commandLine: command.line,
+        timestamp: command.at,
+      });
+      return;
+    }
+    if (mark !== 'D' || command === undefined) return;
+    const code = Number(body.split(';')[1]);
+    emit('terminal', {
+      type: 'terminal/commandFinished',
+      commandId: command.id,
+      ...(Number.isFinite(code) ? { exitCode: code } : {}),
+      durationMs: Date.now() - command.at,
+    });
+    command = undefined;
+  };
 
   /**
-   * Read the shell's own marks out of a chunk, and say what they meant.
+   * Say a chunk of output without the shell's marks, and what each mark meant
+   * where it stood.
    *
-   * The chunk still reaches the client whole: this is a reader, not a filter,
-   * and a client drawing a terminal needs the bytes it was sent.
+   * Where it stood is the protocol's order: the output said between a
+   * command's `terminal/commandExecuted` and its `terminal/commandFinished` is
+   * the command's, so what came before a mark is said before the mark's
+   * action, as the reference host says each run of output and each sequence
+   * in the order they arrived
+   * (https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/agentHostTerminalManager.ts#L654-L705).
    */
-  const marked = (data: string): void => {
-    for (const found of data.matchAll(MARKS)) {
-      const [, kind, body = ''] = found;
-      if (kind === '7') {
-        // `file://host/path`, per the convention. The host part is dropped:
-        // the path is on this machine, and that is what a client opens.
-        const path = localPath(body);
-        if (path !== '' && path !== where) {
-          where = path;
-          emit('terminal', { type: 'terminal/cwdChanged', cwd: uriOf(path) });
-        }
-        continue;
-      }
-      const mark = body.split(';')[0];
-      if (mark === 'A') { typed = ''; continue; }
-      if (mark === 'C') {
-        command = { id: `c${String(Date.now())}`, line: typed.trim(), at: Date.now() };
-        emit('terminal', {
-          type: 'terminal/commandExecuted',
-          commandId: command.id,
-          commandLine: command.line,
-          timestamp: command.at,
-        });
-        continue;
-      }
-      if (mark !== 'D' || command === undefined) continue;
-      const code = Number(body.split(';')[1]);
-      emit('terminal', {
-        type: 'terminal/commandFinished',
-        commandId: command.id,
-        ...(Number.isFinite(code) ? { exitCode: code } : {}),
-        durationMs: Date.now() - command.at,
-      });
-      command = undefined;
+  const read = (chunk: string): void => {
+    const data = held + chunk;
+    const end = unfinished(data);
+    held = data.slice(end);
+    let from = 0;
+    for (const found of data.slice(0, end).matchAll(MARKS)) {
+      if (found.index > from) said(data.slice(from, found.index));
+      from = found.index + found[0].length;
+      meant(found[1], found[2] ?? '');
     }
+    if (end > from) said(data.slice(from, end));
   };
 
   /*
@@ -419,11 +485,14 @@ export function createTerminal(
     env: environment,
   });
   if (terminal !== undefined) {
-    terminal.onData((data) => { marked(data); said(data); });
-    terminal.onExit(({ exitCode: code }) => { exitCode = code; ended(); });
-    // Said once, at the start. A client MUST check this before relying on
-    // command boundaries, and the same fact is on the state.
-    emit('terminal', { type: 'terminal/commandDetectionAvailable' });
+    terminal.onData(read);
+    terminal.onExit(({ exitCode: code }) => {
+      // What was held as the start of a mark was output after all.
+      if (held !== '') said(held);
+      held = '';
+      exitCode = code;
+      ended();
+    });
   }
 
   const child = terminal !== undefined ? undefined : start(shell, args, {
@@ -538,10 +607,10 @@ export function createTerminal(
       // to divide the output at. The protocol's shape, not a flat string.
       content: buffered === '' ? [] : [{ type: 'unclassified', value: buffered }],
       claim,
-      // Both true only under a pseudoterminal: without one there is no shell
-      // running its own prompt, so there are no boundaries to report and no
-      // VT sequences for a client to parse.
-      supportsCommandDetection: terminal !== undefined,
+      // Detection once the shell has marked a boundary, which only a shell
+      // running its own prompt under a pseudoterminal does. VT sequences for
+      // a client to parse come with the pseudoterminal itself.
+      supportsCommandDetection: detected,
       isPty: terminal !== undefined,
       /*
        * Both spellings, because this host speaks five versions.
