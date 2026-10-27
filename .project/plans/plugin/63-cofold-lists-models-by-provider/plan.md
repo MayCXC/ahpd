@@ -74,7 +74,7 @@ turn -> modelOf -> connectionOf(strict=true) -> the provider the reference names
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - List every provider under its own id](task-01-list-every-provider-under-its-id.md) | implemented | - |
-| [02 - The cofold prefix names only an unowned endpoint](task-02-cofold-prefix-only-unowned-endpoint.md) | doing | 01 |
+| [02 - The cofold prefix names only an unowned endpoint](task-02-cofold-prefix-only-unowned-endpoint.md) | implemented | 01 |
 | [03 - The README says how models are listed](task-03-readme-says-how-models-are-listed.md) | todo | 02 |
 | [04 - A new Cofold session picks a model](task-04-a-new-session-picks-a-model.md) | todo | - |
 
@@ -85,12 +85,12 @@ turn -> modelOf -> connectionOf(strict=true) -> the provider the reference names
 
 ## Resume state
 
-- **Done so far:** task 01 is implemented.
-  Every provider in the cofold file is listed under its own id.
-  Each is asked with its own key, and a turn uses the key of the provider its reference names.
+- **Done so far:** tasks 01 and 02 are implemented.
+  Every provider in the cofold file is listed under its own id, each with its own key.
+  The `cofold` prefix remains only for an explicit `baseUrl` or the local endpoint.
   The `packages/agent-cofold` suite and `pnpm -s typecheck` pass.
 - **Reopened:** 2026-10-27, a new Cofold session showed no Model picker in ahpw. Task 04 removes `model` from the session schema.
-- **Next action:** task 02, starting at step 1. Task 04 depends on no other task.
+- **Next action:** task 03. Task 04 depends on no other task.
 - **Open questions:** none.
 - **Watch out for:** `infoOf` searches every catalogue by reference already, so it needs no change. Keep the five-second catalogue limit per provider, and ask the providers in parallel.
 

@@ -409,7 +409,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | proxy 04 |
 | [61 - A plugin icon has a dark variant](plugin/61-a-plugin-icon-has-a-dark-variant/plan.md) | medium | built 2026-10-24 ([implemented.md](plugin/61-a-plugin-icon-has-a-dark-variant/implemented.md)); merged in #86 | plugin 58 | - |
 | [62 - A working connector is ready, not open](plugin/62-a-working-connector-is-ready/plan.md) | medium | active 2026-10-24; one task, implemented | - | - |
-| [63 - agent-cofold lists models under their provider id](plugin/63-cofold-lists-models-by-provider/plan.md) | high | active 2026-10-24; task 01 implemented, task 02 doing, task 04 added 2026-10-27 | - | - |
+| [63 - agent-cofold lists models under their provider id](plugin/63-cofold-lists-models-by-provider/plan.md) | high | active 2026-10-24; tasks 01 and 02 implemented, task 04 added 2026-10-27 | - | - |
 | [64 - An admin installs and removes a plugin from the UI](plugin/64-an-admin-installs-a-plugin-from-the-ui/plan.md) | medium | active 2026-10-25; three tasks, all implemented | plugin 59 | - |
 | [65 - A disabled plugin describes itself](plugin/65-a-disabled-plugin-describes-itself/plan.md) | medium | active 2026-10-25; four tasks, all implemented | plugin 64 | the ahpw plugin page for a disabled plugin; `definePlugin` |
 | [66 - A reopened bot chat keeps its mark](plugin/66-a-reopened-bot-chat-keeps-its-mark/plan.md) | high | active 2026-10-25; tasks 01 and 02 implemented | - | ahpw, which reads the mark from `_meta` and needs no change |

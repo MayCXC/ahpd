@@ -1,6 +1,6 @@
 ---
 title: The cofold prefix names only an unowned endpoint
-status: doing
+status: implemented
 depends: [task-01-list-every-provider-under-its-id.md]
 layer: "agent-cofold"
 refs:
@@ -36,7 +36,14 @@ A `cofold/<id>` reference no longer resolves to a file provider. The `cofold` pr
 
 ## Resume
 
-- **Done so far:** nothing yet.
+- **Done so far:** `ownRef` is removed.
+  In strict mode a reference under this backend's own id is accepted only with an explicit `baseUrl` or with no file provider.
+  Any other unmatched reference keeps the error that names the configured providers.
+  The test of an explicit `baseUrl` still lists and resolves `cofold/qwen/qwen3-8b`.
+  New tests cover the refused `cofold/<id>` with a file provider and the accepted one with no provider.
+  The doc comment on `Connection.prefix` says when the prefix is this backend's own id.
+  `rg -n "ownRef" packages/agent-cofold/src` finds nothing.
+  The full `packages/agent-cofold` suite passes, and `pnpm -s typecheck` passes.
 - **Next action:** step 1.
 - **Files:** none yet.
 - **Open questions:** none.

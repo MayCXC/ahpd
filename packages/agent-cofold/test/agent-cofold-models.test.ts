@@ -337,6 +337,27 @@ it('offers an endpoint no harness entry owns under this backend own provider id'
   expect(resolved.modelId).toBe('qwen/qwen3-8b');
 });
 
+it('refuses this backend own prefix for a provider the file carries', () => {
+  put(CONFIG);
+  /*
+   * The file has open_router, so `cofold/...` names no endpoint of its own: it
+   * is a provider reference like any other, and the error names what the file
+   * configures.
+   */
+  expect(() => modelOf({}, { model: 'cofold/qwen/qwen3-8b' })).toThrow(/configures open_router/);
+});
+
+it('resolves this backend own prefix to the local endpoint when the file has no provider', () => {
+  put({ providers: [] });
+  const resolved = modelOf({}, { model: 'cofold/qwen/qwen3-8b' });
+  expect(resolved.modelId).toBe('qwen/qwen3-8b');
+});
+
+it('refuses a named provider when the file carries none', () => {
+  put({ providers: [] });
+  expect(() => modelOf({}, { model: 'absent/model' })).toThrow(/configures none/);
+});
+
 it('never asks the network for a caller that passed an adapter', async () => {
   put(CONFIG);
   const { seen } = answering({ data: LISTED });

@@ -209,8 +209,9 @@ export interface Connection {
    * The prefix a model this endpoint serves is offered under.
    *
    * The harness provider that owns the endpoint, so a choice selects the same
-   * provider back; this backend's own id when no entry owns it, which `modelOf`
-   * accepts for the endpoint it was configured with.
+   * provider back; this backend's own id only for an endpoint no entry owns,
+   * which is an explicit `baseUrl` or the local endpoint when the file carries
+   * no provider.
    */
   prefix: string;
 }
@@ -292,16 +293,20 @@ const connectionOf = (
   const named = reference === undefined ? undefined : splitModel(reference);
   const provider = endpointOf(options, harness, reference);
   const explicitBase = text(settings.baseUrl) ?? options.baseUrl;
-  // A reference under this backend's own id names the endpoint it was
-  // configured with rather than a provider the harness file would have to hold.
-  const ownRef = named !== undefined && named.provider === own;
   if (strict) {
     if (reference === undefined) {
       throw new Error(`${own}: no model is configured and this backend has no default; add "model" (as "<provider>/<model>") to ${harness.path}`);
     }
-    if (named !== undefined && provider === undefined && explicitBase === undefined && !ownRef) {
+    /*
+     * This backend's own id is not a provider the file has to carry. It names
+     * an endpoint only where one was given outright, or where the file carries
+     * no provider at all; any other reference has to match a file provider.
+     */
+    if (named !== undefined && provider === undefined && explicitBase === undefined) {
       const known = harness.providers.map((one) => one.id);
-      throw new Error(`${own}: model "${reference}" names provider "${named.provider}", and ${harness.path} configures ${known.length === 0 ? 'none' : known.join(', ')}`);
+      if (known.length > 0 || named.provider !== own) {
+        throw new Error(`${own}: model "${reference}" names provider "${named.provider}", and ${harness.path} configures ${known.length === 0 ? 'none' : known.join(', ')}`);
+      }
     }
   }
   const model = reference === undefined ? undefined : (named === undefined ? reference : named.modelId);
