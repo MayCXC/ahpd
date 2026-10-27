@@ -51,6 +51,7 @@ pnpm notes:bun   # examples/notes on Bun
 ```
 
 [`packages/sdk/src/listen.ts`](packages/sdk/src/listen.ts) is the only file that knows the runtime, and it has one code path for each of Node, Bun and Deno, so a change to it is run on more than one.
+[`packages/server/src/pty.ts`](packages/server/src/pty.ts) asks it, and has a terminal binding for Bun and one for the rest, so a change there is run on Bun and on Node.
 The sources import `./host.js`, the name the build emits.
 Bun maps that to the `.ts` by itself; on Node, [`scripts/dev.mjs`](scripts/dev.mjs) registers [`scripts/dev-hooks.mjs`](scripts/dev-hooks.mjs) to do the same.
 On a Node older than 22.15 or 23.5 the hooks run on their own thread, and importing pi takes about four times as long.

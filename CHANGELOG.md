@@ -2,6 +2,12 @@
 
 What changed in each release of the `@ahpd/*` packages. Every package carries the same version. Releases before 0.11.0 are in the git history.
 
+## 0.14.1 - unreleased
+
+### Daemon
+
+- On Bun, a terminal is a pseudoterminal with OSC 133 command detection: Bun's own, through the `terminal` option of `Bun.spawn`, from Bun 1.3.5 on Linux and macOS and from Bun 1.3.14 on Windows, where it is ConPTY. `node-pty` is never loaded on Bun, where it loads but every shell it starts dies at once. Node and Deno keep `node-pty` where it loads. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#pipes-or-a-pseudoterminal).
+
 ## 0.14.0 - 2026-10-26
 
 ### Upgrading

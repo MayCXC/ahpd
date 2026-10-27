@@ -136,8 +136,9 @@ export interface Terminal {
  *
  * Handed in rather than imported: a PTY is a native binding, and a library
  * that depended on one would not load under a runtime it was not built for.
- * The daemon passes `node-pty` when it has it; a host on another runtime
- * passes its own, and one that passes none keeps pipes and says `isPty: false`.
+ * The daemon passes Bun's own on Bun, and `node-pty` elsewhere when it has it;
+ * a host on another runtime passes its own, and one that passes none keeps
+ * pipes and says `isPty: false`.
  */
 export interface Pty {
   /** Everything the terminal writes, VT sequences included. */

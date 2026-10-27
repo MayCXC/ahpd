@@ -21,8 +21,9 @@ import type { Bounding } from './types/rpc.js';
  *
  * The knowledge stays in this module rather than moving to a second detector:
  * `listen` is still the only place that knows, and the plugin loader that has
- * to answer a bare spec differently on Deno calls this rather than copying it,
- * so the two can never disagree.
+ * to answer a bare spec differently on Deno, and the terminal binding that is
+ * Bun's own on Bun, call this rather than copying it, so they can never
+ * disagree.
  */
 export const runtime = (): Runtime => {
   const g = globalThis as { Bun?: unknown; Deno?: unknown };
