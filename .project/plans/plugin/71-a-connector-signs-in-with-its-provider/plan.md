@@ -1,7 +1,7 @@
 ---
 title: A connector signs in with its provider
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-27
 revalidated: 2026-10-27
@@ -74,8 +74,8 @@ client -> x-ahpd/connectors/signin-finish { state, code } -> adapter.signIn.exch
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A connector signs in with a pasted code](task-01-a-connector-signs-in-with-a-pasted-code.md) | todo | - |
-| [02 - OpenRouter signs in](task-02-openrouter-signs-in.md) | todo | 01 |
+| [01 - A connector signs in with a pasted code](task-01-a-connector-signs-in-with-a-pasted-code.md) | implemented | - |
+| [02 - OpenRouter signs in](task-02-openrouter-signs-in.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -86,8 +86,8 @@ client -> x-ahpd/connectors/signin-finish { state, code } -> adapter.signIn.exch
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-connector-signs-in-with-a-pasted-code.md](task-01-a-connector-signs-in-with-a-pasted-code.md).
+- **Done so far:** tasks 01 and 02 are implemented. The sdk owns `SignIn`, the two commands and the started sign-ins, and the server gives `openrouter` its `signIn`.
+- **Next action:** a person runs the checks in [pending/plugin-71-sign-in-checks.md](../../pending/plugin-71-sign-in-checks.md) after the ahpw Connect button lands.
 - **Open questions:** none.
 - **Watch out for:** a finished sign-in must run the same checks as a put, again, because the caller's grants can change in 10 minutes.
 

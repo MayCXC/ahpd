@@ -21,6 +21,7 @@ import type { StartSession } from '../types/automations.js';
 import type { ChatRequest, PluginContracts, PortKey } from '../types/plugin.js';
 import type { Owner } from '../types/usage.js';
 import { SUBJECTS, isGrant } from '../access/users.js';
+import { writeOnly } from '../channels/owners.js';
 import { RECORD_SLUG, isRecordSlug } from '../resources/records.js';
 
 /**
@@ -597,6 +598,34 @@ export const checkIcons = (value: unknown, by: string, method = 'registerAdapter
 };
 
 /**
+ * Check a `signIn` against `SignIn`, and that its field is one the schema keeps.
+ *
+ * A sign-in is served as commands of its own, so every member the host calls
+ * has to be there and be the right kind. The field is checked against the
+ * schema here: only a `writeOnly` field is moved to the vault, and a sign-in
+ * filling any other would leave the key in the record a client reads.
+ */
+const checkSignIn = (value: unknown, schema: Record<string, unknown>, by: string): void => {
+  if (value === undefined) return;
+  const signIn = asObject(value, by, 'registerAdapter', 'a signIn');
+  if (typeof signIn.title !== 'string' || signIn.title === '') {
+    throw new Error(miss(by, 'registerAdapter', 'signIn.title', 'a non-empty string, what a client prints on the button'));
+  }
+  if (typeof signIn.field !== 'string' || signIn.field === '') {
+    throw new Error(miss(by, 'registerAdapter', 'signIn.field', 'a non-empty string, naming a field the schema marks writeOnly'));
+  }
+  for (const member of ['url', 'exchange']) {
+    if (typeof signIn[member] !== 'function') {
+      throw new Error(miss(by, 'registerAdapter', `signIn.${member}`, 'a function, the half of a sign-in the host calls'));
+    }
+  }
+  const field = signIn.field;
+  if (!writeOnly(schema).includes(field)) {
+    throw new Error(miss(by, 'registerAdapter', field, `a field the schema marks writeOnly, so the exchanged value is kept in the vault`));
+  }
+};
+
+/**
  * Check one `registerAdapter` value against `Adapter`, and answer its name.
  *
  * The name is a slug and the schema an object, because those are the two the
@@ -616,6 +645,7 @@ export const checkAdapter = (value: unknown, by: string): string => {
   if (!right(object.schema, 'object')) {
     throw new Error(miss(by, 'registerAdapter', 'schema', 'an object, the JSON Schema a client draws the form from'));
   }
+  checkSignIn(object.signIn, object.schema as Record<string, unknown>, by);
   if (!Array.isArray(object.capabilities)) {
     throw new Error(miss(by, 'registerAdapter', 'capabilities', 'a list of the capabilities a connector of this adapter has'));
   }

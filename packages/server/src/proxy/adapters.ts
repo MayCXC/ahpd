@@ -13,6 +13,11 @@
  *
  * The four checks are one `GET` that needs the key, so a wrong key is refused
  * rather than answered. Nothing here reads a key from the environment itself.
+ *
+ * OpenRouter is also the first adapter with a `signIn`: a person signs in on
+ * OpenRouter's own page and pastes the code back, and the host exchanges it for
+ * a key. Both URLs are OpenRouter's public ones, fixed here, so a connector's
+ * `endpoint` never moves a sign-in or an exchange anywhere else.
  */
 
 import { fileURLToPath } from 'node:url';
@@ -25,6 +30,15 @@ import { resolveIcons, type IconProblem } from '../icons.js';
 
 /** The endpoint OpenRouter answers on, until a connector says otherwise. */
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1';
+
+/** Where a person signs in to OpenRouter, which is OpenRouter's own page whatever a connector names. */
+const OPENROUTER_AUTH = 'https://openrouter.ai/auth';
+
+/** Where OpenRouter exchanges a pasted code for a key, fixed for the same reason. */
+const OPENROUTER_KEYS = 'https://openrouter.ai/api/v1/auth/keys';
+
+/** The verifier method the sign-in asks for: S256, so only the challenge leaves the host. */
+const PKCE_METHOD = 'S256';
 
 /** The endpoint Anthropic answers on, until a connector says otherwise. */
 const ANTHROPIC_ENDPOINT = 'https://api.anthropic.com';
@@ -328,6 +342,43 @@ export function hostAdapters(options: HostAdapterOptions = {}): Record<string, A
       { authorization: `Bearer ${required(connector, 'key')}` },
       fetcher,
     ), openRouterModel),
+    /*
+     * The sign-in is OpenRouter's own PKCE flow, with no callback: the page
+     * shows a code, a person pastes it, and the host exchanges it here. The
+     * connector's `endpoint` is not read, because a key is OpenRouter's to give
+     * and a form field must not move where it is asked for.
+     */
+    signIn: {
+      title: 'Sign in with OpenRouter',
+      field: 'key',
+      url: (challenge: string, state: string) => {
+        const query = new URLSearchParams({
+          code_challenge: challenge,
+          code_challenge_method: PKCE_METHOD,
+          state,
+          key_label: 'ahpd',
+        });
+        return `${OPENROUTER_AUTH}?${query.toString()}`;
+      },
+      exchange: async (code: string, verifier: string) => {
+        const answer = await fetcher(OPENROUTER_KEYS, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ code, code_verifier: verifier, code_challenge_method: PKCE_METHOD }),
+          redirect: 'error',
+          signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
+        });
+        if (!answer.ok) {
+          // The body may quote the code, so a refusal is its status and nothing else.
+          await answer.body?.cancel().catch(() => undefined);
+          throw new Error(`HTTP ${String(answer.status)}`);
+        }
+        const held = plain(await answer.json() as unknown);
+        const key = held === undefined ? undefined : text(held['key']);
+        if (key === undefined) throw new Error('the answer named no key');
+        return key;
+      },
+    },
     ...icon('openrouter'),
   };
 

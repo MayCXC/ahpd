@@ -32,12 +32,24 @@
  * again and answers the row, so a person who fixed the service side sees the
  * connector work without saving it again.
  *
+ * An adapter may also declare a `signIn`, and then two more commands are
+ * served. `x-ahpd/connectors/signin` takes what a put takes, checks it the same
+ * way except for the field the sign-in fills, keeps a PKCE verifier and the
+ * put's own params in memory for ten minutes under a state, and answers
+ * `{ url, state }`. `x-ahpd/connectors/signin-finish` takes `{ state, code }`,
+ * runs the put's owner checks again, exchanges the code through the adapter,
+ * and runs the put with the key in that field. A state is the caller's and is
+ * used once. Neither answer, row, error nor log carries the code, the verifier
+ * or the key.
+ *
  * `connector:list` reads the caller's own connectors, their teams' and the
  * host's; `connector:all` reads every connector. A caller with neither reads
  * no connector, its own included. A connector of an adapter no plugin
  * registers stays on disk and is served as `unavailable`: a disabled plugin
  * keeps its connectors.
  */
+
+import { createHash, randomBytes } from 'node:crypto';
 
 import { INVALID_PARAMS, INTERNAL_ERROR, RpcError } from '../rpc.js';
 import { sameOwnerOrHost } from '../automations/automations.js';
@@ -66,12 +78,23 @@ import type { Grant, Principal } from '../types/users.js';
 import type { Owner } from '../types/usage.js';
 import type { Vault } from '../types/vault.js';
 
-/** The channel's scheme, and the domain its two commands are named under. */
+/** The channel's scheme, and the domain its commands are named under. */
 const SCHEME = 'x-ahpd-connectors';
 const DOMAIN = 'x-ahpd/connectors';
 const PUT = `${DOMAIN}/put`;
 const REMOVE = `${DOMAIN}/remove`;
 const CHECK = `${DOMAIN}/check`;
+const SIGNIN = `${DOMAIN}/signin`;
+const SIGNIN_FINISH = `${DOMAIN}/signin-finish`;
+
+/** How long one sign-in waits for the code a person pastes, in milliseconds. */
+const SIGNIN_LIMIT_MS = 10 * 60 * 1000;
+
+/** The most started sign-ins one caller may have waiting; the oldest goes first. */
+const SIGNIN_KEPT = 10;
+
+/** How long one exchange may take. */
+const EXCHANGE_LIMIT_MS = 10_000;
 
 /** How long a check may take before its connector is called `unreachable`. */
 const CHECK_LIMIT_MS = 10_000;
@@ -125,11 +148,49 @@ interface Opened {
   stop?: () => void | Promise<void>;
 }
 
+/**
+ * One sign-in a caller started, kept in memory until its code arrives.
+ *
+ * The verifier is the PKCE secret the challenge was made from, and the params
+ * are what the start was asked to make, with the sign-in's field left out so
+ * only the exchange can fill it.
+ */
+interface StartedSignIn {
+  /** The PKCE verifier, sent to nothing but the adapter's exchange. */
+  verifier: string;
+  /** What the put is made with once the code is exchanged. */
+  params: Record<string, unknown>;
+  /** Who started it: the owner their connection works as, or nothing on a host with no users. */
+  caller: Owner | undefined;
+  /** When it stops being finishable, in epoch milliseconds. */
+  expires: number;
+}
+
+/** What a put and a sign-in both check before anything is written. */
+interface Prepared {
+  /** The connector's id, already a slug. */
+  id: string;
+  /** The adapter the connector names, as this host serves it. */
+  adapter: ServedAdapter;
+  /** Who the connector belongs to. */
+  owner: ConnectorOwner;
+  /** What the client calls it, when it said. */
+  title: string | undefined;
+  /** The config as the client sent it. */
+  config: Record<string, unknown>;
+  /** The record the id held, when it held one. */
+  before: StoredRecord | undefined;
+  /** The owner the record held, when it named one. */
+  was: ConnectorOwner | undefined;
+  /** The secrets a record of this owner keeps, read for the fields sent empty. */
+  kept: Record<string, unknown>;
+}
+
 /** A connectors channel, the commands beside it, and the connectors it has open. */
 export interface ConnectorsChannel {
   /** What `servedRecords` takes. */
   channel: RecordsChannel;
-  /** `x-ahpd/connectors/put` and `remove`, by name. */
+  /** `x-ahpd/connectors/put`, `remove`, `check`, `signin` and `signin-finish`, by name. */
   methods: Record<string, PluginMethod>;
   /**
    * Run one action on one open connector for one reader.
@@ -190,6 +251,8 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   const healths = new Map<string, ConnectorHealth>();
   /** The provider problems already said, so a route on every call says each one once. */
   const providerProblems = new Set<string>();
+  /** The sign-ins this host has started, by state, in memory only: a restart loses them. */
+  const started = new Map<string, StartedSignIn>();
 
   const problem = (message: string): void => { options.onProblem?.(`${SCHEME}: ${message}`); };
 
@@ -488,99 +551,313 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     return id;
   };
 
+  /** One value of 32 random bytes, as base64url: a PKCE verifier and a state. */
+  const random = (): string => randomBytes(32).toString('base64url');
+
+  /** The S256 challenge of one verifier. */
+  const challengeOf = (verifier: string): string => createHash('sha256').update(verifier).digest('base64url');
+
+  /**
+   * The status an exchange refused with, when its message is that alone.
+   *
+   * An adapter's error may carry anything, so only a message that is exactly
+   * `HTTP <status>` is shown to the caller. The vendor's body, the code and the
+   * verifier never reach a refusal.
+   */
+  const statusOf = (error: unknown): string | undefined => {
+    const message = reason(error).trim();
+    return /^HTTP \d{3}$/u.test(message) ? message : undefined;
+  };
+
+  /**
+   * Run one exchange, answering its key, and refuse when it takes too long.
+   *
+   * The adapter's own call may have no time limit of its own, so this is the
+   * ten seconds a person waits. The marker resolves rather than rejects, so a
+   * call that answers first leaves no unhandled rejection behind.
+   */
+  const LATE = Symbol('the exchange did not answer');
+  const exchangeWithin = async (work: Promise<string>): Promise<string> => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<typeof LATE>((done) => {
+      timer = setTimeout(() => { done(LATE); }, EXCHANGE_LIMIT_MS);
+      timer.unref?.();
+    });
+    try {
+      const answer = await Promise.race([work, late]);
+      if (answer === LATE) throw new Error('the exchange did not answer');
+      return answer;
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  };
+
+  /**
+   * The owner checks a put, a sign-in start and a sign-in finish all ask.
+   *
+   * An id that is taken is its owner's: a put that names another owner takes it
+   * from them, which is a remove for the owner it leaves. A record naming no
+   * scope was written by hand, and takes `connector:remove`, as its remove does.
+   */
+  const ownerChecks = async (
+    id: string,
+    owner: ConnectorOwner,
+    reader: Principal | undefined,
+  ): Promise<{ before: StoredRecord | undefined; was: ConnectorOwner | undefined }> => {
+    refuseOwner('connector', 'make', owner, reader, 'put');
+    const before = await options.collection.get(id);
+    const was = before === undefined ? undefined : asOwner(before.owner);
+    const moving = before !== undefined && was !== owner;
+    if (moving && was !== undefined) refuseOwner('connector', 'take', was, reader, 'remove');
+    if (moving && was === undefined && reader !== undefined && !reader.can('connector:remove' as Grant)) {
+      throw new RpcError(DENIED, `${id} is not ${reader.id}'s to take`);
+    }
+    return { before, was };
+  };
+
+  /**
+   * Everything a put checks before the record is written.
+   *
+   * `filled` names the field a sign-in is about to fill. The rules are asked of
+   * what a person filled in, and that one field is held as `HELD`, because the
+   * exchange answers it and never the client.
+   */
+  const prepare = async (
+    params: Record<string, unknown>,
+    reader: Principal | undefined,
+    asked: { command: string; filled?: string },
+  ): Promise<Prepared> => {
+    const id = idParam(asked.command, params);
+    const adapterName = params.adapter;
+    if (typeof adapterName !== 'string' || adapterName === '') {
+      throw new RpcError(INVALID_PARAMS, `${asked.command} needs adapter, the name of an adapter`);
+    }
+    const adapter = options.adapters()[adapterName];
+    if (adapter === undefined) {
+      throw new RpcError(INVALID_PARAMS, `${adapterName} is not an adapter this host serves`);
+    }
+    const owner = asOwner(params.owner);
+    if (owner === undefined) {
+      throw new RpcError(INVALID_PARAMS, `${asked.command} needs owner, one of host, team:<team> or user:<id>`);
+    }
+    const config = params.config ?? {};
+    if (!isRecord(config)) {
+      throw new RpcError(INVALID_PARAMS, "A connector's config is a JSON object, and that is not one");
+    }
+    const title = params.title;
+    if (title !== undefined && typeof title !== 'string') {
+      throw new RpcError(INVALID_PARAMS, `${asked.command} takes title as a string`);
+    }
+    const { before, was } = await ownerChecks(id, owner, reader);
+    // Nothing of an old owner's is kept, so nothing of it is read either.
+    const kept = before !== undefined && was === owner ? configOf(before) : {};
+    /*
+     * What the client sent, with a secret it kept stood in for by `HELD`: the
+     * rules are asked of what a person filled in, and an empty field that
+     * keeps a secret is not refused for being empty.
+     */
+    const checked: Record<string, unknown> = { ...config };
+    for (const field of writeOnly(adapter.schema)) {
+      if (field === asked.filled) {
+        checked[field] = HELD;
+        continue;
+      }
+      if (checked[field] === '' && secretRef(kept[field]) !== undefined) checked[field] = HELD;
+      if (fromEnvRef(checked[field]) !== undefined) checked[field] = HELD;
+    }
+    try {
+      options.check(checked, adapter.schema, `connector ${id}`);
+    } catch (error) {
+      throw new RpcError(INVALID_PARAMS, reason(error));
+    }
+    checkAutomationLinks(adapter, config, owner);
+    return { id, adapter, owner, title, config, before, was, kept };
+  };
+
+  /**
+   * Write one connector, open it and wait for its check: what a put does.
+   *
+   * A sign-in finishes through here too, with the key its exchange answered in
+   * the field the adapter named, so a connector a person signed in to is
+   * checked and opened exactly as one a person typed.
+   */
+  const putOne = async (
+    params: Record<string, unknown>,
+    reader: Principal | undefined,
+  ): Promise<Record<string, unknown>> => {
+    const ready = await prepare(params, reader, { command: PUT });
+    const { id, adapter, owner, title, config, before, was, kept } = ready;
+    const moving = before !== undefined && was !== owner;
+    const moved = await moveRecordSecrets({
+      rules: CONNECTOR_SECRETS,
+      fields: writeOnly(adapter.schema),
+      config,
+      held: kept,
+      owner,
+      id,
+      vault: options.vault(),
+      problem,
+    });
+    const record: StoredRecord = {
+      id,
+      adapter: adapter.name,
+      owner,
+      ...(title === undefined ? {} : { title }),
+      config: moved,
+    };
+    await close(id);
+    await options.collection.put(record);
+    owners.set(id, owner);
+    known.set(id, { id, adapter: adapter.name, owner });
+    // The secrets kept under the owner it left are no record's any more.
+    if (moving && was !== undefined && before !== undefined) {
+      await forgetRecordSecrets(configOf(before), was, id, CONNECTOR_SECRETS, options.vault(), problem);
+    }
+    try {
+      await openOne(adapter, record, owner);
+      // A put is where a person learns the key is wrong, so it waits for the check.
+      await checkOne(id);
+    } catch (error) {
+      await channel.refresh();
+      throw new RpcError(INTERNAL_ERROR, `${id} is stored, but ${adapter.name} could not open it: ${reason(error)}`);
+    }
+    await channel.refresh();
+    return connectorRow(record);
+  };
+
   const put: PluginMethod = {
     grant: 'connector:put' as Grant,
     describe: () => ({ title: 'Make a connector', description: 'Makes or changes one connector, and opens it.' }),
     authorize: async (params, reader) => ownerAllows('connector', asOwner(params.owner), reader, 'put'),
-    handle: async (params, reader) => {
-      const id = idParam(PUT, params);
+    handle: async (params, reader) => putOne(params, reader),
+  };
+
+  /*
+   * A sign-in start is a put that names an adapter with a `signIn`, and it
+   * checks everything a put checks except the field the exchange fills. What it
+   * keeps is the id, the owner and the config: the grant and the owner are
+   * asked again when the code comes back, because ten minutes is long enough
+   * for both to change.
+   */
+  const signin: PluginMethod = {
+    grant: 'connector:put' as Grant,
+    describe: () => ({ title: 'Start a sign-in', description: 'Starts a sign-in for an adapter, and answers the URL a person opens.' }),
+    authorize: async (params, reader) => ownerAllows('connector', asOwner(params.owner), reader, 'put'),
+    handle: async (params, reader, _client, caller) => {
       const adapterName = params.adapter;
       if (typeof adapterName !== 'string' || adapterName === '') {
-        throw new RpcError(INVALID_PARAMS, `${PUT} needs adapter, the name of an adapter`);
+        throw new RpcError(INVALID_PARAMS, `${SIGNIN} needs adapter, the name of an adapter`);
       }
       const adapter = options.adapters()[adapterName];
       if (adapter === undefined) {
         throw new RpcError(INVALID_PARAMS, `${adapterName} is not an adapter this host serves`);
       }
-      const owner = asOwner(params.owner);
-      if (owner === undefined) {
-        throw new RpcError(INVALID_PARAMS, `${PUT} needs owner, one of host, team:<team> or user:<id>`);
+      const signIn = adapter.signIn;
+      if (signIn === undefined) {
+        throw new RpcError(INVALID_PARAMS, `${adapterName} has no sign-in`);
       }
-      refuseOwner('connector', 'make', owner, reader, 'put');
-      const config = params.config ?? {};
-      if (!isRecord(config)) {
-        throw new RpcError(INVALID_PARAMS, "A connector's config is a JSON object, and that is not one");
+      // A plugin's adapter is checked when it registers, and a host adapter is
+      // not: a field the schema does not keep would leave the key in the record.
+      if (!writeOnly(adapter.schema).includes(signIn.field)) {
+        throw new RpcError(INVALID_PARAMS, `${adapterName} signs in to a field its schema does not keep`);
       }
-      const title = params.title;
-      if (title !== undefined && typeof title !== 'string') {
-        throw new RpcError(INVALID_PARAMS, `${PUT} takes title as a string`);
+      const ready = await prepare(params, reader, { command: SIGNIN, filled: signIn.field });
+      // An expired state is gone before a new one takes its place, so the map
+      // holds no more than the sign-ins somebody may still finish.
+      const now = Date.now();
+      for (const [key, one] of started) if (one.expires <= now) started.delete(key);
+      let mine = 0;
+      for (const one of started.values()) if (one.caller === caller) mine += 1;
+      if (mine >= SIGNIN_KEPT) {
+        // A map keeps insertion order, so the oldest of this caller's goes.
+        for (const [key, one] of started) {
+          if (one.caller !== caller) continue;
+          started.delete(key);
+          break;
+        }
       }
-      const before = await options.collection.get(id);
-      const was = before === undefined ? undefined : asOwner(before.owner);
-      /*
-       * An id that is taken is its owner's: a put that names another owner
-       * takes it from them, which is a remove for the owner it leaves. A
-       * record naming no scope was written by hand, and takes
-       * `connector:remove`, as its remove does.
-       */
-      const moving = before !== undefined && was !== owner;
-      if (moving && was !== undefined) refuseOwner('connector', 'take', was, reader, 'remove');
-      if (moving && was === undefined && reader !== undefined && !reader.can('connector:remove' as Grant)) {
-        throw new RpcError(DENIED, `${id} is not ${reader.id}'s to take`);
-      }
-      // Nothing of an old owner's is kept, so nothing of it is read either.
-      const kept = before !== undefined && was === owner ? configOf(before) : {};
-      /*
-       * What the client sent, with a secret it kept stood in for by `HELD`: the
-       * rules are asked of what a person filled in, and an empty field that
-       * keeps a secret is not refused for being empty.
-       */
-      const checked: Record<string, unknown> = { ...config };
-      for (const field of writeOnly(adapter.schema)) {
-        if (checked[field] === '' && secretRef(kept[field]) !== undefined) checked[field] = HELD;
-        if (fromEnvRef(checked[field]) !== undefined) checked[field] = HELD;
-      }
-      try {
-        options.check(checked, adapter.schema, `connector ${id}`);
-      } catch (error) {
-        throw new RpcError(INVALID_PARAMS, reason(error));
-      }
-      checkAutomationLinks(adapter, config, owner);
-      const moved = await moveRecordSecrets({
-        rules: CONNECTOR_SECRETS,
-        fields: writeOnly(adapter.schema),
-        config,
-        held: kept,
-        owner,
-        id,
-        vault: options.vault(),
-        problem,
+      const verifier = random();
+      const state = random();
+      const url = signIn.url(challengeOf(verifier), state);
+      const config = { ...ready.config };
+      // Only the exchange may fill the field, so nothing a client sent is kept.
+      delete config[signIn.field];
+      started.set(state, {
+        verifier,
+        params: {
+          id: ready.id,
+          adapter: adapterName,
+          owner: ready.owner,
+          ...(ready.title === undefined ? {} : { title: ready.title }),
+          config,
+        },
+        caller,
+        expires: now + SIGNIN_LIMIT_MS,
       });
-      const record: StoredRecord = {
-        id,
-        adapter: adapterName,
-        owner,
-        ...(title === undefined ? {} : { title }),
-        config: moved,
-      };
-      await close(id);
-      await options.collection.put(record);
-      owners.set(id, owner);
-      known.set(id, { id, adapter: adapterName, owner });
-      // The secrets kept under the owner it left are no record's any more.
-      if (moving && was !== undefined) {
-        await forgetRecordSecrets(configOf(before), was, id, CONNECTOR_SECRETS, options.vault(), problem);
+      return { url, state };
+    },
+  };
+
+  /*
+   * The finish takes the state and the code, and nothing else. The state is
+   * used once, and only by the caller who started it; the put's owner checks
+   * are asked again before the exchange, because a grant may be gone by now.
+   */
+  const signinFinish: PluginMethod = {
+    grant: 'connector:put' as Grant,
+    describe: () => ({ title: 'Finish a sign-in', description: 'Exchanges the pasted code for the key, and makes the connector.' }),
+    handle: async (params, reader, _client, caller) => {
+      const state = params.state;
+      if (typeof state !== 'string' || state === '') {
+        throw new RpcError(INVALID_PARAMS, `${SIGNIN_FINISH} needs state, the value the start answered`);
       }
+      const code = params.code;
+      if (typeof code !== 'string' || code === '') {
+        throw new RpcError(INVALID_PARAMS, `${SIGNIN_FINISH} needs code, the code the provider showed`);
+      }
+      const entry = started.get(state);
+      if (entry === undefined) {
+        throw new RpcError(INVALID_PARAMS, 'This host has no such sign-in, or it has already finished');
+      }
+      if (entry.expires <= Date.now()) {
+        started.delete(state);
+        throw new RpcError(INVALID_PARAMS, 'This sign-in has expired; start it again');
+      }
+      /*
+       * A state is its starter's. A caller it is not gets nothing, and the
+       * state stays: a stranger may not burn a sign-in somebody else started.
+       */
+      if (entry.caller !== caller) {
+        throw new RpcError(DENIED, 'This sign-in is not yours to finish');
+      }
+      // From here the state is used once, even when the exchange refuses.
+      started.delete(state);
+      const adapterName = String(entry.params['adapter']);
+      const adapter = options.adapters()[adapterName];
+      const signIn = adapter?.signIn;
+      if (signIn === undefined) {
+        throw new RpcError(INVALID_PARAMS, `${adapterName} has no sign-in`);
+      }
+      const id = String(entry.params['id']);
+      const owner = asOwner(entry.params['owner']);
+      if (owner === undefined) {
+        throw new RpcError(INVALID_PARAMS, `${SIGNIN_FINISH} holds a sign-in with no owner`);
+      }
+      await ownerChecks(id, owner, reader);
+      let key: string;
       try {
-        await openOne(adapter, record, owner);
-        // A put is where a person learns the key is wrong, so it waits for the check.
-        await checkOne(id);
+        key = await exchangeWithin(signIn.exchange(code, entry.verifier));
       } catch (error) {
-        await channel.refresh();
-        throw new RpcError(INTERNAL_ERROR, `${id} is stored, but ${adapterName} could not open it: ${reason(error)}`);
+        const status = statusOf(error);
+        throw new RpcError(INTERNAL_ERROR, status === undefined
+          ? `${signIn.title} did not finish the sign-in`
+          : `${signIn.title} answered ${status}`);
       }
-      await channel.refresh();
-      return connectorRow(record);
+      if (typeof key !== 'string' || key === '') {
+        throw new RpcError(INTERNAL_ERROR, `${signIn.title} answered no key`);
+      }
+      const config = { ...bag(entry.params['config']), [signIn.field]: key };
+      return await putOne({ ...entry.params, config }, reader);
     },
   };
 
@@ -646,7 +923,13 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     },
   };
 
-  const methods: Record<string, PluginMethod> = { [PUT]: put, [REMOVE]: remove, [CHECK]: check };
+  const methods: Record<string, PluginMethod> = {
+    [PUT]: put,
+    [REMOVE]: remove,
+    [CHECK]: check,
+    [SIGNIN]: signin,
+    [SIGNIN_FINISH]: signinFinish,
+  };
 
   return {
     channel,

@@ -3,9 +3,10 @@
  *
  * One row for each adapter, keyed by the adapter's name, holding what a client
  * needs to list it and to draw the form a person makes a connector with: its
- * title, its description, its schema, its capabilities, and the plugin that
- * registered it. Nothing here is an instance of anything; the connectors made
- * from an adapter are on `x-ahpd-connectors`.
+ * title, its description, its schema, its capabilities, the plugin that
+ * registered it, and a `signIn` when the adapter can sign a person in. Nothing
+ * here is an instance of anything; the connectors made from an adapter are on
+ * `x-ahpd-connectors`.
  *
  * The channel is read-only, and reading it takes `connector:list`: a client
  * that may not see a connector is not shown the forms either. The adapters
@@ -62,6 +63,9 @@ const rowOf = (adapter: ServedAdapter, pluginIcons: Icon[] | undefined): Record<
     schema: adapter.schema,
     capabilities: adapter.capabilities,
     plugin: adapter.by,
+    // What a client needs to draw the sign-in button. The two halves of the
+    // flow stay here, so a row never carries a function or a key.
+    ...(adapter.signIn === undefined ? {} : { signIn: { title: adapter.signIn.title, field: adapter.signIn.field } }),
     // An icon is decoration, so an adapter with none carries no key rather than
     // an empty list a client would have to test.
     ...(icons === undefined || icons.length === 0 ? {} : { icons }),
