@@ -561,6 +561,53 @@ describe('an embeddings call is charged its prompt tokens', () => {
   });
 });
 
+describe('a rerank call is charged its billed input tokens', () => {
+  /** A connector that accepts rerank, and a table name it serves. */
+  const reranker = (endpoint: string) => ({
+    proxy: { models: { 'fake/model': [{ provider: 'fake', id: 'fake-model', price: { input: 1 } }] } },
+    providers: [{ id: 'fake', adapter: 'fake', endpoint, accepts: ['rerank'] as ModelDialect[] }],
+  });
+  const RERANK = { model: 'fake/model', query: 'what is ahpd', documents: ['a', 'b'] };
+
+  it('answers at /rerank, /v1/rerank and /v2/rerank, and records total_tokens as input', async () => {
+    const fake = await fakeProvider(answerJson(200, {
+      results: [{ index: 0, relevance_score: 0.9 }],
+      usage: { total_tokens: 12 },
+    }));
+    fakes.push(fake);
+    const usage = memoryUsage();
+    const served = await proxy({ ...reranker(fake.endpoint), usage: () => usage });
+
+    for (const path of ['/rerank', '/v1/rerank', '/v2/rerank']) {
+      const got = await send(served.port, path, { headers: asRoot, body: RERANK });
+      expect(got.status, path).toBe(200);
+      expect(got.json).toMatchObject({ results: [{ index: 0, relevance_score: 0.9 }] });
+    }
+    expect(fake.received.map((one) => one.url)).toEqual(['/v1/rerank', '/v1/rerank', '/v1/rerank']);
+    expect(fake.received.every((one) => (JSON.parse(one.body) as { model: string }).model === 'fake-model')).toBe(true);
+
+    await pause(20);
+    expect(usage.entries).toHaveLength(3);
+    expect(usage.entries[0]?.model).toEqual({ name: 'fake/model', provider: 'fake', connector: 'fake', input: 12 });
+    expect(usage.entries[0]?.cost?.amount).toBeCloseTo(12 / 1_000_000, 12);
+  });
+
+  it('reads meta.billed_units.input_tokens when usage names no total', async () => {
+    const fake = await fakeProvider(answerJson(200, {
+      results: [],
+      usage: {},
+      meta: { billed_units: { input_tokens: 7 } },
+    }));
+    fakes.push(fake);
+    const usage = memoryUsage();
+    const served = await proxy({ ...reranker(fake.endpoint), usage: () => usage });
+    const got = await send(served.port, '/rerank', { headers: asRoot, body: RERANK });
+    expect(got.status).toBe(200);
+    await pause(20);
+    expect(usage.entries[0]?.model).toEqual({ name: 'fake/model', provider: 'fake', connector: 'fake', input: 7 });
+  });
+});
+
 describe('a count call charges nothing and records nothing', () => {
   /** A connector that has both counters, and a table name it serves. */
   const counters = (endpoint: string) => ({
