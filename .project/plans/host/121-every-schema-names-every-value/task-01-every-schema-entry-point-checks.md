@@ -1,6 +1,6 @@
 ---
 title: Every schema entry point checks for gaps
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server, docs"
 refs:
@@ -53,9 +53,9 @@ Each gap is a problem line that names the plugin and the path, and the load cont
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Files:** none yet.
+- **Done so far:** `schemaGaps(schema)` and `gapLine(by, where, gap)` are in `packages/sdk/src/plugins/schemagaps.ts`, and the sdk's index exports them. `checkAgent`, `checkTriggerType`, `checkAdapter` and `checkEngine` return the gaps beside what they checked. `pluginHost` reports each gap through `reportGaps`, and `registerSessionConfig` walks the property it is given. The host keeps a manifest's `optionsSchema` only after it walks it, in `packages/server/src/plugins.ts`. `sessionmethods.ts` walks a backend's session config schema once for each backend, the first time a client asks for it. `packages/sdk/test/schema-gaps.test.ts` covers each gap, each union and `{}`.
+- **Next action:** Softov reads the report.
+- **Files:** `packages/sdk/src/plugins/schemagaps.ts` (new), `packages/sdk/src/plugins/validate.ts`, `packages/sdk/src/plugins/plugins.ts`, `packages/sdk/src/index.ts`, `packages/sdk/src/host/sessionmethods.ts`, `packages/server/src/plugins.ts`, `packages/sdk/test/schema-gaps.test.ts` (new), `docs/plugins/PLUGINS.md`.
 - **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** the first-party plugins have gaps until tasks 02, 03 and 04 are done, so a test daemon prints their problem lines.
+- **Departures:** a gap reaches the daemon as a warning alert, not as a `problem`. A `problem` is a line that can refuse a load, and a gap never refuses one. The line's text is the `<plugin>: <where> <path>: <gap>` that the plan names. `checkAdapter` and `checkEngine` now return `{ name, checked }`, and `checkAgent` and `checkTriggerType` return their gaps, so the caller writes the line. The walk does not enter a node again inside itself, so a schema that holds itself ends. A node that two fields share is still reported at each field.
+- **Watch out for:** the first-party plugins had gaps until tasks 02, 03 and 04 were done. The walk test of task 05 now holds them at none.

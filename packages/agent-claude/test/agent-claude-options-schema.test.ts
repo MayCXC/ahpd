@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
+import { schemaGaps } from '@ahpd/sdk';
 import { DECLARED } from '../src/options.js';
 import type { Engine, Bag } from '@ahpd/sdk';
 
@@ -31,10 +32,39 @@ const engineOf = async (): Promise<Engine> => {
 it('declares every option a record holds as a property of the engine schema', async () => {
   const properties = ((await engineOf()).schema.properties ?? {}) as Record<string, Record<string, unknown>>;
   for (const [name, one] of Object.entries(DECLARED)) expect(properties[name], name).toEqual(one.schema);
-  // Beside the declared options are the two fields a record holds as an agent
+  // Beside the declared options are the three fields a record holds as an agent
   // of this engine rather than as a set of values.
-  expect(properties['models']).toMatchObject({ type: 'array' });
+  expect(properties['models']).toMatchObject({
+    type: 'array',
+    items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } }, required: ['id'] },
+  });
+  expect(properties['modelSources']).toMatchObject({
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: { fetch: { type: 'string' }, match: { type: 'string' }, key: { writeOnly: true } },
+      required: ['fetch'],
+    },
+  });
   expect(properties['keepCliModels']).toMatchObject({ type: 'boolean' });
+});
+
+it('names every value of env and every value of a source, with no gap', async () => {
+  const properties = ((await engineOf()).schema.properties ?? {}) as Bag;
+  expect(properties['env']).toMatchObject({
+    type: 'object',
+    additionalProperties: {
+      oneOf: [
+        { type: 'string' },
+        { type: 'null' },
+        { type: 'object', properties: { fromEnv: { type: 'string' } }, required: ['fromEnv'] },
+        { type: 'object', properties: { $secret: { type: 'string' } }, required: ['$secret'] },
+      ],
+    },
+  });
+  expect(properties['extraArgs']).toMatchObject({ type: 'object', additionalProperties: {} });
+  // Every path a client draws names its value, so the walk finds no hole.
+  expect(schemaGaps((await engineOf()).schema)).toEqual([]);
 });
 
 it('names the values a record may hold, not only their types', async () => {

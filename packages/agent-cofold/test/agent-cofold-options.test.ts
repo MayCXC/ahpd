@@ -60,13 +60,24 @@ it.each<[string, unknown]>([
   ['strictTools', 'yes'],
   ['apiKey', 5],
   ['resource', 5],
-  ['adapter', 'x'],
-  ['policy', 'x'],
 ])('reports %s of the wrong type and skips the plugin', async (key, value) => {
   const { loaded, problems } = await load({ ...VALID, [key]: value });
   expect(problems).toHaveLength(1);
   expect(problems[0]).toMatch(new RegExp(`^plugin ${NAME} skipped: plugins\\.${NAME}\\.options\\.${key} must be `, 'u'));
   expect(loaded).toEqual([]);
+});
+
+/*
+ * `adapter` and `policy` are an embedder's, not a configuration's.
+ *
+ * They are not in the schema, so the loader says it does not know them and lets
+ * them through, and the plugin holds them whatever type they are: the schema is
+ * not closed, which is what lets an embedder that passes one keep passing it.
+ */
+it.each(['adapter', 'policy'])('lets %s through, naming it as an option the plugin does not know', async (key) => {
+  const { loaded, problems } = await load({ ...VALID, [key]: 'x' });
+  expect(loaded).toHaveLength(1);
+  expect(problems).toEqual([`plugin ${NAME}: plugins.${NAME}.options.${key} is not an option ${NAME} knows; passed through`]);
 });
 
 it('reports a tools switch of the wrong type by its full key', async () => {

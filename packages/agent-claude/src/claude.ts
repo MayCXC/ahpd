@@ -3,7 +3,7 @@ import { serversFor } from './mcp.js';
 import { createSession, EFFORT_LABELS, EFFORTS } from './session.js';
 import { turnsOf, subagentsOf } from './transcript.js';
 import { catalogue, findSession, forgetSession, transcriptOf } from './catalog.js';
-import { offeredModels, ownModels, type ModelEntry, type OfferedModel } from './models.js';
+import { offeredModels, ownModels, type ModelEntry, type ModelSource, type OfferedModel } from './models.js';
 import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
@@ -154,11 +154,16 @@ export interface ClaudeOptions {
    */
   presetOf?: () => Bag;
   /**
-   * The models this harness offers, by id, with a name, or fetched from an
-   * endpoint's model list and filtered. Without it, the CLI's own list.
+   * The models this harness offers, by id and with a name.
+   * Without either list, the CLI's own list.
    */
   models?: ModelEntry[];
-  /** With `models`, add them to the CLI's list rather than replace it. */
+  /**
+   * Endpoints whose model lists this harness offers, each filtered by its
+   * `match`. Offered after `models`, and each id once.
+   */
+  modelSources?: ModelSource[];
+  /** With either list, add them to the CLI's list rather than replace it. */
   keepCliModels?: boolean;
   /** Where a model list that could not be fetched is said. */
   log?: (line: string) => void;
@@ -184,12 +189,12 @@ export function claude(options: ClaudeOptions): Agent {
   if (dir === undefined)
     throw new Error('claude() needs at least one directory to work in.');
 
-  /** The models `models` names, fetched once and kept. */
+  /** The models the two lists name, fetched once and kept. */
   let named: Promise<OfferedModel[]> | undefined;
   /** A list the CLI reported, as this harness offers it. */
   const offer = async <T extends OfferedModel>(cli: T[]): Promise<(T | OfferedModel)[]> => {
-    if (options.models === undefined) return cli;
-    named ??= ownModels(options.models, options.log);
+    if (options.models === undefined && options.modelSources === undefined) return cli;
+    named ??= ownModels(options.models, options.modelSources, options.log);
     return offeredModels(cli, await named, options.keepCliModels);
   };
 
@@ -690,7 +695,7 @@ export function claude(options: ClaudeOptions): Agent {
       // sees an edit without the daemon rebuilding the agent.
       ...(options.preset === undefined ? {} : { preset: options.preset }),
       ...(options.presetOf === undefined ? {} : { presetOf: options.presetOf }),
-      ...(options.models === undefined ? {} : { offerModels: offer }),
+      ...(options.models === undefined && options.modelSources === undefined ? {} : { offerModels: offer }),
       });
     },
   };

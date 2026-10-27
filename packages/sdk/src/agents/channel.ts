@@ -48,7 +48,7 @@ import {
   ownerAllows,
   refuseOwner,
   resolved as resolvedRecord,
-  writeOnly,
+  writeOnlyPaths,
   DENIED,
 } from '../channels/owners.js';
 import { isRecordSlug } from '../resources/records.js';
@@ -223,9 +223,12 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   /** The engine a stored record names, when this host serves one. */
   const engineOf = (record: StoredRecord): ServedEngine | undefined => options.engines()[String(record.engine)];
 
-  /** The fields an engine keeps secret: its `writeOnly` fields and its `keyVariables`. */
-  const secretFields = (engine: ServedEngine): string[] => {
-    const fields = new Set(writeOnly(engine.schema));
+  /**
+   * The fields an engine keeps secret in a put: its `writeOnly` values at any
+   * depth, in what is sent and what was kept, and its `keyVariables`.
+   */
+  const secretFields = (engine: ServedEngine, config: Record<string, unknown>, kept: Record<string, unknown>): string[] => {
+    const fields = new Set(writeOnlyPaths(engine.schema, kept, config));
     for (const variable of engine.keyVariables ?? []) fields.add(`env.${variable}`);
     return [...fields];
   };
@@ -631,7 +634,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     refuseEnv(config, owner, engine);
     // Nothing of another owner's is kept; only the same record's own secrets are.
     const kept = before !== undefined && was === owner ? configOf(before) : {};
-    const fields = secretFields(engine);
+    const fields = secretFields(engine, config, kept);
     try {
       options.check(checkedConfig(config, AGENT_SECRETS, fields, kept), engine.schema, `agent ${id}`);
     } catch (error) {

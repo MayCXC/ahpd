@@ -1,10 +1,11 @@
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { memoryRecords } from '@ahpd/sdk';
 import type { PluginSpec, RecordCollection, ServedEngine, StoredRecord, Vault } from '@ahpd/sdk';
-import { applyPresets, planPresets } from '../src/agents/migrate.js';
+import { applyPresets, planPresets, splitModels } from '../src/agents/migrate.js';
+import { fileRecords } from '../src/records.js';
 
 /*
  * The presets a configuration file holds, made into host records at the start.
@@ -471,6 +472,164 @@ it('leaves the file as it is when the run loads a spec the file does not hold', 
   expect([...(await held()).keys()]).toEqual(['claude']);
   expect(readFileSync(configFile, 'utf8')).toBe(before);
   expect(backups()).toEqual([]);
+});
+
+describe('a Claude record written before models held one shape', () => {
+  /** A record store in a temp folder, and its `agents` collection, the daemon's own. */
+  const stored = async (): Promise<RecordCollection> => (await fileRecords(join(dir, 'records')).collection('agents', { format: 'json' }));
+
+  /** The record's file, as the store wrote it. */
+  const recordFile = (id: string): string => join(dir, 'records', 'agents', `${id}.json`);
+
+  it('is split once into models and modelSources, keeping every other value and naming no key', async () => {
+    const agents = await stored();
+    const KEY = 'sk-a-model-source-key-nobody may read';
+    await agents.put({
+      id: 'deepseek',
+      engine: 'claude',
+      owner: 'host',
+      name: 'DeepSeek',
+      description: 'A second endpoint.',
+      model: 'deepseek-chat',
+      config: {
+        thinking: 'disabled',
+        models: [
+          'deepseek-flash',
+          { id: 'deepseek-chat', name: 'DeepSeek Chat' },
+          { fetch: 'https://models.test/v1/models', match: 'deepseek/*', key: { fromEnv: 'DEEPSEEK_MODELS_KEY' } },
+          { fetch: 'https://other.test/v1/models', key: KEY },
+        ],
+        env: { ANTHROPIC_BASE_URL: 'https://api.deepseek.test/anthropic' },
+      },
+    });
+    const before = JSON.parse(readFileSync(recordFile('deepseek'), 'utf8')) as StoredRecord;
+    const say = (line: string): void => { said.push(line); };
+
+    const written = await splitModels({ records: agents, log: say });
+
+    expect(written).toEqual(['deepseek']);
+    const after = JSON.parse(readFileSync(recordFile('deepseek'), 'utf8')) as StoredRecord;
+    // Nothing but `models` changed, and the fetch entries moved beside it.
+    expect(after).toEqual({
+      ...before,
+      config: {
+        thinking: 'disabled',
+        env: { ANTHROPIC_BASE_URL: 'https://api.deepseek.test/anthropic' },
+        models: [{ id: 'deepseek-flash' }, { id: 'deepseek-chat', name: 'DeepSeek Chat' }],
+        modelSources: [
+          { fetch: 'https://models.test/v1/models', match: 'deepseek/*', key: { fromEnv: 'DEEPSEEK_MODELS_KEY' } },
+          { fetch: 'https://other.test/v1/models', key: KEY },
+        ],
+      },
+    });
+    // One line, naming the id and no value of the record.
+    expect(said).toEqual(['Split one agent into models and modelSources: deepseek.']);
+    expect(said.join('\n')).not.toContain(KEY);
+    expect(said.join('\n')).not.toContain('DEEPSEEK_MODELS_KEY');
+    expect(said.join('\n')).not.toContain('api.deepseek.test');
+  });
+
+  it('is not written a second time, and a record already in the two-list shape is left as it is', async () => {
+    const agents = await stored();
+    await agents.put({
+      id: 'deepseek', engine: 'claude', owner: 'host', name: 'DeepSeek',
+      config: { models: ['deepseek-flash'], modelSources: [{ fetch: 'https://models.test/v1/models' }] },
+    });
+    await agents.put({
+      id: 'steadiest', engine: 'claude', owner: 'host', name: 'Steadiest',
+      config: { models: [{ id: 'deepseek-chat', name: 'DeepSeek Chat' }], keepCliModels: true },
+    });
+    const say = (line: string): void => { said.push(line); };
+
+    await splitModels({ records: agents, log: say });
+    const once = readFileSync(recordFile('deepseek'), 'utf8');
+    const steady = readFileSync(recordFile('steadiest'), 'utf8');
+    said.length = 0;
+
+    // The second start finds both in the two-list shape and writes neither.
+    expect(await splitModels({ records: agents, log: say })).toEqual([]);
+    expect(readFileSync(recordFile('deepseek'), 'utf8')).toBe(once);
+    expect(readFileSync(recordFile('steadiest'), 'utf8')).toBe(steady);
+    expect(said).toEqual([]);
+  });
+
+  it('leaves a record whole when an entry is neither a model nor a fetch', async () => {
+    const agents = await stored();
+    await agents.put({
+      id: 'odd', engine: 'claude', owner: 'host', name: 'Odd',
+      config: { models: ['deepseek-flash', { nickname: 'x' }] },
+    });
+    const before = readFileSync(recordFile('odd'), 'utf8');
+    const say = (line: string): void => { said.push(line); };
+
+    expect(await splitModels({ records: agents, log: say })).toEqual([]);
+    // Nothing a person wrote is dropped, and the record is the one it was.
+    expect(readFileSync(recordFile('odd'), 'utf8')).toBe(before);
+    expect(said).toEqual(['The models of odd were not split: models entry 1 is neither a model id, a model nor a fetch.']);
+  });
+
+  it('leaves a record whole when its modelSources is not a list', async () => {
+    const agents = await stored();
+    await agents.put({
+      id: 'odd', engine: 'claude', owner: 'host', name: 'Odd',
+      config: { models: [{ fetch: 'https://models.test/v1/models' }], modelSources: { fetch: 'https://kept.test' } },
+    });
+    const before = readFileSync(recordFile('odd'), 'utf8');
+    const say = (line: string): void => { said.push(line); };
+
+    expect(await splitModels({ records: agents, log: say })).toEqual([]);
+    expect(readFileSync(recordFile('odd'), 'utf8')).toBe(before);
+    expect(said).toEqual(['The models of odd were not split: modelSources is not a list.']);
+  });
+
+  it('moves a model source key written in plain text to the vault, in the owner\'s scope', async () => {
+    const agents = await stored();
+    const held = new Map<string, string>();
+    const vault: Vault = {
+      get: async (name) => held.get(name),
+      set: async (name, value) => { held.set(name, value); },
+      delete: async (name) => held.delete(name),
+      list: async () => [...held.keys()],
+    };
+    await agents.put({
+      id: 'mine', engine: 'claude', owner: 'user:ana', name: 'Mine',
+      config: { models: [{ fetch: 'https://other.test/v1/models', key: KEY }, { fetch: 'https://env.test', key: { fromEnv: 'X' } }] },
+    });
+    await agents.put({
+      id: 'split', engine: 'claude', owner: 'host', name: 'Split',
+      config: { modelSources: [{ fetch: 'https://other.test/v1/models', key: KEY }] },
+    });
+    const say = (line: string): void => { said.push(line); };
+
+    expect((await splitModels({ records: agents, vault, log: say })).sort()).toEqual(['mine', 'split']);
+    expect(readFileSync(recordFile('mine'), 'utf8')).not.toContain(KEY);
+    expect(readFileSync(recordFile('split'), 'utf8')).not.toContain(KEY);
+    expect((JSON.parse(readFileSync(recordFile('mine'), 'utf8')) as StoredRecord).config).toEqual({
+      models: [],
+      modelSources: [
+        { fetch: 'https://other.test/v1/models', key: { $secret: 'user:ana/agent/mine/modelSources.0.key' } },
+        { fetch: 'https://env.test', key: { fromEnv: 'X' } },
+      ],
+    });
+    expect(held.get('user:ana/agent/mine/modelSources.0.key')).toBe(KEY);
+    expect(held.get('host:agent/split/modelSources.0.key')).toBe(KEY);
+    expect(said.join('\n')).not.toContain(KEY);
+    said.length = 0;
+    // A second start finds no plain key and writes nothing.
+    expect(await splitModels({ records: agents, vault, log: say })).toEqual([]);
+  });
+
+  it('leaves a record of another engine as it is', async () => {
+    const agents = await stored();
+    await agents.put({
+      id: 'codex', engine: 'acp', owner: 'host', name: 'Codex',
+      config: { models: ['deepseek-flash'] },
+    });
+    const before = readFileSync(recordFile('codex'), 'utf8');
+
+    expect(await splitModels({ records: agents, log: () => {} })).toEqual([]);
+    expect(readFileSync(recordFile('codex'), 'utf8')).toBe(before);
+  });
 });
 
 it('plans from the file, so a value a flag set for this run is not made permanent', async () => {

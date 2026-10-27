@@ -24,6 +24,22 @@ import { asSpec, configDir, configPath, loadConfig, shellEnvProblems } from '../
 import { sourceOf, pluginIdOf, pluginIdsOf } from '../plugins.js';
 import { proxyConfiguration, proxyProblems, proxySchema, type ProxyConfiguration } from '../proxy/providers.js';
 
+/**
+ * A schema that names the values of a map.
+ *
+ * cofold 0.3.0 types `additionalProperties` as a switch, but its `check` reads a
+ * schema there: it accepts one and copies each value under it without holding
+ * it, so the schema is what a client draws and the host still checks each value
+ * itself. `models`, `mcpServers` and `shellEnv` are held to one of these, and
+ * each value is kept honest by the host's own check beside it.
+ */
+export type MapSchema = Omit<JsonSchema, 'additionalProperties'> & {
+  additionalProperties?: boolean | JsonSchema;
+};
+
+/** A `MapSchema` as cofold's own type, which spells `additionalProperties` as a switch. */
+export const asJsonSchema = (schema: MapSchema): JsonSchema => schema as unknown as JsonSchema;
+
 /** What this daemon was told, after argv and the configuration file were folded. */
 export interface Options {
   /** TCP port to bind. 0 lets the OS choose. */
@@ -399,10 +415,11 @@ export const splitPluginOption = (
 /**
  * `mcpServers` as this run offers them, and what is wrong with the rest.
  *
- * The entries are not described by the schema on the key, because the JSON
- * Schema this family checks has no way of saying that an object is a map; each
- * one is checked on its own, so a bad entry is named and left out rather than
- * refusing a start that would have worked for every other server.
+ * The value schema on the key is for a client to draw a row from: `check`
+ * copies a map value without holding it, and holding the whole map to it would
+ * stop the start for one bad server. So each entry is checked on its own here,
+ * and a bad entry is named and left out rather than refusing a start that would
+ * have worked for every other server.
  *
  * Which shape an entry is decides what it must carry, which is the one rule a
  * single schema cannot state: a `stdio` server needs a `command` and an `http`
@@ -432,6 +449,34 @@ export const mcpServers = (
     servers[name] = entry as McpServer;
   }
   return { servers, warnings };
+};
+
+/**
+ * The environment every shell this host starts is given: a variable name set to
+ * its value, or to null to remove it.
+ *
+ * The value schema is what a client draws a row from. Each value is held by
+ * `shellEnvProblems`, because `check` copies a map value without a check.
+ */
+const shellEnvField: MapSchema = {
+  type: 'object',
+  title: 'Shell environment',
+  additionalProperties: { type: ['string', 'null'] },
+  description: 'The environment every shell this host starts is given: a variable name set to its value, or to null to remove it, such as {"XDG_CONFIG_HOME": "/home/me/.config"}. Set in the configuration file only.',
+};
+
+/**
+ * The MCP servers every session is offered, by the name a person gave them.
+ *
+ * The value schema is one server, so a client draws a row per server; the
+ * entries are still checked one at a time by `mcpServers`, so one bad server is
+ * named and left out rather than stopping the start.
+ */
+const mcpServersField: MapSchema = {
+  type: 'object',
+  title: 'MCP servers',
+  additionalProperties: mcpServerSchema as JsonSchema,
+  description: 'The MCP servers every session is offered, by the name a person gave them: a stdio server is a command an agent starts, and an http one is an endpoint it calls. An env or a header is a credential wherever it is, so each answers <set>. A session adds the servers of its own client plugins over these. Set in the configuration file only.',
 };
 
 /** Every flag a run takes, as the fields help and the parser read. */
@@ -564,11 +609,7 @@ export const serverFields = {
     description: 'How long a call a client runs may wait. Default ten minutes; 0 waits for ever.',
     cli: { value: 'MS' },
   },
-  shellEnv: {
-    type: 'object',
-    title: 'Shell environment',
-    description: 'The environment every shell this host starts is given: a variable name set to its value, or to null to remove it, such as {"XDG_CONFIG_HOME": "/home/me/.config"}. Set in the configuration file only.',
-  },
+  shellEnv: asJsonSchema(shellEnvField),
   terminalAutoApproveDefaults: {
     type: 'string',
     enum: ['vscode', 'none'],
@@ -659,14 +700,7 @@ export const serverFields = {
     title: 'Model proxy',
     description: 'The model names this proxy serves: each is written <maker>/<name> and lists the entries that serve it, by connector id or adapter name. A provider is a connector, so its endpoint and key are the connectors store\'s, never this file\'s. sessionCalls is record (the default) or skip: whether a call made with a session\'s own token is policy-checked and recorded by the proxy. Set in the configuration file only.',
   },
-  mcpServers: {
-    // The entries are not described here, for the same reason `proxy`'s are
-    // not: this JSON Schema cannot say that an object is a map. `mcpServers`
-    // checks each of them.
-    type: 'object',
-    title: 'MCP servers',
-    description: 'The MCP servers every session is offered, by the name a person gave them: a stdio server is a command an agent starts, and an http one is an endpoint it calls. An env or a header is a credential wherever it is, so each answers <set>. A session adds the servers of its own client plugins over these. Set in the configuration file only.',
-  },
+  mcpServers: asJsonSchema(mcpServersField),
   plugins: {
     type: 'array',
     items: { type: 'string' },
@@ -719,7 +753,10 @@ const pluginEntry: JsonSchema = {
     // What a listing prints. An entry written before `source` named the module
     // with this key, so one with no `source` still reads it as the module.
     name: { type: 'string' },
-    options: { type: 'object' },
+    // A plugin's own options are any JSON: the plugin checks them against its
+    // own schema, and this one only says that an object stands there and that
+    // its values are a plugin's to name.
+    options: asJsonSchema({ type: 'object', additionalProperties: {} }),
     enabled: { type: 'boolean' },
     // What the plugin may do on this host when it acts as a client of its own:
     // `<subject>:<operation>`, checked by the loader, which drops what is not

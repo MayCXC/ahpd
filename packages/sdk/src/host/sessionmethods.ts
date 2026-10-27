@@ -12,11 +12,23 @@ import { chatIdFor, named, ROOT } from './channels.js';
 import { preambleOf, withPreamble } from './preamble.js';
 import { startsRead } from './chatactions.js';
 import { SEEDS } from './sessionconfig.js';
+import { gapLine, schemaGaps } from '../plugins/schemagaps.js';
 import type { ChatOrigin, ChatSummary } from '@microsoft/agent-host-protocol';
 import type { Bag } from '../types/common.js';
+import type { Agent } from '../types/agent.js';
 import type { Session } from '../types/session.js';
 import type { Claimed, Held, LiveSubagent } from './state.js';
 import type { ConnectionContext, HostContext } from './context.js';
+
+/**
+ * The backends whose session config schema has been walked.
+ *
+ * A backend's schema is made when a client asks for it, so there is no
+ * registration to check it at. Each backend is walked once rather than once
+ * per client: a form with a hole is one problem line, not one per ask. Keyed by
+ * the backend object, because that is the thing whose schema is walked.
+ */
+const walked = new WeakSet<Agent>();
 
 /**
  * The sessions and chats a connection reads and writes.
@@ -1498,6 +1510,18 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        */
       const scoped = scoping(connection.principal);
       const theirs = sessionSchema(agent);
+      /*
+       * The form this client is about to draw, walked once for this backend.
+       *
+       * The backend's own schema is made when it is asked for rather than
+       * registered, so this is the one place it can be read. A hole is a line
+       * in the log and nothing else: the client still gets the form, and the
+       * backend still runs.
+       */
+      if (!walked.has(agent)) {
+        walked.add(agent);
+        for (const gap of schemaGaps(theirs)) log(gapLine(agent.provider, 'session config', gap));
+      }
       /*
        * A contributed key's own values, asked for here rather than left
        * to the first client that opens its picker: this is the answer a

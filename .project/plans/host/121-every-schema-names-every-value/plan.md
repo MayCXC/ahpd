@@ -1,7 +1,7 @@
 ---
 title: Every schema a client draws names every value
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-26
 revalidated: 2026-10-26
@@ -74,6 +74,7 @@ Only the check in task 01 and the test in task 05 can walk it.
 | An activepieces ARRAY prop has the item schema of its own props, or `{ type: 'string' }` when it has none | (defaulted: Activepieces lists a string when an ARRAY prop has no props) | 03 |
 | An activepieces OBJECT or DYNAMIC prop takes `additionalProperties: {}`, and a JSON prop is `{}` | (defaulted: the piece gives no shape for these values) | 03 |
 | The host's own maps get `additionalProperties` through a local type in ahpd, and the host checks each value | (defaulted: solved in ahpd, with no cofold release) | 04 |
+| A `writeOnly` value at any depth, in a list entry or a map value, moves to the vault. An empty list key keeps its secret only while its entry is unchanged. A host agent may name a `host:` secret | Softov, 2026-10-27: "Vault every writeOnly field" | 02 |
 
 ## Proposed architecture
 
@@ -86,11 +87,11 @@ Only the check in task 01 and the test in task 05 can walk it.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Every schema entry point checks for gaps](task-01-every-schema-entry-point-checks.md) | todo | - |
-| [02 - Claude lists models and model sources apart](task-02-claude-lists-models-and-sources.md) | todo | 01 |
-| [03 - The first-party plugin schemas have no gap](task-03-plugin-schemas-have-no-gap.md) | todo | 01 |
-| [04 - The host config names its maps](task-04-the-host-config-names-its-maps.md) | todo | 01 |
-| [05 - A test walks every first-party schema](task-05-a-test-walks-every-schema.md) | todo | 01, 02, 03, 04 |
+| [01 - Every schema entry point checks for gaps](task-01-every-schema-entry-point-checks.md) | implemented | - |
+| [02 - Claude lists models and model sources apart](task-02-claude-lists-models-and-sources.md) | implemented | 01 |
+| [03 - The first-party plugin schemas have no gap](task-03-plugin-schemas-have-no-gap.md) | implemented | 01 |
+| [04 - The host config names its maps](task-04-the-host-config-names-its-maps.md) | implemented | 01 |
+| [05 - A test walks every first-party schema](task-05-a-test-walks-every-schema.md) | implemented | 01, 02, 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -100,13 +101,13 @@ Only the check in task 01 and the test in task 05 can walk it.
 
 ## Resume state
 
-- **Done so far:** the walk on 2026-10-26, whose results are the Gaps table.
-- **Next action:** Softov reads this plan. Task 01 comes first. Tasks 02 and 03 follow it, in either order.
+- **Done so far:** tasks 01 to 05 implemented on 2026-10-27. `schemaGaps` and `gapLine` are in the sdk, and every entry point walks what it is given. The first-party schemas and the host's maps name every value. `packages/server/test/schema-gaps.test.ts` walks all of them. After the review, a `writeOnly` value at any depth moves to the vault.
+- **Next action:** Softov reads the report, then probes by hand with ahpw: a Claude record, a computer profile and an activepieces action.
 - **Open questions:** none.
-- **Watch out for:** a gap in a third-party plugin is a problem line only. Never refuse its load for a gap.
+- **Watch out for:** a gap in a third-party plugin is a warning line only. Never refuse its load for a gap.
 
 ## Final verification checklist
 
-- [ ] The test of task 05 passes, and fails when one fix is removed.
+- [x] The test of task 05 passes, and fails when one fix is removed.
 - [ ] By hand: ahpw draws each field of a Claude record, a computer profile and an activepieces action.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

@@ -1,6 +1,6 @@
 ---
 title: Claude lists models and model sources apart
-status: todo
+status: implemented
 depends:
   - task-01-every-schema-entry-point-checks.md
 layer: "agent-claude, server, docs"
@@ -61,9 +61,10 @@ Each list holds one shape: `models` holds models, and `modelSources` holds fetch
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Files:** none yet.
+- **Done so far:** `env`'s values are `oneOf` a string, `null`, `{ fromEnv }` and `{ "$secret" }`, and `fromEnv` and `secretAtUse` stay. `extraArgs` is `additionalProperties: {}`. `models` items are `{ id, name? }`. The new `modelSources` items are `{ fetch, match?, key? }`, and `key` is `writeOnly` and `secretAtUse`. `models.ts` and `claude.ts` read the two lists: the written models first, then each source's models, each id once. `plugin.ts` reads each list through `modelsOf` and `sourcesOf`, which drop an entry of the wrong shape. `splitModels` in `packages/server/src/agents/migrate.ts` rewrites a stored Claude record's mixed list into the two lists, once. `run.ts` calls it after `applyPresets` and before the records open. The README describes the two lists and the `modelSources` example.
+- **Next action:** Softov reads the report.
+- **Files:** `packages/agent-claude/src/options.ts`, `packages/agent-claude/src/models.ts`, `packages/agent-claude/src/claude.ts`, `packages/agent-claude/src/plugin.ts`, `packages/agent-claude/README.md`, `packages/agent-claude/test/agent-claude-models.test.ts`, `packages/agent-claude/test/agent-claude-options-schema.test.ts`, `packages/agent-claude/test/agent-claude-presets.test.ts`, `packages/agent-claude/test/engine.test.ts`, `packages/sdk/src/channels/owners.ts`, `packages/sdk/src/agents/channel.ts`, `packages/sdk/src/index.ts`, `packages/sdk/test/owners-nested-secrets.test.ts` (new), `packages/server/src/agents/migrate.ts`, `packages/server/src/commands/run.ts`, `packages/server/test/agents-migrate.test.ts`.
 - **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** only agent-claude reads a `models` list from a record. The proxy's `ModelEntry` has one shape and does not change.
+- **Departures:** the rewrite is in `packages/server/src/agents/migrate.ts`, with its tests in `packages/server/test/agents-migrate.test.ts`. It rewrites a stored record through the server's record store, as `applyPresets` does. `splitModels` runs after `applyPresets`, so a record that a preset writes is split in the same start. It logs each record it leaves whole, with the reason and no value. It moves a plain `modelSources` key to the vault, in the owner's scope.
+- **Departures, the vault:** `writeOnlyPaths` in `packages/sdk/src/channels/owners.ts` finds a `writeOnly` field at any depth, in a list entry or a map value. The agents channel and the start migration use it, so each such value moves to the vault and a client sees `<set>`. An empty list key keeps its secret only while its entry is unchanged. Otherwise the channel refuses the put, so a key never goes to another endpoint. A host agent may name a `host:` secret in a nested field, such as an ACP `env` value. `sourcesProblem` in `models.ts` drops a source it cannot read, and names the field and never the value.
+- **Watch out for:** only agent-claude reads a `models` list from a record. The proxy's `ModelEntry` has one shape and did not change. A plain ACP `env` value already in a stored host record stays plain until the next put of that record.
