@@ -1,6 +1,6 @@
 ---
 title: A new Cofold session picks a model
-status: todo
+status: doing
 depends: []
 layer: "plugin"
 refs:
@@ -40,7 +40,7 @@ Today the session schema has a `model` field with no values, and a client that p
 
 ## Resume
 
-- **Done so far:** nothing.
+- **Done so far:** nothing yet.
 - **Next action:** step 1.
 - **Files:** none yet.
 - **Open questions:** none.
