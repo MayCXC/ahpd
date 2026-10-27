@@ -2,7 +2,7 @@
 title: A shell's marks stay out of its output - implemented
 date: 2026-10-27
 refs:
-  - git://06cf79df
+  - git://c71d2bb4
   - "[code://packages/sdk/src/machines/terminals.ts](../../../../packages/sdk/src/machines/terminals.ts)"
   - "[code://packages/sdk/test/pty.test.ts](../../../../packages/sdk/test/pty.test.ts)"
 ---
