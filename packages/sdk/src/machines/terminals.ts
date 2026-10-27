@@ -467,8 +467,14 @@ export function createTerminal(
    */
   const endTree = (pid: number): void => { run('taskkill', ['/pid', String(pid), '/T', '/F']); };
 
-  child?.stdout.on('data', (chunk: Buffer) => said(chunk.toString('utf8')));
-  child?.stderr.on('data', (chunk: Buffer) => said(chunk.toString('utf8')));
+  // Each pipe decodes as one stream, so a character whose bytes arrive in two
+  // reads comes out whole, as `node-pty` reads its terminal
+  // (https://nodejs.org/api/stream.html#readablesetencodingencoding,
+  // https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L109-L111).
+  child?.stdout.setEncoding('utf8');
+  child?.stderr.setEncoding('utf8');
+  child?.stdout.on('data', (chunk: string) => said(chunk));
+  child?.stderr.on('data', (chunk: string) => said(chunk));
   /**
    * Said once, whichever of the three got here first.
    *

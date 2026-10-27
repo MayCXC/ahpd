@@ -1,6 +1,6 @@
 ---
 title: Each pipe decodes as a stream
-status: todo
+status: done
 depends: []
 layer: "sdk"
 refs:
@@ -33,3 +33,8 @@ A character that two reads split arrives whole.
 - `pnpm boundary`, `pnpm typecheck` and `pnpm build` pass.
 
 ## Resume
+
+Done 2026-10-27.
+Both pipes call `setEncoding('utf8')`, and their handlers take strings.
+The new case passes, and it fails on the store before this change.
+A run of the store with the same two writes gives `é` on Node 24.21.0 and on Bun 1.4.4.

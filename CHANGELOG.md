@@ -2,6 +2,12 @@
 
 What changed in each release of the `@ahpd/*` packages. Every package carries the same version. Releases before 0.11.0 are in the git history.
 
+## 0.14.1 - unreleased
+
+### Terminals
+
+- On pipes, a character whose bytes arrive in two reads reaches the client whole rather than as two replacement characters: each pipe is decoded as one stream. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#pipes-or-a-pseudoterminal).
+
 ## 0.14.0 - 2026-10-26
 
 ### Upgrading

@@ -26,7 +26,7 @@ What the directory decides is smaller: a command that ran in it may have moved i
 
 ## Pipes, or a pseudoterminal
 
-The store runs shells on pipes unless it was handed a pseudoterminal binding, and the state says which the client is reading: `isPty` and `supportsCommandDetection` are both false on pipes, because there is no terminal device and no shell running a prompt of its own to emit anything. Output is then plain text, and anything a client draws with cursor movement will not look right - said in the state rather than discovered. This is what the protocol's `isPty: false` is for.
+The store runs shells on pipes unless it was handed a pseudoterminal binding, and the state says which the client is reading: `isPty` and `supportsCommandDetection` are both false on pipes, because there is no terminal device and no shell running a prompt of its own to emit anything. Output is then plain text, and anything a client draws with cursor movement will not look right - said in the state rather than discovered. This is what the protocol's `isPty: false` is for. Each pipe is decoded as one UTF-8 stream with the stream's own `setEncoding('utf8')`, as `node-pty` reads its terminal, so a character whose bytes arrive in two reads reaches the client whole.
 
 The daemon hands one in when the machine has it: `node-pty`'s `spawn`, loaded by name at runtime, because a native binding that does not match its runtime aborts the process rather than throwing and is nothing a `try`/`catch` can hold. So the import is tried in a child of the same runtime first and repeated here only once that child has survived it - `packages/server/src/pty.ts`. With it, shells run under a real terminal, and the shell's own marks become facts.
 

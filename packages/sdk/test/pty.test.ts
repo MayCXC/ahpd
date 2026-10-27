@@ -398,6 +398,17 @@ describe('a shell opened with a command', () => {
     ]);
     expect(again).toMatchObject({ exitCode: 7 });
   });
+
+  it('hands over a character whole when its bytes arrive in two reads', async () => {
+    // The two bytes of `é`, written a moment apart, so the pipe hands them
+    // over in two reads. Decoded one read at a time, each is a replacement
+    // character.
+    const terminal = run({
+      command: process.execPath,
+      args: ['-e', 'process.stdout.write(Buffer.from([0xc3])); setTimeout(() => process.stdout.write(Buffer.from([0xa9, 0x0a])), 200)'],
+    });
+    expect(await whole(terminal)).toBe('é\n');
+  });
 });
 
 it('signals nothing when the shell never started, rather than its own process group', () => {
