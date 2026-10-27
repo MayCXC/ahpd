@@ -587,9 +587,10 @@ describe('a rerank call is charged its billed input tokens', () => {
     expect(fake.received.every((one) => (JSON.parse(one.body) as { model: string }).model === 'fake-model')).toBe(true);
 
     await pause(20);
-    expect(usage.entries).toHaveLength(3);
-    expect(usage.entries[0]?.model).toEqual({ name: 'fake/model', provider: 'fake', connector: 'fake', input: 12 });
-    expect(usage.entries[0]?.cost?.amount).toBeCloseTo(12 / 1_000_000, 12);
+    const entries = usage.entries as ModelUse[];
+    expect(entries).toHaveLength(3);
+    expect(entries[0]?.model).toEqual({ name: 'fake/model', provider: 'fake', connector: 'fake', input: 12 });
+    expect(entries[0]?.cost?.amount).toBeCloseTo(12 / 1_000_000, 12);
   });
 
   it('reads meta.billed_units.input_tokens when usage names no total', async () => {
@@ -604,7 +605,8 @@ describe('a rerank call is charged its billed input tokens', () => {
     const got = await send(served.port, '/rerank', { headers: asRoot, body: RERANK });
     expect(got.status).toBe(200);
     await pause(20);
-    expect(usage.entries[0]?.model).toEqual({ name: 'fake/model', provider: 'fake', connector: 'fake', input: 7 });
+    const entries = usage.entries as ModelUse[];
+    expect(entries[0]?.model).toEqual({ name: 'fake/model', provider: 'fake', connector: 'fake', input: 7 });
   });
 });
 
