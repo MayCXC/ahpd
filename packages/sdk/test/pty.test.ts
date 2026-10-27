@@ -209,8 +209,8 @@ describe('the line a pipe spawn is given', () => {
       calls.push({ shell: nextShell, args, options });
       return {
         stdin: { writable: false, end: () => {} },
-        stdout: { on: () => {} },
-        stderr: { on: () => {} },
+        stdout: { setEncoding: () => {}, on: () => {} },
+        stderr: { setEncoding: () => {}, on: () => {} },
         pid: undefined,
         on: () => {},
         kill: () => {},

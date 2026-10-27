@@ -38,3 +38,5 @@ Done 2026-10-27.
 Both pipes call `setEncoding('utf8')`, and their handlers take strings.
 The new case passes, and it fails on the store before this change.
 A run of the store with the same two writes gives `é` on Node 24.21.0 and on Bun 1.4.4.
+The fake child of the pipe spawn cases gains `setEncoding`, as the streams of a real child have it.
+`packages/sdk/test/pty.test.ts` and `packages/sdk/test/host-terminals.test.ts` pass, 52 of 52.
