@@ -2,22 +2,26 @@
 title: A terminal under Bun is a pseudoterminal - implemented
 date: 2026-10-26
 refs:
-  - "[code://packages/server/src/pty.ts#L33-L160](../../../../packages/server/src/pty.ts#L33-L160) - `bunTerminal` and the loader's Bun branch"
-  - "[code://packages/server/test/server-pty.test.ts](../../../../packages/server/test/server-pty.test.ts) - the thirteen cases"
+  - "[code://packages/server/src/pty.ts#L33-L208](../../../../packages/server/src/pty.ts#L33-L208) - `bunTerminal`, `makesTerminal` and the loader's Bun branch"
+  - "[code://packages/server/test/server-pty.test.ts](../../../../packages/server/test/server-pty.test.ts) - the seventeen cases"
+  - "[code://.project/pending/daemon-41-windows-checks.md](../../../../.project/pending/daemon-41-windows-checks.md) - the run on Windows"
 ---
 
-On a Bun that has `Bun.Terminal`, from 1.3.5, on Linux and macOS, a terminal is Bun's own pseudoterminal.
+On a Bun that makes a terminal, a terminal is Bun's own pseudoterminal.
+That is Linux and macOS from Bun 1.3.5, and Windows, through ConPTY, from Bun 1.3.14.
 Every other Bun gets pipes, and `node-pty` is never loaded on Bun.
 
 ## What was built
 
-- [`code://packages/server/src/pty.ts`](../../../../packages/server/src/pty.ts) - `bunTerminal`, which starts the shell with `Bun.spawn` and its `terminal` option, as Bun's example does, and the loader's Bun branch.
+- [`code://packages/server/src/pty.ts`](../../../../packages/server/src/pty.ts) - `bunTerminal`, which starts the shell with `Bun.spawn` and its `terminal` option, as Bun's example does, with `node-pty`'s Unix behaviour or its Windows one. `makesTerminal`, which makes one terminal and closes it. The loader's Bun branch.
 - [`code://packages/server/test/server-pty.test.ts`](../../../../packages/server/test/server-pty.test.ts) - the binding against a stand-in of Bun, and the loader's choice on Bun.
 - `TERMINALS.md`, `INSTALL.md`, `README.md`, `DEVELOPER.md`, the comments on `runtime()` and `Pty`, the daemon spec and `CHANGELOG.md` say which runtime gets which terminal.
 
 ## Verified
 
-- `server-pty.test.ts`: 13 of 13 pass. The `exit` callback case fails when the callback is added back. The closed `write` case fails without the check of `closed`. The `Bun.Terminal` case fails without the presence test. The refused signal case fails without the `try` around `proc.kill`.
+- `server-pty.test.ts`: 17 of 17 pass. The `exit` callback case fails when the callback is added back. The closed `write` case fails without the check of `closed`. The `Bun.Terminal` case fails without the presence test. The refused signal case fails without the `try` around `proc.kill`.
+- The `cmd.exe` line case fails without `windowsVerbatimArguments`. The Bun 1.3.13 on Windows case fails with a presence test in place of `makesTerminal`. The Windows `kill` case fails with the Unix `kill` on Windows.
+- With real Bun 1.3.13 and 1.4.4 on Linux, and Bun 1.3.13 on macOS, the loader makes and closes a terminal and hands the binding out. `probe-binding.mjs`, below, passes on each.
 - `pnpm -s typecheck`, `pnpm -s boundary`, `pnpm -s schema` and `pnpm -s build` exit 0.
 - Vitest on `packages/server` and `packages/sdk`, with `--maxWorkers=2 --testTimeout=10000`: 5030 tests pass, 4 skip and 5 fail.
 - The 4 in `server-cli-restart.test.ts` pass alone, 12 of 12.
@@ -218,4 +222,4 @@ After that exit, a write and a kill with `SIGFOO` did nothing, and the process l
 
 ## Left for later
 
-- Bun's terminal on Windows, from 1.3.14, is open question 1 in [plan.md](plan.md).
+- The run on a Windows machine: [pending/daemon-41-windows-checks.md](../../../pending/daemon-41-windows-checks.md).

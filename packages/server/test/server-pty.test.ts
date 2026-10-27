@@ -22,7 +22,7 @@ interface Given {
 }
 
 /** `Bun.spawn` and its terminal, as far as the binding reaches for them, saying whatever a test tells it to. */
-function fakeBun(options: { terminal?: boolean; refuse?: Error; refuseSignal?: Error } = {}) {
+function fakeBun(options: { terminal?: boolean; terminalRefused?: boolean; refuse?: Error; refuseSignal?: Error } = {}) {
   const spawned: { cmd: string[]; options: Record<string, unknown> }[] = [];
   const written: string[] = [];
   const resized: [number, number][] = [];
@@ -43,8 +43,16 @@ function fakeBun(options: { terminal?: boolean; refuse?: Error; refuseSignal?: E
     },
     close: () => { terminal.closed = true; },
   };
+  /** `Bun.Terminal`, which the loader makes and closes once; Bun 1.3.13 on Windows throws there. */
+  class Terminal {
+    constructor() {
+      if (options.terminalRefused === true) throw new Error('PTY not supported on this platform');
+    }
+
+    close(): void {}
+  }
   const Bun = {
-    ...(options.terminal === false ? {} : { Terminal: class Terminal {} }),
+    ...(options.terminal === false ? {} : { Terminal }),
     spawn: (cmd: string[], given: Record<string, unknown> & { terminal: Given }) => {
       if (options.refuse !== undefined) throw options.refuse;
       spawned.push({ cmd, options: given });
@@ -74,10 +82,10 @@ function fakeBun(options: { terminal?: boolean; refuse?: Error; refuseSignal?: E
   };
 }
 
-/** The binding the loader hands a daemon on Linux under this Bun. */
-const bunBinding = async (bun: ReturnType<typeof fakeBun>): Promise<SpawnPty> => {
+/** The binding the loader hands a daemon on this system under this Bun. */
+const bunBinding = async (bun: ReturnType<typeof fakeBun>, platform = 'linux'): Promise<SpawnPty> => {
   vi.stubGlobal('Bun', bun.Bun);
-  const { pty: spawn } = await pty('linux');
+  const { pty: spawn } = await pty(platform);
   if (spawn === undefined) throw new Error('the loader handed no binding under Bun');
   return spawn;
 };
@@ -137,6 +145,31 @@ describe('a terminal under Bun', () => {
     expect(() => spawn('cmd.exe', '/d /s /c "echo hi"', { cols: 80, rows: 24, env: {} }))
       .toThrow('args as a string is not supported on unix.');
     expect(bun.spawned).toEqual([]);
+  });
+
+  it("passes cmd.exe its line verbatim on Windows, as node-pty writes a string after the file", async () => {
+    const bun = fakeBun();
+    const spawn = await bunBinding(bun, 'win32');
+    spawn('C:\\Windows\\System32\\cmd.exe', '/d /s /c "echo hi"', { cols: 80, rows: 24, env: {} });
+    expect(bun.spawned[0]?.cmd).toEqual(['C:\\Windows\\System32\\cmd.exe', '/d /s /c "echo hi"']);
+    expect(bun.spawned[0]?.options).toMatchObject({ windowsVerbatimArguments: true });
+  });
+
+  it('passes an argv as it is on Windows, with Bun quoting it', async () => {
+    const bun = fakeBun();
+    const spawn = await bunBinding(bun, 'win32');
+    spawn('pwsh.exe', ['-NoLogo', '-Command', 'echo "hi"'], { cols: 80, rows: 24, env: {} });
+    expect(bun.spawned[0]?.cmd).toEqual(['pwsh.exe', '-NoLogo', '-Command', 'echo "hi"']);
+    expect('windowsVerbatimArguments' in (bun.spawned[0]?.options ?? {})).toBe(false);
+  });
+
+  it('ends the process with no signal on Windows, and refuses one there, as node-pty does', async () => {
+    const bun = fakeBun();
+    const { terminal } = started(await bunBinding(bun, 'win32'));
+    terminal.kill();
+    expect(bun.killed).toEqual([undefined]);
+    expect(() => { terminal.kill('SIGINT'); }).toThrow('Signals not supported on windows.');
+    expect(bun.killed).toEqual([undefined]);
   });
 
   it('hands over a character split across two reads whole, and nothing for its first half', async () => {
@@ -212,7 +245,7 @@ describe('a terminal under Bun', () => {
  * without a terminal of its own gets pipes, whatever a probe would say.
  */
 describe('the binding on Bun', () => {
-  it("is Bun's own where Bun has Bun.Terminal", async () => {
+  it("is Bun's own where Bun makes a terminal", async () => {
     vi.stubGlobal('Bun', fakeBun().Bun);
     expect((await pty('linux')).pty).toBeTypeOf('function');
   });
@@ -222,8 +255,13 @@ describe('the binding on Bun', () => {
     expect(await pty('linux')).toEqual({});
   });
 
-  it('is pipes on Windows, where the store hands cmd.exe its line as one string', async () => {
+  it("is Bun's own on Windows, where Bun 1.3.14 makes a ConPTY", async () => {
     vi.stubGlobal('Bun', fakeBun().Bun);
+    expect((await pty('win32')).pty).toBeTypeOf('function');
+  });
+
+  it('is pipes where Bun cannot make a terminal, as Bun 1.3.13 cannot on Windows', async () => {
+    vi.stubGlobal('Bun', fakeBun({ terminalRefused: true }).Bun);
     expect(await pty('win32')).toEqual({});
   });
 });

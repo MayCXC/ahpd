@@ -47,14 +47,30 @@ const loadable = (): boolean => {
  * resolves either way.
  *
  * Where Bun leaves a choice open, this makes the one `node-pty` makes, because
- * the port is `node-pty`'s shape: arguments as one string are refused, `kill`
- * sends `SIGHUP` when it names no signal, and a write once the terminal has
- * closed does nothing.
+ * the port is `node-pty`'s shape, and `node-pty` has a terminal for Unix and
+ * one for Windows,
+ * https://github.com/microsoft/node-pty/blob/v1.1.0/src/index.ts#L12-L16.
+ * On Unix, arguments as one string are refused, and `kill` sends `SIGHUP` when
+ * it names no signal. On Windows, arguments as one string are the command line
+ * after the file, which is how the store hands `cmd.exe` its line, and `kill`
+ * takes no signal. On both, a write once the terminal has closed does nothing.
  */
-const bunTerminal = (Bun: BunRuntime): SpawnPty => (file, args, { cwd, cols, rows, env }) => {
-  // `node-pty`'s own refusal on Unix, the only systems this is handed out on:
+const bunTerminal = (Bun: BunRuntime, platform: string): SpawnPty => (file, args, { cwd, cols, rows, env }) => {
+  const windows = platform === 'win32';
+  // `node-pty`'s own refusal on Unix:
   // https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L50-L52
-  if (typeof args === 'string') throw new Error('args as a string is not supported on unix.');
+  if (typeof args === 'string' && !windows) throw new Error('args as a string is not supported on unix.');
+  /*
+   * On Windows, a string is the command line after the file, written as it
+   * is, as `node-pty` writes it there,
+   * https://github.com/microsoft/node-pty/blob/v1.1.0/src/windowsPtyAgent.ts#L255-L261.
+   * Bun is told the arguments are verbatim, as the store tells Node for
+   * `cmd.exe` on pipes, and Bun passes that flag to libuv beside the
+   * pseudoconsole,
+   * https://github.com/oven-sh/bun/blob/bun-v1.3.14/src/runtime/api/bun/process.zig#L1709-L1719.
+   */
+  const verbatim = typeof args === 'string';
+  const argv = typeof args === 'string' ? (args === '' ? [file] : [file, args]) : [file, ...args];
   const heard: ((data: string) => void)[] = [];
   const ended: ((exit: { exitCode: number }) => void)[] = [];
   const said = (data: string): void => { for (const listen of heard) listen(data); };
@@ -67,9 +83,10 @@ const bunTerminal = (Bun: BunRuntime): SpawnPty => (file, args, { cwd, cols, row
   /** Starts the subprocess, and answers nothing when Bun refuses to. */
   const started = (): BunSubprocess | undefined => {
     try {
-      return Bun.spawn([file, ...args], {
+      return Bun.spawn(argv, {
         ...(cwd !== undefined ? { cwd } : {}),
         env,
+        ...(verbatim ? { windowsVerbatimArguments: true } : {}),
         terminal: {
           cols,
           rows,
@@ -110,15 +127,48 @@ const bunTerminal = (Bun: BunRuntime): SpawnPty => (file, args, { cwd, cols, row
     // https://github.com/microsoft/node-pty/blob/v1.1.0/src/terminal.ts#L190-L195
     write: (data) => { if (proc !== undefined && !proc.terminal.closed) proc.terminal.write(data); },
     resize: (nextCols, nextRows) => { proc?.terminal.resize(nextCols, nextRows); },
-    // `SIGHUP` when nothing is named, as `node-pty` sends: an interactive shell
-    // ignores Bun's own default, `SIGTERM`, and the store's close names none.
-    // A signal the runtime refuses is swallowed, as `node-pty` swallows it.
-    // https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L249-L253
-    kill: (signal) => {
-      try { proc?.kill(signal ?? 'SIGHUP'); }
-      catch { /* a signal Bun does not know */ }
-    },
+    kill: windows
+      /*
+       * On Windows, no signal, as `node-pty` takes none there,
+       * https://github.com/microsoft/node-pty/blob/v1.1.0/src/windowsTerminal.ts#L164-L171,
+       * and Bun's own `SIGTERM` ends the process, where libuv has no `SIGHUP`,
+       * https://github.com/libuv/libuv/blob/v1.51.0/src/win/process.c#L1295-L1304.
+       */
+      ? (signal) => {
+        if (signal) throw new Error('Signals not supported on windows.');
+        proc?.kill();
+      }
+      /*
+       * On Unix, `SIGHUP` when nothing is named, as `node-pty` sends: an
+       * interactive shell ignores Bun's own default, `SIGTERM`, and the store's
+       * close names none. A signal the runtime refuses is swallowed, as
+       * `node-pty` swallows it,
+       * https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L249-L253.
+       */
+      : (signal) => {
+        try { proc?.kill(signal ?? 'SIGHUP'); }
+        catch { /* a signal Bun does not know */ }
+      },
   };
+};
+
+/**
+ * Whether this Bun makes a terminal on this system.
+ *
+ * One is made and closed here, as `loadable` tries `node-pty` before the
+ * binding is handed out. A Bun with no terminal on its system throws rather
+ * than aborting, as 1.3.13 does on Windows, so the try needs no child:
+ * https://github.com/oven-sh/bun/blob/bun-v1.3.13/src/bun.js/api/bun/Terminal.zig#L270-L278
+ */
+const makesTerminal = (Bun: BunRuntime): boolean => {
+  if (Bun.Terminal === undefined) return false;
+  try {
+    new Bun.Terminal({ cols: 1, rows: 1 }).close();
+    return true;
+  }
+  catch {
+    return false;
+  }
 };
 
 /**
@@ -128,11 +178,9 @@ const bunTerminal = (Bun: BunRuntime): SpawnPty => (file, args, { cwd, cols, row
  * turn into command boundaries. Without it they run on pipes and the state
  * says `isPty: false`, which is what the protocol has that flag for.
  *
- * On Bun it is Bun's own, wherever Bun has `Bun.Terminal`, which came with
- * 1.3.5, and on Linux and macOS. Up to 1.3.13 Bun documents its terminal for
- * those two only; from 1.3.14 it has one on Windows, but this binding takes
- * an argv, as `node-pty` does on Unix, and there the store hands `cmd.exe`
- * its line as one string. So any other Bun gets pipes. `node-pty` is never loaded on Bun,
+ * On Bun it is Bun's own, wherever Bun makes a terminal: on Linux and macOS
+ * from 1.3.5, which brought `Bun.Terminal`, and on Windows, through ConPTY,
+ * from 1.3.14. Any other Bun gets pipes. `node-pty` is never loaded on Bun,
  * whatever a probe says: on Bun 1.3.13 and 1.4.4 it loads, so the child below
  * survives it, and every shell it starts dies of `SIGHUP` before printing
  * anything. Everywhere else it is `node-pty`, where a child of the same
@@ -147,7 +195,7 @@ export const pty = async (platform: string = process.platform): Promise<{ pty?: 
   const { runtime } = await import('@ahpd/sdk');
   if (runtime() === 'bun') {
     const Bun = (globalThis as unknown as { Bun: BunRuntime }).Bun;
-    return platform !== 'win32' && Bun.Terminal !== undefined ? { pty: bunTerminal(Bun) } : {};
+    return makesTerminal(Bun) ? { pty: bunTerminal(Bun, platform) } : {};
   }
   if (!loadable()) return {};
   try {
@@ -176,12 +224,13 @@ if (process.argv[1] === SELF && process.argv[2] === '--probe') {
  * and its `Terminal` are declared in "Terminal (PTY) support".
  */
 
-/** `Bun.spawn` with a terminal, and `Bun.Terminal`, whose presence says Bun has one. */
+/** `Bun.spawn` with a terminal, and `Bun.Terminal`, which is made once to see that Bun has one here. */
 interface BunRuntime {
-  Terminal?: unknown;
+  Terminal?: new (options: { cols: number; rows: number }) => { close(): void };
   spawn(cmd: string[], options: {
     cwd?: string;
     env: Record<string, string | undefined>;
+    windowsVerbatimArguments?: boolean;
     terminal: { cols: number; rows: number; data(terminal: BunTerminal, data: Uint8Array): void };
   }): BunSubprocess;
 }

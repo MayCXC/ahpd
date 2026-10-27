@@ -201,19 +201,23 @@ A weekly workflow proposes a pull request when a part has a newer release.
 
 ### A terminal is a pseudoterminal where the runtime has one
 
-WHEN the daemon starts on a Bun that has `Bun.Terminal`, on Linux or macOS
+WHEN the daemon starts on a Bun that makes a terminal
 THEN its terminals run under Bun's own pseudoterminal, the `terminal` option of `Bun.spawn`
 AND `node-pty` is neither probed nor loaded.
 The reason: on Bun, `node-pty` loads and every shell it starts dies at once.
-`Bun.Terminal` came with Bun 1.3.5.
+`Bun.Terminal` came with Bun 1.3.5, and on Windows it makes a ConPTY from Bun 1.3.14.
+The daemon makes one terminal and closes it at start, to see that Bun can.
+
+WHEN a terminal on Bun on Windows runs `cmd.exe` with a line
+THEN the line is the command line after the file, written as it is
+AND `kill` takes no signal and ends the process, as `node-pty` does on Windows.
 
 WHEN a terminal's process exits on Bun
 THEN its exit is said once `exited` resolves, after its whole output
 AND its terminal is closed, and input after that is dropped.
 
-WHEN it starts on a Bun without `Bun.Terminal`, or on Windows
+WHEN it starts on a Bun without `Bun.Terminal`, or on a Bun that cannot make one, such as Bun 1.3.13 on Windows
 THEN its terminals run on pipes and say `isPty: false`.
-On Windows the store hands `cmd.exe` its line as one string, which this binding refuses, as `node-pty` does on Unix.
 
 WHEN it starts on Node or Deno
 THEN its terminals run under `node-pty` where a child of the same runtime survives loading it, and on pipes otherwise.

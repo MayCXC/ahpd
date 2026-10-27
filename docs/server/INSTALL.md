@@ -83,7 +83,7 @@ deno run -A "$(npm root -g)/@ahpd/server/dist/main.js"
 
 Node needs the optional `ws` dependency, which npm installs. Bun and Deno use their built-in servers.
 
-A terminal is a pseudoterminal on Node and Deno where `node-pty` loads, and on Bun 1.3.5 or newer on Linux and macOS, through Bun's own; anywhere else it runs on pipes. See [TERMINALS.md](../sdk/TERMINALS.md#pipes-or-a-pseudoterminal).
+A terminal is a pseudoterminal on Node and Deno where `node-pty` loads, and on Bun through Bun's own: from 1.3.5 on Linux and macOS, and from 1.3.14 on Windows. Anywhere else it runs on pipes. See [TERMINALS.md](../sdk/TERMINALS.md#pipes-or-a-pseudoterminal).
 
 Before they install, `install.sh` and `install.ps1` print one line for each of Node, Bun and Deno: the version, and whether ahpd runs on it.
 

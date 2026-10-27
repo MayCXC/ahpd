@@ -8,10 +8,11 @@ revalidated: 2026-10-26
 changes:
   - specs/daemon.md
 refs:
-  - "[code://packages/server/src/pty.ts#L33-L122](../../../../packages/server/src/pty.ts#L33-L122) - `bunTerminal`, Bun's terminal as the port"
-  - "[code://packages/server/src/pty.ts#L124-L160](../../../../packages/server/src/pty.ts#L124-L160) - `pty`, the loader, whose answer the daemon spreads into `shellTerminals`"
-  - "[code://packages/server/src/pty.ts#L162-L172](../../../../packages/server/src/pty.ts#L162-L172) - the probe child, which must load nothing but `node-pty`"
-  - "[code://packages/server/src/pty.ts#L174-L192](../../../../packages/server/src/pty.ts#L174-L192) - the shapes Bun hands back"
+  - "[code://packages/server/src/pty.ts#L33-L153](../../../../packages/server/src/pty.ts#L33-L153) - `bunTerminal`, Bun's terminal as the port, with `node-pty`'s Unix and Windows behaviour"
+  - "[code://packages/server/src/pty.ts#L155-L172](../../../../packages/server/src/pty.ts#L155-L172) - `makesTerminal`, one terminal made and closed to see that Bun has one here"
+  - "[code://packages/server/src/pty.ts#L174-L208](../../../../packages/server/src/pty.ts#L174-L208) - `pty`, the loader, whose answer the daemon spreads into `shellTerminals`"
+  - "[code://packages/server/src/pty.ts#L210-L220](../../../../packages/server/src/pty.ts#L210-L220) - the probe child, which must load nothing but `node-pty`"
+  - "[code://packages/server/src/pty.ts#L222-L241](../../../../packages/server/src/pty.ts#L222-L241) - the shapes Bun hands back"
   - "[code://packages/server/src/commands/run.ts#L898-L899](../../../../packages/server/src/commands/run.ts#L898-L899) - the start asks `pty()` once"
   - "[code://.project/plans/daemon/27-ahpd-installs-with-one-line/plan.md#L81](../../../../.project/plans/daemon/27-ahpd-installs-with-one-line/plan.md#L81) - the intent: a terminal under Bun comes from Bun's own install"
   - "[code://packages/sdk/src/types/terminals.ts#L134-L161](../../../../packages/sdk/src/types/terminals.ts#L134-L161) - `Pty` and `SpawnPty`, the port; a host on another runtime passes its own"
@@ -38,7 +39,18 @@ refs:
   - https://github.com/oven-sh/bun/blob/bun-v1.3.13/packages/bun-types/bun.d.ts#L7189 - `exited` is the exit code of the process
   - https://github.com/oven-sh/bun/blob/bun-v1.3.13/packages/bun-types/bun.d.ts#L7800-L7806 - the class `Terminal` in the `bun` module, and its `closed`
   - https://github.com/oven-sh/bun/blob/bun-v1.3.4/docs/runtime/child-process.mdx - no terminal section yet; it came with 1.3.5
-  - https://github.com/oven-sh/bun/blob/bun-v1.3.14/docs/runtime/child-process.mdx#L419 - from 1.3.14, a terminal on Windows through ConPTY
+  - https://github.com/oven-sh/bun/blob/bun-v1.3.14/docs/runtime/child-process.mdx#L417-L425 - from 1.3.14, a terminal on Windows through ConPTY, and what differs there
+  - https://github.com/oven-sh/bun/blob/bun-v1.3.14/docs/runtime/child-process.mdx#L516 - the spawn option `windowsVerbatimArguments`
+  - https://github.com/oven-sh/bun/blob/bun-v1.3.14/src/runtime/api/bun/process.zig#L1709-L1719 - the option reaches libuv's verbatim flag beside the pseudoconsole
+  - https://github.com/oven-sh/bun/blob/bun-v1.3.13/src/bun.js/api/bun/Terminal.zig#L270-L278 - a terminal Bun cannot make throws, it does not abort
+  - https://github.com/oven-sh/bun/blob/bun-v1.3.13/src/bun.js/api/bun/Terminal.zig#L316-L324 - and up to 1.3.13 Bun cannot make one on Windows
+  - https://github.com/libuv/libuv/blob/v1.51.0/src/win/process.c#L1295-L1304 - on Windows, `SIGTERM` ends a process
+  - https://github.com/libuv/libuv/blob/v1.51.0/src/win/process.c#L1358-L1359 - and a signal like `SIGHUP` is not supported there
+  - "[code://packages/sdk/src/machines/terminals.ts#L446-L452](../../../../packages/sdk/src/machines/terminals.ts#L446-L452) - on pipes, the spawn is told `cmd.exe`'s argv is verbatim"
+  - https://github.com/microsoft/node-pty/blob/v1.1.0/src/index.ts#L12-L16 - one terminal for Unix and one for Windows
+  - https://github.com/microsoft/node-pty/blob/v1.1.0/src/windowsTerminal.ts#L22-L28 - on Windows, arguments are an argv or one command line
+  - https://github.com/microsoft/node-pty/blob/v1.1.0/src/windowsPtyAgent.ts#L255-L261 - a command line is written after the file as it is
+  - https://github.com/microsoft/node-pty/blob/v1.1.0/src/windowsTerminal.ts#L164-L171 - on Windows, `kill` refuses a signal and ends the process without one
   - npm://node-pty@1.1.0 - the shape the port names, read at its tag below
   - https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L50-L52 - arguments as one string are refused on Unix
   - https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L76 - the output is UTF-8 unless told otherwise
@@ -71,7 +83,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ```
 ahpd start -> run.ts stamp('start: terminals') -> pty()
-  -> runtime() is 'bun' -> Bun.Terminal is there and not win32 -> bunTerminal(Bun)
+  -> runtime() is 'bun' -> a Bun.Terminal made and closed -> bunTerminal(Bun, platform)
   -> shellTerminals({ pty }) -> createTerminal -> Bun.spawn([shell, ...args], { terminal: { cols, rows, data } })
   -> data -> terminal/data, OSC 133 -> terminal/commandExecuted, exited -> close -> terminal/exited
 ```
@@ -87,6 +99,8 @@ ahpd start -> run.ts stamp('start: terminals') -> pty()
 - An interactive `bash` keeps running after `proc.kill()`, which sends `SIGTERM`, and exits `129` on `SIGHUP`.
 - After a shell exits, `node-pty` does nothing on a write, throws `ioctl(2) failed, EBADF` on a resize, and takes a kill. This binding on Bun 1.3.13 and 1.4.4 does the same.
 - Bun 1.3.13 and 1.4.4 throw `ERR_INVALID_ARG_TYPE` from `kill` for a signal they do not know, and `node-pty` swallows the same call.
+- On Linux with Bun 1.3.13 and 1.4.4, and on macOS with Bun 1.3.13, the loader makes and closes a terminal and hands the binding out.
+- No Windows machine was at hand. The checks for one are in [pending/daemon-41-windows-checks.md](../../../pending/daemon-41-windows-checks.md).
 
 ### Gaps
 
@@ -98,16 +112,19 @@ ahpd start -> run.ts stamp('start: terminals') -> pty()
 | What | Source | Task |
 | --- | --- | --- |
 | `pty()` asks `runtime()` from `@ahpd/sdk` which runtime it is on, and never tests `globalThis.Bun` itself | [code://packages/sdk/src/listen.ts#L19-L33](../../../../packages/sdk/src/listen.ts#L19-L33), a second reader "calls this rather than copying it"; [code://packages/server/src/plugins.ts#L418](../../../../packages/server/src/plugins.ts#L418), the server's own call | 01 |
-| `@ahpd/sdk` is imported inside `pty()`, not at the top of the file | [code://packages/server/src/pty.ts#L162-L172](../../../../packages/server/src/pty.ts#L162-L172), the probe child: "nothing else is imported, so what it exits with is about `node-pty` alone" | 01 |
+| `@ahpd/sdk` is imported inside `pty()`, not at the top of the file | [code://packages/server/src/pty.ts#L210-L220](../../../../packages/server/src/pty.ts#L210-L220), the probe child: "nothing else is imported, so what it exits with is about `node-pty` alone" | 01 |
 | The Bun branch is `if (runtime() === 'bun')`, before the probe | [code://packages/sdk/src/listen.ts#L180](../../../../packages/sdk/src/listen.ts#L180), `if (here === 'bun')` | 01 |
 | Bun is reached as `(globalThis as unknown as { Bun: BunRuntime }).Bun` | [code://packages/sdk/src/listen.ts#L181](../../../../packages/sdk/src/listen.ts#L181) | 01 |
-| A Bun gets its own terminal where `Bun.Terminal` is there, tested as `Bun.Terminal !== undefined` | [code://packages/sdk/src/listen.ts#L30](../../../../packages/sdk/src/listen.ts#L30), the test of `g.Bun`'s presence; https://github.com/oven-sh/bun/blob/bun-v1.3.13/packages/bun-types/bun.d.ts#L7800-L7806; the 1.3.4 docs have no terminal section | 01 |
-| On Windows, Bun gets pipes, as on upstream | (defaulted: upstream's pipes, until open question 1 is answered); https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L417, terminals on Linux and macOS only up to 1.3.13 | 01 |
+| A Bun gets its own terminal where it makes one: `Bun.Terminal` is there, and one made at start and closed does not throw | [code://packages/sdk/src/listen.ts#L30](../../../../packages/sdk/src/listen.ts#L30), the test of `g.Bun`'s presence; [code://packages/server/src/pty.ts#L16-L31](../../../../packages/server/src/pty.ts#L16-L31), `loadable`, which tries `node-pty` before it is handed out, in a child because native code aborts; Bun throws instead, https://github.com/oven-sh/bun/blob/bun-v1.3.13/src/bun.js/api/bun/Terminal.zig#L270-L278, so the try is in the daemon; https://github.com/oven-sh/bun/blob/bun-v1.3.13/packages/bun-types/bun.d.ts#L7800-L7806 | 01 |
+| On Windows, Bun's terminal is ConPTY from 1.3.14, and Bun 1.3.13 there gets pipes | https://github.com/oven-sh/bun/blob/bun-v1.3.14/docs/runtime/child-process.mdx#L417-L425; https://github.com/oven-sh/bun/blob/bun-v1.3.13/src/bun.js/api/bun/Terminal.zig#L316-L324, no terminal on Windows up to 1.3.13; the row above decides which Bun makes one | 01 |
+| The binding takes `node-pty`'s Unix behaviour or its Windows behaviour by the platform | https://github.com/microsoft/node-pty/blob/v1.1.0/src/index.ts#L12-L16, one terminal per system; [code://packages/sdk/src/machines/terminals.ts#L241-L258](../../../../packages/sdk/src/machines/terminals.ts#L241-L258), the platform as a parameter | 01 |
+| On Windows, arguments as one string are the command line after the file, as `Bun.spawn([file, line], { windowsVerbatimArguments: true })` | https://github.com/microsoft/node-pty/blob/v1.1.0/src/windowsTerminal.ts#L22-L28 and https://github.com/microsoft/node-pty/blob/v1.1.0/src/windowsPtyAgent.ts#L255-L261, a command line written after the file as it is; [code://packages/sdk/src/machines/terminals.ts#L446-L452](../../../../packages/sdk/src/machines/terminals.ts#L446-L452), the store's verbatim argv for `cmd.exe` on pipes; https://github.com/oven-sh/bun/blob/bun-v1.3.14/docs/runtime/child-process.mdx#L516 and https://github.com/oven-sh/bun/blob/bun-v1.3.14/src/runtime/api/bun/process.zig#L1709-L1719, the same libuv flag beside the pseudoconsole | 01 |
+| On Windows, an argv is passed as it is, and Bun quotes it | the store's own argv for every shell but `cmd.exe`, [code://packages/sdk/src/machines/terminals.ts#L414](../../../../packages/sdk/src/machines/terminals.ts#L414) | 01 |
 | On Bun, `node-pty` is neither probed nor loaded, and a Bun with no terminal of its own gets pipes | upstream's daemon at ed1534d4 on Bun 1.3.13 and 1.4.4: every shell exits at once with no output, see [implemented.md](implemented.md) | 01 |
-| `BunRuntime` declares `Terminal` and `spawn`, with only the options passed | [code://packages/sdk/src/listen.ts#L615-L620](../../../../packages/sdk/src/listen.ts#L615-L620), the shapes "named so the code above reads"; https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L486-L513 | 01 |
+| `BunRuntime` declares `Terminal`, made with `cols` and `rows` and closed, and `spawn`, with only the options passed, `windowsVerbatimArguments` among them | [code://packages/sdk/src/listen.ts#L615-L620](../../../../packages/sdk/src/listen.ts#L615-L620), the shapes "named so the code above reads"; https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L486-L513 | 01 |
 | `BunSubprocess` declares `terminal`, `exited` and `kill` | the same pattern; https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L546-L553 | 01 |
 | `BunTerminal` declares `closed`, `write`, `resize` and `close` | the same pattern; https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L583-L593 | 01 |
-| Arguments as one string throw `node-pty`'s own error, `args as a string is not supported on unix.` | https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L50-L52 | 01 |
+| On Unix, arguments as one string throw `node-pty`'s own error, `args as a string is not supported on unix.` | https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L50-L52 | 01 |
 | The shell starts as `Bun.spawn([file, ...args], { cwd, env, terminal: { cols, rows, data } })` | https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L322-L332 | 01 |
 | The terminal gets no `exit` callback | the requirement, the exit said after the whole output, is met without it: Bun's example and its test read the output after `exited`, and the 200-run probes found nothing missing; with it, a start Bun refuses crashes Bun 1.3.5 to 1.3.13 | 01 |
 | `cwd` is passed only when the store names one | [code://packages/sdk/src/machines/terminals.ts#L416](../../../../packages/sdk/src/machines/terminals.ts#L416), the store's own spread | 01 |
@@ -118,16 +135,21 @@ ahpd start -> run.ts stamp('start: terminals') -> pty()
 | Once `exited` resolves, the terminal is closed and the exit said | https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L337-L341, `await proc.exited;` then `proc.terminal.close();`; [code://packages/sdk/src/machines/terminals.ts#L504-L517](../../../../packages/sdk/src/machines/terminals.ts#L504-L517), the exit after the output | 01 |
 | `write` is the terminal's `write` while the terminal is open, and does nothing once it is closed | https://github.com/microsoft/node-pty/blob/v1.1.0/src/terminal.ts#L190-L195, `this.write = () => {}`; `closed` at https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L586; [code://packages/sdk/src/machines/terminals.ts#L581-L587](../../../../packages/sdk/src/machines/terminals.ts#L581-L587) writes input with no check | 01 |
 | `resize` is the terminal's `resize`, which throws once the terminal has closed, as `node-pty`'s does once its descriptor has | https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L370-L371; https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L271-L278 with https://github.com/microsoft/node-pty/blob/v1.1.0/src/unix/pty.cc#L525; measured after exit: `node-pty` throws `ioctl(2) failed, EBADF`, Bun 1.3.13 and 1.4.4 throw `Terminal is closed` | 01 |
-| `kill` sends `signal ?? 'SIGHUP'` through `proc.kill`, and swallows what that throws | https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L249-L253, `signal \|\| 'SIGHUP'` in a `try` whose `catch` swallows; https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L141-L147; [code://packages/sdk/src/machines/terminals.ts#L650-L654](../../../../packages/sdk/src/machines/terminals.ts#L650-L654) names no signal; measured: Bun 1.3.13 and 1.4.4 throw `ERR_INVALID_ARG_TYPE` for a signal they do not know | 01 |
+| On Windows, `kill` throws `node-pty`'s `Signals not supported on windows.` for a named signal, and with none calls `proc.kill()`, whose `SIGTERM` ends the process | https://github.com/microsoft/node-pty/blob/v1.1.0/src/windowsTerminal.ts#L164-L171; https://github.com/libuv/libuv/blob/v1.51.0/src/win/process.c#L1295-L1304, `SIGTERM` ends a process, and https://github.com/libuv/libuv/blob/v1.51.0/src/win/process.c#L1358-L1359, `SIGHUP` is not supported there | 01 |
+| On Unix, `kill` sends `signal ?? 'SIGHUP'` through `proc.kill`, and swallows what that throws | https://github.com/microsoft/node-pty/blob/v1.1.0/src/unixTerminal.ts#L249-L253, `signal \|\| 'SIGHUP'` in a `try` whose `catch` swallows; https://github.com/oven-sh/bun/blob/bun-v1.3.13/docs/runtime/child-process.mdx#L141-L147; [code://packages/sdk/src/machines/terminals.ts#L650-L654](../../../../packages/sdk/src/machines/terminals.ts#L650-L654) names no signal; measured: Bun 1.3.13 and 1.4.4 throw `ERR_INVALID_ARG_TYPE` for a signal they do not know | 01 |
 | A start Bun refuses writes the error's message and `\r\n` into the output and exits `127` | [code://docs/sdk/TERMINALS.md#L21](../../../../docs/sdk/TERMINALS.md#L21); [code://packages/sdk/src/machines/terminals.ts#L491-L495](../../../../packages/sdk/src/machines/terminals.ts#L491-L495), the same on pipes; a pseudoterminal ends its lines with `\r\n` | 01 |
 | That report waits for a microtask | [code://packages/sdk/src/host/sleep.ts#L220-L221](../../../../packages/sdk/src/host/sleep.ts#L220-L221); [code://packages/sdk/src/machines/terminals.ts#L415-L423](../../../../packages/sdk/src/machines/terminals.ts#L415-L423) puts its listeners on after the call | 01 |
 | The cases stub `Bun` with `vi.stubGlobal` and undo it in `afterEach` | [code://packages/sdk/test/github.test.ts#L19-L39](../../../../packages/sdk/test/github.test.ts#L19-L39) | 01 |
 | `fakeBun` stands in for `Bun.spawn` and says what a case tells it | [code://packages/sdk/test/pty.test.ts#L21-L41](../../../../packages/sdk/test/pty.test.ts#L21-L41), `fakePty` | 01 |
 | `fakeBun`'s terminal throws `Terminal is closed` on `write` and `resize` once closed | measured on Bun 1.3.13 and 1.4.4 | 01 |
 | `fakeBun`'s `kill` throws when a case says Bun refuses the signal | measured on Bun 1.3.13 and 1.4.4, `ERR_INVALID_ARG_TYPE` | 01 |
+| `fakeBun`'s `Terminal` throws when made, when a case says Bun cannot make one | https://github.com/oven-sh/bun/blob/bun-v1.3.13/src/bun.js/api/bun/Terminal.zig#L270-L278, `PTY not supported on this platform` | 01 |
 | Case: "is Bun's own, started with the argv, directory, size and environment the store gives" | the start, `cwd`, `env` and `exit` callback rows above | 01 |
 | Case: "is a pseudoterminal to the store, which reads its output, its marks and its exit code" | [code://packages/sdk/test/pty.test.ts#L43-L52](../../../../packages/sdk/test/pty.test.ts#L43-L52), `opened`; the decoder and exit rows above | 01 |
-| Case: "refuses arguments as one string, as node-pty does on Unix" | the arguments row above | 01 |
+| Case: "refuses arguments as one string, as node-pty does on Unix" | the Unix arguments row above | 01 |
+| Case: "passes cmd.exe its line verbatim on Windows, as node-pty writes a string after the file" | the Windows command line row above | 01 |
+| Case: "passes an argv as it is on Windows, with Bun quoting it" | the Windows argv row above | 01 |
+| Case: "ends the process with no signal on Windows, and refuses one there, as node-pty does" | the Windows `kill` row above | 01 |
 | Case: "hands over a character split across two reads whole, and nothing for its first half" | the decoder row above | 01 |
 | Case: "says the exit once the process has exited, with the code Bun gives, and closes the terminal" | the exit code and close rows above | 01 |
 | Case: "writes nothing once its terminal has closed, as node-pty writes nothing once its output has" | the `write` row above | 01 |
@@ -135,9 +157,10 @@ ahpd start -> run.ts stamp('start: terminals') -> pty()
 | Case: "swallows a signal Bun refuses, as node-pty swallows what process.kill refuses" | the `kill` row above | 01 |
 | Case: "writes and resizes Bun's terminal" | the `write` and `resize` rows above | 01 |
 | Case: "says a start Bun refuses in its output, with 127, to listeners put on after the call" | the refused start and microtask rows above | 01 |
-| Case: "is Bun's own where Bun has Bun.Terminal" | the `Bun.Terminal` row above | 01 |
-| Case: "is pipes on a Bun without Bun.Terminal" | the `node-pty` and `Bun.Terminal` rows above | 01 |
-| Case: "is pipes on Windows, where the store hands cmd.exe its line as one string" | the Windows row above | 01 |
+| Case: "is Bun's own where Bun makes a terminal" | the row on which Bun makes one | 01 |
+| Case: "is pipes on a Bun without Bun.Terminal" | the `node-pty` row and the row on which Bun makes one | 01 |
+| Case: "is Bun's own on Windows, where Bun 1.3.14 makes a ConPTY" | the Windows ConPTY row above | 01 |
+| Case: "is pipes where Bun cannot make a terminal, as Bun 1.3.13 cannot on Windows" | the row on which Bun makes one, and the `Terminal` stand-in row | 01 |
 | `TERMINALS.md` names both bindings in its terms | [code://docs/sdk/TERMINALS.md#L11](../../../../docs/sdk/TERMINALS.md#L11) | 02 |
 | `TERMINALS.md` says a missing directory exits `1` under `node-pty`, with the failure written on Linux and nothing on macOS | https://github.com/microsoft/node-pty/blob/v1.1.0/src/unix/pty.cc#L418-L442; https://github.com/microsoft/node-pty/blob/v1.1.0/src/unix/spawn-helper.cc#L17-L22; measured on Node | 02 |
 | `TERMINALS.md` says the binding on Node and Deno, and the one on Bun | [code://docs/sdk/TERMINALS.md#L27-L39](../../../../docs/sdk/TERMINALS.md#L27-L39), "Pipes, or a pseudoterminal" | 02 |
@@ -170,17 +193,13 @@ ahpd start -> run.ts stamp('start: terminals') -> pty()
 - A shell that a signal ended exits `128` plus the signal on Bun, and `0` under `node-pty`. `TERMINALS.md` says the one on Bun.
 - A directory that is not there exits `127` on Bun, and `1` under `node-pty`. `TERMINALS.md` says which.
 - A job the shell left in the background loses what it writes after the shell exits, because the terminal is closed then.
-- Bun 1.3.14 and later have a terminal on Windows, and Windows gets pipes on Bun until open question 1 is answered.
+- On Windows the binding follows Bun's, `node-pty`'s and libuv's sources and its cases, and has not run on a Windows machine. [pending/daemon-41-windows-checks.md](../../../pending/daemon-41-windows-checks.md) holds that run.
 
 ## Resume state
 
 - **Done so far:** built 2026-10-26, see [implemented.md](implemented.md).
-- **Next action:** an answer to open question 1.
-- **Open questions:**
-  1. Does Bun 1.3.14 and later get its own terminal, ConPTY, on Windows? - proposed: pipes there, as on upstream, until a Windows run decides.
-     The store hands `cmd.exe` its line as one string.
-     `Bun.spawn` takes an argv, and has a `windowsVerbatimArguments` option ([docs at 1.3.14](https://github.com/oven-sh/bun/blob/bun-v1.3.14/docs/runtime/child-process.mdx#L516)).
-     No source here joins the two, and no Windows machine was at hand to measure it.
+- **Next action:** the Windows checks in [pending/daemon-41-windows-checks.md](../../../pending/daemon-41-windows-checks.md).
+- **Open questions:** none.
 - **Watch out for:** never load `node-pty` on Bun, whatever the probe says.
   Never give the terminal an `exit` callback while Bun 1.3.5 to 1.3.13 are supported.
   A by-hand daemon gets XDG folders under a temp folder and a port other than 9187.
@@ -190,4 +209,6 @@ ahpd start -> run.ts stamp('start: terminals') -> pty()
 - [x] On Bun 1.3.13 and 1.4.4, a terminal is a pseudoterminal where `^C`, a resize, OSC 133 marks and `exit 7` all work.
 - [x] On Bun 1.3.13 and 1.4.4 a command's whole output arrives before its exit, and a missing directory exits `127` with no crash.
 - [x] On Node the terminals are `node-pty`'s, as on upstream.
+- [ ] On Windows, Bun 1.3.14 runs a terminal as a ConPTY, and `cmd.exe` gets its line as written.
+- [ ] On Windows, a close ends the shell, and Bun 1.3.13 gets pipes.
 - [x] `plans/index.md` updated.
