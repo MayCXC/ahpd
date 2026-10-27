@@ -1092,7 +1092,7 @@ it('a nested session is listed after the outer host restarts, from the record it
   const asked = port.asked().length;
   const second = await restartable(dir, port.computers);
   const rows = await rowsOf(second.client);
-  expect(rows.map((one) => [one.resource, one.title])).toEqual([[`${PROVIDER}:/kept`, 'In the box']]);
+  expect(rows.map((one) => [one.resource, one.title])).toEqual([['ahp-session:/kept', 'In the box']]);
   // Listed without asking the machine anything.
   expect(port.asked().length).toBe(asked);
   await second.host.close();
@@ -1186,7 +1186,7 @@ it('a nested session moved to this host before its first turn shows its history'
    */
   const second = await daemon();
   const [row] = await rowsOf(second.client);
-  expect(row?.resource).toBe(`${PROVIDER}:/moved`);
+  expect(row?.resource).toBe('ahp-session:/moved');
   const opened = await second.client.handle({ method: 'subscribe', params: { channel: chatUriFor(String(row?.resource)) } }) as {
     snapshot: { state: { turns: Bag[] } };
   };
@@ -1406,7 +1406,7 @@ it('a nested session whose machine is gone is listed, and its resume ends with a
   await madeAndStopped(dir, port);
   const second = await restartable(dir, { how: async () => ({ command: 'true', args: [] }), nested: async () => undefined });
   const rows = await rowsOf(second.client);
-  expect(rows.map((one) => one.resource)).toEqual([`${PROVIDER}:/kept`]);
+  expect(rows.map((one) => one.resource)).toEqual(['ahp-session:/kept']);
   const uri = String(rows[0]?.resource);
   await second.client.handle({ method: 'subscribe', params: { channel: uri } });
   await second.client.handle({ method: 'dispatchAction', params: { channel: chatUriFor(uri), clientSeq: 1, action: { type: 'chat/turnStarted', turnId: 't2', message: { text: 'again' } } } });

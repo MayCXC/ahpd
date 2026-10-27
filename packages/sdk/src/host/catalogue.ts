@@ -1,6 +1,6 @@
 import { ROOT, subagentChatUri } from './channels.js';
 import { accountKey } from './root.js';
-import { Status, idFor, idOf } from '../sessions/catalog.js';
+import { Status, idFor, idOf, uriFor } from '../sessions/catalog.js';
 import { localPath } from '../resources/fileuri.js';
 import { statSync } from 'node:fs';
 import type { Summary, SummaryChat } from '../types/catalog.js';
@@ -837,6 +837,15 @@ export function createCatalogue(ctx: HostContext): Catalogue {
     for (const id of [...offered.keys()]) {
       if (claimed.has(id)) offered.delete(id);
     }
+    /*
+     * The ids this host has a row for, read once for the whole listing.
+     *
+     * A row is what makes a listed session the host's own: it is where the
+     * name the session was made with lives, and a session with no row is one
+     * that only a backend knows. Asking the store once rather than once a row
+     * keeps a listing over a hundred transcripts from a hundred questions.
+     */
+    const stored = new Set(kept.sessions());
     const found: Summary[] = [];
     for (const [id, both] of offered) {
       /*
@@ -859,7 +868,7 @@ export function createCatalogue(ctx: HostContext): Catalogue {
       const one = waiting === undefined ? both.find((it) => it.agent.provider === recorded) ?? both[0] : both[0];
       // Never empty: an id is in the map only because an agent listed it.
       if (one === undefined) continue;
-      found.push(adopt(one.agent, one.row, waiting));
+      found.push(adopt(one.agent, one.row, waiting, stored.has(id)));
     }
     /*
      * The nested sessions, from what this host recorded of them.
@@ -875,7 +884,7 @@ export function createCatalogue(ctx: HostContext): Catalogue {
       const reader = agent ?? [...agents.values()][0];
       if (reader === undefined) continue;
       const { title, createdAt, modifiedAt, workingDirectories } = record;
-      found.push(adopt(reader, { id, title, createdAt, modifiedAt, workingDirectories }, agent === undefined ? record.provider : undefined));
+      found.push(adopt(reader, { id, title, createdAt, modifiedAt, workingDirectories }, agent === undefined ? record.provider : undefined, stored.has(id)));
     }
     /*
      * The sessions the store recorded in a folder no backend read.
@@ -991,15 +1000,28 @@ export function createCatalogue(ctx: HostContext): Catalogue {
    * serving, so the row keeps its own provider and no owner: nothing here can
    * open it, and the session waits for the agent it actually ran on.
    *
+   * `stored` says whether this host has a row for the id. A row's `uri` is the
+   * name the session was made with, so a listed session with one is named that
+   * way and a session that already exists keeps its `<provider>:/<id>` name. A
+   * row with no `uri` is named from its provider, as before, and that name is
+   * stored. A row this host has none for is a transcript nobody here made, and
+   * it is `ahp-session:/<id>` until something makes the session this host's own.
+   *
    * The row's folder goes into the session's record when the record has none,
    * so a backend is told where to look for it after a restart. Only into a
    * record the host already keeps, which is one with a provider: a listing
    * names every session on the machine, and a file for each is a file for
    * sessions this host never ran.
    */
-  const adopt = (agent: Agent, row: Listed, waiting?: string): Summary => {
+  const adopt = (agent: Agent, row: Listed, waiting?: string, stored = false): Summary => {
     const provider = waiting ?? agent.provider;
-    const resource = `${provider}:/${row.id}`;
+    const keptName = kept.uri?.(row.id);
+    const resource = keptName ?? (stored ? `${provider}:/${row.id}` : uriFor(row.id));
+    // An old row keeps the name its clients already hold, and stores it so the
+    // next listing does not derive it again. A row this host has none for is
+    // named but not remembered: a listing must not write a file per session it
+    // finds on the machine.
+    if (keptName === undefined && stored) kept.setUri?.(row.id, resource);
     names.set(row.id, resource);
     if (waiting === undefined) owners.set(resource, agent);
     wheres.set(resource, row.workingDirectories);

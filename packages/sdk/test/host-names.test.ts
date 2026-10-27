@@ -280,31 +280,29 @@ describe('a session asked for by the name a client computed', () => {
     expect(opened.snapshot.state.chats[0]?.resource).toBe(derived('claude:/row'));
   });
 
-  it('names a listed session after its provider', async () => {
+  it('names a listed session nobody here made as the protocol\'s URI', async () => {
     const client = await browsing();
     const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
       items: { resource: string }[];
     };
     /*
-     * One name, and the one the only other implementation computes. It builds
-     * a session URI as `<provider>:/<id>` both when it creates a session and
-     * when it reopens one it listed; publishing `ahp-session:/<id>` gave it
-     * two strings for the same session and it picked between them out of its
-     * own stored state - the same conversation, the same bytes behind it,
-     * drawing or not depending on which it happened to reach for.
+     * A row this host has no record of is a transcript it never ran, so it is
+     * named `ahp-session:/<id>` and nothing is written for it - the protocol's
+     * spelling, which is what VS Code publishes for a session it finds with no
+     * registration of its own.
      */
-    expect(listed.items[0]?.resource).toBe('claude:/row');
+    expect(listed.items[0]?.resource).toBe('ahp-session:/row');
   });
 
-  it('still answers to the name it used to publish', async () => {
+  it('still answers to the provider\'s scheme, the name it used to publish', async () => {
     const client = await browsing();
     await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
     // Only the id inside a session URI is ever read, so the older spelling is
     // still the same session - and anything holding one is not broken by this.
-    const opened = await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/row' } }) as {
+    const opened = await client.handle({ method: 'subscribe', params: { channel: 'claude:/row' } }) as {
       snapshot: { resource: string; state: { title: string } };
     };
-    expect(opened.snapshot.resource).toBe('ahp-session:/row');
+    expect(opened.snapshot.resource).toBe('claude:/row');
     expect(opened.snapshot.state.title).toBe('A real title');
   });
 
