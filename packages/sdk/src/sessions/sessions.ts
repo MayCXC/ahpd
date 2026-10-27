@@ -116,6 +116,8 @@ export function memorySessions(): SessionStore & Held {
     },
     provider: (id) => rows.get(id)?.provider,
     setProvider: (id, value) => { patch(id, { provider: value }); },
+    uri: (id) => rows.get(id)?.uri,
+    setUri: (id, value) => { patch(id, { uri: value === '' ? undefined : value }); },
     tools: (id) => rows.get(id)?.tools,
     // An empty list is held as that absence: a session that asked for no opt-in
     // tool is one nothing was recorded for, the way an empty chat list is.
@@ -247,6 +249,7 @@ export function memorySessions(): SessionStore & Held {
         ...(held.owner === undefined ? {} : { owner: held.owner }),
         ...(held.senders === undefined ? {} : { senders: held.senders }),
         ...(held.provider === undefined ? {} : { provider: held.provider }),
+      ...(held.uri === undefined ? {} : { uri: held.uri }),
         ...(held.tools === undefined ? {} : { tools: held.tools }),
         ...(held.trustedFolder === undefined ? {} : { trustedFolder: held.trustedFolder }),
         ...(held.userSettings === undefined ? {} : { userSettings: held.userSettings }),
@@ -428,6 +431,8 @@ interface Row {
   owner?: Owner | undefined;
   senders?: Map<string, Owner> | undefined;
   provider?: string | undefined;
+  /** The name the host holds the session under, when it chose one. */
+  uri?: string | undefined;
   /** The opt-in host tools the session's request named, by name. */
   tools?: string[] | undefined;
   /** The one folder the session was started trusted in. */
@@ -455,6 +460,8 @@ interface Row {
  * The working folder is not counted. It says where a session ran, which is
  * worth keeping for a session something else was recorded for and for no
  * other: a folder alone is a session this host was never told anything about.
+ * The URI is not counted for the same reason: a name alone is a session
+ * nothing this host ran, and a row with one writes no file.
  */
 const empty = (row: Row): boolean =>
   row.flags === undefined && row.config === undefined && row.scope === undefined
@@ -483,6 +490,8 @@ interface Saved {
   owner?: string;
   senders?: Record<string, string>;
   provider?: string;
+  /** The name the host holds the session under, when it chose one. */
+  uri?: string;
   /** The opt-in host tools the session's request named, by name. */
   tools?: string[];
   /** The one folder the session was started trusted in. */
@@ -636,6 +645,7 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       ...(held.owner === undefined ? {} : { owner: held.owner }),
       ...(held.senders === undefined ? {} : { senders: Object.fromEntries(held.senders) }),
       ...(held.provider === undefined ? {} : { provider: held.provider }),
+      ...(held.uri === undefined ? {} : { uri: held.uri }),
       ...(held.tools === undefined ? {} : { tools: held.tools }),
       ...(held.trustedFolder === undefined ? {} : { trustedFolder: held.trustedFolder }),
       ...(held.userSettings === undefined ? {} : { userSettings: held.userSettings }),
@@ -753,6 +763,10 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       // non-empty one is taken as it stands. A row written before providers
       // were kept has none, and reads as a session nothing was recorded for.
       if (typeof row.provider === 'string' && row.provider !== '') inner.setProvider(row.id, row.provider);
+      // A name is a URI the host chose, so any non-empty string is taken as it
+      // stands. A row written before names were kept has none, and is named
+      // from its provider as it was before.
+      if (typeof row.uri === 'string' && row.uri !== '') inner.setUri?.(row.id, row.uri);
       // Opt-in tool names are strings and nothing else: a list that holds
       // anything else is ignored rather than guessed at, as every other field
       // here is. An empty one is the same as none named, as it is in the store.
@@ -843,6 +857,8 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
     setSender: (id, turnId, value) => { touched(id, () => { inner.setSender(id, turnId, value); }); },
     provider: (id) => inner.provider(id),
     setProvider: (id, value) => { touched(id, () => { inner.setProvider(id, value); }); },
+    uri: (id) => inner.uri?.(id),
+    setUri: (id, value) => { touched(id, () => { inner.setUri?.(id, value); }); },
     tools: (id) => inner.tools?.(id),
     setTools: (id, value) => { touched(id, () => { inner.setTools?.(id, value); }); },
     trustedFolder: (id) => inner.trustedFolder?.(id),

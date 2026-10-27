@@ -906,6 +906,42 @@ it('keeps which harness a session runs on across a restart, and forgets it with 
   expect(memorySessions().provider('a')).toBeUndefined();
 });
 
+it('keeps the name a session is held under across a restart, and writes no file for a name alone', async () => {
+  const dir = join(root, 'sessions');
+  const store = fileSessions({ dir });
+  store.setProvider('a', 'claude');
+  store.setUri?.('a', 'ahp-session:/one');
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'a')).toEqual({ version: 1, id: 'a', provider: 'claude', uri: 'ahp-session:/one' });
+  // Read back by a second store on the same folder, which is what a restart is.
+  const second = fileSessions({ dir });
+  expect(second.uri?.('a')).toBe('ahp-session:/one');
+  expect(second.provider('a')).toBe('claude');
+  // A row that holds only a name says nothing: it is a session this host never
+  // ran, so it is no file.
+  second.setUri?.('lone', 'ahp-session:/lone');
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'lone')).toBeUndefined();
+  expect(second.uri?.('lone')).toBeUndefined();
+  second.setUri?.('a', undefined);
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'a')).toEqual({ version: 1, id: 'a', provider: 'claude' });
+});
+
+it('reads a file row whose name is not a string as a row with no name', async () => {
+  const dir = join(root, 'sessions');
+  const store = fileSessions({ dir });
+  store.setProvider('a', 'claude');
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  writeFileSync(join(dir, 'b.json'), JSON.stringify({ version: 1, id: 'b', provider: 'claude', uri: 7 }));
+  writeFileSync(join(dir, 'c.json'), JSON.stringify({ version: 1, id: 'c', provider: 'claude', uri: '' }));
+  const second = fileSessions({ dir });
+  expect(second.uri?.('b')).toBeUndefined();
+  expect(second.uri?.('c')).toBeUndefined();
+  expect(second.provider('b')).toBe('claude');
+  expect(second.provider('c')).toBe('claude');
+});
+
 it('keeps the folder a session works in across a restart, and reads a row without one as before', async () => {
   const dir = join(root, 'sessions');
   const store = fileSessions({ dir });
