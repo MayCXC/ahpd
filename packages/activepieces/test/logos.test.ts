@@ -142,6 +142,14 @@ describe('logoOf', () => {
     expect(logo).toEqual({ icon: { src: 'mark:whatsapp' } });
   });
 
+  it('answers the GitHub mark for the GitHub piece', async () => {
+    const failing = (async () => { throw new Error('a marked piece must not fetch'); }) as unknown as typeof fetch;
+
+    const logo = await logoOf('ap-github', 'https://cdn.activepieces.com/pieces/github.png', home, failing);
+
+    expect(logo).toEqual({ icon: { src: 'mark:github' } });
+  });
+
   it('fetches the CDN logo of a piece with no mark', async () => {
     const body = Buffer.from('the logo');
     const fake = fetcher(body, { contentType: 'image/svg+xml' });

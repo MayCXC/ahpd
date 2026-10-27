@@ -43,6 +43,7 @@ const folderOf = (dir: string): string => join(dir, 'activepieces', 'icons');
  * because the mark is the better drawing and the CDN file is over 32 KB.
  */
 const MARKS: Record<string, string> = {
+  'ap-github': 'github',
   'ap-jira-cloud': 'jira',
   'ap-linear': 'linear',
   'ap-resend': 'resend',

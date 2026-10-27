@@ -39,7 +39,8 @@ Nothing else changes, because the manifest of each package names the file, not t
 | Webhook | `packages/webhook/icon.svg` | `webhook` | `packages/webhook/icon-dark.svg` | https://lucide.dev/icons/webhook | ISC |
 | Jira | `packages/server/icons/jira.svg` | the Jira mark, in `#0052CC` | none | https://cdn.simpleicons.org/jira | CC0 1.0, from Simple Icons |
 | Linear | `packages/server/icons/linear.svg` | the Linear mark, in `#5E6AD2` | none | https://cdn.simpleicons.org/linear | CC0 1.0, from Simple Icons |
-| Resend | `packages/server/icons/resend.svg` | the Resend mark, in black | none | https://cdn.simpleicons.org/resend | CC0 1.0, from Simple Icons |
+| Resend | `packages/server/icons/resend.svg` | the Resend mark, in black | `packages/server/icons/resend-dark.svg`, in `#E6EDF3` | https://cdn.simpleicons.org/resend | CC0 1.0, from Simple Icons |
+| GitHub | `packages/server/icons/github.svg` | the GitHub mark, in `#181717` | `packages/server/icons/github-dark.svg`, in `#E6EDF3` | https://cdn.simpleicons.org/github | CC0 1.0, from Simple Icons |
 | WhatsApp | `packages/server/icons/whatsapp.svg` | the WhatsApp mark, in `#25D366` | none | https://cdn.simpleicons.org/whatsapp | CC0 1.0, from Simple Icons |
 | Gemini | `packages/server/icons/gemini.svg` | the Google Gemini mark, in `#8E75B2` | none | https://cdn.simpleicons.org/googlegemini | CC0 1.0, from Simple Icons |
 | Copilot | `packages/server/icons/copilot.svg` | the GitHub Copilot mark, in black | `packages/server/icons/copilot-dark.svg`, in `#E6EDF3` | https://cdn.simpleicons.org/githubcopilot | CC0 1.0, from Simple Icons |
@@ -52,7 +53,7 @@ Nothing else changes, because the manifest of each package names the file, not t
 The first eleven rows are plugin icons under their package, and the rest are the marks the host ships in `packages/server/icons/`.
 A plugin, an adapter or an ACP template names a mark as `{ "src": "mark:<name>" }`, and the host resolves it.
 Codex reuses `openai.svg`, which the host ships already.
-The Resend mark is black, so it does not read on a dark background. It has no dark file, because plan 69 task 01 lists only the four light files.
+The Resend and GitHub marks are black, so each has a dark file in `#E6EDF3`, as Copilot and Cursor have.
 Kilo, Goose, pi, Devin, Amp and omp show the engine's icon, because no mark was found with a clear source and a licence.
 dsh needs a mark from you before its row can name one.
 

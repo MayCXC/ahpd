@@ -15,12 +15,13 @@ The host ships a set of brand marks, and any plugin names one with `{ "src": "ma
 ## What was built
 
 - [`code://packages/server/src/icons.ts`](../../../../packages/server/src/icons.ts) - `resolveIcons` resolves a `mark:` source against `packages/server/icons/`. It also sends `<name>-dark.svg` with `theme: "dark"` where that file exists. An unknown or malformed name is one problem line.
-- `packages/server/icons/` - the Jira, Linear, Resend, WhatsApp, Gemini, Qwen, Copilot, OpenCode, Cursor and Cline marks, with a dark file for Copilot, OpenCode, Cursor and Cline.
+- `packages/server/icons/` - the GitHub, Jira, Linear, Resend, WhatsApp, Gemini, Qwen, Copilot, OpenCode, Cursor and Cline marks. Six have a dark file: GitHub, Resend, Copilot, OpenCode, Cursor and Cline.
 - [`code://packages/server/src/plugins.ts`](../../../../packages/server/src/plugins.ts) - the loader resolves the icon of each engine template.
 - [`code://packages/sdk/src/connectors/adapters.ts`](../../../../packages/sdk/src/connectors/adapters.ts) - an adapter with no icon is sent with its plugin's icons.
 - [`code://packages/activepieces/src/logos.ts`](../../../../packages/activepieces/src/logos.ts) - a table from piece to mark, read before the cache and the CDN.
 - [`code://packages/agent-acp/src/presets.ts`](../../../../packages/agent-acp/src/presets.ts) - each template with a known vendor names its `mark:` icon.
-- [`code://packages/sdk/src/agents/channel.ts`](../../../../packages/sdk/src/agents/channel.ts) - the agents row carries `icons`: the record's own icon, or the icons of the template whose `command` matches.
+- [`code://packages/sdk/src/agents/channel.ts`](../../../../packages/sdk/src/agents/channel.ts) - the agents row carries `icons`: the record's own icon, or the icons of the template the engine's `templateOf` names. An engine with no `templateOf` is matched by `command`.
+- [`code://packages/agent-acp/src/plugin.ts`](../../../../packages/agent-acp/src/plugin.ts) - `templateOf` names the template of the shipped row for a record's `id`, else its `base`.
 - `docs/plugins/PLUGINS.md` and `docs/plugins/activepieces.md` describe the `mark:` source and the fallbacks.
 
 ## Verified
@@ -31,9 +32,9 @@ The host ships a set of brand marks, and any plugin names one with `{ "src": "ma
 
 ## Departures from the plan
 
-- none.
+- Task 04 matched a record to its template by `command`. Softov's ACP records have no `command`, so they showed the ACP icon. Task 05 replaces the match with the engine's answer.
 
 ## Left for later
 
-- The dsh mark, six agents with no mark, a Resend dark file and the ahpw change - see [deferred.md](deferred.md).
+- The dsh mark, six agents with no mark and the ahpw change - see [deferred.md](deferred.md).
 - The by-hand checks - see `.project/pending/plugin-69-mark-checks.md`.

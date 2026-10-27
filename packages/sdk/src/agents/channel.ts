@@ -56,7 +56,7 @@ import { recordsChannel, type RecordsChannel } from '../resources/recordschannel
 import { bag, isRecord, reason } from '../utils/values.js';
 import type { Icon } from '@microsoft/agent-host-protocol';
 import type { Agent } from '../types/agent.js';
-import type { AgentHealth, AgentOwner, AgentState, ServedEngine } from '../types/agents.js';
+import type { AgentHealth, AgentOwner, AgentState, AgentTemplate, ServedEngine } from '../types/agents.js';
 import type { PluginMethod } from '../types/plugin.js';
 import type { RecordCollection, StoredRecord } from '../types/records.js';
 import type { Grant, Principal } from '../types/users.js';
@@ -249,15 +249,22 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     return 'ready';
   };
 
+  /** The template a record was made from: the engine's answer, else the one whose `command` is the record's. */
+  const templateOf = (record: StoredRecord, engine: ServedEngine): AgentTemplate | undefined => {
+    const templates = engine.templates ?? [];
+    const config = configOf(record);
+    if (engine.templateOf !== undefined) return engine.templateOf({ id: record.id, config }, templates);
+    const command = config['command'];
+    if (typeof command !== 'string') return undefined;
+    return templates.find((one) => one.config?.['command'] === command);
+  };
+
   /** The icons a client draws for a record: its own, else its template's. */
   const iconsOf = (record: StoredRecord): Icon[] => {
     if (isRecord(record.icon)) return [record.icon as unknown as Icon];
     const engine = engineOf(record);
     if (engine === undefined) return [];
-    const command = configOf(record)['command'];
-    if (typeof command !== 'string') return [];
-    const template = (engine.templates ?? []).find((one) => one.config?.['command'] === command);
-    return template?.icons ?? [];
+    return templateOf(record, engine)?.icons ?? [];
   };
 
   /** One stored record as a client is shown it: its record, its state, and its health where known. */
