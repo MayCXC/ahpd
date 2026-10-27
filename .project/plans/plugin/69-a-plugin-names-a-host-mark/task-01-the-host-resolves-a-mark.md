@@ -1,6 +1,6 @@
 ---
 title: The host resolves a mark
-status: todo
+status: implemented
 depends: []
 layer: "server"
 refs:
@@ -47,3 +47,10 @@ The folder holds the Jira, Linear, Resend and WhatsApp marks.
 - `pnpm -s typecheck && pnpm -s build && pnpm -s boundary && pnpm -s test` passes.
 
 ## Resume
+
+- **Done so far:** `resolveIcons` in `packages/server/src/icons.ts` reads a `src` that starts with `mark:` as a file in `packages/server/icons/`, resolved from `import.meta.url`, before the `https:` and `data:` cases. A name of lowercase letters, digits and `-` is accepted, and any other name gives one problem line. An unknown mark gives one problem line that names the plugin and the mark. The light file is sent with no `theme`, and `<name>-dark.svg` follows it with `theme: "dark"` where it exists. The folder gained `jira.svg`, `linear.svg`, `resend.svg` and `whatsapp.svg`, each from Simple Icons under CC0 1.0 with an XML comment, under 32 KB, and with no script, event attribute or external reference. `plugin-icons.test.ts` has four new cases: a mark read with no package, a mark with a dark file, an unknown mark through the loader, and a name holding a path.
+- **Next action:** none; task 03 builds on this.
+- **Files:** `packages/server/src/icons.ts`, `packages/server/icons/jira.svg`, `packages/server/icons/linear.svg`, `packages/server/icons/resend.svg`, `packages/server/icons/whatsapp.svg`, `packages/server/test/plugin-icons.test.ts`, `docs/plugins/PLUGINS.md`, `.project/pending/plugin-58-icon-curation.md`, this task file.
+- **Open questions:** whether the black Resend mark needs a dark file, which the Files list does not name.
+- **Departures:** none.
+- **Watch out for:** the mark name is checked before any file is read, so a name such as `../openai` never leaves the folder.

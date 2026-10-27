@@ -1520,6 +1520,19 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     else adapter.icons = icons;
   }
   /*
+   * An engine's template icon is read the same way, and resolved into `icons`:
+   * a template names its mark once, and a client reads the `data:` form the
+   * host sends rather than the `mark:` or path the plugin wrote.
+   */
+  for (const engine of Object.values(contribution.engines ?? {})) {
+    for (const template of engine.templates ?? []) {
+      if (template.icon === undefined) continue;
+      const read = resolveIcons([template.icon], base, `plugin ${name}`, (line) => problems.push(line));
+      const icons = await fetchIcons(read, `plugin ${name}`, (line) => problems.push(line), options.fetcher);
+      if (icons.length > 0) template.icons = icons;
+    }
+  }
+  /*
    * A vault that read a secret out of its own options is a vault that decided
    * where its own secrets come from, which is the one thing it cannot be asked
    * to answer: it would be reading the store it is, or the one it took over.

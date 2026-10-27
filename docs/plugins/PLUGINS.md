@@ -669,7 +669,9 @@ host.registerEngine({
   `{ "$secret": "<name>" }`.
 - `templates` is what a new record starts from, each with a `name` and
   optionally a `description`, an `icon`, a `model` and a `config`. A template's
-  `config` may leave a key variable empty, for the record to fill in.
+  `config` may leave a key variable empty, for the record to fill in. The host
+  resolves a template's `icon` at load, as it does a plugin's, and sends the
+  result as the template's `icons`.
 - `hostOnly` names the fields only a `host` record may set. A team's or a
   person's record that sets one is refused, because a field a dangerous setting
   lives in - a command a backend runs, a directory it writes - is the daemon's
@@ -1219,6 +1221,8 @@ A `src` that is a relative path is a file in the plugin's package. An adapter's 
 
 `contentType` is taken from the manifest when it gives one, and otherwise from the extension: `.svg`, `.png`, `.jpg`, `.jpeg` or `.webp`. An icon with another extension and no `contentType` is dropped. A fetched icon takes the response's `image/` type when the manifest gives none, and an answer that is not an image is dropped. An SVG with no `sizes` is sent with `["any"]`.
 
+A `src` that starts with `mark:` names one of the marks the host ships, in `packages/server/icons/`, and any plugin may name any of them. The name is lowercase letters, digits and `-`, and the host resolves `<name>.svg` at load as it would a plugin's own file. Where `<name>-dark.svg` exists, the host sends it as a second icon with `theme: "dark"`. One template or adapter names a mark once, and a client draws the right one. The marks are `anthropic`, `cline`, `copilot`, `cursor`, `gemini`, `jira`, `linear`, `openai`, `openai-compatible`, `opencode`, `openrouter`, `qwen`, `resend` and `whatsapp`. An unknown mark, or a name with any other character, costs the icon and one line in the daemon's log.
+
 One icon is at most 32 KB, and a larger file, a larger fetched body or a larger `data:` URI is dropped. So is a path that resolves outside the package, a file that is not there, and an `https:` URL that cannot be fetched within 5 seconds. A dropped icon costs the icon and one line in the daemon's log, and the plugin still loads. An icon of the wrong shape refuses the manifest instead, because the field is checked before the plugin loads.
 
 A client draws an icon as an image, an `<img>` or a native image view, and never inline in the document. The host does not sanitize one: an SVG can carry a script, and drawing it as an image runs none.
@@ -1387,6 +1391,12 @@ One row for each agent, keyed by its id. A row is the record - `id`, `engine`,
 | `ready` | The engine opened it and the host serves it |
 | `invalid` | Its config no longer fits the engine's schema, the engine refused to open it, or a `$secret` in it was not in the vault |
 | `unavailable` | No loaded plugin registers its engine, so it cannot be opened |
+
+A row also carries `icons`: the icons a client draws for the agent. It is the
+record's own `icon` as a one-item list when the record names one, and otherwise
+the `icons` of the engine's template whose `config.command` equals the record's.
+A record that matches no template carries no `icons` key, and the client draws a
+blank square. `icon` stays on the row, so a client that reads it is not changed.
 
 A row also carries a `health` when a check was run and none when it was not:
 `health.result` is `ok`, `unreachable` or `failed`, with `message` where the

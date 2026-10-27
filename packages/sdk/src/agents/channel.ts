@@ -249,10 +249,27 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     return 'ready';
   };
 
+  /** The icons a client draws for a record: its own, else its template's. */
+  const iconsOf = (record: StoredRecord): Icon[] => {
+    if (isRecord(record.icon)) return [record.icon as unknown as Icon];
+    const engine = engineOf(record);
+    if (engine === undefined) return [];
+    const command = configOf(record)['command'];
+    if (typeof command !== 'string') return [];
+    const template = (engine.templates ?? []).find((one) => one.config?.['command'] === command);
+    return template?.icons ?? [];
+  };
+
   /** One stored record as a client is shown it: its record, its state, and its health where known. */
   const row = (record: StoredRecord): Record<string, unknown> => {
     const health = healths.get(record.id);
-    return { ...record, state: stateOf(record), ...(health === undefined ? {} : { health }) };
+    const icons = iconsOf(record);
+    return {
+      ...record,
+      state: stateOf(record),
+      ...(icons.length === 0 ? {} : { icons }),
+      ...(health === undefined ? {} : { health }),
+    };
   };
 
   /** The values a record is read through, before any secret is read back. */

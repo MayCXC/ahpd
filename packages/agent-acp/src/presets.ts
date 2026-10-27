@@ -251,6 +251,23 @@ export const keyVariablesOf = (id: string): string[] => {
 export const KEY_VARIABLES: string[] = [...new Set(Object.keys(presets).flatMap(keyVariablesOf))].sort();
 
 /**
+ * The host mark each row shows, by the key a preset names.
+ *
+ * The mark is the vendor's, taken from Simple Icons, and the host resolves it
+ * when the plugin loads. A row with no mark here shows the engine's own icon
+ * instead, because no clear source and licence was found for one.
+ */
+const MARKS: Record<string, string> = {
+  codex: 'openai',
+  gemini: 'gemini',
+  copilot: 'copilot',
+  opencode: 'opencode',
+  cursor: 'cursor',
+  qwen: 'qwen',
+  cline: 'cline',
+};
+
+/**
  * One template per shipped row: the values a record made from it starts with.
  *
  * A template carries the row's spawn fields whole - the command, the arguments
@@ -271,11 +288,13 @@ export const KEY_VARIABLES: string[] = [...new Set(Object.keys(presets).flatMap(
  */
 export const templates = (): AgentTemplate[] => Object.entries(presets).map(([id, row]) => {
   const known = knownAgents[id];
+  const mark = MARKS[id];
   const env: Record<string, string> = { ...row.env };
   for (const variable of keyVariablesOf(id)) env[variable] ??= '';
   return {
     name: row.name,
     description: `${row.name} over the Agent Client Protocol.`,
+    ...(mark === undefined ? {} : { icon: { src: `mark:${mark}` } }),
     config: {
       command: row.command,
       ...(row.args === undefined ? {} : { args: [...row.args] }),
