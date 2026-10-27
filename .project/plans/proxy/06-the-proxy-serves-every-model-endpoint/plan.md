@@ -130,7 +130,8 @@ GET /responses/{id} -> decode id -> connector, original id -> may the caller use
 
 ## Resume state
 
-- **Done so far:** all seven tasks are implemented. A dialect is one row: caller paths, upstream path, family, kind and usage reader. The proxy answers count tokens, embeddings, Responses and their follow-ups, images and multipart bodies, speech and transcriptions, and rerank, each at the root where an OpenAI SDK calls it. A Responses id holds its connector and is rewritten in JSON and SSE. `ModelPrice` carries `characters` and `minutes`. The two docs and `00-proxy.md` list the endpoints. The plan's final checklist is still open because no task is `done`.
+- **Done so far:** all seven tasks are implemented. A dialect is one row: caller paths, upstream path, family, kind and usage reader. The proxy answers count tokens, embeddings, Responses and their follow-ups, images, speech, transcriptions and rerank.
+An OpenAI endpoint answers at the root as well. A Responses id holds its connector and is rewritten in JSON and SSE. `ModelPrice` carries `characters` and `minutes`. The two docs and `00-proxy.md` list the endpoints. The plan's final checklist is still open because no task is `done`.
 - **Next action:** run the final verification checklist by hand, then write `implemented.md` and close the plan.
 - **Open questions:** none.
 - **Watch out for:** a dialect is now more than chat. The 404 hint in `route` stays among dialects of the same kind, so a chat refusal never names `/rerank`.
