@@ -16,7 +16,8 @@
  */
 
 import { shellOf } from '../machines/terminals.js';
-import { DEFAULT_SHELL_COMMAND_TIMEOUT_MS, isZsh, prepareOutputForModel, shellTypeForExecutable } from '../host/shells.js';
+import { isZsh } from '../machines/shellintegration.js';
+import { DEFAULT_SHELL_COMMAND_TIMEOUT_MS, prepareOutputForModel, shellTypeForExecutable } from '../host/shells.js';
 import type { Grant } from '../types/users.js';
 import type { HostTool, ToolCall } from '../types/host.js';
 import type { ManagedShell, ShellCommandResult, ShellType, Shells } from '../types/shells.js';

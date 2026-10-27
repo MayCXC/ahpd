@@ -34,9 +34,10 @@ const loadable = (): boolean => {
 /**
  * The binding, if this machine has one that runs.
  *
- * With it, shells run under a real terminal and the shell's own OSC 133 marks
- * turn into command boundaries. Without it they run on pipes and the state
- * says `isPty: false`, which is what the protocol has that flag for.
+ * A shell that starts under it runs in a real terminal: one opened to sit in
+ * starts with VS Code's shell integration, and the marks a shell writes turn
+ * into command boundaries. Without it shells run on pipes and the state says
+ * `isPty: false`, which is what the protocol has that flag for.
  */
 export const pty = async (): Promise<{ pty?: SpawnPty }> => {
   if (!loadable()) return {};

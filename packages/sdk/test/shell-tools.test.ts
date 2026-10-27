@@ -1,9 +1,10 @@
-import { mkdtempSync, realpathSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WAIT_MS } from '../../../tools/wait.ts';
 import { posix } from '../../../tools/posix.ts';
+import { pty } from '../../server/src/pty.js';
 import { uriOf } from '../src/resources/fileuri.js';
 import { shellTools, SHELL_TOOL_NAMES } from '../src/tools/shell.js';
 import { ROOT } from '../src/host.js';
@@ -257,16 +258,27 @@ describe('the agent terminal tool under a pseudoterminal', () => {
    * screen and takes every line after it, and the sentinel's own line prints
    * the sentinel with the last code. With `marks` it marks each command in
    * OSC 133, with `paste` its prompt turns bracketed paste on, and with
-   * `flood` it says that many characters before its first prompt. The
-   * switches reach the shell's headless terminal as a real shell's would.
+   * `flood` it says that many characters before its first prompt. With
+   * `late` its first prompt comes that many milliseconds after it starts,
+   * and with `dies` it exits with code 1 before saying anything. With `busy`
+   * a command somebody typed is running when the shell starts, and ends with
+   * code 7 when the first line is written. The switches reach the shell's
+   * headless terminal as a real shell's would.
    */
-  const fakeShell = (options: { marks?: boolean; paste?: boolean; flood?: number } = {}): { spawn: SpawnPty; typed: string[] } => {
+  const fakeShell = (options: { marks?: boolean; paste?: boolean; flood?: number; late?: number; dies?: boolean; busy?: boolean } = {}): {
+    spawn: SpawnPty;
+    typed: string[];
+    envs: Record<string, string | undefined>[];
+  } => {
     const typed: string[] = [];
-    const spawn: SpawnPty = () => {
+    const envs: Record<string, string | undefined>[] = [];
+    const spawn: SpawnPty = (_file, _args, started) => {
+      envs.push(started.env);
       let listen: ((data: string) => void) | undefined;
       let exit: ((exit: { exitCode: number }) => void) | undefined;
       let last = 0;
       let vim = false;
+      let busy = options.busy === true;
       const say = (data: string): void => { listen?.(data); };
       const prompt = (): void => { say(`${options.marks === true ? '\x1b]133;A\x07' : ''}$ ${options.paste === true ? '\x1b[?2004h' : ''}`); };
       const opened = options.marks === true ? '\x1b]133;C\x07' : '';
@@ -274,13 +286,24 @@ describe('the agent terminal tool under a pseudoterminal', () => {
       const pty: Pty = {
         onData: (to) => {
           listen = to;
+          if (options.dies === true) return;
           if (options.flood !== undefined) say('x'.repeat(options.flood));
-          prompt();
+          if (options.late === undefined) prompt();
+          else setTimeout(prompt, options.late);
+          if (busy) say(`sleep 9\r\n${opened}`);
         },
-        onExit: (to) => { exit = to; },
+        onExit: (to) => {
+          exit = to;
+          if (options.dies === true) setTimeout(() => { exit?.({ exitCode: 1 }); }, 0);
+        },
         write: (data) => {
           typed.push(data);
           if (vim) return;
+          if (busy) {
+            busy = false;
+            say(`${closed(7)}`);
+            prompt();
+          }
           say(data.replace(/\r/gu, '\r\n'));
           const line = data.replace('\x1b[200~', '').replace('\x1b[201~', '').trim();
           const sentinel = /^echo "(<<<COPILOT_SENTINEL_[0-9a-f]+_EXIT_)\$\?>>>"$/u.exec(line);
@@ -308,8 +331,24 @@ describe('the agent terminal tool under a pseudoterminal', () => {
       };
       return pty;
     };
-    return { spawn, typed };
+    return { spawn, typed, envs };
   };
+
+  it('opens a shell with the variables the reference gives a tool\'s terminal', async () => {
+    const fake = fakeShell();
+    const on = await hosted(true, shellTerminals({ pty: fake.spawn }));
+    await on.call('bash', { command: 'echo hi' });
+    // `preventShellHistory`, which the scripts read, and `nonInteractive`.
+    expect(fake.envs[0]).toMatchObject({
+      VSCODE_PREVENT_SHELL_HISTORY: '1',
+      LC_ALL: 'C.UTF-8',
+      PAGER: '',
+      GIT_PAGER: '',
+      GH_PAGER: '',
+      GIT_TERMINAL_PROMPT: '0',
+      DEBIAN_FRONTEND: 'noninteractive',
+    });
+  });
 
   it('ends each line with a carriage return and reads the sentinel past its own echo', async () => {
     const fake = fakeShell();
@@ -322,19 +361,40 @@ describe('the agent terminal tool under a pseudoterminal', () => {
     expect(fake.typed[1]).toMatch(/^echo "<<<COPILOT_SENTINEL_[0-9a-f]+_EXIT_\$\?>>>"\r$/u);
   });
 
-  it('ends a command at the shell\'s own mark once the shell marks its commands', async () => {
+  it('ends a command at the shell\'s own mark once the shell has marked its prompt', async () => {
     const fake = fakeShell({ marks: true });
     const on = await hosted(true, shellTerminals({ pty: fake.spawn }));
-    // The first command is the one that shows the shell marks them.
-    await on.call('bash', { command: 'echo one' });
-    expect(fake.typed).toHaveLength(2);
-    const second = await on.call('bash', { command: 'echo two' });
-    expect(text(second)).toMatch(/^Shell ID: \S+\nExit code: 0\ntwo$/u);
+    const first = await on.call('bash', { command: 'echo one' });
+    expect(text(first)).toMatch(/^Shell ID: \S+\nExit code: 0\none$/u);
     // No sentinel after it: the mark is the end.
-    expect(fake.typed).toHaveLength(3);
+    expect(fake.typed).toHaveLength(1);
     const failed = await on.call('bash', { command: 'false' });
     expect(failed.isError).toBe(true);
     expect(text(failed)).toMatch(/^Shell ID: \S+\nExit code: 1\n$/u);
+    expect(fake.typed).toHaveLength(2);
+  });
+
+  it('ends a command at its own mark rather than at the end of one already running', async () => {
+    const fake = fakeShell({ marks: true, busy: true });
+    const on = await hosted(true, shellTerminals({ pty: fake.spawn }));
+    const first = await on.call('bash', { command: 'echo one' });
+    expect(text(first)).toMatch(/^Shell ID: \S+\nExit code: 0\none$/u);
+  });
+
+  it('gives a new shell time to say something before its first command', async () => {
+    const fake = fakeShell({ marks: true, late: 200 });
+    const on = await hosted(true, shellTerminals({ pty: fake.spawn }));
+    const first = await on.call('bash', { command: 'echo one' });
+    expect(text(first)).toMatch(/^Shell ID: \S+\nExit code: 0\none$/u);
+    expect(fake.typed).toHaveLength(1);
+  });
+
+  it('answers a shell that exited before its first command at once', async () => {
+    const fake = fakeShell({ dies: true });
+    const on = await hosted(true, shellTerminals({ pty: fake.spawn }));
+    const answer = await on.call('bash', { command: 'echo one', timeout: 30_000 });
+    expect(answer.isError).toBe(true);
+    expect(text(answer)).toMatch(/^Shell ID: \S+\nShell exited with code 1\n/u);
   });
 
   it('pastes a command of several lines where the shell turned bracketed paste on', async () => {
@@ -374,5 +434,66 @@ describe('the agent terminal tool under a pseudoterminal', () => {
     expect(text(answer)).toBe(`Shell ID: ${shellIdOf(answer)}\nThe command opened the alternate buffer and is still running in the terminal. It likely launched an interactive terminal UI. Use write_bash/write_powershell to interact with it, or shutdown the shell to stop it.`);
     const next = await on.call('bash', { command: 'echo other' });
     expect(shellIdOf(next)).not.toBe(shellIdOf(answer));
+  });
+});
+
+/*
+ * The agent terminal tool in a real shell under a real pseudoterminal.
+ *
+ * `node-pty`, loaded the way the daemon loads it, so a runtime it cannot run
+ * under skips these cases rather than dying. Each shell starts in a home of
+ * its own, so what it reads as it starts is the system's and the
+ * integration's alone.
+ */
+const { pty: realPty } = await pty();
+
+/** A shell program by its name, from the folders a system keeps them in. */
+const installed = (name: string): string | undefined => ['/bin', '/usr/bin', '/usr/local/bin', '/opt/homebrew/bin']
+  .map((folder) => join(folder, name))
+  .find((path) => existsSync(path));
+
+describe('the agent terminal tool in a real shell', () => {
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  /** Each shell, and a command whose output says the script kept its commands out of the history. */
+  const shells = [
+    { name: 'zsh', history: 'setopt | grep -x histignorespace', kept: 'histignorespace' },
+    { name: 'bash', history: 'echo "$HISTCONTROL"', kept: 'ignorespace' },
+  ];
+
+  /** A host whose shells are `shell`, under a real pseudoterminal, in a home with nothing in it. */
+  const hostedIn = async (shell: string) => {
+    const home = realpathSync(mkdtempSync(join(tmpdir(), 'ahpd-home-')));
+    vi.stubEnv('SHELL', shell);
+    vi.stubEnv('HOME', home);
+    vi.stubEnv('ZDOTDIR', home);
+    return await hosted(true, shellTerminals(realPty === undefined ? {} : { pty: realPty }));
+  };
+
+  for (const { name, history, kept } of shells) {
+    const shell = installed(name);
+    // A POSIX shell, under `node-pty` where it loads.
+    it.skipIf(!posix || realPty === undefined || shell === undefined)(`answers a ${name} command with its output alone, and the code of the shell's own D`, async () => {
+      const on = await hostedIn(shell ?? '');
+      const echoed = await on.call('bash', { command: 'echo by-hand' });
+      // Neither the command's echo nor a prompt, nor zsh's end-of-line mark.
+      expect(text(echoed)).toBe(`Shell ID: ${shellIdOf(echoed)}\nExit code: 0\nby-hand`);
+      const failed = await on.call('bash', { command: 'sh -c \'exit 3\'' });
+      expect(failed.isError).toBe(true);
+      expect(text(failed)).toBe(`Shell ID: ${shellIdOf(failed)}\nExit code: 3\n`);
+      // The script read `VSCODE_PREVENT_SHELL_HISTORY`.
+      expect(text(await on.call('bash', { command: history }))).toBe(`Shell ID: ${shellIdOf(echoed)}\nExit code: 0\n${kept}`);
+      // Each ended at the shell's own mark, with no sentinel typed after it.
+      expect(text(await on.call('read_bash'))).not.toContain('COPILOT_SENTINEL');
+    });
+  }
+
+  const zsh = installed('zsh');
+  // zsh, under `node-pty` where it loads.
+  it.skipIf(!posix || realPty === undefined || zsh === undefined)('gives an agent\'s zsh the reference\'s fixups', async () => {
+    const on = await hostedIn(zsh ?? '');
+    // A `!` in double quotes is not a history event, and `#` starts a comment.
+    const answer = await on.call('bash', { command: 'echo "a!b" # a note' });
+    expect(text(answer)).toBe(`Shell ID: ${shellIdOf(answer)}\nExit code: 0\na!b`);
   });
 });

@@ -9,15 +9,16 @@
  * A shell is a terminal on the root list, claimed by the session, so the person
  * in the session watches the command run and can type into it or stop it.
  *
- * The reference's shell integration is a script it injects, and this host
- * injects none: a command's end is the shell's own OSC 133 mark once the
- * shell has marked a command, and the reference's sentinel until then. The
- * alternate screen and bracketed paste are read off a headless terminal fed
- * with what each shell says, as the reference reads them.
+ * Under a pseudoterminal the store starts each shell with the reference's
+ * shell integration scripts, and a command ends at the shell's own `D` mark
+ * once the terminal has announced command detection. Where it has not - on
+ * pipes, in a shell the scripts do not cover, or before the shell has marked
+ * anything - a command ends at the reference's sentinel. The alternate screen
+ * and bracketed paste are read off a headless terminal fed with what each
+ * shell says, as the reference reads them.
  */
 
-import { posix, win32 } from 'node:path';
-import { MARKS, shellOf } from '../machines/terminals.js';
+import { shellOf } from '../machines/terminals.js';
 import { localPath } from '../resources/fileuri.js';
 import { ROOT } from './channels.js';
 import { createHeadlessTerminal } from './headlessterminal.js';
@@ -55,6 +56,36 @@ const NON_INTERACTIVE_ENV: Record<string, string> = {
   GIT_TERMINAL_PROMPT: '0',
   DEBIAN_FRONTEND: 'noninteractive',
 };
+
+/**
+ * The reference's `preventShellHistory`, for the same terminal: the
+ * integration scripts read it and keep a command that starts with a space out
+ * of the shell's history, which is why each command is written with one.
+ */
+const PREVENT_SHELL_HISTORY_ENV: Record<string, string> = {
+  VSCODE_PREVENT_SHELL_HISTORY: '1',
+};
+
+/**
+ * How long a new shell is given to say something before its first command:
+ * the reference's `WAIT_FOR_PROMPT_TIMEOUT`, which its terminal manager waits
+ * on before it hands a new terminal back
+ * (https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/agentHostTerminalManager.ts#L506).
+ */
+const WAIT_FOR_PROMPT_TIMEOUT = 10_000;
+
+/**
+ * The actions a terminal sends because its shell said something, which a
+ * new shell is waited on for. The rest follow what a client or the host did.
+ */
+const SPOKEN = new Set([
+  'terminal/data',
+  'terminal/commandDetectionAvailable',
+  'terminal/commandExecuted',
+  'terminal/commandFinished',
+  'terminal/cwdChanged',
+  'terminal/exited',
+]);
 
 /**
  * The scrollback each shell's headless terminal keeps: none, as the
@@ -159,16 +190,6 @@ export const shellTypeForExecutable = (shellPath: string, platform: string = pro
 };
 
 /**
- * Whether a program is zsh, by its file name.
- *
- * The reference's `isZsh` (`node/agentHostShellUtils.ts`): `zsh` or `zsh.exe`
- * in any case on Windows, `zsh` exactly elsewhere.
- */
-export const isZsh = (shellPath: string, platform: string = process.platform): boolean => (platform === 'win32'
-  ? /^zsh(?:\.exe)?$/iu.test(win32.basename(shellPath))
-  : /^zsh$/u.test(posix.basename(shellPath)));
-
-/**
  * The space a POSIX shell keeps a command out of its history for.
  *
  * Under `HISTCONTROL=ignorespace` or `HIST_IGNORE_SPACE`, a command that starts
@@ -250,14 +271,8 @@ interface Heard {
   listeners: Set<(action: Bag) => void>;
   /** The shell's screen, fed with what it says. */
   screen: HeadlessTerminal;
-  /**
-   * Whether the shell marks its own commands.
-   *
-   * Set the first time it marks one in OSC 133, as the reference turns to its
-   * shell integration once the first of its marks arrives: from then on a
-   * command ends at the shell's own mark rather than at a sentinel.
-   */
-  marks: boolean;
+  /** Whether the shell has said anything yet, which a new shell is given time to do. */
+  spoke: boolean;
   command?: Started;
 }
 
@@ -296,7 +311,7 @@ const observe = (kept: Heard, action: Bag): void => {
   }
   else if (action.type === 'terminal/resized') kept.screen.resize(Number(action.cols), Number(action.rows));
   else if (action.type === 'terminal/cleared') kept.screen.clear();
-  else if (action.type === 'terminal/commandExecuted' || action.type === 'terminal/commandFinished') kept.marks = true;
+  if (SPOKEN.has(String(action.type))) kept.spoke = true;
   for (const listen of [...kept.listeners]) listen(action);
 };
 
@@ -483,13 +498,13 @@ export function createShells(ctx: HostContext): HostShells {
       const kept: Heard = {
         listeners: new Set(),
         screen: createHeadlessTerminal({ cols: 80, rows: 24, scrollback: HEADLESS_TERMINAL_SCROLLBACK }),
-        marks: false,
+        spoke: false,
       };
       const terminal = ctx.heldShell(shells, {
         cwd: whereOf(session),
         claim: wanted,
         name: shellDisplayName(shellType),
-        env: NON_INTERACTIVE_ENV,
+        env: { ...PREVENT_SHELL_HISTORY_ENV, ...NON_INTERACTIVE_ENV },
         watch: (action) => { observe(kept, action); },
       });
       const shell: ManagedShell = { id, terminalUri: terminal.uri, shellType, executable };
@@ -520,22 +535,49 @@ export function createShells(ctx: HostContext): HostShells {
     };
 
     /**
+     * Wait for a new shell to say something, for at most
+     * `WAIT_FOR_PROMPT_TIMEOUT`.
+     *
+     * The reference's terminal manager hands a new terminal back once its
+     * shell has said anything, and its command execution then asks whether the
+     * terminal detects commands. A shell this host opens is handed back at
+     * once, so its first command waits here instead. A shell on pipes says
+     * nothing until it is given a command, and is not waited on.
+     */
+    const spoken = (entry: Entry): Promise<void> => new Promise((resolve) => {
+      if (entry.spoke || entry.terminal.state().isPty !== true) {
+        resolve();
+        return;
+      }
+      const done = (): void => {
+        clearTimeout(timer);
+        stop();
+        resolve();
+      };
+      const timer = setTimeout(done, WAIT_FOR_PROMPT_TIMEOUT);
+      const stop = listen(entry, () => { if (entry.spoke) done(); });
+    });
+
+    /**
      * Run one command, and answer how it ended.
      *
-     * The reference's two executions. Where the shell marks its own commands,
-     * the command ends at its `D` mark, with the code the mark carries and the
-     * output between its `C` and its `D`. Where it marks none, the command is
-     * followed by a line echoing a sentinel with its exit code, and the output
-     * between the two is the result. What else ends the wait is the
-     * reference's in both: the alternate screen, the shell exiting, a client
-     * narrowing the claim to the session and chat alone, which moves the
-     * command to the background, and the timeout.
+     * The reference's two executions. Where the terminal detects commands, the
+     * command ends at the shell's `D`, with the code the mark carries, and its
+     * output is what the terminal said between its `terminal/commandExecuted`
+     * and its `terminal/commandFinished`, which is the command's output as the
+     * protocol defines it. Where it does not, the command is followed by a
+     * line echoing a sentinel with its exit code, and the output between the
+     * two is the result. What else ends the wait is the reference's in both:
+     * the alternate screen, the shell exiting, a client narrowing the claim to
+     * the session and chat alone, which moves the command to the background,
+     * and the timeout.
      */
     const run = async (shell: ManagedShell, command: string, timeoutMs: number): Promise<ShellCommandResult> => {
       const entry = entryOf(shell);
       if (entry === undefined) throw new Error(`There is no shell ${shell.id}`);
+      await spoken(entry);
       // Asked once, before the command is written, as the reference asks.
-      const marked = entry.marks;
+      const marked = entry.terminal.state().supportsCommandDetection === true;
       const sentinel = marked ? undefined : crypto.randomUUID().replaceAll('-', '');
       const started: Started = { received: 0, ...(sentinel !== undefined ? { sentinel } : {}) };
       entry.command = started;
@@ -550,46 +592,26 @@ export function createShells(ctx: HostContext): HostShells {
           for (const stop of stops) stop();
           resolve(answer);
         };
-        /** A `C` the shell announced and the chunk carrying it has not yet arrived. */
-        let starting = false;
-        /** Where the command's output starts, after its `C`. */
+        /** Where the command's output starts, once the shell has said it started. */
         let opened: number | undefined;
-        /** What the shell's `D` said, once it has said it. */
-        let ended: { exitCode?: number } | undefined;
         stops.push(listen(entry, (action) => {
           switch (action.type) {
             case 'terminal/commandExecuted':
-              if (marked) starting = true;
+              if (marked) opened = started.received;
               return;
             case 'terminal/commandFinished': {
+              // A command the shell finished without having started it here
+              // is not this one.
+              if (!marked || opened === undefined) return;
               const code = Number(action.exitCode);
-              if (marked) ended = Number.isFinite(code) ? { exitCode: code } : {};
+              const output = prepareOutputForModel(between(shell, started, opened));
+              finish({ status: 'completed', exitCode: Number.isFinite(code) ? code : 0, output });
               return;
             }
             case 'terminal/data': {
-              if (sentinel !== undefined) {
-                const parsed = parseSentinel(between(shell, started, 0), sentinel);
-                if (parsed.found) finish({ status: 'completed', exitCode: parsed.exitCode, output: prepareOutputForModel(parsed.before) });
-                return;
-              }
-              if (!starting && ended === undefined) return;
-              const data = String(action.data ?? '');
-              const chunkAt = started.received - data.length;
-              // The marks the terminal announced are in this chunk: it reads
-              // a chunk for its marks before it says the chunk.
-              for (const found of data.matchAll(MARKS)) {
-                if (found[1] !== '133') continue;
-                const mark = (found[2] ?? '').split(';')[0];
-                if (mark === 'C' && starting) {
-                  starting = false;
-                  opened = chunkAt + found.index + found[0].length;
-                }
-                else if (mark === 'D' && ended !== undefined && !starting) {
-                  const output = between(shell, started, opened ?? 0, chunkAt + found.index);
-                  finish({ status: 'completed', exitCode: ended.exitCode ?? 0, output: prepareOutputForModel(output) });
-                  return;
-                }
-              }
+              if (sentinel === undefined) return;
+              const parsed = parseSentinel(between(shell, started, 0), sentinel);
+              if (parsed.found) finish({ status: 'completed', exitCode: parsed.exitCode, output: prepareOutputForModel(parsed.before) });
               return;
             }
             case 'terminal/exited': {
@@ -621,6 +643,13 @@ export function createShells(ctx: HostContext): HostShells {
           log(`the command in ${shell.id} entered the alternate screen`);
           finish({ status: 'altBuffer', output: '' });
         });
+        // A shell that exited while it was waited on sends no exit again, and
+        // answers as one that exits under its command.
+        const gone = entry.terminal.exitCode();
+        if (gone !== undefined) {
+          log(`the shell ${shell.id} exited with ${String(gone)}`);
+          finish({ status: 'shellExited', exitCode: gone, output: partial() });
+        }
       });
       const line = `${prefixForHistorySuppression(shell.shellType)}${command}`;
       const paste = await pasted(entry, shouldUseBracketedPasteMode(command));

@@ -1,7 +1,9 @@
 import { spawn, type ChildProcessWithoutNullStreams, type SpawnOptions } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { basename, win32 } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import { basename, dirname, posix, win32 } from 'node:path';
 import { localPath, uriOf } from '../resources/fileuri.js';
+import { Osc633Parser, type Osc633Event, type Osc633ParseSegment } from './osc633.js';
+import { getShellIntegrationInjection, isZsh, windowsBuildNumber } from './shellintegration.js';
 import { shellEnvOf, type ShellEnv } from './shellenv.js';
 import type { Pty, SpawnPty, Terminal, TerminalOptions, TerminalStore } from '../types/terminals.js';
 
@@ -226,28 +228,28 @@ const argvLine = (kind: ShellKind, argv: string[], windowsPowerShell = false): s
 /**
  * What a shell says about itself, in the escape sequences it says it with.
  *
- * OSC 133 is the command-boundary convention every shell integration script
- * writes - `A` before the prompt, `B` where the command starts, `C` where its
+ * OSC 133 is the command-boundary convention most shell integration scripts
+ * write - `A` before the prompt, `B` where the command starts, `C` where its
  * output does, `D;<code>` when it finished - and OSC 7 is the directory. They
  * arrive mixed into the output, so this reads them out and leaves the rest
  * alone: the bytes still go to the client, which is drawing a terminal and
- * needs them.
+ * needs them. VS Code's own scripts write OSC 633 instead, which `Osc633Parser`
+ * reads.
  *
  * Only under a pseudoterminal, because only then is there a shell running its
- * own prompt to emit them. Exported so the agent's shells read the marks this
- * reads: a marked command's output is what lies between its `C` and its `D`.
+ * own prompt to emit them.
  */
-export const MARKS = /\u001b\](133|7);([^\u0007\u001b]*)(?:\u0007|\u001b\\)/g;
+const MARKS = /\u001b\](133|7);([^\u0007\u001b]*)(?:\u0007|\u001b\\)/g;
 
 /**
  * Open one.
  *
- * `pty`, `shellEnv`, `platform`, `run` and `start` are the machine's own: a
- * pseudoterminal to run under, the environment an operator gives every shell,
- * which system this is, how a program is started to end a tree, and how the
- * shell itself is started. All five are handed in rather than reached for,
- * which is the only way a case on Linux can ask what a Windows machine would
- * do.
+ * `pty`, `shellEnv`, `platform`, `run`, `start` and `windowsBuild` are the
+ * machine's own: a pseudoterminal to run under, the environment an operator
+ * gives every shell, which system this is, how a program is started to end a
+ * tree, how the shell itself is started, and which Windows build it is. All
+ * six are handed in rather than reached for, which is the only way a case on
+ * Linux can ask what a Windows machine would do.
  */
 export function createTerminal(
   options: TerminalOptions,
@@ -256,6 +258,7 @@ export function createTerminal(
   platform: string = process.platform,
   run: RunQuietly = quietly,
   start: SpawnShell = shells,
+  windowsBuild: () => number = windowsBuildNumber,
 ): Terminal {
   const { uri, cwd, emit } = options;
   /** Windows, where a shell is started without `detached` and ended by pid. */
@@ -299,9 +302,9 @@ export function createTerminal(
   /*
    * The shell's own flag for one command, and nothing when there is no command.
    *
-   * A shell given one runs the one thing and exits. Under pipes that is the
-   * only completion signal there is; under a pseudoterminal the shell says so
-   * itself, in OSC 133.
+   * A shell given one runs the one thing and exits, and the exit is what says
+   * the command finished: the shell draws no prompt, so it marks nothing,
+   * under pipes or under a pseudoterminal.
    *
    * Two shapes arrive here and they are not the same thing. With `args` the
    * caller is naming a program, so the argv is quoted word by word and the
@@ -359,47 +362,135 @@ export function createTerminal(
   let command: { id: string; line: string; at: number } | undefined;
   /** What has been typed since the prompt, so the command line can be read back. */
   let typed = '';
+  /**
+   * Whether the shell has marked anything, which is when command detection
+   * is there to be relied on.
+   *
+   * Announced with the first mark and reported on the state from then on, as
+   * the reference announces it with the first OSC 633 sequence a terminal
+   * writes (`agentHostTerminalManager.ts#L709-L715` at `122ec4fe4431`): the
+   * protocol's `terminal/commandDetectionAvailable` is sent when shell
+   * integration becomes available, and a shell under a pseudoterminal may have
+   * none.
+   */
+  let detected = false;
+  /**
+   * Whether the shell has written OSC 633. From then on its commands are read
+   * from those marks alone, so a shell that also writes OSC 133 of its own -
+   * fish does from 4.0
+   * (https://github.com/fish-shell/fish-shell/blob/4.0.0/CHANGELOG.rst?plain=1#L220),
+   * and so does a prompt set up for another terminal - does not report each
+   * command twice.
+   */
+  let integrated = false;
+  /** The command line the integration script reported last, with this terminal's nonce. */
+  let reported: string | undefined;
+
+  const detect = (): void => {
+    if (detected) return;
+    detected = true;
+    emit('terminal', { type: 'terminal/commandDetectionAvailable' });
+  };
+
+  /** A command's output begins, as a `C` says. */
+  const executed = (commandLine: string): void => {
+    command = { id: `c${String(Date.now())}`, line: commandLine, at: Date.now() };
+    emit('terminal', {
+      type: 'terminal/commandExecuted',
+      commandId: command.id,
+      commandLine: command.line,
+      timestamp: command.at,
+    });
+  };
+
+  /** The command ended, as a `D` says, with the code the mark carries. */
+  const finished = (code: number | undefined): void => {
+    if (command === undefined) return;
+    emit('terminal', {
+      type: 'terminal/commandFinished',
+      commandId: command.id,
+      ...(code !== undefined && Number.isFinite(code) ? { exitCode: code } : {}),
+      durationMs: Date.now() - command.at,
+    });
+    command = undefined;
+  };
+
+  /** The shell's directory, as a path on this machine. */
+  const moved = (path: string): void => {
+    if (path === '' || path === where) return;
+    where = path;
+    emit('terminal', { type: 'terminal/cwdChanged', cwd: uriOf(path) });
+  };
 
   /**
-   * Read the shell's own marks out of a chunk, and say what they meant.
+   * Say a run of output, with what each of its OSC 133 and OSC 7 marks means
+   * said where the mark stands.
    *
-   * The chunk still reaches the client whole: this is a reader, not a filter,
-   * and a client drawing a terminal needs the bytes it was sent.
+   * The bytes still reach the client whole: this is a reader, not a filter,
+   * and a client drawing a terminal needs the bytes it was sent. The order is
+   * the protocol's: the output said between a command's `terminal/commandExecuted`
+   * and its `terminal/commandFinished` is the command's, so a `C` is said
+   * before its action and a `D` after its own, and the output between the two
+   * marks is all the command holds.
    */
-  const marked = (data: string): void => {
+  const read = (data: string): void => {
+    let from = 0;
+    const sayTo = (to: number): void => {
+      if (to > from) said(data.slice(from, to));
+      from = to;
+    };
     for (const found of data.matchAll(MARKS)) {
-      const [, kind, body = ''] = found;
+      const [whole, kind, body = ''] = found;
+      const end = found.index + whole.length;
       if (kind === '7') {
+        sayTo(end);
         // `file://host/path`, per the convention. The host part is dropped:
         // the path is on this machine, and that is what a client opens.
-        const path = localPath(body);
-        if (path !== '' && path !== where) {
-          where = path;
-          emit('terminal', { type: 'terminal/cwdChanged', cwd: uriOf(path) });
-        }
+        moved(localPath(body));
         continue;
       }
+      if (integrated) continue;
+      detect();
       const mark = body.split(';')[0];
-      if (mark === 'A') { typed = ''; continue; }
-      if (mark === 'C') {
-        command = { id: `c${String(Date.now())}`, line: typed.trim(), at: Date.now() };
-        emit('terminal', {
-          type: 'terminal/commandExecuted',
-          commandId: command.id,
-          commandLine: command.line,
-          timestamp: command.at,
-        });
+      if (mark === 'D') {
+        sayTo(found.index);
+        finished(Number(body.split(';')[1]));
         continue;
       }
-      if (mark !== 'D' || command === undefined) continue;
-      const code = Number(body.split(';')[1]);
-      emit('terminal', {
-        type: 'terminal/commandFinished',
-        commandId: command.id,
-        ...(Number.isFinite(code) ? { exitCode: code } : {}),
-        durationMs: Date.now() - command.at,
-      });
-      command = undefined;
+      sayTo(end);
+      if (mark === 'A') typed = '';
+      else if (mark === 'C') executed(typed.trim());
+    }
+    sayTo(data.length);
+  };
+
+  /**
+   * One OSC 633 sequence the integration script wrote, read as the reference
+   * reads it (`agentHostTerminalManager.ts#L708-L805`).
+   *
+   * The command line is the one the script reported with this terminal's
+   * nonce, and nothing when it reported none. The directory is a path, as the
+   * script writes it; the action carries it as a URI, as an OSC 7 directory is.
+   */
+  const heard = (event: Osc633Event): void => {
+    integrated = true;
+    detect();
+    switch (event.type) {
+      case 'CommandLine':
+        // Only trust command lines with a valid nonce
+        if (event.nonce === integration?.nonce) reported = event.commandLine;
+        return;
+      case 'CommandExecuted':
+        executed(reported ?? '');
+        reported = undefined;
+        return;
+      case 'CommandFinished':
+        finished(event.exitCode);
+        return;
+      case 'Property':
+        if (event.key === 'Cwd') moved(event.value);
+        return;
+      default:
     }
   };
 
@@ -413,18 +504,71 @@ export function createTerminal(
    * gets the argv it was started with.
    */
   const ptyArgs: string[] | string = kind === 'cmd' && line !== undefined ? args.join(' ') : args;
-  const terminal: Pty | undefined = pty?.(shell, ptyArgs, {
+
+  /**
+   * VS Code's shell integration, for a shell to sit in under a pseudoterminal.
+   *
+   * The reference's terminal manager puts it into every terminal it opens
+   * (`agentHostTerminalManager.ts#L321-L418` at `122ec4fe4431`): on macOS it
+   * starts zsh and bash as login shells, then takes the arguments, variables
+   * and files `getShellIntegrationInjection` answers, and reads the marks the
+   * script writes with the nonce the script was given. A shell it cannot
+   * inject keeps its own arguments, and its marks are read as OSC 133.
+   *
+   * A terminal given a command runs it and exits, with no prompt to mark, so
+   * it starts as it was asked; the injection's own rules turn down the `-c`
+   * it carries in any case. On pipes there is no prompt at all.
+   *
+   * A zsh a session holds gets the reference's fixups for an agent's shell,
+   * and one more variable of this host's: an empty `PROMPT_EOL_MARK`. zsh
+   * draws that mark, `%`, where a line ends with no newline, and it writes the
+   * mark before the integration's `D` whatever the output was - `PROMPT_SP`
+   * runs before `precmd` - so every command's output would end with it, as in
+   * the reference's own capture of a command
+   * (https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/test/node/e2e/captures/copilotcli-custom-terminal-tool-preserves-a-nonzero-shell-exit-code.yaml#L34-L37).
+   * Empty, the line is still kept and nothing is drawn
+   * (https://zsh.sourceforge.io/Doc/Release/Parameters.html#index-PROMPT_005fEOL_005fMARK).
+   */
+  const integrate = (): { args: string[]; nonce?: string; parser?: Osc633Parser } => {
+    const login = platform === 'darwin' && ['zsh', 'bash'].some((name) => posix.parse(shell).name.includes(name)) ? ['--login'] : [];
+    const nonce = crypto.randomUUID();
+    const injection = getShellIntegrationInjection(shell, login, nonce, environment, { platform, windowsBuild });
+    if (injection.type === 'failure') return { args: login };
+    if (options.claim.kind === 'session' && isZsh(shell, platform)) {
+      environment.VSCODE_AGENT_ZSH_FIXUPS = '1';
+      environment.PROMPT_EOL_MARK = '';
+    }
+    Object.assign(environment, injection.envMixin);
+    for (const file of injection.filesToCopy ?? []) {
+      try {
+        mkdirSync(dirname(file.dest), { recursive: true });
+        copyFileSync(file.source, file.dest);
+      }
+      catch {
+        // Swallow - another process may be using the same temp dir
+      }
+    }
+    return { args: injection.newArgs ?? login, nonce, parser: new Osc633Parser() };
+  };
+  const integration = pty !== undefined && line === undefined ? integrate() : undefined;
+
+  const terminal: Pty | undefined = pty?.(shell, integration?.args ?? ptyArgs, {
     ...(cwd !== undefined ? { cwd } : {}),
     cols,
     rows,
     env: environment,
   });
   if (terminal !== undefined) {
-    terminal.onData((data) => { marked(data); said(data); });
+    terminal.onData((data) => {
+      // In stream order, so output that comes before a mark in one chunk is
+      // said before what the mark means.
+      const segments: Osc633ParseSegment[] = integration?.parser?.parseSegments(data) ?? [{ kind: 'data', data }];
+      for (const segment of segments) {
+        if (segment.kind === 'event') heard(segment.event);
+        else read(segment.data);
+      }
+    });
     terminal.onExit(({ exitCode: code }) => { exitCode = code; ended(); });
-    // Said once, at the start. A client MUST check this before relying on
-    // command boundaries, and the same fact is on the state.
-    emit('terminal', { type: 'terminal/commandDetectionAvailable' });
   }
 
   const child = terminal !== undefined ? undefined : start(shell, args, {
@@ -535,14 +679,15 @@ export function createTerminal(
       cwd: uriOf(cwd),
       cols,
       rows,
-      // One part, because without command detection there are no boundaries
-      // to divide the output at. The protocol's shape, not a flat string.
+      // One part, the scrollback whole: the boundaries a shell marks reach a
+      // client as actions while it watches, and are not kept. The protocol's
+      // shape, not a flat string.
       content: buffered === '' ? [] : [{ type: 'unclassified', value: buffered }],
       claim,
-      // Both true only under a pseudoterminal: without one there is no shell
-      // running its own prompt, so there are no boundaries to report and no
-      // VT sequences for a client to parse.
-      supportsCommandDetection: terminal !== undefined,
+      // Without a pseudoterminal there is no shell running its own prompt, so
+      // no VT sequences for a client to parse and no boundaries to report;
+      // with one, the boundaries are there once the shell has marked one.
+      supportsCommandDetection: detected,
       isPty: terminal !== undefined,
       /*
        * Both spellings, because this host speaks five versions.
@@ -682,11 +827,12 @@ export function createTerminal(
  * ```
  *
  * Given a `pty` it runs shells under a pseudoterminal instead, which is what
- * makes shell integration possible: the shell prints its own OSC 133 marks, so
- * command boundaries and the working directory become facts rather than
- * guesses. The binding is handed in because it is native code - `node-pty` is
- * the daemon's dependency and never this library's, and a host on another
- * runtime passes whatever it has.
+ * makes shell integration possible: a shell opened to sit in is started with
+ * VS Code's integration scripts, as the reference host starts its terminals,
+ * and its marks make command boundaries and the working directory facts
+ * rather than guesses. The binding is handed in because it is native code -
+ * `node-pty` is the daemon's dependency and never this library's, and a host
+ * on another runtime passes whatever it has.
  *
  * ```ts
  * import { spawn } from 'node-pty';
@@ -698,12 +844,20 @@ export function createTerminal(
  * the daemon itself runs with. A caller asking for one terminal still wins
  * over it, because a terminal somebody opened is theirs.
  *
- * `platform`, `run` and `spawn` are the machine's own as well, and are for a
- * case that has to ask what another system would do - or, for `spawn`, read
- * what the pipe path asks of the runtime. An ordinary caller names none.
+ * `platform`, `run`, `spawn` and `windowsBuild` are the machine's own as well,
+ * and are for a case that has to ask what another system would do - or, for
+ * `spawn`, read what the pipe path asks of the runtime. An ordinary caller
+ * names none.
  */
 export const shellTerminals = (
-  options: { pty?: SpawnPty; shellEnv?: ShellEnv; platform?: string; run?: RunQuietly; spawn?: SpawnShell } = {},
+  options: {
+    pty?: SpawnPty;
+    shellEnv?: ShellEnv;
+    platform?: string;
+    run?: RunQuietly;
+    spawn?: SpawnShell;
+    windowsBuild?: () => number;
+  } = {},
 ): TerminalStore => ({
-  create: (asked) => createTerminal(asked, options.pty, options.shellEnv, options.platform, options.run, options.spawn),
+  create: (asked) => createTerminal(asked, options.pty, options.shellEnv, options.platform, options.run, options.spawn, options.windowsBuild),
 });

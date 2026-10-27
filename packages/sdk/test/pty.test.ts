@@ -1,20 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SpawnOptions } from 'node:child_process';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { homedir, tmpdir, userInfo } from 'node:os';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { posix } from '../../../tools/posix.ts';
 import { uriOf } from '../src/resources/fileuri.js';
 import { shellOf, shellTerminals } from '../src/machines/terminals.js';
 import type { SpawnShell } from '../src/machines/terminals.js';
-import type { Pty, SpawnPty, Terminal } from '../src/types/terminals.js';
+import type { Claim, Pty, SpawnPty, Terminal } from '../src/types/terminals.js';
 
 /*
  * A shell that says where it is and what it ran.
  *
  * Under pipes there is no shell integration: nothing knows where one command's
  * output ends and the next begins, and `isPty: false` says so. Under a
- * pseudoterminal the shell prints its own OSC 133 marks and the boundaries
- * become facts. The binding is handed in, so this drives a fake one rather
- * than needing native code to have been built.
+ * pseudoterminal the shell marks its own commands - in OSC 133, or in OSC 633
+ * once the store has started it with VS Code's integration - and the
+ * boundaries become facts. The binding is handed in, so this drives a fake one
+ * rather than needing native code to have been built.
  */
 
 /** A pseudoterminal that says whatever a test tells it to. */
@@ -22,13 +26,13 @@ function fakePty(): {
   spawn: SpawnPty;
   say: (data: string) => void;
   typed: string[];
-  started: { shell: string; args: string[] | string }[];
+  started: { shell: string; args: string[] | string; env: Record<string, string | undefined> }[];
 } {
   let listen: ((data: string) => void) | undefined;
   const typed: string[] = [];
-  const started: { shell: string; args: string[] | string }[] = [];
-  const spawn: SpawnPty = (shell, args) => {
-    started.push({ shell, args });
+  const started: { shell: string; args: string[] | string; env: Record<string, string | undefined> }[] = [];
+  const spawn: SpawnPty = (shell, args, options) => {
+    started.push({ shell, args, env: options.env });
     return {
       onData: (to) => { listen = to; },
       onExit: () => {},
@@ -54,6 +58,21 @@ const opened = (pty?: SpawnPty) => {
 
 /** An OSC sequence, the way a shell integration script writes one. */
 const osc = (body: string) => `\u001b]${body}\u0007`;
+
+/**
+ * What a terminal said between its first `terminal/commandExecuted` and the
+ * `terminal/commandFinished` after it, which the protocol calls the command's
+ * output. A terminal that reported no such pair answers a text no output is.
+ */
+const betweenActions = (seen: Record<string, unknown>[]): string => {
+  const from = seen.findIndex((one) => one.type === 'terminal/commandExecuted');
+  const to = seen.findIndex((one, at) => at > from && one.type === 'terminal/commandFinished');
+  if (from === -1 || to === -1) return '<no command reported>';
+  return seen.slice(from + 1, to).filter((one) => one.type === 'terminal/data').map((one) => String(one.data)).join('');
+};
+
+/** The folder the shell integration scripts are in, at the package's root. */
+const SCRIPTS = fileURLToPath(new URL('../shellintegration', import.meta.url));
 
 /**
  * `/tmp`, absolute on this system: `F:\tmp` on Windows, where a path with no
@@ -132,9 +151,9 @@ describe('the shell a terminal starts', () => {
  */
 describe('the arguments a command reaches the shell with', () => {
   /** One terminal under a fake pty, and what it was started with. */
-  const started = (shell: string, asked: { command?: string; args?: string[] }) => {
+  const started = (shell: string, asked: { command?: string; args?: string[] }, windowsBuild?: () => number) => {
     const pty = fakePty();
-    shellTerminals({ pty: pty.spawn }).create({
+    shellTerminals({ pty: pty.spawn, ...(windowsBuild !== undefined ? { windowsBuild } : {}) }).create({
       uri: 'ahp-terminal:/args',
       cwd: '/tmp',
       shell,
@@ -185,8 +204,10 @@ describe('the arguments a command reaches the shell with', () => {
 
   it('gives no flag at all when there is no command', () => {
     // A terminal somebody types into: `-NoProfile -Command` with nothing after
-    // it is a shell that exits rather than one that waits.
-    expect(started('pwsh.exe', {})?.args).toEqual([]);
+    // it is a shell that exits rather than one that waits. On a Windows build
+    // with ConPTY PowerShell is given the shell integration's arguments
+    // instead, which are read below.
+    expect(started('pwsh.exe', {}, () => 0)?.args).toEqual([]);
     expect(started('cmd.exe', {})?.args).toEqual([]);
   });
 });
@@ -249,15 +270,22 @@ describe('the line a pipe spawn is given', () => {
 });
 
 describe('a shell under a pseudoterminal', () => {
-  it('says it is one, and that command detection works', () => {
-    const { spawn } = fakePty();
+  it('says it is one, and that command detection works once the shell marks', () => {
+    const { spawn, say } = fakePty();
     const { terminal, seen } = opened(spawn);
-    const state = terminal.state() as { isPty?: boolean; supportsCommandDetection?: boolean };
-    expect(state.isPty).toBe(true);
+    const state = () => terminal.state() as { isPty?: boolean; supportsCommandDetection?: boolean };
+    const announced = () => seen.filter((one) => one.type === 'terminal/commandDetectionAvailable');
+    expect(state().isPty).toBe(true);
+    // Not before: a shell with no integration of its own never marks, and
+    // the protocol's action is sent when integration becomes available.
+    expect(state().supportsCommandDetection).toBe(false);
+    expect(announced()).toEqual([]);
+    say(osc('133;A'));
+    say(osc('133;A'));
     // A client MUST check this before relying on command boundaries, so it is
-    // announced as well as reported.
-    expect(state.supportsCommandDetection).toBe(true);
-    expect(seen.some((one) => one.type === 'terminal/commandDetectionAvailable')).toBe(true);
+    // announced as well as reported, once.
+    expect(state().supportsCommandDetection).toBe(true);
+    expect(announced()).toHaveLength(1);
   });
 
   it('reads the command boundaries the shell prints', () => {
@@ -322,6 +350,18 @@ describe('a shell under a pseudoterminal', () => {
     expect(data.join('')).toContain('133;C');
   });
 
+  it('says a command\'s output between its two actions, though one chunk holds them all', () => {
+    const { spawn, say } = fakePty();
+    const { terminal, seen } = opened(spawn);
+    say(`${osc('133;A')}$ `);
+    terminal.write('ls');
+    // The echo, the mark, the output and the next mark, as one read.
+    say(`ls\r\n${osc('133;C')}total 8\r\n${osc('133;D;0')}${osc('133;A')}$ `);
+    // The protocol's command output: the data between `commandExecuted` and
+    // `commandFinished`. The echo is before it and the next prompt after.
+    expect(betweenActions(seen)).toBe('total 8\r\n');
+  });
+
   it('is not one when no binding was given', () => {
     const { terminal, seen } = opened();
     const state = terminal.state() as { isPty?: boolean; supportsCommandDetection?: boolean };
@@ -329,6 +369,169 @@ describe('a shell under a pseudoterminal', () => {
     expect(state.supportsCommandDetection).toBe(false);
     expect(seen.some((one) => one.type === 'terminal/commandDetectionAvailable')).toBe(false);
     terminal.close();
+  });
+});
+
+/*
+ * VS Code's shell integration, as the reference host puts it into a shell.
+ *
+ * A shell opened to sit in under a pseudoterminal is started with the
+ * arguments, variables and files VS Code's `getShellIntegrationInjection`
+ * answers, and the OSC 633 marks its script writes are read the way the
+ * reference's terminal manager reads them. The platform and the Windows build
+ * are handed in, so each system's answer is read here on any.
+ */
+describe('VS Code\'s shell integration', () => {
+  const session: Claim = { kind: 'session', session: 'ahp-session:/one', chat: 'ahp-chat:/one' };
+  const client: Claim = { kind: 'client', clientId: 'one' };
+
+  /** One terminal under a fake pty, started as a machine of `platform` starts it. */
+  const integrated = (shell: string, asked: {
+    command?: string;
+    claim?: Claim;
+    platform?: string;
+    windowsBuild?: () => number;
+  } = {}) => {
+    const pty = fakePty();
+    const seen: Record<string, unknown>[] = [];
+    const terminal = shellTerminals({
+      pty: pty.spawn,
+      platform: asked.platform ?? 'linux',
+      windowsBuild: asked.windowsBuild ?? (() => 0),
+    }).create({
+      uri: 'ahp-terminal:/integrated',
+      cwd: '/tmp',
+      shell,
+      claim: asked.claim ?? client,
+      ...(asked.command !== undefined ? { command: asked.command } : {}),
+      emit: (_channel: string, action: Record<string, unknown>) => { seen.push(action); },
+    });
+    const start = pty.started.at(-1);
+    if (start === undefined) throw new Error('the store started nothing');
+    return { terminal, seen, say: pty.say, start };
+  };
+
+  it('starts bash on its init file, with the nonce the marks are checked against', () => {
+    const { start } = integrated('/bin/bash');
+    expect(start.args).toEqual(['--init-file', `${SCRIPTS}/shellIntegration-bash.sh`]);
+    expect(existsSync(`${SCRIPTS}/shellIntegration-bash.sh`)).toBe(true);
+    expect(start.env).toMatchObject({ VSCODE_INJECTION: '1', VSCODE_STABLE: '1' });
+    expect(start.env.VSCODE_NONCE).toMatch(/^[0-9a-f-]{36}$/u);
+  });
+
+  it('points zsh at the scripts in a folder of its own, which send it back to the person\'s', () => {
+    const { start } = integrated('/usr/bin/zsh', { claim: session });
+    expect(start.args).toEqual(['-i']);
+    const folder = join(realpathSync(tmpdir()), `${userInfo().username}-ahpd-zsh`);
+    expect(start.env.ZDOTDIR).toBe(folder);
+    // Nobody else may enter it, and only its owner may take a file out of it.
+    // Windows keeps no such mode, and a Windows zsh is never given this folder.
+    if (posix) expect(statSync(folder).mode & 0o7777).toBe(0o1700);
+    expect(start.env.USER_ZDOTDIR).toBe(process.env.ZDOTDIR ?? homedir());
+    const copies = { '.zshrc': 'rc', '.zprofile': 'profile', '.zshenv': 'env', '.zlogin': 'login' };
+    for (const [file, script] of Object.entries(copies)) {
+      expect(readFileSync(join(folder, file), 'utf8')).toBe(readFileSync(`${SCRIPTS}/shellIntegration-${script}.zsh`, 'utf8'));
+    }
+    // A session's zsh gets the reference's fixups for an agent's shell, and
+    // no end-of-line mark between a command's output and its `D`.
+    expect(start.env).toMatchObject({ VSCODE_AGENT_ZSH_FIXUPS: '1', PROMPT_EOL_MARK: '' });
+    const own = integrated('/usr/bin/zsh').start;
+    expect(own.env.VSCODE_AGENT_ZSH_FIXUPS).toBeUndefined();
+    expect(own.env.PROMPT_EOL_MARK).toBeUndefined();
+  });
+
+  it('starts zsh and bash as login shells on macOS, as the reference does', () => {
+    expect(integrated('/bin/zsh', { platform: 'darwin' }).start.args).toEqual(['-il']);
+    const bash = integrated('/bin/bash', { platform: 'darwin' }).start;
+    expect(bash.args).toEqual(['--init-file', `${SCRIPTS}/shellIntegration-bash.sh`]);
+    expect(bash.env.VSCODE_SHELL_LOGIN).toBe('1');
+  });
+
+  it('starts PowerShell on its script on a Windows build with ConPTY, and as it is on one without', () => {
+    const modern = integrated('pwsh.exe', { platform: 'win32', windowsBuild: () => 22631 }).start;
+    expect(modern.args).toEqual(['-noexit', '-command', `try { . "${SCRIPTS}\\shellIntegration.ps1" } catch {}`]);
+    expect(modern.env).toMatchObject({ VSCODE_INJECTION: '1', VSCODE_A11Y_MODE: '0', VSCODE_STABLE: '1' });
+    const old = integrated('pwsh.exe', { platform: 'win32', windowsBuild: () => 17763 }).start;
+    expect(old.args).toEqual([]);
+    expect(old.env.VSCODE_INJECTION).toBeUndefined();
+  });
+
+  it('leaves a shell given a command, and a shell it does not know, as they were asked', () => {
+    const command = integrated('/bin/bash', { command: 'echo hi' }).start;
+    expect(command.args).toEqual(['-c', 'echo hi']);
+    expect(command.env.VSCODE_INJECTION).toBeUndefined();
+    const sh = integrated('/bin/sh').start;
+    expect(sh.args).toEqual([]);
+    expect(sh.env.VSCODE_INJECTION).toBeUndefined();
+  });
+
+  it('starts nothing extra on pipes, where no prompt is drawn', () => {
+    const calls: { args: string[]; env: SpawnOptions['env'] }[] = [];
+    const start: SpawnShell = (_shell, args, options) => {
+      calls.push({ args, env: options.env });
+      return {
+        stdin: { writable: false, end: () => {} },
+        stdout: { on: () => {} },
+        stderr: { on: () => {} },
+        pid: undefined,
+        on: () => {},
+        kill: () => {},
+      } as unknown as ReturnType<SpawnShell>;
+    };
+    shellTerminals({ spawn: start, platform: 'linux' }).create({
+      uri: 'ahp-terminal:/pipes',
+      cwd: '/tmp',
+      shell: '/bin/bash',
+      claim: session,
+      emit: () => {},
+    });
+    expect(calls.at(-1)?.args).toEqual([]);
+    expect(calls.at(-1)?.env?.VSCODE_INJECTION).toBeUndefined();
+  });
+
+  it('reads the commands the script marks, and keeps its marks from the client', () => {
+    const { terminal, seen, say, start } = integrated('/bin/bash');
+    const nonce = String(start.env.VSCODE_NONCE);
+    say(`${osc('633;P;HasRichCommandDetection=True')}${osc('633;A')}$ ${osc('633;B')}`);
+    expect(terminal.state()).toMatchObject({ supportsCommandDetection: true });
+    // A command line is escaped as the scripts escape it: `\x3b` is a `;`.
+    say(`echo a; echo b\r\n${osc(`633;E;echo a\\x3b echo b;${nonce}`)}${osc('633;C')}a\r\nb\r\n${osc('633;D;0')}`);
+    say(`${osc('633;P;Cwd=/tmp/elsewhere')}${osc('633;A')}$ ${osc('633;B')}`);
+    const ran = seen.find((one) => one.type === 'terminal/commandExecuted');
+    const done = seen.find((one) => one.type === 'terminal/commandFinished');
+    expect(ran).toMatchObject({ commandLine: 'echo a; echo b' });
+    expect(done).toMatchObject({ commandId: ran?.commandId, exitCode: 0 });
+    expect(betweenActions(seen)).toBe('a\r\nb\r\n');
+    expect(seen.find((one) => one.type === 'terminal/cwdChanged')).toMatchObject({ cwd: uriOf('/tmp/elsewhere') });
+    expect(seen.filter((one) => one.type === 'terminal/commandDetectionAvailable')).toHaveLength(1);
+    // The reference strips its marks from what a client draws: the actions
+    // carry them, and a client would otherwise read each command twice.
+    const drawn = seen.filter((one) => one.type === 'terminal/data').map((one) => String(one.data)).join('');
+    expect(drawn).not.toContain('633');
+    expect(drawn).toContain('a\r\nb\r\n');
+  });
+
+  it('takes a command line only with its terminal\'s nonce, as the reference does', () => {
+    const { seen, say } = integrated('/bin/bash');
+    say(`${osc('633;E;rm -rf /;another')}${osc('633;C')}${osc('633;D;0')}`);
+    expect(seen.find((one) => one.type === 'terminal/commandExecuted')).toMatchObject({ commandLine: '' });
+  });
+
+  it('reads a mark split across two reads once its end arrives', () => {
+    const { seen, say } = integrated('/bin/bash');
+    say(`${osc('633;C')}out\r\n\u001b]633;D`);
+    expect(seen.some((one) => one.type === 'terminal/commandFinished')).toBe(false);
+    say(';3\u0007');
+    expect(seen.find((one) => one.type === 'terminal/commandFinished')).toMatchObject({ exitCode: 3 });
+    expect(betweenActions(seen)).toBe('out\r\n');
+  });
+
+  it('reads a command once when the shell also writes OSC 133 of its own', () => {
+    const { seen, say } = integrated('/bin/bash');
+    say(`${osc('633;A')}${osc('133;A')}$ `);
+    say(`${osc('633;C')}${osc('133;C')}out\r\n${osc('133;D;0')}${osc('633;D;0')}`);
+    expect(seen.filter((one) => one.type === 'terminal/commandExecuted')).toHaveLength(1);
+    expect(seen.filter((one) => one.type === 'terminal/commandFinished')).toHaveLength(1);
   });
 });
 

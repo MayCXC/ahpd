@@ -38,9 +38,10 @@ export interface TerminalOptions {
    *
    * The terminal runs it and exits, so `terminal/exited` is what says the
    * command finished and its code is what says how. Without this the shell
-   * reads from a pipe and stays open, which is right for a terminal somebody
-   * is typing into and wrong for one opened to answer a single question -
-   * there is no shell integration here to tell where one command ends.
+   * stays open reading its input, which is right for a terminal somebody is
+   * typing into and wrong for one opened to answer a single question: on pipes
+   * nothing says where one command ends, and under a pseudoterminal only the
+   * shell's own marks do, once its integration has loaded.
    */
   command?: string;
   /**
