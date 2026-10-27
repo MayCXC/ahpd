@@ -1,6 +1,6 @@
 ---
 title: The cofold prefix names only an unowned endpoint
-status: todo
+status: doing
 depends: [task-01-list-every-provider-under-its-id.md]
 layer: "agent-cofold"
 refs:
@@ -36,7 +36,7 @@ A `cofold/<id>` reference no longer resolves to a file provider. The `cofold` pr
 
 ## Resume
 
-- **Done so far:** nothing.
+- **Done so far:** nothing yet.
 - **Next action:** step 1.
 - **Files:** none yet.
 - **Open questions:** none.
