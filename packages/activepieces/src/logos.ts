@@ -4,7 +4,8 @@
  * A piece names its logo as a URL, and the plugin turns it into the `data:`
  * form a client draws. The fetch happens once for each piece: what it reads is
  * kept in the daemon's configuration folder, and a start after that reads the
- * file rather than the network.
+ * file rather than the network. A piece in the host's mark table answers a
+ * `mark:` source instead, so its CDN logo is never fetched.
  *
  * A logo is decoration, so a fetch that fails, takes too long or answers
  * something too large costs the icon and one line; it never fails the load.
@@ -33,6 +34,20 @@ const reason = (error: unknown): string => (error instanceof Error ? error.messa
 
 /** The folder a piece's logo is kept in. */
 const folderOf = (dir: string): string => join(dir, 'activepieces', 'icons');
+
+/**
+ * The host mark each piece shows, by adapter name.
+ *
+ * A piece in this table is sent `{ src: "mark:<name>" }`, which the host
+ * resolves from the marks it ships. Its CDN logo is neither fetched nor cached,
+ * because the mark is the better drawing and the CDN file is over 32 KB.
+ */
+const MARKS: Record<string, string> = {
+  'ap-jira-cloud': 'jira',
+  'ap-linear': 'linear',
+  'ap-resend': 'resend',
+  'ap-whatsapp': 'whatsapp',
+};
 
 /** The extension a logo of one type is kept under. */
 const extensionOf = (contentType: string): string => {
@@ -86,9 +101,10 @@ const iconOf = (bytes: Buffer, contentType: string): Icon => ({
 /**
  * The icon of one piece, read from the cache or fetched once.
  *
- * `dir` is the daemon's configuration folder, which is where the cache lives.
- * Absent, there is nowhere to keep the logo, so the promise of one fetch for
- * each piece cannot be kept and no fetch is made.
+ * A piece in the host's mark table answers that mark before the cache is read,
+ * so it makes no fetch. `dir` is the daemon's configuration folder, which is
+ * where the cache lives. Absent, there is nowhere to keep the logo, so the
+ * promise of one fetch for each piece cannot be kept and no fetch is made.
  *
  * `fetcher` is a parameter so a test can answer without a network, and the
  * same argument `fetch` takes otherwise.
@@ -99,6 +115,9 @@ export async function logoOf(
   dir: string | undefined,
   fetcher: typeof fetch = fetch,
 ): Promise<Logo> {
+  const mark = MARKS[piece];
+  if (mark !== undefined) return { icon: { src: `mark:${mark}` } };
+
   if (dir === undefined || dir === '') return {};
   const folder = folderOf(dir);
 

@@ -10,10 +10,11 @@ import { memoryRecords } from '../src/resources/records.js';
 import { servedRecords } from '../src/resources/recordschannel.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';
-import type { Engine, AgentView, ServedEngine } from '../src/types/agents.js';
+import type { Engine, AgentView, AgentTemplate, ServedEngine } from '../src/types/agents.js';
 import type { HostOptions, Users } from '../src/types/index.js';
 import type { RecordCollection } from '../src/types/records.js';
 import type { Vault } from '../src/types/vault.js';
+import type { Icon } from '@microsoft/agent-host-protocol';
 
 /*
  * The agents channel over a store in memory and a vault that is a map.
@@ -126,6 +127,25 @@ type Host = ReturnType<typeof createHost>;
 type Opened = AgentView;
 
 /**
+ * Two icons as the host sends them, after it resolved a template's `mark:`.
+ */
+const ALPHA_ICONS: Icon[] = [
+  { src: 'data:image/svg+xml;base64,YWxwaGE=', contentType: 'image/svg+xml', sizes: ['any'] },
+];
+const BETA_ICONS: Icon[] = [
+  { src: 'data:image/svg+xml;base64,YmV0YQ==', contentType: 'image/svg+xml', sizes: ['any'], theme: 'dark' },
+];
+
+/**
+ * What the `checker` engine offers as templates, each with the command a record
+ * made from it carries and the icons the host resolved at load.
+ */
+const TEMPLATES: AgentTemplate[] = [
+  { name: 'Alpha', description: 'One target.', icon: { src: 'mark:alpha' }, icons: ALPHA_ICONS, config: { command: 'checker-alpha' } },
+  { name: 'Beta', description: 'Another target.', icon: { src: 'mark:beta' }, icons: BETA_ICONS, config: { command: 'checker-beta' } },
+];
+
+/**
  * One engine, over the echo backend.
  *
  * `probe` is built only for the `prober` engine: the host asks a fresh agent what
@@ -190,7 +210,7 @@ async function served(options: { register?: boolean; fold?: (agents: Agent[]) =>
   const vault = made();
   const engines: Record<string, ServedEngine> = register
     ? {
-        checker: { ...engineOf('checker', opened, false), by: 'test' },
+        checker: { ...engineOf('checker', opened, false), templates: TEMPLATES, by: 'test' },
         prober: { ...engineOf('prober', opened, true), by: 'test' },
         misnamed: misnamed(opened),
       }
@@ -295,6 +315,47 @@ it('puts a record, lists it ready, and answers with no config of another engine'
   expect(answer).toMatchObject({ result: { id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', state: 'ready' } });
   expect(await cy.agents()).toContain('mine');
   expect((await cy.rows())['mine']).toMatchObject({ name: 'Mine', state: 'ready' });
+  await close();
+});
+
+it('sends a record its own icon as one icon, and keeps the icon field', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const icon = { src: 'data:image/svg+xml;base64,bWluZQ==', contentType: 'image/svg+xml', sizes: ['any'] };
+
+  await cy.call('x-ahpd/agents/put', {
+    id: 'mine', engine: 'checker', owner: 'user:cy', name: 'Mine', icon, config: { target: 'a' },
+  });
+
+  const row = (await cy.rows())['mine'];
+  expect(row?.['icon']).toEqual(icon);
+  expect(row?.['icons']).toEqual([icon]);
+  await close();
+});
+
+it("sends a record with no icon its template's icons, matched by command", async () => {
+  const { host, users, close } = await served();
+  const fa = await as(host, users, 'fa');
+
+  await fa.call('x-ahpd/agents/put', {
+    id: 'theirs', engine: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a', command: 'checker-beta' },
+  });
+
+  const row = (await fa.rows())['theirs'];
+  expect(row).not.toHaveProperty('icon');
+  expect(row?.['icons']).toEqual(BETA_ICONS);
+  await close();
+});
+
+it('sends a record no icons when no template has its command', async () => {
+  const { host, users, close } = await served();
+  const fa = await as(host, users, 'fa');
+
+  await fa.call('x-ahpd/agents/put', {
+    id: 'theirs', engine: 'checker', owner: 'host', name: 'Theirs', config: { target: 'a', command: 'checker-nothing' },
+  });
+
+  expect((await fa.rows())['theirs']).not.toHaveProperty('icons');
   await close();
 });
 

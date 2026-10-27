@@ -281,6 +281,68 @@ describe('ahpd.icons', () => {
   });
 });
 
+describe('a host mark', () => {
+  /** The icon of one mark file the server ships, as a client receives it. */
+  const markIcon = (name: string, theme?: 'dark'): Record<string, unknown> => ({
+    src: `data:image/svg+xml;base64,${readFileSync(join(import.meta.dirname, '..', 'icons', theme === 'dark' ? `${name}-dark.svg` : `${name}.svg`)).toString('base64')}`,
+    contentType: 'image/svg+xml',
+    sizes: ['any'],
+    ...(theme === undefined ? {} : { theme }),
+  });
+
+  it('reads a mark as the server\'s file, with no package to be relative to', () => {
+    const problems: string[] = [];
+
+    const icons = resolveIcons([{ src: 'mark:whatsapp' }], undefined, 'plugin demo', (line) => problems.push(line));
+
+    expect(problems).toEqual([]);
+    expect(icons).toEqual([markIcon('whatsapp')]);
+  });
+
+  it('sends a mark\'s dark file beside its light one where the host ships both', () => {
+    const problems: string[] = [];
+
+    const icons = resolveIcons([{ src: 'mark:copilot' }], undefined, 'plugin demo', (line) => problems.push(line));
+
+    expect(problems).toEqual([]);
+    expect(icons).toEqual([markIcon('copilot'), markIcon('copilot', 'dark')]);
+  });
+
+  it('drops an unknown mark with one line, and loads the plugin', async () => {
+    const dir = pkg('icons-mark-unknown', { description: 'An unknown mark.', icons: [{ src: 'mark:nonesuch' }] });
+
+    const { loaded, problems } = await load([dir]);
+
+    expect(loaded).toHaveLength(1);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('plugin icons-mark-unknown');
+    expect(problems[0]).toContain('the mark nonesuch is not one the host ships');
+  });
+
+  it('drops a mark whose name is a path with one line', () => {
+    const problems: string[] = [];
+
+    const icons = resolveIcons([{ src: 'mark:../openai' }], undefined, 'plugin demo', (line) => problems.push(line));
+
+    expect(icons).toEqual([]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('lowercase letters, digits and -');
+  });
+
+  it('resolves a mark a template names at load, into its icons', async () => {
+    const template = "host.registerEngine({ name: 'demo', title: 'Demo', description: 'A demo engine.', schema: { type: 'object', properties: {} }, templates: [{ name: 'Demo', icon: { src: 'mark:whatsapp' }, config: { command: 'demo' } }], open: () => undefined });";
+    const dir = pkg('icons-template-mark', { description: 'A template with a mark.' }, template);
+
+    const { options, problems } = await load([dir]);
+
+    expect(problems).toEqual([]);
+    const icons = options.engines?.['demo']?.templates?.[0]?.icons;
+    expect(icons).toEqual([markIcon('whatsapp')]);
+    // The template keeps the mark it named, for a client that reads `icon`.
+    expect(options.engines?.['demo']?.templates?.[0]?.icon).toEqual({ src: 'mark:whatsapp' });
+  });
+});
+
 describe('Adapter.icons', () => {
   it('reads an adapter icon against the package of the plugin that registered it', async () => {
     write('plugin-adapter/adapter.svg', '<svg/>');

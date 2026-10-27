@@ -13,6 +13,8 @@
  * and one is listed as soon as it is registered, before any connector exists.
  */
 
+import type { Icon } from '@microsoft/agent-host-protocol';
+
 import { recordsChannel, type RecordsChannel } from '../resources/recordschannel.js';
 import type { ServedAdapter } from '../types/connectors.js';
 import type { Grant } from '../types/users.js';
@@ -29,6 +31,8 @@ export interface AdaptersChannelOptions {
    * read through a function rather than handed in.
    */
   adapters(): Record<string, ServedAdapter>;
+  /** The icons of the plugin with this name, sent for an adapter that has none. */
+  pluginIcons?(name: string): Icon[] | undefined;
   /** Where an adapter that could not be listed is said. */
   onProblem?(message: string): void;
 }
@@ -46,26 +50,30 @@ export interface AdaptersChannel {
  *
  * The capabilities are sent whole, so a receive capability's `path` reaches a
  * client beside its type, name, title and description, and a capability with
- * no path carries no key.
+ * no path carries no key. An adapter with no icons is drawn with its plugin's,
+ * then the client's own blank square.
  */
-const rowOf = (adapter: ServedAdapter): Record<string, unknown> => ({
-  name: adapter.name,
-  title: adapter.title,
-  description: adapter.description,
-  schema: adapter.schema,
-  capabilities: adapter.capabilities,
-  plugin: adapter.by,
-  // An icon is decoration, so an adapter with none carries no key rather than
-  // an empty list a client would have to test.
-  ...(adapter.icons === undefined || adapter.icons.length === 0 ? {} : { icons: adapter.icons }),
-});
+const rowOf = (adapter: ServedAdapter, pluginIcons: Icon[] | undefined): Record<string, unknown> => {
+  const icons = adapter.icons !== undefined && adapter.icons.length > 0 ? adapter.icons : pluginIcons;
+  return {
+    name: adapter.name,
+    title: adapter.title,
+    description: adapter.description,
+    schema: adapter.schema,
+    capabilities: adapter.capabilities,
+    plugin: adapter.by,
+    // An icon is decoration, so an adapter with none carries no key rather than
+    // an empty list a client would have to test.
+    ...(icons === undefined || icons.length === 0 ? {} : { icons }),
+  };
+};
 
 export const adaptersChannel = (options: AdaptersChannelOptions): AdaptersChannel => {
   const source = {
     ids: async (): Promise<string[]> => Object.keys(options.adapters()).sort(),
     find: async (id: string): Promise<Record<string, unknown> | undefined> => {
       const adapter = options.adapters()[id];
-      return adapter === undefined ? undefined : rowOf(adapter);
+      return adapter === undefined ? undefined : rowOf(adapter, options.pluginIcons?.(adapter.by));
     },
   };
 

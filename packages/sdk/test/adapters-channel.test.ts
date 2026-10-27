@@ -12,6 +12,7 @@ import { echo } from '../../../examples/echo/agent.js';
 import type { Adapter, ServedAdapter } from '../src/types/connectors.js';
 import type { LoaderContext } from '../src/types/plugin.js';
 import type { Users } from '../src/types/users.js';
+import type { Icon } from '@microsoft/agent-host-protocol';
 
 /*
  * The adapters channel over a fold that holds two adapters.
@@ -82,9 +83,12 @@ const CONTEXT: LoaderContext = {
 };
 
 /** A host serving the adapters channel over two adapters, and no connector. */
-async function served() {
+async function served(pluginIcons?: (name: string) => Icon[] | undefined) {
   const adapters: Record<string, ServedAdapter> = { webhook: WEBHOOK, mail: MAIL };
-  const lists = adaptersChannel({ adapters: () => adapters });
+  const lists = adaptersChannel({
+    adapters: () => adapters,
+    ...(pluginIcons === undefined ? {} : { pluginIcons }),
+  });
   const wire = servedRecords('ahpd', [lists.channel], {});
   const users = fileUsers({ path: usersFile });
   const host = createHost({
@@ -179,6 +183,29 @@ it('sends an adapter its icons, and leaves the key out where it has none', async
     { src: 'https://example.com/mail.svg', contentType: 'image/svg+xml', sizes: ['any'], theme: 'light' },
   ]);
   // An adapter with no icon carries no key rather than an empty list.
+  expect(rows['webhook']).not.toHaveProperty('icons');
+  await close();
+});
+
+it('sends an adapter with no icon the icons of its plugin', async () => {
+  const pluginIcons: Icon[] = [
+    { src: 'data:image/svg+xml;base64,PHN2Zy8+', contentType: 'image/svg+xml', sizes: ['any'] },
+  ];
+  const { host, users, close } = await served((name) => (name === 'webhook' ? pluginIcons : undefined));
+  const ana = await as(host, users, 'ana');
+
+  const rows = await ana.rows();
+  expect(rows['webhook']?.['icons']).toEqual(pluginIcons);
+  // An adapter's own icon wins over its plugin's.
+  expect(rows['mail']?.['icons']).toEqual(MAIL.icons);
+  await close();
+});
+
+it('sends no icons for an adapter whose plugin has none', async () => {
+  const { host, users, close } = await served(() => undefined);
+  const ana = await as(host, users, 'ana');
+
+  const rows = await ana.rows();
   expect(rows['webhook']).not.toHaveProperty('icons');
   await close();
 });

@@ -1,6 +1,6 @@
 ---
 title: A piece with a large logo has a shipped SVG
-status: todo
+status: dropped
 depends: [task-03-a-piece-has-its-logo.md]
 layer: "activepieces"
 refs:
@@ -14,6 +14,8 @@ refs:
 
 A piece whose CDN logo is over 32 KB still shows an icon.
 The package ships an SVG for that piece, and `logoOf` uses it before the cache and the CDN.
+
+Dropped: plan 69 task 03 replaces this task. It carries the four marks in the host's `icons` folder, and `logoOf` answers a `mark:` source for these pieces.
 
 ## Files
 

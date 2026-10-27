@@ -762,7 +762,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   let automationsStore: AutomationStore | undefined;
   let pluginTypes: ReturnType<typeof pluginTriggerTypes> = [];
-  const adapterLists = adaptersChannel({ adapters: () => adapters, onProblem: listProblem });
+  const adapterLists = adaptersChannel({
+    adapters: () => adapters,
+    pluginIcons: (name) => loaded.find((one) => one.name === name)?.manifest?.icons,
+    onProblem: listProblem,
+  });
   const connectorLists = connectorsChannel({
     collection: connectorRecords,
     adapters: () => adapters,
