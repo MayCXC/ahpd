@@ -1,6 +1,6 @@
 ---
 title: Audio is served
-status: doing
+status: implemented
 depends: [task-04-images-are-served.md]
 layer: "server"
 refs:
