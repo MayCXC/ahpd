@@ -11,7 +11,7 @@ import type { Agent, Listed, Start } from '../src/types/agent.js';
 import type { Bag } from '../src/types/common.js';
 import type { Host } from '../src/types/host.js';
 import type { Peer } from '../src/types/rpc.js';
-import type { Session } from '../src/types/session.js';
+import type { Session, SubagentChat } from '../src/types/session.js';
 
 /*
  * The terminal a call of the agent terminal tool shows.
@@ -62,7 +62,19 @@ interface Script {
   input: Record<string, unknown>;
   /** Content the backend writes on the call itself while the command runs. */
   own?: Bag[];
+  /** Whether the call is a subagent's, made in a worker chat the turn opens. */
+  worker?: boolean;
 }
+
+/**
+ * The worker chat the last turn opened, when it opened one, and the gate its
+ * call waits at, which a test opens once it has subscribed to the worker's
+ * channel: a channel nobody watches is sent nothing.
+ */
+const seen: { worker?: string; open?: () => void } = {};
+
+/** The gate, read when asked: the backend sets it while a test waits. */
+const gate = (): (() => void) | undefined => seen.open;
 
 /** The call every turn makes. */
 const CALL = 'tc-1';
@@ -115,20 +127,44 @@ function shelling(script: Script): Agent {
           active = turn;
           start.emit('chat', { type: 'chat/turnStarted', turnId, startedAt, message: turn.message });
           void (async () => {
+            /*
+             * Where the call is drawn: the session's chat, or a worker chat
+             * the turn opens from a spawning call of its own, the way a
+             * harness's subagent makes its calls in the worker's chat while
+             * the host's tools stay bound to the session's.
+             */
+            let worker: SubagentChat | undefined;
+            if (script.worker === true) {
+              start.emit('chat', {
+                type: 'chat/toolCallStart', turnId, toolCallId: 'toolu_task', toolName: 'Task', displayName: 'Task',
+                _meta: { toolKind: 'subagent' },
+              });
+              start.emit('chat', { type: 'chat/toolCallReady', turnId, toolCallId: 'toolu_task', invocationMessage: 'Task', confirmed: 'not-needed' });
+              worker = start.subagent?.('toolu_task', { title: 'Explore', prompt: 'run it' });
+              if (worker === undefined) throw new Error('the host opened no worker');
+              const opened = new Promise<void>((resolve) => { seen.open = resolve; });
+              seen.worker = worker.uri;
+              await opened;
+            }
+            const callTurn = worker?.turnId ?? turnId;
+            const emit = (action: Bag): void => {
+              if (worker === undefined) start.emit('chat', action);
+              else worker.emit(action);
+            };
             const call: Bag = {
               toolCallId: CALL, toolName: 'bash', displayName: 'Run command', status: 'running',
               confirmed: 'not-needed', invocationMessage: 'Run command', content: [],
             };
-            (turn.responseParts as Bag[]).push({ kind: 'toolCall', toolCall: call });
-            start.emit('chat', { type: 'chat/toolCallStart', turnId, toolCallId: CALL, toolName: 'bash', displayName: 'Run command' });
-            start.emit('chat', { type: 'chat/toolCallReady', turnId, toolCallId: CALL, invocationMessage: 'Run command', confirmed: 'not-needed' });
+            if (worker === undefined) (turn.responseParts as Bag[]).push({ kind: 'toolCall', toolCall: call });
+            emit({ type: 'chat/toolCallStart', turnId: callTurn, toolCallId: CALL, toolName: 'bash', displayName: 'Run command' });
+            emit({ type: 'chat/toolCallReady', turnId: callTurn, toolCallId: CALL, invocationMessage: 'Run command', confirmed: 'not-needed' });
             const bash = start.tools?.find((one) => one.definition.name === 'bash');
             if (bash?.run === undefined) throw new Error('the host offered no bash');
             // Started before it is awaited: the call is given its shell at once.
             const running = Promise.resolve(bash.run(script.input, { toolCallId: CALL }));
             if (script.own !== undefined) {
               call.content = script.own;
-              start.emit('chat', { type: 'chat/toolCallContentChanged', turnId, toolCallId: CALL, content: script.own });
+              emit({ type: 'chat/toolCallContentChanged', turnId: callTurn, toolCallId: CALL, content: script.own });
             }
             let success = true;
             let answer: string;
@@ -141,7 +177,14 @@ function shelling(script: Script): Agent {
             }
             const result = { success, pastTenseMessage: 'Ran command', content: [{ type: 'text', text: answer }] };
             Object.assign(call, { status: 'completed', ...result });
-            start.emit('chat', { type: 'chat/toolCallComplete', turnId, toolCallId: CALL, result });
+            emit({ type: 'chat/toolCallComplete', turnId: callTurn, toolCallId: CALL, result });
+            if (worker !== undefined) {
+              worker.end('complete');
+              start.emit('chat', {
+                type: 'chat/toolCallComplete', turnId, toolCallId: 'toolu_task',
+                result: { success: true, pastTenseMessage: 'Task', content: [{ type: 'text', text: 'done' }] },
+              });
+            }
             turns.push(turn);
             active = undefined;
             start.emit('chat', { type: 'chat/turnComplete', turnId, duration: 1 });
@@ -178,6 +221,8 @@ const asking = (client: { handle(r: { method: string; params: unknown }): Promis
  */
 async function ran(script: Script) {
   wire.length = 0;
+  delete seen.worker;
+  delete seen.open;
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'ahpd-call-terminal-')));
   const host = createHost({ path: dir, agents: [shelling(script)], terminals: shellTerminals(), tools: hostTools() });
   opened.push(host);
@@ -193,6 +238,11 @@ async function ran(script: Script) {
     method: 'dispatchAction',
     params: { channel: chat, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'run it' } } },
   });
+  if (script.worker === true) {
+    await until(() => seen.worker !== undefined && gate() !== undefined);
+    await ask('subscribe', { channel: seen.worker });
+    gate()?.();
+  }
   await until(() => on(chat).some((one) => one.type === 'chat/turnComplete'));
   const root = await ask('subscribe', { channel: ROOT }) as { snapshot: { state: { terminals?: { resource: string; claim: Bag }[] } } };
   const terminal = (root.snapshot.state.terminals ?? []).find((one) => one.claim.toolCallId === CALL)?.resource;
@@ -240,6 +290,30 @@ describe.skipIf(!posix)('the terminal of an agent terminal tool call', () => {
     const block = { type: 'terminal', resource: terminal, title: 'Bash', isPty: false };
     // The host's, then the backend's with the terminal kept after it.
     expect(changes(chat)).toEqual([[block], [...own, block]]);
+  });
+
+  it('is on the call a subagent makes once the call completes, on the wire and in the worker chat', async () => {
+    const { ask, chat, terminal } = await ran({ input: { command: 'echo hello' }, worker: true });
+    const worker = seen.worker;
+    if (worker === undefined) throw new Error('the turn opened no worker');
+    const block = { type: 'terminal', resource: terminal, title: 'Bash', isPty: false };
+    // While the command runs the terminal is written on the chat the tool is
+    // bound to, as the reference writes it on its session's chat, and names no
+    // call there; the worker's call shows it once its completion carries it.
+    expect(changes(chat)).toEqual([[block]]);
+    expect(changes(worker)).toEqual([]);
+    const result = completion(worker).result as Bag;
+    expect(result.content).toEqual([
+      { type: 'text', text: expect.stringMatching(/^Shell ID: \S+\nExit code: 0\nhello$/u) as unknown },
+      { ...block, result: { exitCode: 0 } },
+    ]);
+    // A client that subscribes to the worker after reads the call as the wire left it.
+    const late = await ask('subscribe', { channel: worker }) as { snapshot: { state: { turns?: Bag[]; activeTurn?: Bag } } };
+    const state = late.snapshot.state;
+    const parts = [...(state.turns ?? []), ...(state.activeTurn === undefined ? [] : [state.activeTurn])]
+      .flatMap((one) => one.responseParts as Bag[]);
+    const part = parts.find((one) => one.kind === 'toolCall' && (one.toolCall as Bag).toolCallId === CALL) as Bag;
+    expect((part.toolCall as Bag).content).toEqual(result.content);
   });
 
   it('carries no exit for a command still running when its call ends', async () => {

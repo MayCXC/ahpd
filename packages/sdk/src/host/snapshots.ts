@@ -295,18 +295,26 @@ export function createSnapshots(ctx: HostContext): Snapshots {
      * has none: what it says is what the backend emitted on this channel.
      */
     const worker = subagents.get(channel);
-    if (worker)
+    if (worker) {
+      const folded = worker.state as Bag;
       return value({
         resource: channel,
         state: {
-          ...(worker.state as Bag),
+          ...folded,
+          // The terminal each of its calls of the agent terminal tool shows,
+          // which the wire carries and the actions folded here do not.
+          ...(Array.isArray(folded.turns) ? { turns: ctx.shells.stampedTerminals(channel, folded.turns as Bag[]) } : {}),
+          ...(typeof folded.activeTurn === 'object' && folded.activeTurn !== null
+            ? { activeTurn: ctx.shells.stampedTerminals(channel, [folded.activeTurn as Bag])[0] }
+            : {}),
           resource: channel,
           // What the worker is doing, with the read and archived bits a client
           // set on it laid over: those are this host's and no backend has them.
-          status: Number((worker.state as Bag).status ?? Status.Idle) | kept.chatFlags(idOf(worker.session), channel),
+          status: Number(folded.status ?? Status.Idle) | kept.chatFlags(idOf(worker.session), channel),
         },
         fromSeq: ctx.serverSeq,
       });
+    }
     const talking = byChat.get(channel);
     if (talking) {
       /*

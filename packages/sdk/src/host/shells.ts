@@ -17,7 +17,6 @@
  */
 
 import { posix, win32 } from 'node:path';
-import { aboutCall } from '../automations/calllinks.js';
 import { MARKS, shellOf } from '../machines/terminals.js';
 import { localPath } from '../resources/fileuri.js';
 import { ROOT } from './channels.js';
@@ -81,6 +80,18 @@ const CONTROL_SEQUENCES = new RegExp(`(?:${[CSI_SEQUENCE.source, OSC_SEQUENCE.so
  * (copilotShellTools.ts#L204) and the terminal a call shows (#L262).
  */
 const shellDisplayName = (shellType: ShellType): string => (shellType === 'bash' ? 'Bash' : 'PowerShell');
+
+/**
+ * The key a call's terminal is kept under: the session the call was made in,
+ * and the call's id.
+ *
+ * The reference keeps a call's shell by the call's id alone
+ * (copilotShellTools.ts#L57, #L259). A call id is one a backend gave, and
+ * unique only among its own session's calls, so the session scopes it: the
+ * lead chat and its workers are the session's, and a subagent's call is drawn
+ * in a worker chat while its tool was bound to the lead.
+ */
+const keyOf = (session: string, toolCallId: string): string => `${session}\u0000${toolCallId}`;
 
 /** Whether a call's content already shows this terminal. */
 const shows = (content: readonly Bag[], resource: unknown): boolean =>
@@ -254,7 +265,7 @@ interface Heard {
 interface Entry extends Heard {
   shell: ManagedShell;
   terminal: Terminal;
-  /** The call the shell was last given to, by its chat and id, when that call named itself. */
+  /** The call the shell was last given to, by its `keyOf`, when that call named itself. */
   call?: string;
 }
 
@@ -303,14 +314,19 @@ export interface HostShells {
    * call is passed on with the terminal laid after the backend's content, and
    * its completion with the terminal and the command's exit in its result, as
    * the reference keeps the terminal on the call it completes
-   * (copilotAgentSession.ts#L9417-L9422). Every other action, and an action of
-   * a call no shell was given to, is returned as it is.
+   * (copilotAgentSession.ts#L9417-L9422). The chat may be any of the session's,
+   * a worker's included: the reference completes a subagent's call on the
+   * subagent's chat (#L9482-L9494), and so the call carries its terminal
+   * there. Every other action, and an action of a call no shell was given to,
+   * is returned as it is.
    */
   withTerminal(chat: string, action: Bag): Bag;
   /**
-   * A live chat's turns with each call this host gave a shell showing its
-   * terminal, so a client that subscribes late reads what the wire said. A
-   * copy where anything moved; the turns passed in are the backend's own.
+   * A chat's turns with each call this host gave a shell showing its
+   * terminal, so a client that subscribes late reads what the wire said: a
+   * live chat's, whose state is its backend's, and a worker's, whose state is
+   * folded from what its backend sent before the wire carried the terminal.
+   * A copy where anything moved.
    */
   stampedTerminals(chat: string, turns: Bag[]): Bag[];
 }
@@ -318,7 +334,7 @@ export interface HostShells {
 export function createShells(ctx: HostContext): HostShells {
   const { options, terminals, dispatch, log } = ctx;
   const sessions = new Map<string, Shells & { dispose(): void }>();
-  /** Every call a shell was given, by its chat and id. */
+  /** Every call a shell was given, by its `keyOf`. */
   const calls = new Map<string, Called>();
 
   /**
@@ -403,9 +419,13 @@ export function createShells(ctx: HostContext): HostShells {
      * while the command runs. Written the way this host writes a worker's link
      * on the call that spawned it (spawn.ts, `openSubagent`): with what the
      * call already holds, and only while its chat has a turn open. The chat is
-     * the one the tool was bound to, which is a session's own chat. A terminal
-     * on pipes says `isPty: false`, as the reference's terminals that are not
-     * pseudoterminals do (copilotAgentSession.ts#L11972-L11977), and a
+     * the one the tool was bound to, which is a session's own chat, as the
+     * reference writes it on its session's chat (copilotAgentSession.ts
+     * #L2273-L2278): a subagent's
+     * call is in a worker chat, so there the write names no call, and the call
+     * shows its terminal once its completion carries it (`withTerminal`). A
+     * terminal on pipes says `isPty: false`, as the reference's terminals that
+     * are not pseudoterminals do (copilotAgentSession.ts#L11972-L11977), and a
      * pseudoterminal says nothing, as the reference's own do.
      */
     const associate = (claim: { chat: string; toolCallId?: string }, entry: Entry): void => {
@@ -413,7 +433,7 @@ export function createShells(ctx: HostContext): HostShells {
         delete entry.call;
         return;
       }
-      const key = aboutCall(claim.chat, claim.toolCallId);
+      const key = keyOf(session, claim.toolCallId);
       const block: Bag = {
         type: 'terminal',
         resource: entry.shell.terminalUri,
@@ -705,9 +725,16 @@ export function createShells(ctx: HostContext): HostShells {
     };
   };
 
-  /** The terminal a call's content should show, when a shell was given to that call. */
-  const calledIn = (chat: string, toolCallId: unknown): Called | undefined =>
-    (typeof toolCallId === 'string' ? calls.get(aboutCall(chat, toolCallId)) : undefined);
+  /**
+   * The terminal a call's content should show, when a shell was given to that
+   * call: looked up under the session that holds the chat, a lead's or a
+   * worker's, which is the session the call was made in.
+   */
+  const calledIn = (chat: string, toolCallId: unknown): Called | undefined => {
+    if (typeof toolCallId !== 'string') return undefined;
+    const session = ctx.sessionHolding(chat);
+    return session === undefined ? undefined : calls.get(keyOf(session, toolCallId));
+  };
 
   return {
     of: (session) => {

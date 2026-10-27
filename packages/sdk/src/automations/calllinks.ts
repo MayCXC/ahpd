@@ -56,7 +56,7 @@ export const linkIn = (content: unknown): string | undefined => {
 };
 
 /** The key one call is held under: its chat and its id. */
-export const aboutCall = (chat: string, toolCallId: string): string => `${chat}\u0000${toolCallId}`;
+const aboutCall = (chat: string, toolCallId: string): string => `${chat}\u0000${toolCallId}`;
 
 /**
  * An empty index.

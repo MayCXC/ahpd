@@ -36,6 +36,7 @@ refs:
   - "[code://packages/sdk/src/host/gate.ts#L86-L87](../../../../packages/sdk/src/host/gate.ts#L86-L87) - the grants a client's terminal methods ask"
   - https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L2261-L2280 - the reference puts a call's terminal on the call's content
   - https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L9417-L9422 - and keeps it on the call it completes
+  - https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L9482-L9494 - a subagent's call completed on the subagent's chat
   - "[code://packages/sdk/src/host/spawn.ts#L463-L487](../../../../packages/sdk/src/host/spawn.ts#L463-L487) - a worker's link written on the call that spawned it, the pattern for content this host puts on a backend's call"
 ---
 
@@ -94,6 +95,7 @@ root/configChanged enableCustomTerminalTool -> tooling lists the six tools -> ba
 | A call shows its shell's terminal in its content, built with the tool | Aaron, 2026-10-27, on the proposal that a call show its terminal: "the proposal makes sense to me what are you basing the idea off of and why would we save it for an upstream conversation"; https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L2261-L2280 | 03 |
 | The host writes the terminal on the backend's call, the way it writes a worker's link | [code://packages/sdk/src/host/spawn.ts#L463-L487](../../../../packages/sdk/src/host/spawn.ts#L463-L487) | 03 |
 | The terminal stays on the call's later content and on the call it completes | https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L9417-L9422 | 03 |
+| A subagent's call carries its terminal once completed, in the worker's chat | https://github.com/microsoft/vscode/blob/122ec4fe4431e8435c42e9b609e3a43a60877383/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L9482-L9494, the completion emitted on the subagent's chat, and `#L2273-L2278`, the live write on the session's | 03 |
 | A completed command's code is the terminal's `result.exitCode` | npm://@microsoft/agent-host-protocol@^1.0.0, `ToolResultTerminalContent.result` in `dist/types/channels-chat/state.d.ts`, filled in when the command exits | 03 |
 
 ## What decided each element
@@ -173,12 +175,13 @@ An element that is this host's adaptation names the primitive of this host that 
 | The block: `terminal`, the shell's terminal, `Bash` or `PowerShell` | `VS` `node/copilot/copilotShellTools.ts#L262`, `node/copilot/copilotAgentSession.ts#L2267-L2271` | 03 |
 | `isPty: false` on pipes, and nothing on a pseudoterminal | `VS` `node/copilot/copilotAgentSession.ts#L11972-L11977` and `#L9456-L9462` mark a terminal that is not a pseudoterminal, and `#L2267-L2271` marks none | 03 |
 | Written as `chat/toolCallContentChanged` with what the call holds, while its chat has a turn open | adaptation: the backend writes its own calls, so the host writes on one as it writes a worker's link, [`code://packages/sdk/src/host/spawn.ts#L463-L487`](../../../../packages/sdk/src/host/spawn.ts#L463-L487) | 03 |
-| Calls keyed by their chat and id | adaptation: `aboutCall`, the links index's key, [`code://packages/sdk/src/automations/calllinks.ts#L59`](../../../../packages/sdk/src/automations/calllinks.ts#L59) | 03 |
+| Calls keyed by their session and id | `VS` `node/copilot/copilotShellTools.ts#L57`, `#L259`, a call's shell kept by the call's id; adaptation: a call id is unique within its session, and a call is looked up under the session `sessionHolding` names for its chat, [`code://packages/sdk/src/host/routing.ts#L375-L377`](../../../../packages/sdk/src/host/routing.ts#L375-L377) | 03 |
 | The terminal kept on the call's later content and its completion | `VS` `node/copilot/copilotAgentSession.ts#L9417-L9422`; adaptation: rewritten in `dispatch` beside `withWorkerUri`, [`code://packages/sdk/src/host.ts#L773`](../../../../packages/sdk/src/host.ts#L773), since the reducer builds a completed call from its result alone | 03 |
 | The exit set on a block the content already holds | `VS` `node/copilot/mapSessionEvents.ts#L237-L240` | 03 |
 | The code of a completed command only | the protocol's `ToolResultTerminalContent.result`, "the command's exit, not the terminal's", `dist/types/channels-chat/state.d.ts#L1541-L1544` at 1.0.0; the code as the call's answer names it, `VS` `node/copilot/copilotShellTools.ts#L333` | 03 |
 | `result` holds the code alone | the reference's own tool answers in text and gives its terminal no `result`, `VS` `node/copilot/copilotShellTools.ts#L313-L319`; the protocol's `preview` and `truncated` are optional, and the call's answer carries the output | 03 |
-| A live chat's turns stamped for a late subscriber | adaptation: a chat's state is its backend's, and `stampedCalls` stamps a spawning call there the same way, [`code://packages/sdk/src/host/snapshots.ts#L357-L365`](../../../../packages/sdk/src/host/snapshots.ts#L357-L365) | 03 |
+| A live chat's turns stamped for a late subscriber | adaptation: a chat's state is its backend's, and `stampedCalls` stamps a spawning call there the same way, [`code://packages/sdk/src/host/snapshots.ts#L365-L373`](../../../../packages/sdk/src/host/snapshots.ts#L365-L373) | 03 |
+| A worker chat's folded turns stamped the same way | adaptation: `sendSubagent` folds an action into the worker's state before `dispatch` rewrites it, [`code://packages/sdk/src/host/spawn.ts#L371-L377`](../../../../packages/sdk/src/host/spawn.ts#L371-L377), so the worker's snapshot is stamped where it is served, [`code://packages/sdk/src/host/snapshots.ts#L291-L317`](../../../../packages/sdk/src/host/snapshots.ts#L291-L317) | 03 |
 | A session's calls forgotten with its shells | adaptation: `forgetSession`, which the session's deletion already calls | 03 |
 | `shell-call-terminal.test.ts`, a backend that writes its own calls | [`code://packages/sdk/test/subagent-link.test.ts`](../../../../packages/sdk/test/subagent-link.test.ts) | 03 |
 
@@ -201,7 +204,7 @@ An element that is this host's adaptation names the primitive of this host that 
 ## Risks and tradeoffs
 
 - A command that reads its standard input takes the sentinel's line where the shell has no marks, and the call waits for its timeout. The reference has the same sentinel.
-- A call a subagent makes shows no terminal. A host tool is bound to its session's chat. The backend draws a subagent's call in the worker's chat, which the tool is not told. The reference follows such a call by its parent call's id.
+- A call a subagent makes shows its terminal only once it completes, as the reference's does. The live write goes to the chat the tool is bound to, the session's own, and names no call there. The completion in the worker's chat carries the terminal.
 
 ## Resume state
 

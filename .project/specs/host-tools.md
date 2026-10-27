@@ -153,6 +153,9 @@ AND each content the backend writes for the call, and the result it completes th
 AND a command that finished sets its code on the terminal as `result.exitCode`.
 WHEN a client subscribes to the chat after
 THEN the call's content in the chat's state shows the same terminal.
+WHEN a subagent's call of `bash` completes in a worker chat
+THEN its completion in the worker's chat carries the terminal
+AND a client that subscribes to the worker after reads it on the call.
 
 ### A command ends before it finishes
 

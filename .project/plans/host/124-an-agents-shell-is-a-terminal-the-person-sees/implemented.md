@@ -41,8 +41,9 @@ Claude and pi let the host's `bash` take the place of their own shell.
 - On `bun` as installed on that machine, `node-pty` loads and every shell it starts exits at once with code 1.
 - The calls then answered `Shell exited with code`, and a shell started with `node-pty` alone under `bun` exits the same way.
 - The built headless terminal read bracketed paste and the alternate screen, on and off, under `node` and `bun`.
-- `packages/sdk/test/shell-call-terminal.test.ts`: 4 cases, a backend's call of `bash` on a real shell over pipes.
-- Four pieces of the call's terminal were each taken out once: the rewrite in `dispatch`, the write on acquire, the stamp and the exit. Each time, the cases that check it failed.
+- `packages/sdk/test/shell-call-terminal.test.ts`: 5 cases, a backend's call of `bash` on a real shell over pipes, one of them a subagent's in a worker chat.
+- Six pieces of the call's terminal were each taken out once, and each time the cases that check it failed.
+- They were the rewrite in `dispatch`, the write on acquire, both stamps, the exit and the lookup on a worker chat.
 - With the call's terminal, `pnpm test` failed in 29 files on that machine, all in the docker, daemon and process tests.
 - Those 29 files were run again without the change, and the ones that still failed alone fail the same way without it.
 - By hand from the built daemon on `bun` 1.4.4, on pipes, with an ACP agent that reports its call of `bash`.
@@ -59,5 +60,6 @@ Claude and pi let the host's `bash` take the place of their own shell.
 - The reference names the call as the turn in the claim. This host names the turn the call runs in.
 - The reference's macOS `--login`, its shell integration variables and its zsh fixups are not here, because this host's terminals take none of them.
 - The reference's session holds its calls' content and adds the terminal to it. Here a backend writes its own calls. The host writes the terminal on the call as it writes a worker's link, and `dispatch` keeps it there.
-- The reference follows a call a subagent makes by its parent call's id. A host tool here is bound to its session's chat, so a call a subagent makes shows no terminal.
+- The reference keeps a call's shell by the call's id alone. Here a call is kept by its session and id, since a backend's call ids are unique only within its session. A subagent's call is found in its worker chat, through the session that holds the chat.
+- A worker chat's state is folded before `dispatch` rewrites an action, so its snapshot is stamped where it is served, as a live chat's is.
 - The reference's own shell tool gives its terminal no `result`. Here a completed command sets its code there, as the protocol's `ToolResultTerminalContent.result` describes.
