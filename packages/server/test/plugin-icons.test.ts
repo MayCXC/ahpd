@@ -308,6 +308,15 @@ describe('a host mark', () => {
     expect(icons).toEqual([markIcon('copilot'), markIcon('copilot', 'dark')]);
   });
 
+  it('sends a dark file for the black marks of Resend and GitHub', () => {
+    const problems: string[] = [];
+
+    const icons = resolveIcons([{ src: 'mark:resend' }, { src: 'mark:github' }], undefined, 'plugin demo', (line) => problems.push(line));
+
+    expect(problems).toEqual([]);
+    expect(icons).toEqual([markIcon('resend'), markIcon('resend', 'dark'), markIcon('github'), markIcon('github', 'dark')]);
+  });
+
   it('drops an unknown mark with one line, and loads the plugin', async () => {
     const dir = pkg('icons-mark-unknown', { description: 'An unknown mark.', icons: [{ src: 'mark:nonesuch' }] });
 

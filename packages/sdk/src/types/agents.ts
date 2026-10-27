@@ -116,6 +116,15 @@ export interface Engine {
   /** What a new record of this engine starts from. */
   templates?: AgentTemplate[];
   /**
+   * The template one record was made from, picked out of `templates`.
+   *
+   * The host draws a record with no icon of its own with its template's icons.
+   * An engine that knows which template a record runs, as `acp` knows from the
+   * record's id or its `base`, answers here. Left out, the host takes the
+   * template whose `command` equals the record's.
+   */
+  templateOf?(record: { id: string; config: Record<string, unknown> }, templates: readonly AgentTemplate[]): AgentTemplate | undefined;
+  /**
    * The fields only the host's own record may set.
    *
    * A field a dangerous setting lives in, such as a command a backend runs. A

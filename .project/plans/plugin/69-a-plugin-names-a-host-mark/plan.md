@@ -1,7 +1,7 @@
 ---
 title: A plugin names a brand mark the host ships
 domain: plugin
-status: built
+status: active
 priority: medium
 created: 2026-10-26
 revalidated: 2026-10-26
@@ -75,10 +75,12 @@ acp template { icon: { src: "mark:<name>" } } -> loader resolves -> template ico
 | Plan 58 task 06 is replaced by task 03, and its four SVGs go into the host's set | file:///github/ahp-review/briefs/shared-marks.md | 01, 03 |
 | The ACP agent icons are part of this plan | Softov, 2026-10-26 | 04 |
 | A template and a record keep one `mark:` icon. The host sends the light file and, where one exists, the dark file | Softov, 2026-10-26 | 04 |
-| A record with no icon is sent with the icons of its engine's template whose `command` matches. Nothing on disk changes, and a record's own icon wins | Softov, 2026-10-26 | 04 |
+| A record with no icon is sent with the icons of its template. Nothing on disk changes, and a record's own icon wins | Softov, 2026-10-26 | 04 |
+| The engine names a record's template with `templateOf`, and the host matches by `command` only for an engine with none | Softov, 2026-10-26: "Engine answers" | 05 |
 | A template carries the resolved icons in a new `icons` list, and the agents channel row carries `icons` beside `icon` | (defaulted: a mark with a dark file is two icons, and `icon` stays for clients that read it) | 04 |
 | An ACP row with no mark from Simple Icons or its vendor gets no icon, and the engine's icon is drawn | (defaulted: the fallback a record has today) | 04 |
 | dsh needs a mark from Softov | file:///github/ahp-review/briefs/acp-agent-icons.md | 04 |
+| Resend and GitHub get a dark file in `#E6EDF3`, and the GitHub piece maps to a `github` mark | Softov, 2026-10-26: "Resend and github are dark colors" | 06 |
 
 ## Proposed architecture
 
@@ -97,24 +99,27 @@ acp template { icon: { src: "mark:<name>" } } -> loader resolves -> template ico
 | [02 - An adapter falls back to its plugin's icon](task-02-an-adapter-takes-its-plugin-icon.md) | done | - |
 | [03 - An Activepieces piece shows its mark](task-03-a-piece-shows-its-mark.md) | done | 01 |
 | [04 - An ACP agent shows its vendor's mark](task-04-an-acp-agent-shows-its-mark.md) | done | 01 |
+| [05 - The engine names the template a record runs](task-05-the-engine-names-a-record-s-template.md) | implemented | 04 |
+| [06 - Black marks get a dark file, and GitHub gets a mark](task-06-black-marks-get-a-dark-file.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
 - The marks are the brands' trademarks. The Simple Icons data is CC0 1.0, and the docs say that a mark stays its brand's.
-- A record with no icon matches a template by `command`. A record whose command was edited matches nothing and keeps the engine's icon.
+- A record with no icon takes the template its engine names. An ACP record whose `id` and `base` name no shipped row keeps the engine's icon.
 - ahpw draws `[record.icon]` today. It must read the row's `icons` first, or a record shows no dark file. That change is in ahpw, outside this plan.
 
 ## Resume state
 
-- **Done so far:** all four tasks are done, and the plan is merged in #102. See [implemented.md](implemented.md).
-- **Next action:** Softov runs the by-hand checks in `.project/pending/plugin-69-mark-checks.md`.
+- **Done so far:** tasks 01-04 are merged in #102. Tasks 05 and 06 are built on `plugin/69-icons-fix`. See [implemented.md](implemented.md).
+- **Next action:** Softov reviews the fix PR. After the merge, set the plan to `built` and run the by-hand checks in `.project/pending/plugin-69-mark-checks.md`.
 - **Open questions:** none. What waits is in [deferred.md](deferred.md).
 - **Watch out for:** ahpw must read a row's `icons` before `icon`, or a record shows no dark file.
 
 ## Final verification checklist
 
 - [ ] `{ "src": "mark:whatsapp" }` in a manifest gives a `data:image/svg+xml` icon in the plugins channel row.
-- [ ] The Jira, Linear, Resend and WhatsApp connectors show their marks, and the CDN is not fetched for them.
+- [ ] The GitHub, Jira, Linear, Resend and WhatsApp connectors show their marks, and the CDN is not fetched for them.
+- [ ] The Resend and GitHub marks read in ahpw's dark theme.
 - [ ] A webhook connector with no adapter icon shows the webhook plugin's icon.
 - [ ] Softov's existing Codex record shows the OpenAI mark in ahpw, in light and dark.
 - [x] Each new mark has a row in `.project/pending/plugin-58-icon-curation.md`.

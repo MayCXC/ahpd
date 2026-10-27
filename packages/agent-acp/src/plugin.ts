@@ -355,6 +355,11 @@ const engineOf = (host: PluginHost, values: Record<string, unknown>): Engine => 
     description: 'An ACP server as an agent, with one record per server: its own command, arguments, sign-in and machine.',
     schema: kindSchema(),
     templates: templates(),
+    templateOf: (record, made) => {
+      const base = typeof record.config['base'] === 'string' ? record.config['base'] : undefined;
+      const row = shipped[record.id] ?? (base === undefined ? undefined : shipped[base]);
+      return row === undefined ? undefined : made.find((one) => one.name === row.name);
+    },
     hostOnly: ['base', 'command', 'args', 'cwd', 'machine', 'install'],
     keyVariables: KEY_VARIABLES,
     open: (record) => acpAgent({

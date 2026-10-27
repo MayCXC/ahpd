@@ -212,6 +212,12 @@ async function served(options: { register?: boolean; fold?: (agents: Agent[]) =>
     ? {
         checker: { ...engineOf('checker', opened, false), templates: TEMPLATES, by: 'test' },
         prober: { ...engineOf('prober', opened, true), by: 'test' },
+        picker: {
+          ...engineOf('picker', opened, false),
+          templates: TEMPLATES,
+          templateOf: (record, made) => made.find((one) => one.name.toLowerCase() === record.id),
+          by: 'test',
+        },
         misnamed: misnamed(opened),
       }
     : {};
@@ -344,6 +350,23 @@ it("sends a record with no icon its template's icons, matched by command", async
   const row = (await fa.rows())['theirs'];
   expect(row).not.toHaveProperty('icon');
   expect(row?.['icons']).toEqual(BETA_ICONS);
+  await close();
+});
+
+it("sends a record no icon the template its engine names, whatever its command", async () => {
+  const { host, users, close } = await served();
+  const fa = await as(host, users, 'fa');
+
+  // The engine answers by id, so a record named for a template is drawn with
+  // it even with no command, and a command alone matches nothing.
+  await fa.call('x-ahpd/agents/put', { id: 'alpha', engine: 'picker', owner: 'host', name: 'Alpha', config: { target: 'a' } });
+  await fa.call('x-ahpd/agents/put', {
+    id: 'other', engine: 'picker', owner: 'host', name: 'Other', config: { target: 'a', command: 'checker-beta' },
+  });
+
+  const rows = await fa.rows();
+  expect(rows['alpha']?.['icons']).toEqual(ALPHA_ICONS);
+  expect(rows['other']).not.toHaveProperty('icons');
   await close();
 });
 

@@ -185,6 +185,22 @@ it('registers the acp engine, its templates, host-only fields and key variables'
   expect((served.agents ?? []).map((one) => one.provider)).toEqual(['echo']);
 });
 
+it('names the template a record runs, by its id or its base, with an empty config', async () => {
+  const engine = await engineOf();
+  const made = engine.templates ?? [];
+  const pick = (id: string, config: Record<string, unknown> = {}) => engine.templateOf?.({ id, config }, made)?.name;
+
+  // A record stored with no config, as the move from presets wrote them, runs
+  // the row its id names, so it is drawn with that row's template.
+  expect(pick('codex')).toBe('Codex');
+  expect(pick('gemini')).toBe('Gemini');
+  // A record of its own id names its row with `base`.
+  expect(pick('mine', { base: 'copilot' })).toBe('Copilot');
+  // A record that runs no shipped row has no template.
+  expect(pick('nothing')).toBeUndefined();
+  expect(pick('mine', { command: 'codex-acp' })).toBeUndefined();
+});
+
 it('opens one backend per record, with the record\'s own id, name and server', async () => {
   const engine = await engineOf();
   const one = folderOf('one');
