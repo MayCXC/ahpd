@@ -22,6 +22,7 @@ import type { ChatRequest, PluginContracts, PortKey } from '../types/plugin.js';
 import type { Owner } from '../types/usage.js';
 import { SUBJECTS, isGrant } from '../access/users.js';
 import { RECORD_SLUG, isRecordSlug } from '../resources/records.js';
+import { schemaGaps, type SchemaGap } from './schemagaps.js';
 
 /**
  * The one message shape every check reports through.
@@ -35,6 +36,35 @@ export const miss = (by: string, method: string, member: string, expected: strin
 
 /** What a member is expected to be, in the few kinds a contract names. */
 type Kind = 'function' | 'object' | 'string' | 'boolean' | 'array';
+
+/**
+ * One schema a registration gave, and the gaps the walk found in it.
+ *
+ * A check answers these beside its own result rather than writing them out:
+ * the schema's gaps are a problem line and never a refusal, and only the
+ * caller knows where the line goes. `where` names the schema the way the line
+ * reads, such as `engine claude` or `adapter slack capability send input`.
+ */
+export interface CheckedSchema {
+  where: string;
+  gaps: SchemaGap[];
+}
+
+/**
+ * The gaps in one schema, or none when asking for it throws.
+ *
+ * A backend's `schema()` is asked here because the form it answers is one a
+ * client draws. A schema that throws while being built is that backend's
+ * problem to report when it is used, not a reason to refuse the load.
+ */
+const gapsOf = (read: () => unknown): SchemaGap[] => {
+  try {
+    return schemaGaps(read());
+  }
+  catch {
+    return [];
+  }
+};
 
 /** Whether a value is that kind. Arrays are not objects and `null` is neither. */
 const right = (value: unknown, expected: Kind): boolean => {
@@ -84,8 +114,8 @@ const AGENT_OPTIONAL: Record<string, Kind> = {
   transcript: 'function',
 };
 
-/** Check one `registerAgent` value against `Agent`. */
-export const checkAgent = (value: unknown, by: string): void => {
+/** Check one `registerAgent` value against `Agent`, and answer its schema's gaps. */
+export const checkAgent = (value: unknown, by: string): CheckedSchema[] => {
   const object = asObject(value, by, 'registerAgent', 'agent');
   stringy(object, 'provider', by, 'registerAgent');
   stringy(object, 'displayName', by, 'registerAgent');
@@ -96,6 +126,7 @@ export const checkAgent = (value: unknown, by: string): void => {
     if (object[member] === undefined) continue;
     if (!right(object[member], expected)) throw new Error(miss(by, 'registerAgent', member, expected));
   }
+  return [{ where: `agent ${object.provider as string}`, gaps: gapsOf(object.schema as () => unknown) }];
 };
 
 /*
@@ -546,7 +577,7 @@ export const checkRoute = (value: unknown, by: string): void => {
  * event with no id - is a trigger an automation could name and nothing could
  * fire.
  */
-export const checkTriggerType = (value: unknown, by: string): void => {
+export const checkTriggerType = (value: unknown, by: string): CheckedSchema[] => {
   const object = asObject(value, by, 'registerTriggerType', 'definition');
   stringy(object, 'type', by, 'registerTriggerType');
   stringy(object, 'title', by, 'registerTriggerType');
@@ -565,6 +596,8 @@ export const checkTriggerType = (value: unknown, by: string): void => {
   if (object.configSchema !== undefined && !right(object.configSchema, 'object')) {
     throw new Error(miss(by, 'registerTriggerType', 'configSchema', 'an object'));
   }
+  if (object.configSchema === undefined) return [];
+  return [{ where: `trigger ${object.type as string}`, gaps: schemaGaps(object.configSchema) }];
 };
 
 /**
@@ -597,16 +630,18 @@ export const checkIcons = (value: unknown, by: string, method = 'registerAdapter
 };
 
 /**
- * Check one `registerAdapter` value against `Adapter`, and answer its name.
+ * Check one `registerAdapter` value against `Adapter`, and answer its name and
+ * its schemas' gaps.
  *
  * The name is a slug and the schema an object, because those are the two the
  * host acts on: the name is what every stored connector carries, and the
  * schema is what a client draws and what a connector's own config is checked
  * against. The capabilities are read for their shape and for their path: a
  * client lists them, and an `action` runs through `run`, which an adapter may
- * leave out when it has none.
+ * leave out when it has none. Each capability's `input` is a form of its own,
+ * so it is walked under a name that says which capability it is.
  */
-export const checkAdapter = (value: unknown, by: string): string => {
+export const checkAdapter = (value: unknown, by: string): { name: string; checked: CheckedSchema[] } => {
   const object = asObject(value, by, 'registerAdapter', 'adapter');
   for (const member of ['name', 'title', 'description']) stringy(object, member, by, 'registerAdapter');
   const name = object.name as string;
@@ -616,6 +651,7 @@ export const checkAdapter = (value: unknown, by: string): string => {
   if (!right(object.schema, 'object')) {
     throw new Error(miss(by, 'registerAdapter', 'schema', 'an object, the JSON Schema a client draws the form from'));
   }
+  const checked: CheckedSchema[] = [{ where: `adapter ${name}`, gaps: schemaGaps(object.schema) }];
   if (!Array.isArray(object.capabilities)) {
     throw new Error(miss(by, 'registerAdapter', 'capabilities', 'a list of the capabilities a connector of this adapter has'));
   }
@@ -624,6 +660,9 @@ export const checkAdapter = (value: unknown, by: string): string => {
     for (const member of ['type', 'name', 'title', 'description']) stringy(capability, member, by, 'registerAdapter');
     if (capability.input !== undefined && !right(capability.input, 'object')) {
       throw new Error(miss(by, 'registerAdapter', 'input', 'an object, the JSON Schema a client draws the form from, or nothing'));
+    }
+    if (capability.input !== undefined) {
+      checked.push({ where: `adapter ${name} capability ${capability.name as string} input`, gaps: schemaGaps(capability.input) });
     }
     /*
      * A path is where a client sends a call, so only a `receive` capability
@@ -648,11 +687,12 @@ export const checkAdapter = (value: unknown, by: string): string => {
   if (object.run !== undefined && typeof object.run !== 'function') {
     throw new Error(miss(by, 'registerAdapter', 'run', 'a function running one action of a connector, or nothing'));
   }
-  return name;
+  return { name, checked };
 };
 
 /**
- * Check one `registerEngine` value against `Engine`, and answer its name.
+ * Check one `registerEngine` value against `Engine`, and answer its name and
+ * its schema's gaps.
  *
  * The name is a slug and the schema an object, because those are the two the
  * host acts on: the name is what every stored record carries, and the schema is
@@ -661,7 +701,7 @@ export const checkAdapter = (value: unknown, by: string): string => {
  * setting to the host's record, and `keyVariables` is what lets a person's
  * record set an environment variable at all.
  */
-export const checkEngine = (value: unknown, by: string): string => {
+export const checkEngine = (value: unknown, by: string): { name: string; checked: CheckedSchema[] } => {
   const object = asObject(value, by, 'registerEngine', 'engine');
   for (const member of ['name', 'title', 'description']) stringy(object, member, by, 'registerEngine');
   const name = object.name as string;
@@ -702,5 +742,5 @@ export const checkEngine = (value: unknown, by: string): string => {
   if (typeof object.open !== 'function') {
     throw new Error(miss(by, 'registerEngine', 'open', 'a function building the backend for one record'));
   }
-  return name;
+  return { name, checked: [{ where: `engine ${name}`, gaps: schemaGaps(object.schema) }] };
 };

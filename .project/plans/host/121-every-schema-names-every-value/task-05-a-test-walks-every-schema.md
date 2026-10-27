@@ -1,6 +1,6 @@
 ---
 title: A test walks every first-party schema
-status: todo
+status: implemented
 depends:
   - task-01-every-schema-entry-point-checks.md
   - task-02-claude-lists-models-and-sources.md
@@ -37,9 +37,9 @@ A test fails when any first-party schema has a gap, so a new gap cannot merge.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Files:** none yet.
+- **Done so far:** `packages/server/test/schema-gaps.test.ts` loads all eleven first-party plugins with a stub host. It walks each manifest's `optionsSchema`, each engine's `schema` and each adapter's `schema`. It walks each backend's session config schema through `open`, each capability's `input` and each trigger's `configSchema`. It walks each session config property and each agent's `schema()`. It also walks the host's `configSchema`, `mcpServerSchema` and `proxySchema`. It has 23 cases: eleven manifests, eleven registration walks and one host walk. With `{ type: 'object' }` back on Claude's `env`, it fails with `agent-claude: engine claude env: object with no properties`.
+- **Next action:** Softov reads the report.
+- **Files:** `packages/server/test/schema-gaps.test.ts` (new).
 - **Open questions:** none.
-- **Departures:** none.
+- **Departures:** the test skips a capability with no `input`, because a capability that takes nothing leaves `input` out. Activepieces is applied with `configDir: ''`, so no piece logo is fetched and the walk never reaches the network. The test opens a record of the engine's own template to read a backend's session config schema. `published` and the session config factory are not exported.
 - **Watch out for:** the activepieces walk needs the shipped pieces only. A piece that is not shipped makes `apply` call `install`.

@@ -44,7 +44,7 @@ In the configuration file, with the plugin's own options as the defaults every r
 
 With no model named anywhere, the providers, keys and model come from cofold's own configuration file, `$COFOLD_CONFIG` or `$XDG_CONFIG_HOME/cofold/config.json` or `~/.config/cofold/config.json`. Inside a machine the first of those is what finds it.
 
-Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. An agent of the engine is a record on the agents channel: it sets any of these except `adapter`, `strictTools` and the keyed search providers, and wins over the plugin for the ones it sets. A record's id, name and description are the record's own, so this plugin has no option for them.
+Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. An agent of the engine is a record on the agents channel: it sets any of these except `strictTools` and the keyed search providers, and wins over the plugin for the ones it sets. A record's id, name and description are the record's own, so this plugin has no option for them. There are two more options, `adapter` and `policy`, that only an embedder calling `apply` in code passes: a model adapter is an object of methods and a policy is a function, so neither is in the options schema and a configuration file cannot name them.
 
 | Option | Default | What it does |
 | --- | --- | --- |
@@ -58,9 +58,7 @@ Every option below is a key under `options` in the plugin's entry, and the daemo
 | `strictTools` | `true` | `false` holds `tools` to the loose check, so a key cofold does not know is dropped rather than refused |
 | `apiKey` | the cofold file's | The daemon's own key, for a record that names none. `{ "$secret": "host:<name>" }` reads it from the vault; an embedder may pass a function asked once per request |
 | `resource` | the endpoint's origin when it is `https` | The protected resource a client authenticates against |
-| `adapter` | the HTTP one | A cofold `ModelAdapter` used instead of the HTTP one, for an embedder or a test |
 | `autoCompactTokens` | 80% of the model's listed context, or of 32000 | The estimated history size at which a session compacts, never above that 80% |
-| `policy` | cofold's own default | The run-level policy a pause comes from, which turns the approvals mode control off |
 
 `ahpd vault set host:<name>` keeps a key that `apiKey` or a search provider's `apiKey` reads with `{ "$secret": "host:<name>" }`, from standard input. See [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md#naming-a-secret-instead-of-holding-one) for a `$secret`.
 
@@ -89,7 +87,7 @@ The providers `web_search` asks, in the order they are written. A failing one is
 
 An agent is a record on `x-ahpd-agents`: `{ id, engine, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model`, so `config` holds the cofold fields above, and a new record starts from the engine's one template, which sets nothing and runs on cofold's own configuration file.
 
-`computerConfigDir`, `store` and `memory` are host-only: a team's or a person's record that sets one is refused. `adapter` and `strictTools` are not fields of a record at all, and neither is a keyed search provider, for the reason the `tools.web.search` table gives. The engine names no key variable, because cofold's key is not an environment variable: a record's `apiKey` is a `writeOnly` field of its own, so the channel keeps it in the vault under `host:agent/<id>/apiKey` for a host record, and no client, session or log gets the value.
+`computerConfigDir`, `store` and `memory` are host-only: a team's or a person's record that sets one is refused. `strictTools` is not a field of a record at all, and neither is a keyed search provider, for the reason the `tools.web.search` table gives; `adapter` and `policy` are not options of the schema at all, only values an embedder passes in code. The engine names no key variable, because cofold's key is not an environment variable: a record's `apiKey` is a `writeOnly` field of its own, so the channel keeps it in the vault under `host:agent/<id>/apiKey` for a host record, and no client, session or log gets the value.
 
 A record that names its own endpoint and key, with the model the channel owns:
 

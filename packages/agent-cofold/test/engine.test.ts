@@ -76,7 +76,11 @@ const load = async (options: Bag = {}) => {
 /** The `cofold` engine one load registered. */
 const engineOf = async (options: Bag = {}): Promise<Engine> => {
   const { problems, served } = await load(options);
-  expect(problems).toEqual([]);
+  // An embedder's `adapter` is not in the schema, so the loader names it and
+  // passes it through: that one line is the loader's, not a refusal.
+  expect(problems).toEqual(options.adapter === undefined ? [] : [
+    'plugin agent-cofold: plugins.agent-cofold.options.adapter is not an option agent-cofold knows; passed through',
+  ]);
   const engine = served.engines?.['cofold'];
   if (engine === undefined) throw new Error('no cofold engine was registered');
   return engine;
@@ -133,9 +137,9 @@ it('registers the cofold engine, its form, its template and its host-only fields
   // agents channel owns and without the two only an embedder can set.
   const fields = Object.keys((engine?.schema.properties ?? {}) as Bag).sort();
   expect(fields).toEqual([
-    'apiKey', 'autoCompactTokens', 'baseUrl', 'computerConfigDir', 'instructions', 'memory', 'policy', 'resource', 'store', 'tools',
+    'apiKey', 'autoCompactTokens', 'baseUrl', 'computerConfigDir', 'instructions', 'memory', 'resource', 'store', 'tools',
   ]);
-  for (const owned of ['provider', 'displayName', 'name', 'description', 'icon', 'model', 'adapter', 'strictTools']) {
+  for (const owned of ['provider', 'displayName', 'name', 'description', 'icon', 'model', 'adapter', 'policy', 'strictTools']) {
     expect(fields).not.toContain(owned);
   }
   // A record's key is vaulted and answered as set, never read back.

@@ -65,7 +65,13 @@ const staticOptions = (prop: Record<string, unknown>): unknown[] | undefined => 
   return listed.filter(isRecord).map((one) => one['value']);
 };
 
-/** One record of props, each as its type, names, required flag and static options. */
+/**
+ * One record of props, each as its type, names, required flag, static options
+ * and, for an array, the props of one item.
+ *
+ * The framework writes an array prop's item props as its `properties`, so an
+ * array of objects is told apart from a plain list of strings here.
+ */
 const describeProps = (props: unknown): Record<string, PropDescription> => {
   const out: Record<string, PropDescription> = {};
   if (!isRecord(props)) return out;
@@ -79,6 +85,10 @@ const describeProps = (props: unknown): Record<string, PropDescription> => {
     if (typeof value['description'] === 'string') one.description = value['description'];
     const options = staticOptions(value);
     if (options !== undefined) one.options = options;
+    if (one.type === 'ARRAY' && isRecord(value['properties'])) {
+      const sub = describeProps(value['properties']);
+      if (Object.keys(sub).length > 0) one.props = sub;
+    }
     out[name] = one;
   }
   return out;

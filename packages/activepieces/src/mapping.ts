@@ -55,9 +55,16 @@ export function entryOf(auth: AuthDescription | AuthDescription[] | undefined): 
  * A `MARKDOWN` prop is text a builder UI shows, so it is not in the input. A
  * `FILE` prop is a string: an `https:` URL, a `data:` URI, or the name of a
  * session attachment, which the child turns into the file a piece reads.
+ *
+ * An `ARRAY` prop that names the props of one item is an array of objects,
+ * those fields on each; one that names none is an array of strings, which is
+ * how the pieces themselves read it. An `OBJECT` or `DYNAMIC` prop is an object
+ * whose values are unnamed, and a `JSON` prop is any value at all: the one
+ * schema that says so is `{}`.
  */
 export function propOf(prop: PropDescription): Record<string, unknown> | undefined {
   if (prop.type === 'MARKDOWN') return undefined;
+  if (prop.type === 'JSON') return {};
   const schema: Record<string, unknown> = { title: prop.displayName };
   const described = prop.description !== undefined && prop.description !== '';
   switch (prop.type) {
@@ -73,13 +80,16 @@ export function propOf(prop: PropDescription): Record<string, unknown> | undefin
     case 'CHECKBOX':
       schema['type'] = 'boolean';
       break;
-    case 'ARRAY':
+    case 'ARRAY': {
+      const item = prop.props === undefined ? undefined : inputOf(prop.props);
       schema['type'] = 'array';
+      schema['items'] = item ?? { type: 'string' };
       break;
+    }
     case 'OBJECT':
-    case 'JSON':
     case 'DYNAMIC':
       schema['type'] = 'object';
+      schema['additionalProperties'] = {};
       break;
     case 'DATE_TIME':
       schema['type'] = 'string';
@@ -101,8 +111,15 @@ export function propOf(prop: PropDescription): Record<string, unknown> | undefin
   return schema;
 }
 
-/** The input schema of one action, each prop by the name the piece reads it by. */
-export function inputOf(props: Record<string, PropDescription>): Record<string, unknown> {
+/**
+ * The input schema of one action, each prop by the name the piece reads it by,
+ * or nothing when the action names no prop a client can draw.
+ *
+ * An action with no props takes nothing, and a capability with no `input` is
+ * the one way to say so: `{ type: 'object' }` with no properties is a form a
+ * client draws as "No parameters defined." and a hole this host reports.
+ */
+export function inputOf(props: Record<string, PropDescription>): Record<string, unknown> | undefined {
   const properties: Record<string, unknown> = {};
   const required: string[] = [];
   for (const [name, prop] of Object.entries(props)) {
@@ -111,6 +128,7 @@ export function inputOf(props: Record<string, PropDescription>): Record<string, 
     properties[name] = schema;
     if (prop.required) required.push(name);
   }
+  if (Object.keys(properties).length === 0) return undefined;
   const input: Record<string, unknown> = { type: 'object', properties };
   if (required.length > 0) input['required'] = required;
   return input;
@@ -209,12 +227,15 @@ export function adapterOf(piece: PieceDescription, run?: RunCall, icon?: Icon): 
   const notes: string[] = [];
   const capabilities: Capability[] = [];
   for (const action of piece.actions) {
+    const input = inputOf(action.props);
     capabilities.push({
       type: 'action',
       name: action.name,
       title: action.displayName,
       description: descriptionOf(action),
-      input: inputOf(action.props),
+      // An action that names no prop takes nothing, and a capability with no
+      // input is how a client is told that.
+      ...(input === undefined ? {} : { input }),
     });
   }
 

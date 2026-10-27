@@ -134,23 +134,23 @@
           "additionalProperties": {
             "type": "object",
             "properties": {
-              "title": { "description": "What the picker shows for it, a string. The profile name when absent." },
-              "description": { "description": "One line about what it is for, a string." },
-              "image": { "description": "The image its machines are made from, a string. The plugin's image when absent." },
-              "cpus": { "description": "A CPU limit for its machines, a string. The plugin's cpus when absent." },
-              "memory": { "description": "A memory limit for its machines, a string. The plugin's memory when absent." },
-              "ociRuntime": { "description": "The OCI runtime Docker starts its machines under, a string. runsc is gVisor. Docker's own default when absent." },
-              "workdir": { "description": "Where commands start, a string. folder, or the image's own, when absent." },
-              "mounts": { "description": "Mounts added after the plugin's own, a list of strings." },
-              "agents": { "description": "The agents its machines are prepared for, a list of provider ids. A session of another agent is refused." },
-              "folder": { "description": "A host folder mounted at the same path inside the machine, a string." },
-              "host": { "description": "The command that starts the nested host inside one of its machines, a list of strings. [\"ahpd\"] when absent." },
-              "disposable": { "description": "true: no machine until a session starts, and one is made for that session. false when absent." },
-              "disposableDelay": { "description": "Milliseconds after the last session leaves a disposable machine before it is removed, a whole number above 0. 300000 when absent." },
-              "disposableAlone": { "description": "true: a disposable machine is kept out of the picker, so only the session it was made for runs in it. false when absent." },
-              "sessionFolder": { "description": "true: the session's working folder is mounted read-write at the same path inside the machine. false when absent." },
-              "sessionRepository": { "description": "true: the repository that folder sits inside is mounted too. Needs sessionFolder. false when absent." },
-              "sessionTree": { "description": "shared mounts this host's tree; copy gives the machine a checkout of its own that reaches the host only by fetch. Needs sessionFolder. shared when absent." },
+              "title": { "type": "string", "description": "What the picker shows for it, a string. The profile name when absent." },
+              "description": { "type": "string", "description": "One line about what it is for, a string." },
+              "image": { "type": "string", "description": "The image its machines are made from, a string. The plugin's image when absent." },
+              "cpus": { "type": "string", "description": "A CPU limit for its machines, a string. The plugin's cpus when absent." },
+              "memory": { "type": "string", "description": "A memory limit for its machines, a string. The plugin's memory when absent." },
+              "ociRuntime": { "type": "string", "description": "The OCI runtime Docker starts its machines under, a string. runsc is gVisor. Docker's own default when absent." },
+              "workdir": { "type": "string", "description": "Where commands start, a string. folder, or the image's own, when absent." },
+              "mounts": { "type": "array", "items": { "type": "string" }, "description": "Mounts added after the plugin's own, a list of strings." },
+              "agents": { "type": "array", "items": { "type": "string" }, "description": "The agents its machines are prepared for, a list of provider ids. A session of another agent is refused." },
+              "folder": { "type": "string", "description": "A host folder mounted at the same path inside the machine, a string." },
+              "host": { "type": "array", "items": { "type": "string" }, "description": "The command that starts the nested host inside one of its machines, a list of strings. [\"ahpd\"] when absent." },
+              "disposable": { "type": "boolean", "description": "true: no machine until a session starts, and one is made for that session. false when absent." },
+              "disposableDelay": { "type": "integer", "minimum": 1, "description": "Milliseconds after the last session leaves a disposable machine before it is removed, a whole number above 0. 300000 when absent." },
+              "disposableAlone": { "type": "boolean", "description": "true: a disposable machine is kept out of the picker, so only the session it was made for runs in it. false when absent." },
+              "sessionFolder": { "type": "boolean", "description": "true: the session's working folder is mounted read-write at the same path inside the machine. false when absent." },
+              "sessionRepository": { "type": "boolean", "description": "true: the repository that folder sits inside is mounted too. Needs sessionFolder. false when absent." },
+              "sessionTree": { "type": "string", "enum": ["shared", "copy"], "description": "shared mounts this host's tree; copy gives the machine a checkout of its own that reaches the host only by fetch. Needs sessionFolder. shared when absent." },
               "needs": { "type": "object", "additionalProperties": { "type": "string", "secretAtUse": true, "writeOnly": true } },
               "parts": { "type": "array", "items": { "type": "string" }, "description": "The parts every machine from this profile carries, by their ids in the versions file." },
               "secretUnreadable": {
@@ -192,7 +192,26 @@
             "args": { "type": "array", "items": { "type": "string" } },
             "host": { "type": "array", "items": { "type": "string" } },
             "env": { "type": "object", "additionalProperties": { "type": "string", "writeOnly": true } },
-            "plugins": { "type": "array" },
+            "plugins": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  { "type": "string" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "source": { "type": "string", "description": "The module specifier, or a path to a directory or a file." },
+                      "name": { "type": "string", "description": "What a listing prints, or the module in an entry written before source." },
+                      "options": { "type": "object", "additionalProperties": {}, "description": "Passed to the plugin's apply as its second argument." },
+                      "enabled": { "type": "boolean", "description": "false drops the plugin before it is resolved. Absent means on." },
+                      "grants": { "type": "array", "items": { "type": "string" }, "description": "What the plugin may do when it connects as a client of its own." }
+                    },
+                    "additionalProperties": {}
+                  }
+                ]
+              },
+              "description": "The plugins the host inside the machine runs, as a module specifier or an object naming one. At least one, or the host inside has no backend."
+            },
             "docker": { "type": "string" },
             "install": { "type": ["string", "boolean"] },
             "folders": { "type": "array", "items": { "type": "string" } }

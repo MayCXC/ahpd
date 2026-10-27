@@ -144,7 +144,7 @@ it('opens one backend per record, each with its own name and models', async () =
   const engine = await engineOf();
   const builtIn = engine.open(viewOf('claude', () => ({}), 'Claude Code'));
   const router = engine.open(viewOf('claude-openrouter', () => ({
-    models: ['stealth/space-bunny-alpha', { id: 'claude-sonnet-5', name: 'Sonnet' }],
+    models: [{ id: 'stealth/space-bunny-alpha' }, { id: 'claude-sonnet-5', name: 'Sonnet' }],
   }), 'Claude OpenRouter'));
   expect([builtIn.provider, builtIn.displayName]).toEqual(['claude', 'Claude Code']);
   expect([router.provider, router.displayName]).toEqual(['claude-openrouter', 'Claude OpenRouter']);
@@ -182,7 +182,7 @@ it('opens a record holding every declared field and the models it names', async 
   const agent = engine.open(viewOf('work', () => ({
     sandbox: 'on', thinking: 'adaptive', outputStyle: 'concise',
     env: { ANTHROPIC_MODEL: 'claude-opus-5' }, extraArgs: { 'debug': null },
-    models: ['stealth/space-bunny-alpha', { id: 'claude-sonnet-5', name: 'Sonnet' }],
+    models: [{ id: 'stealth/space-bunny-alpha' }, { id: 'claude-sonnet-5', name: 'Sonnet' }],
     keepCliModels: true,
   }), 'Claude at work'));
   expect([agent.provider, agent.displayName]).toEqual(['work', 'Claude at work']);

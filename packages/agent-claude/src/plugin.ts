@@ -16,7 +16,7 @@
  * the ordinary install.
  */
 
-import type { ModelEntry } from './models.js';
+import type { ModelEntry, ModelSource } from './models.js';
 import type { Engine, Plugin, PluginHost } from '@ahpd/sdk';
 import { claude } from './claude.js';
 import type { ClaudeOptions } from './claude.js';
@@ -88,6 +88,22 @@ const defaultsOf = (host: PluginHost, values: Record<string, unknown>) => {
  * stays the host's to set. The record is read live, so an edit reaches the
  * session at its next turn.
  */
+/**
+ * A record's `models`, each entry an id.
+ *
+ * The start's migration writes every entry as `{ id }`, and a bare id written
+ * by hand later is read the same way. An entry with no id is left out.
+ */
+const modelsOf = (value: unknown): ModelEntry[] => (Array.isArray(value) ? value : []).flatMap((one: unknown) => {
+  if (typeof one === 'string') return one === '' ? [] : [{ id: one }];
+  if (typeof one !== 'object' || one === null || typeof (one as { id?: unknown }).id !== 'string') return [];
+  return [one as ModelEntry];
+});
+
+/** A record's `modelSources`, each entry one with a `fetch`. */
+const sourcesOf = (value: unknown): ModelSource[] => (Array.isArray(value) ? value : []).filter((one: unknown): one is ModelSource =>
+  typeof one === 'object' && one !== null && typeof (one as { fetch?: unknown }).fetch === 'string');
+
 /** The plugin's own options, as every agent of one load is built with them. */
 type Shared = ReturnType<typeof defaultsOf>['shared'];
 
@@ -108,7 +124,8 @@ const engineOf = (paths: string[], shared: Shared): Engine => ({
     paths,
     provider: record.id,
     displayName: record.name,
-    ...(Array.isArray(record.config['models']) ? { models: record.config['models'] as ModelEntry[] } : {}),
+    ...(Array.isArray(record.config['models']) ? { models: modelsOf(record.config['models']) } : {}),
+    ...(Array.isArray(record.config['modelSources']) ? { modelSources: sourcesOf(record.config['modelSources']) } : {}),
     ...(typeof record.config['keepCliModels'] === 'boolean' ? { keepCliModels: record.config['keepCliModels'] } : {}),
     presetOf: () => ({ ...record.config }),
   }),

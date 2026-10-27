@@ -133,6 +133,65 @@ export const writeOnly = (schema: Record<string, unknown>): string[] => {
     .map(([field]) => field);
 };
 
+/** One path below another, with a dot only when there is a parent. */
+const under = (base: string, tail: string): string => (base === '' ? tail : `${base}.${tail}`);
+
+/**
+ * The path of every value a schema marks `writeOnly`, at any depth, in the configs given.
+ *
+ * A property, a value of `additionalProperties` and an item of a list are each
+ * walked, so a key inside one entry of a list is a secret as a top-level field
+ * is. A list item and a map key are named by what the configs hold, so the
+ * same schema gives `sources.0.key` for one config and nothing for another. A
+ * path either config reaches is named: the old record's, so a secret of an
+ * entry that went is taken out, and the new one's, so a new entry's is kept.
+ * The walk goes only as deep as a config does, so a schema that names itself
+ * ends where the value ends.
+ */
+export const writeOnlyPaths = (
+  schema: Record<string, unknown>,
+  ...configs: Record<string, unknown>[]
+): string[] => {
+  const found = new Set<string>();
+  const walk = (node: unknown, value: unknown, path: string): void => {
+    if (!isRecord(node)) return;
+    if (node['writeOnly'] === true && path !== '') { found.add(path); return; }
+    if (isRecord(value)) {
+      const properties = bag(node['properties']);
+      for (const [key, one] of Object.entries(properties)) walk(one, value[key], under(path, key));
+      const additional = node['additionalProperties'];
+      if (isRecord(additional)) {
+        for (const [key, one] of Object.entries(value)) {
+          if (key in properties) continue;
+          walk(additional, one, under(path, key));
+        }
+      }
+    }
+    if (Array.isArray(value) && isRecord(node['items'])) {
+      value.forEach((one, position) => { walk(node['items'], one, under(path, String(position))); });
+    }
+  };
+  for (const config of configs) walk(schema, config, '');
+  return [...found];
+};
+
+/** Whether one part of a dotted path is a position in a list. */
+const isPosition = (part: string): boolean => /^(0|[1-9]\d*)$/u.test(part);
+
+/** One step down a dotted path: a field of an object, or a position in a list. */
+const step = (held: unknown, part: string): unknown => {
+  if (isRecord(held)) return held[part];
+  if (Array.isArray(held) && isPosition(part)) return held[Number(part)];
+  return undefined;
+};
+
+/** The object a dotted path's last part is written in, when the path reaches one. */
+const parentAt = (config: Record<string, unknown>, parts: readonly string[]): Record<string, unknown> | undefined => {
+  let held: unknown = config;
+  for (const part of parts) held = step(held, part);
+  return isRecord(held) ? held : undefined;
+};
+
 /** One value, deep-copied, so a written record shares nothing with what a caller sent. */
 const clone = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map((one) => clone(one));
@@ -147,10 +206,7 @@ const clone = (value: unknown): unknown => {
 /** The value at one dotted path, or nothing when the path does not reach one. */
 const at = (config: Record<string, unknown>, path: string): unknown => {
   let held: unknown = config;
-  for (const part of path.split('.')) {
-    if (!isRecord(held)) return undefined;
-    held = held[part];
-  }
+  for (const part of path.split('.')) held = step(held, part);
   return held;
 };
 
@@ -159,13 +215,8 @@ const putAt = (config: Record<string, unknown>, path: string, value: unknown): v
   const parts = path.split('.');
   const last = parts.pop();
   if (last === undefined) return;
-  let held = config;
-  for (const part of parts) {
-    const next = held[part];
-    if (!isRecord(next)) return;
-    held = next;
-  }
-  held[last] = value;
+  const held = parentAt(config, parts);
+  if (held !== undefined) held[last] = value;
 };
 
 /** Take one dotted path out, leaving the config alone when its parent is not an object. */
@@ -173,13 +224,32 @@ const removeAt = (config: Record<string, unknown>, path: string): void => {
   const parts = path.split('.');
   const last = parts.pop();
   if (last === undefined) return;
-  let held = config;
-  for (const part of parts) {
-    const next = held[part];
-    if (!isRecord(next)) return;
-    held = next;
-  }
-  delete held[last];
+  const held = parentAt(config, parts);
+  if (held !== undefined) delete held[last];
+};
+
+/**
+ * Whether the entry a list secret sits in is the entry it was kept for.
+ *
+ * A list secret is named by its position, so an entry that moves takes its
+ * position's secret, not its own. An empty field keeps a secret only where
+ * every other field of its entry is as it was. Elsewhere the person sends the
+ * value again, and a key never follows a position to another endpoint.
+ */
+const sameEntry = (config: Record<string, unknown>, held: Record<string, unknown>, path: string): boolean => {
+  const parts = path.split('.');
+  if (!parts.some(isPosition)) return true;
+  const now = parentAt(config, parts.slice(0, -1));
+  const was = parentAt(held, parts.slice(0, -1));
+  if (now === undefined || was === undefined) return false;
+  // A secret and an empty field read alike on both sides: the rest is compared.
+  const plain = (value: unknown): unknown => {
+    if (value === '' || secretRef(value) !== undefined) return HELD;
+    if (Array.isArray(value)) return value.map(plain);
+    if (!isRecord(value)) return value;
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, plain(value[key])]));
+  };
+  return JSON.stringify(plain(now)) === JSON.stringify(plain(was));
 };
 
 /** The read of a field, by whether the rules allow a secret under an object. */
@@ -391,7 +461,18 @@ export const moveSecrets = async (options: MoveSecretsOptions): Promise<Record<s
       if (mine) await forget(vault, was, id, problem);
       continue;
     }
-    if (secretRef(value) !== undefined) {
+    const named = secretRef(value);
+    if (named !== undefined) {
+      /*
+       * A host's agent may name a host secret, as it may name a variable of the
+       * daemon: both are the host's own. Anyone else could name a secret that
+       * is not theirs, so they send the value.
+       */
+      if (rules.nested && owner === 'host' && named.startsWith('host:')) {
+        if (mine) await forget(vault, was, id, problem);
+        putAt(out, field, { $secret: named });
+        continue;
+      }
       throw new RpcError(INVALID_PARAMS, `${rules.words.possessive} ${field} is a secret: send its value, not a reference to it`);
     }
     const variable = fromEnvRef(value);
@@ -410,6 +491,9 @@ export const moveSecrets = async (options: MoveSecretsOptions): Promise<Record<s
     }
     if (value === '') {
       if (!mine) { if (rules.nested) removeAt(out, field); else delete out[field]; continue; }
+      if (rules.nested && !sameEntry(config, held, field)) {
+        throw new RpcError(INVALID_PARAMS, `${rules.words.possessive} ${field} sits in an entry that changed: send its value again`);
+      }
       if (rules.nested) putAt(out, field, { $secret: was }); else out[field] = { $secret: was };
       continue;
     }

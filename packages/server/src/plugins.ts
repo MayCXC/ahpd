@@ -29,7 +29,7 @@ import { basename, dirname, extname, isAbsolute, join, resolve, sep } from 'node
 import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
-import { checkIcons, foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
+import { checkIcons, foldHostOptions, frozenCopy, gapLine, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, schemaGaps, sdkVersion, secretRef } from '@ahpd/sdk';
 import type { Agent, AgentOwner, Alert, InstallAnswer, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginHost, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { fetchIcons, resolveIcons } from './icons.js';
 import { satisfies } from './compat.js';
@@ -1973,6 +1973,16 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
      * the loader or the plugin went without.
      */
     const refused = one.loaded === undefined || one.contribution === undefined;
+    /*
+     * The manifest's options form is one a client draws, and a hole in it is
+     * named like any other: one problem line for each gap, and the plugin
+     * still loads. Checked here rather than where the schema is kept, so the
+     * line reaches the row with the rest of this load's problems.
+     */
+    const optionsSchema = one.loaded?.manifest?.optionsSchema;
+    if (optionsSchema !== undefined) {
+      for (const gap of schemaGaps(optionsSchema)) one.problems.push(gapLine(id, 'options', gap));
+    }
     for (const [at, line] of one.problems.entries()) {
       if (raised.includes(line)) continue;
       addAlert(id, { level: refused && at === one.problems.length - 1 ? 'error' : 'warning', text: line });

@@ -68,7 +68,7 @@ import { loadPlugins, pluginSet, type LoadOptions } from '../plugins.js';
 import { applyPlugins, type Applied } from '../applyplugins.js';
 import { pluginsChannel } from '../pluginschannel.js';
 import { fileRecords } from '../records.js';
-import { applyPresets, planPresets } from '../agents/migrate.js';
+import { applyPresets, planPresets, splitModels } from '../agents/migrate.js';
 import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
 import { pty } from '../pty.js';
@@ -1447,6 +1447,12 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     vault: held,
     log: stamp,
   });
+  /*
+   * A Claude record written before `models` held one shape is split into
+   * `models` and `modelSources` before it is opened below. A record already in
+   * the two-list shape is not written, so this is the once the shape changed.
+   */
+  await splitModels({ records: agentRecords, vault: held, log: stamp });
   /*
    * The stored records opened, and folded into the load, before the host is
    * built.

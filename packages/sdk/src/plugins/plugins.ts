@@ -31,7 +31,8 @@ import { isRecordPath, isRecordSlug, RECORD_PATH, RECORD_SLUG } from '../resourc
 import type { Pair } from '../utils/pair.js';
 import { reason } from '../utils/values.js';
 import { readSecret } from '../access/vault.js';
-import { checkAdapter, checkAgent, checkEngine, checkChannel, checkChatRequest, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName } from './validate.js';
+import { checkAdapter, checkAgent, checkEngine, checkChannel, checkChatRequest, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName, type CheckedSchema } from './validate.js';
+import { gapLine, schemaGaps } from './schemagaps.js';
 
 /**
  * One contributed backend, as the host keeps it: the plugin's own agent with a
@@ -1058,6 +1059,19 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     }
   };
 
+  /**
+   * Each schema gap a registration found, as the problem line it is.
+   *
+   * A problem and never a refusal: a plugin whose form has a hole still loads,
+   * and names the path a client could not draw so its author can fill it in.
+   * The line reaches the same alert sink a plugin's own `problem` does.
+   */
+  const reportGaps = (checked: CheckedSchema[]): void => {
+    for (const one of checked) {
+      for (const gap of one.gaps) options.alert?.({ level: 'warning', text: gapLine(by, one.where, gap) });
+    }
+  };
+
   const setPort = <K extends PortKey>(key: K, method: string, value: PortOf<K>, when?: 'replace'): void => {
     open();
     declared(by, options.contracts, 'ports', key);
@@ -1323,13 +1337,14 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     },
     registerAgent(agent) {
       open();
-      checkAgent(agent, by);
+      const checked = checkAgent(agent, by);
       declared(by, options.contracts, 'agents', agent.provider);
       const reserved = reservedName(agent.provider);
       if (reserved !== undefined) throw new Error(miss(by, 'registerAgent', agent.provider, `a name the host has not reserved; ${reserved}`));
       if (providers.has(agent.provider)) {
         throw new Error(miss(by, 'registerAgent', agent.provider, 'a provider no other agent in this plugin uses'));
       }
+      reportGaps(checked);
       providers.add(agent.provider);
       contribution.agents.push(agent);
     },
@@ -1359,6 +1374,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
         throw new Error(miss(by, 'registerSessionConfig', named, 'a key no other setting in this plugin uses'));
       }
       sessionKeys.add(named);
+      reportGaps([{ where: `session config ${named}`, gaps: schemaGaps(schema) }]);
       contribution.sessionConfig[named] = schema as Record<string, unknown>;
       if (completions !== undefined) contribution.sessionCompletions[named] = completions;
     },
@@ -1555,7 +1571,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     },
     registerTriggerType(definition) {
       open();
-      checkTriggerType(definition, by);
+      const checked = checkTriggerType(definition, by);
       const named = definition.type;
       declared(by, options.contracts, 'triggerTypes', named);
       /*
@@ -1571,6 +1587,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       if (contribution.triggers.types[named] !== undefined) {
         throw new Error(miss(by, 'registerTriggerType', named, 'a type name no other type in this plugin uses'));
       }
+      reportGaps(checked);
       contribution.triggers.types[named] = definition;
     },
     fireTrigger(type, event, data, owner) {
@@ -1619,21 +1636,23 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     },
     registerAdapter(adapter) {
       open();
-      const named = checkAdapter(adapter, by);
+      const { name: named, checked } = checkAdapter(adapter, by);
       declared(by, options.contracts, 'adapters', named);
       if (contribution.adapters[named] !== undefined) {
         throw new Error(miss(by, 'registerAdapter', named, 'a name no other adapter in this plugin uses'));
       }
+      reportGaps(checked);
       contribution.adapters[named] = { ...adapter, by };
     },
     registerEngine(engine) {
       open();
-      const named = checkEngine(engine, by);
+      const { name: named, checked } = checkEngine(engine, by);
       declared(by, options.contracts, 'engines', named);
       const held = contribution.engines ??= {};
       if (held[named] !== undefined) {
         throw new Error(miss(by, 'registerEngine', named, 'a name no other engine in this plugin uses'));
       }
+      reportGaps(checked);
       held[named] = { ...engine, by };
     },
     on(event, handle) {
