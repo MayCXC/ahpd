@@ -44,6 +44,8 @@ In the configuration file, with the plugin's own options as the defaults every r
 
 With no model named anywhere, the providers, keys and model come from cofold's own configuration file, `$COFOLD_CONFIG` or `$XDG_CONFIG_HOME/cofold/config.json` or `~/.config/cofold/config.json`. Inside a machine the first of those is what finds it.
 
+Every provider in the cofold file is asked for its models, each with its own key. Each id is offered as `<provider id>/<model id>`, such as `open_router/moonshotai/kimi-k3.1-pro`. The backend's own id is the prefix only for an explicit `baseUrl` or for the local endpoint when the file names no provider.
+
 Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. An agent of the engine is a record on the agents channel: it sets any of these except `strictTools` and the keyed search providers, and wins over the plugin for the ones it sets. A record's id, name and description are the record's own, so this plugin has no option for them. There are two more options, `adapter` and `policy`, that only an embedder calling `apply` in code passes: a model adapter is an object of methods and a policy is a function, so neither is in the options schema and a configuration file cannot name them.
 
 | Option | Default | What it does |
