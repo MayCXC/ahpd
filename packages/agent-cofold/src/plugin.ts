@@ -50,10 +50,9 @@ export const title = 'Agent Cofold';
  * so a listing reads it without importing this module and a plugin switched off
  * still has a form a client draws. These are the defaults for every record of
  * the engine: a record that names one of them wins, and a record that names
- * none runs on what is here. `apiKey`, `adapter` and `policy` are also what an
- * embedder calling `apply` passes: a key function and a model adapter are
- * things JSON cannot carry, so the schema describes the configuration file's
- * spelling of them.
+ * none runs on what is here. `adapter` and `policy` are not here at all: a
+ * model adapter is an object of methods and a policy is a function, which JSON
+ * cannot carry, so only an embedder calling `apply` passes them, in code.
  *
  * `provider`, `displayName` and `description` are deliberately not there: an
  * agent is named by its record's id, name and description, and a plugin that
@@ -156,7 +155,6 @@ const RECORD_FIELDS = [
   'apiKey',
   'resource',
   'autoCompactTokens',
-  'policy',
 ] as const;
 
 /** A non-blank string, or nothing for a blank or missing one. */

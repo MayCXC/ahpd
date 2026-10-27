@@ -57,8 +57,9 @@ An agent is a record on `x-ahpd-agents`: `{ id, engine, owner, name, description
 
 | Field | Default | What it does |
 | --- | --- | --- |
-| `models` | the CLI's own list | The models that agent offers in the picker |
-| `keepCliModels` | `false` | With `models`, add them to the CLI's list rather than replace it |
+| `models` | the CLI's own list | The models that agent offers in the picker, each an `{ "id", "name" }` |
+| `modelSources` | none | Endpoints whose model lists that agent also offers, each `{ "fetch", "match", "key" }` |
+| `keepCliModels` | `false` | With either list, add them to the CLI's list rather than replace it |
 | `sandbox` | `default` | The CLI's own sandbox for shell commands: `default` leaves it to the settings files, `on` and `off` set it |
 | `thinking` | `adaptive` | Extended thinking: `adaptive` lets the agent decide when to think, `disabled` is none |
 | `outputStyle` | none | The name of a style from the CLI's own settings |
@@ -69,7 +70,7 @@ An agent is a record on `x-ahpd-agents`: `{ id, engine, owner, name, description
 
 `extraArgs` is host-only: a team's or a person's record that sets one is refused, because an argument is where a command would come from. `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` in `env` are the engine's key variables, so any owner may set them; every other `env` variable is the host's alone, because a free environment can run a program.
 
-A `models` entry is a model id, `{ "id", "name" }`, or `{ "fetch": "<url>", "match": "<pattern>", "key": "..." }`, which reads an OpenAI-shaped model list and keeps the ids the pattern covers, where `*` is any run of characters. `key` is the bearer token sent with the fetch: the token's text, which is what a record's `{ "fromEnv": "NAME" }` or `{ "$secret": "<name>" }` resolves to when the channel opens it, or `{ "fromEnv": "NAME" }` itself in a preset. A fetch that fails is logged, with no key in the line, and offers nothing.
+A `models` entry is `{ "id": "<model>", "name": "<label>" }`, and `name` may be left out, in which case the picker shows the id. A `modelSources` entry is `{ "fetch": "<url>", "match": "<pattern>", "key": "..." }`, which reads an OpenAI-shaped model list and keeps the ids the pattern covers, where `*` is any run of characters. The written models come first and each source's after them, each id once. `key` is the bearer token sent with the fetch. A key written as text moves to the vault when the record is saved, and a client sees `<set>` in its place. Send it empty to keep it; an entry that changed needs its key again. A host record or a preset may set `key` to `{ "fromEnv": "NAME" }` instead. A fetch that fails is logged, with no key in the line, and offers nothing. A record written before the two lists held one shape is split into them at the next start.
 
 A record's `env` value is a string, `null` to unset the variable, `{ "fromEnv": "NAME" }` for the daemon's own `NAME`, or `{ "$secret": "host:<name>" }` for a credential kept in the vault. A `fromEnv` variable that is not there when the record opens is left unset.
 
@@ -146,7 +147,7 @@ A record with its own name, its own models and an `env` that points the CLI else
   "owner": "host",
   "name": "Claude OpenRouter",
   "config": {
-    "models": [
+    "modelSources": [
       { "fetch": "https://openrouter.ai/api/v1/models", "match": "anthropic/*" }
     ],
     "env": {

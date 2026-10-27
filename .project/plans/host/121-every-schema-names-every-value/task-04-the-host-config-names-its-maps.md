@@ -1,6 +1,6 @@
 ---
 title: The host config names its maps
-status: todo
+status: implemented
 depends:
   - task-01-every-schema-entry-point-checks.md
 layer: server
@@ -43,9 +43,9 @@ The fix stays in ahpd: cofold 0.3.0 accepts the schema, and the host checks each
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Files:** none yet.
+- **Done so far:** `MapSchema` and `asJsonSchema` in `packages/server/src/commands/options.ts` widen cofold's `JsonSchema` with a schema in `additionalProperties`. `shellEnv` names one variable as text or null. `mcpServers` names one server with `mcpServerSchema`. `modelProxy.models` and the proxy's own `models` name one value as a list of `modelEntrySchema`. The host still checks each value itself. `shellEnvProblems` and `proxyProblems` check `shellEnv` and the model lists. `mcpServers` still checks one entry at a time, and names a bad one without stopping the start. `packages/server/test/config-maps.test.ts` covers the maps, cofold 0.3.0's copy of a map value, and each host check.
+- **Next action:** Softov reads the report.
+- **Files:** `packages/server/src/commands/options.ts`, `packages/server/src/proxy/providers.ts`, `packages/server/test/config-maps.test.ts` (new).
 - **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** a map schema on `mcpServers` must not make `check` refuse the whole config for one entry.
+- **Departures:** a plugin entry's `options` in the daemon config also had no value schema, which the plan did not list. It is now `additionalProperties: {}`, because a plugin names its own options.
+- **Watch out for:** a map schema on `mcpServers` must not make `check` refuse the whole config for one entry. The case with a bad entry asserts that `check` accepts the config, and that the host names and drops the entry.

@@ -24,6 +24,11 @@
  * The built-in claude a file with no presets still describes is written once: a
  * marker beside the file says so, so a record a person removed stays removed.
  *
+ * A Claude record may hold a `models` list written before the field held one
+ * shape: a string, a model and a fetch in one list. `splitModels` rewrites one
+ * into `models` and `modelSources` at the same start, and leaves a record
+ * already in the two-list shape untouched.
+ *
  * The configuration file is the person's own, so it is copied beside itself
  * before it is rewritten, and the new text is written to a temporary name and
  * renamed over the old one. Nothing here logs a value: a record may hold a key,
@@ -32,7 +37,7 @@
 
 import { copyFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { bag, isRecord, isRecordSlug, knownAgents, reason, RECORD_SLUG } from '@ahpd/sdk';
+import { bag, isRecord, isRecordSlug, knownAgents, reason, RECORD_SLUG, writeOnlyPaths } from '@ahpd/sdk';
 import type { PluginSpec, RecordCollection, ServedEngine, StoredRecord, Vault } from '@ahpd/sdk';
 import { sourceOf } from '../plugins.js';
 import { readEntry, writeEntry } from '../install.js';
@@ -465,15 +470,15 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
 };
 
 /**
- * The fields an engine keeps secret: its `writeOnly` fields and its `keyVariables`.
+ * The fields an engine keeps secret in one config: its `writeOnly` values at
+ * any depth and its `keyVariables`.
  *
  * The same set the agents channel moves on a put, so a record this writes keeps
- * no value a listing would serve.
+ * no value a listing would serve. A key inside a list entry is moved by
+ * `splitModels`, which runs after this; the paths here reach objects only.
  */
-const secretFieldsOf = (engine: ServedEngine): string[] => {
-  const fields = new Set(Object.entries(bag(engine.schema['properties']))
-    .filter(([, one]) => isRecord(one) && one['writeOnly'] === true)
-    .map(([field]) => field));
+const secretFieldsOf = (engine: ServedEngine, config: Record<string, unknown>): string[] => {
+  const fields = new Set(writeOnlyPaths(engine.schema, config));
   for (const variable of engine.keyVariables ?? []) fields.add(`env.${variable}`);
   return [...fields];
 };
@@ -519,7 +524,7 @@ const withSecretsMoved = async (
   vault: Vault | undefined,
 ): Promise<Record<string, unknown>> => {
   const out = copied(config);
-  for (const field of secretFieldsOf(engine)) {
+  for (const field of secretFieldsOf(engine, config)) {
     const path = field.split('.');
     const value = readAt(out, path);
     // An absent field, an empty one and every value that is not a string is
@@ -532,6 +537,145 @@ const withSecretsMoved = async (
     putAt(out, path, { $secret: name });
   }
   return out;
+};
+
+/** What one record's split came to: a new config, a reason it was left whole, or nothing to do. */
+type Split = { config: Record<string, unknown> } | { left: string } | undefined;
+
+/**
+ * One record's config with a mixed `models` list split in two.
+ *
+ * The old list held a model id, `{ id, name }` or `{ fetch, match, key }`, so a
+ * client could not draw one row for it. A string becomes `{ id }`, a model
+ * entry is kept as written, and a fetch entry moves to `modelSources`; every
+ * other field of the config is kept. Nothing is returned for a config already
+ * in the two-list shape. A config holding an entry this rewrite does not know,
+ * or a `modelSources` that is not a list, is left whole with the reason, so a
+ * record is only ever written when it changed and nothing is dropped.
+ */
+const splitOf = (config: Record<string, unknown>): Split => {
+  const models = config['models'];
+  if (!Array.isArray(models)) return undefined;
+  const kept: unknown[] = [];
+  const moved: unknown[] = [];
+  let changed = false;
+  for (const [position, entry] of models.entries()) {
+    if (typeof entry === 'string') {
+      kept.push({ id: entry });
+      changed = true;
+      continue;
+    }
+    if (isRecord(entry) && typeof entry['fetch'] === 'string') {
+      moved.push(entry);
+      changed = true;
+      continue;
+    }
+    if (!isRecord(entry) || typeof entry['id'] !== 'string') {
+      return { left: `models entry ${String(position)} is neither a model id, a model nor a fetch` };
+    }
+    kept.push(entry);
+  }
+  if (!changed) return undefined;
+  const split = { ...config, models: kept };
+  if (moved.length === 0) return { config: split };
+  const sources = config['modelSources'] ?? [];
+  if (!Array.isArray(sources)) return { left: 'modelSources is not a list' };
+  return { config: { ...split, modelSources: [...sources, ...moved] } };
+};
+
+/**
+ * One config with each model source key written in plain text moved to the vault.
+ *
+ * The name is the one a put of the agents channel gives the same key, in the
+ * record's owner's scope, so the next put of the record finds it its own.
+ * Nothing is returned when no key needed moving.
+ */
+const withSourceKeysMoved = async (
+  config: Record<string, unknown>,
+  id: string,
+  owner: string,
+  vault: Vault,
+): Promise<Record<string, unknown> | undefined> => {
+  const sources = config['modelSources'];
+  if (!Array.isArray(sources)) return undefined;
+  let changed = false;
+  const out: unknown[] = [];
+  for (const [position, source] of sources.entries()) {
+    const key = isRecord(source) ? source['key'] : undefined;
+    if (!isRecord(source) || typeof key !== 'string' || key === '') { out.push(source); continue; }
+    const field = `agent/${id}/modelSources.${String(position)}.key`;
+    const name = owner === 'host' ? `host:${field}` : `${owner}/${field}`;
+    await vault.set(name, key);
+    out.push({ ...source, key: { $secret: name } });
+    changed = true;
+  }
+  return changed ? { ...config, modelSources: out } : undefined;
+};
+
+/** What `splitModels` is given. */
+export interface SplitOptions {
+  /** The `agents` collection, where a record is rewritten. */
+  records: RecordCollection;
+  /** The vault a model source key written in plain text is moved to. */
+  vault?: Vault;
+  /** One line per rewrite, naming record ids and no value. */
+  log(message: string): void;
+}
+
+/** Whether a record's owner is one a secret name can be made in. */
+const ownerOf = (value: unknown): string | undefined => {
+  if (value === 'host') return 'host';
+  if (typeof value === 'string' && /^(team|user):[^/]+$/u.test(value)) return value;
+  return undefined;
+};
+
+/**
+ * Rewrite each Claude record's mixed `models` list into `models` and
+ * `modelSources`, and move each model source key written in plain text to the
+ * vault, once at start.
+ *
+ * A record already in the two-list shape with no plain key is not written, so a
+ * second start writes nothing. A record this cannot split is left as it is and
+ * said with its reason, the same as a record that could not be written: nothing
+ * here refuses a start, and no value of a record - a key among them - is read
+ * into a line.
+ */
+export const splitModels = async (options: SplitOptions): Promise<string[]> => {
+  let records: StoredRecord[];
+  try {
+    records = await options.records.list();
+  }
+  catch (error) {
+    options.log(`The Claude models were not split: the agent records could not be read: ${reason(error)}`);
+    return [];
+  }
+  const written: string[] = [];
+  for (const record of records) {
+    if (record.engine !== 'claude') continue;
+    const split = splitOf(bag(record.config));
+    if (split !== undefined && 'left' in split) {
+      options.log(`The models of ${record.id} were not split: ${split.left}.`);
+      continue;
+    }
+    let config = split?.config;
+    const owner = ownerOf(record.owner);
+    try {
+      if (options.vault !== undefined && owner !== undefined) {
+        config = await withSourceKeysMoved(config ?? bag(record.config), record.id, owner, options.vault) ?? config;
+      }
+      if (config === undefined) continue;
+      await options.records.put({ ...record, config });
+    }
+    catch (error) {
+      options.log(`The models of ${record.id} were not split: ${reason(error)}`);
+      continue;
+    }
+    written.push(record.id);
+  }
+  if (written.length > 0) {
+    options.log(`Split ${written.length === 1 ? 'one agent' : `${String(written.length)} agents`} into models and modelSources: ${written.join(', ')}.`);
+  }
+  return written;
 };
 
 /** What `applyPresets` is given. */

@@ -151,6 +151,30 @@ export const outputStyle: Declaration = {
   toFlags: (value) => typeof value === 'string' && value !== '' ? { outputStyle: value } : {},
 };
 
+/** One name and value a `$secret` or a `fromEnv` reference is written as. */
+const REFERENCE = (keyword: '$secret' | 'fromEnv'): Bag => ({
+  type: 'object',
+  properties: { [keyword]: { type: 'string' } },
+  required: [keyword],
+  additionalProperties: false,
+});
+
+/**
+ * One value of `env`: text, an unset, or a reference to where the text comes
+ * from.
+ *
+ * A client draws one control per branch, so the four shapes are written out
+ * rather than left to a bare object.
+ */
+const ENV_VALUE: Bag = {
+  oneOf: [
+    { type: 'string' },
+    { type: 'null' },
+    REFERENCE('fromEnv'),
+    REFERENCE('$secret'),
+  ],
+};
+
 /**
  * Variables for the CLI's own process.
  *
@@ -169,6 +193,7 @@ export const outputStyle: Declaration = {
 export const env: Declaration = {
   schema: {
     type: 'object',
+    additionalProperties: ENV_VALUE,
     fromEnv: true,
     secretAtUse: true,
     description: "Variables for the CLI's process, over the daemon's own environment. null unsets one; { fromEnv: NAME } reads the daemon's NAME; { \"$secret\": \"host:NAME\" } reads the vault.",
@@ -195,7 +220,11 @@ export const env: Declaration = {
  * should not have to escape it themselves.
  */
 export const extraArgs: Declaration = {
-  schema: { type: 'object', description: 'Extra CLI arguments, by name and value. null for a flag that takes none, and anything else as its JSON text.' },
+  schema: {
+    type: 'object',
+    additionalProperties: {},
+    description: 'Extra CLI arguments, by name and value. null for a flag that takes none, and anything else as its JSON text.',
+  },
   toQuery: (value) => {
     const held = argValuesOf(value);
     return Object.keys(held).length > 0 ? { extraArgs: held } : {};
@@ -205,15 +234,51 @@ export const extraArgs: Declaration = {
 /** Every declared option, by the name a record gives it. */
 export const DECLARED: Record<string, Declaration> = { sandbox, thinking, hostTasks, enableTasks, outputStyle, env, extraArgs };
 
+/** One model a record writes out: an id, and the name the picker draws. */
+const MODEL: Bag = {
+  type: 'object',
+  properties: { id: { type: 'string' }, name: { type: 'string' } },
+  required: ['id'],
+};
+
+/**
+ * One endpoint a record fetches its model list from.
+ *
+ * `key` is a credential, so a form does not draw its value back: a client puts
+ * a `$secret` or a `fromEnv`, and the record keeps the reference.
+ */
+const MODEL_SOURCE: Bag = {
+  type: 'object',
+  properties: {
+    fetch: { type: 'string' },
+    match: { type: 'string' },
+    key: {
+      writeOnly: true,
+      secretAtUse: true,
+      oneOf: [REFERENCE('fromEnv'), { type: 'string' }],
+    },
+  },
+  required: ['fetch'],
+};
+
 /**
  * What a record holds beside the declared options.
  *
- * These two are what make a record an agent rather than a set of values: which
+ * These are what make a record an agent rather than a set of values: which
  * models the picker offers is this backend's question and not the channel's,
  * which is why a record's `config` may name them.
  */
 const OF_A_VARIANT: Record<string, Bag> = {
-  models: { type: 'array', description: 'The models this record offers.' },
+  models: {
+    type: 'array',
+    items: MODEL,
+    description: 'The models this record offers, by id and name.',
+  },
+  modelSources: {
+    type: 'array',
+    items: MODEL_SOURCE,
+    description: "Endpoints whose model lists this record offers, each filtered by match. key is the bearer token, written as { fromEnv } or { \"$secret\" }.",
+  },
   keepCliModels: { type: 'boolean', description: 'With models, add them to the CLI model list rather than replace it.' },
 };
 
@@ -224,15 +289,14 @@ const OF_A_VARIANT: Record<string, Bag> = {
  * and `model`: the agents channel owns those four on every agent, so a
  * record's `config` holds
  * what this backend runs and nothing a second kind could spell differently.
- * `models` and `keepCliModels` stay, because which models a record offers is
- * this backend's question and not the channel's.
+ * `models`, `modelSources` and `keepCliModels` stay, because which models a
+ * record offers is this backend's question and not the channel's.
  */
 export const kindSchema = (): Bag => ({
   type: 'object',
   properties: {
     ...Object.fromEntries(Object.entries(DECLARED).map(([name, one]) => [name, one.schema])),
-    models: OF_A_VARIANT['models'],
-    keepCliModels: OF_A_VARIANT['keepCliModels'],
+    ...OF_A_VARIANT,
   },
 });
 

@@ -38,6 +38,52 @@ export const title = 'Agent ACP';
 /** One option's value in a record's `env`: a variable, or the name of a secret it is. */
 const envValue = { type: 'string', writeOnly: true, secretAtUse: true };
 
+/** One name a `$secret` or a `fromEnv` reference is written as. */
+const referenceOf = (keyword: '$secret' | 'fromEnv'): Record<string, unknown> => ({
+  type: 'object',
+  properties: { [keyword]: { type: 'string' } },
+  required: [keyword],
+  additionalProperties: false,
+});
+
+/**
+ * One value of `machine.env`: text, or a reference to where the text comes from.
+ *
+ * Every value is a credential wherever the server keeps one, so it is marked
+ * `writeOnly`: a client draws it and never reads it back.
+ */
+const MACHINE_ENV_VALUE = {
+  writeOnly: true,
+  secretAtUse: true,
+  oneOf: [
+    { type: 'string' },
+    referenceOf('fromEnv'),
+    referenceOf('$secret'),
+  ],
+};
+
+/** One host path copied into a machine, and where it lands. */
+const COPIED = {
+  type: 'object',
+  properties: {
+    source: { type: 'string', description: 'The host path copied in.' },
+    target: { type: 'string', description: 'The absolute path inside the machine it lands at.' },
+  },
+  required: ['source', 'target'],
+};
+
+/** One host file a machine's state directory is seeded from. */
+const SEEDED = {
+  type: 'object',
+  properties: {
+    source: { type: 'string', description: 'The host path seeded from.' },
+    target: { type: 'string', description: 'Where it lands in the state directory.' },
+    keep: { type: 'array', items: { type: 'string' }, description: 'The top-level keys kept, for a JSON file.' },
+    drop: { type: 'array', items: { type: 'string' }, description: 'The dotted paths removed, for a JSON file.' },
+  },
+  required: ['source'],
+};
+
 /**
  * One record's fields: one ACP server as this host runs it.
  *
@@ -76,17 +122,19 @@ const RECORD_FIELDS: Record<string, Record<string, unknown>> = {
     enum: ['notify', 'list'],
     description: "How this agent hears that the tools it listed have moved: notify holds a stream open and sends notifications/tools/list_changed down it, list says nothing and leaves it to the agent's next tools/list. Both serve the current list; defaults to notify.",
   },
-  // Typed by `machineOf` rather than here, so a wrongly written block costs
-  // its record and not this load. A variable's value is read where the machine
-  // is made, so a `$secret` reaches this plugin as the name it wrote.
+  // Read by `machineOf` as well as described here, so a wrongly written block
+  // is refused with a line naming the field and never a value. A variable's
+  // value is read where the machine is made, so a `$secret` reaches this
+  // plugin as the name it wrote.
   machine: {
+    type: 'object',
     description: 'What a machine needs to run this agent: env, variables set only inside the machine, each a string, { fromEnv: NAME } read from the daemon\'s NAME when the record opens, or { "$secret": "<scope>:<name>" } read when the machine is made; copy, a list of { source, target } host paths copied in; part, the id of the part its CLI comes from; state, the absolute directory it keeps its configuration in; and seed, the host files that directory is seeded from.',
     properties: {
-      env: { additionalProperties: { writeOnly: true, secretAtUse: true }, description: 'Variables set inside the machine, by name.' },
-      copy: { description: 'Host paths copied into the machine, each { source, target }.' },
-      part: { description: "The part the agent's CLI comes from, a string naming its id in the host's versions file." },
-      state: { description: 'The absolute directory inside the machine the agent keeps its configuration in, as a state volume.' },
-      seed: { description: 'The host files the state directory is seeded from, each { source, target, keep, drop }: source the host path, target where it lands in the directory, and for a JSON file keep the top-level keys kept and drop the dotted paths removed.' },
+      env: { type: 'object', additionalProperties: MACHINE_ENV_VALUE, description: 'Variables set inside the machine, by name.' },
+      copy: { type: 'array', items: COPIED, description: 'Host paths copied into the machine, each { source, target }.' },
+      part: { type: 'string', description: "The part the agent's CLI comes from, a string naming its id in the host's versions file." },
+      state: { type: 'string', description: 'The absolute directory inside the machine the agent keeps its configuration in, as a state volume.' },
+      seed: { type: 'array', items: SEEDED, description: 'The host files the state directory is seeded from, each { source, target, keep, drop }: source the host path, target where it lands in the directory, and for a JSON file keep the top-level keys kept and drop the dotted paths removed.' },
     },
   },
 };

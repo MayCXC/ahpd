@@ -250,7 +250,7 @@ Reference: [00-host.md](host/00-host.md)
 | [118 - A connector action runs as a tool](host/118-a-connector-action-runs-as-a-tool/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #73 | plugin 53 | plugin 50 |
 | [119 - A row counts the work while a turn runs](host/119-a-row-counts-the-work-while-a-turn-runs/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #74 | - | - |
 | [120 - A bot session starts with its actions](host/120-a-bot-session-starts-with-its-actions/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #78 | host 118 | - |
-| [121 - Every schema a client draws names every value](host/121-every-schema-names-every-value/plan.md) | high | planned 2026-10-26 | - | scena draws `additionalProperties` |
+| [121 - Every schema a client draws names every value](host/121-every-schema-names-every-value/plan.md) | high | active 2026-10-27; tasks 01 to 05 implemented | - | scena draws `additionalProperties` |
 | [122 - Agents are records on their own channel](host/122-agents-are-records-on-their-own-channel/plan.md) | high | active 2026-10-24; merged in #89, waits on the check by hand | - | - |
 | [123 - Agent kinds on their own channel](host/123-agent-kinds-on-their-own-channel/plan.md) | high | active 2026-10-25; tasks 02 and 03 implemented, wait on Softov | host 122 | ahpw plugins 08 |
 

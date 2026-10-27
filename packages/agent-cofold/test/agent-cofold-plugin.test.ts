@@ -125,6 +125,15 @@ const engineOf = (options: HostOptions): Engine => {
 };
 
 /**
+ * The line the loader writes for an embedder's `adapter`.
+ *
+ * `adapter` is an object of methods, which JSON cannot carry, so it is not in
+ * the manifest's options schema: the loader names it as an option it does not
+ * know and passes it through, and that one line is not a refusal.
+ */
+const PASSED_ADAPTER = 'plugin agent-cofold: plugins.agent-cofold.options.adapter is not an option agent-cofold knows; passed through';
+
+/**
  * One record, as an engine is handed it: every field read at each call.
  *
  * `config` is the reader the channel installs, so a case changes what a record
@@ -178,7 +187,7 @@ it('loads the package from its source file and serves a turn through the stub mo
     { name: SOURCE, options: { adapter: model, memory: true } },
   ]);
 
-  expect(problems).toEqual([]);
+  expect(problems).toEqual([PASSED_ADAPTER]);
   expect(loaded).toHaveLength(1);
   expect(loaded[0]?.name).toBe('agent-cofold');
   // The module exports no title, so this is the manifest's `ahpd.title`.
@@ -248,7 +257,7 @@ it('is loaded once, and refuses a second spec of the same name', async () => {
 
   // A plugin is loaded once: what makes two backends of this package is two
   // records of its engine, not two specs of it.
-  expect(problems).toEqual([`plugin agent-cofold is named 2 times, by ${SOURCE} and ${SOURCE}; write it once and use its options for variants`]);
+  expect(problems).toEqual([`plugin agent-cofold is named 2 times, by ${SOURCE} and ${SOURCE}; write it once and use its options for variants`, PASSED_ADAPTER]);
   expect(loaded).toHaveLength(1);
   expect(loaded.map((one) => one.name)).toEqual(['agent-cofold']);
 
@@ -270,7 +279,7 @@ it('refuses an autoCompactTokens the loader\'s options check rejects', async () 
   }
 
   const fine = await load([{ name: SOURCE, options: { adapter: model, memory: true, autoCompactTokens: 4000 } }]);
-  expect(fine.problems).toEqual([]);
+  expect(fine.problems).toEqual([PASSED_ADAPTER]);
   expect(fine.loaded).toHaveLength(1);
 });
 
@@ -286,18 +295,18 @@ it('refuses a tools option the harness schema does not know, unless strictTools 
 
   const strict = await load([{ name: SOURCE, options: { adapter: model, memory: true, tools: { filse: true } } }]);
   expect(strict.loaded).toEqual([]);
-  expect(strict.problems).toHaveLength(1);
-  expect(strict.problems[0]).toContain('tools.filse');
+  expect(strict.problems).toHaveLength(2);
+  expect(strict.problems[1]).toContain('tools.filse');
 
   const loose = await load([{
     name: SOURCE,
     options: { adapter: model, memory: true, strictTools: false, tools: { filse: true, shell: false } },
   }]);
-  expect(loose.problems).toEqual([]);
+  expect(loose.problems).toEqual([PASSED_ADAPTER]);
   expect(loose.loaded).toHaveLength(1);
 
   const fine = await load([{ name: SOURCE, options: { adapter: model, memory: true, tools: { shell: false } } }]);
-  expect(fine.problems).toEqual([]);
+  expect(fine.problems).toEqual([PASSED_ADAPTER]);
   expect(fine.loaded).toHaveLength(1);
 });
 

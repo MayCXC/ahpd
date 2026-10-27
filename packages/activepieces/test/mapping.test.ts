@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { adapterOf, inputOf, nameOf, schemaOf } from '../src/mapping.js';
 import { checkAdapter } from '../../sdk/src/plugins/validate.js';
+import { schemaGaps } from '../../sdk/src/plugins/schemagaps.js';
 import type { ActionDescription, AuthDescription, PieceDescription, PropDescription } from '../src/wire.js';
 
 /*
@@ -124,10 +125,10 @@ describe('a piece becomes an adapter', () => {
     expect(properties['long']).toMatchObject({ type: 'string' });
     expect(properties['count']).toMatchObject({ type: 'number' });
     expect(properties['loud']).toMatchObject({ type: 'boolean' });
-    expect(properties['list']).toMatchObject({ type: 'array' });
-    expect(properties['body']).toMatchObject({ type: 'object' });
-    expect(properties['raw']).toMatchObject({ type: 'object' });
-    expect(properties['chosen']).toMatchObject({ type: 'object' });
+    expect(properties['list']).toMatchObject({ type: 'array', items: { type: 'string' } });
+    expect(properties['body']).toMatchObject({ type: 'object', additionalProperties: {} });
+    expect(properties['raw']).toEqual({});
+    expect(properties['chosen']).toMatchObject({ type: 'object', additionalProperties: {} });
     expect(properties['format']).toMatchObject({ type: 'string', enum: ['plain', 'markdown'] });
     expect(properties['channel']).toMatchObject({ type: 'string', description: 'The channel to post in. Give the id.' });
     expect(properties['when']).toMatchObject({ type: 'string', format: 'date-time' });
@@ -136,6 +137,75 @@ describe('a piece becomes an adapter', () => {
       description: 'An https: URL, a data: URI or the name of a session attachment.',
     });
     expect(properties).not.toHaveProperty('note');
+  });
+
+  it('maps an ARRAY prop that names its item props to an array of objects', () => {
+    const input = inputOf({
+      emails: {
+        type: 'ARRAY',
+        displayName: 'Emails',
+        description: 'The emails to send at once.',
+        required: true,
+        props: {
+          from: { type: 'SHORT_TEXT', displayName: 'From', required: true },
+          subject: { type: 'SHORT_TEXT', displayName: 'Subject', required: true },
+          bcc: { type: 'SHORT_TEXT', displayName: 'Bcc', required: false },
+        },
+      },
+    });
+
+    expect(input?.['properties']).toEqual({
+      emails: {
+        type: 'array',
+        title: 'Emails',
+        description: 'The emails to send at once.',
+        items: {
+          type: 'object',
+          properties: {
+            from: { type: 'string', title: 'From' },
+            subject: { type: 'string', title: 'Subject' },
+            bcc: { type: 'string', title: 'Bcc' },
+          },
+          required: ['from', 'subject'],
+        },
+      },
+    });
+  });
+
+  it('leaves an action with no drawable prop without an input', () => {
+    const mapped = adapterOf(piece({
+      auth: { type: 'SECRET_TEXT', displayName: 'API Key' },
+      actions: [
+        action({ name: 'ping', displayName: 'Ping', props: {} }),
+        action({ name: 'help', displayName: 'Help', props: { note: { type: 'MARKDOWN', displayName: 'Note', required: false } } }),
+      ],
+    }));
+
+    expect(mapped.adapter?.capabilities[0]?.input).toBeUndefined();
+    expect(mapped.adapter?.capabilities[1]?.input).toBeUndefined();
+  });
+
+  it('names every value of an input that holds each prop type', () => {
+    const mapped = adapterOf(piece({
+      auth: { type: 'SECRET_TEXT', displayName: 'API Key' },
+      actions: [action({
+        props: {
+          text: { type: 'SHORT_TEXT', displayName: 'Text', required: true },
+          list: { type: 'ARRAY', displayName: 'List', required: false },
+          rows: {
+            type: 'ARRAY',
+            displayName: 'Rows',
+            required: false,
+            props: { id: { type: 'SHORT_TEXT', displayName: 'Id', required: true } },
+          },
+          body: { type: 'OBJECT', displayName: 'Body', required: false },
+          raw: { type: 'JSON', displayName: 'Raw', required: false },
+          chosen: { type: 'DYNAMIC', displayName: 'Chosen', required: false },
+        },
+      })],
+    }));
+
+    expect(schemaGaps(mapped.adapter?.capabilities[0]?.input)).toEqual([]);
   });
 
   it('offers an action that needs a file, with the file required', () => {
@@ -205,6 +275,6 @@ describe('a piece becomes an adapter', () => {
 
     expect(() => checkAdapter(simple.adapter, 'activepieces')).not.toThrow();
     expect(() => checkAdapter(slack.adapter, 'activepieces')).not.toThrow();
-    expect(checkAdapter(simple.adapter, 'activepieces')).toBe('ap-demo');
+    expect(checkAdapter(simple.adapter, 'activepieces').name).toBe('ap-demo');
   });
 });

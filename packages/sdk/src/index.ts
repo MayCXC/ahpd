@@ -112,6 +112,10 @@ export type { AdaptersChannel, AdaptersChannelOptions } from './connectors/adapt
 export { enginesChannel } from './agents/engines.js';
 export type { EnginesChannel, EnginesChannelOptions } from './agents/engines.js';
 export { checkIcons } from './plugins/validate.js';
+export type { CheckedSchema } from './plugins/validate.js';
+export { schemaGaps, gapLine } from './plugins/schemagaps.js';
+export { writeOnlyPaths } from './channels/owners.js';
+export type { SchemaGap } from './plugins/schemagaps.js';
 export type { Icon } from '@microsoft/agent-host-protocol';
 export { covers, mayRead, membership, namesOf, poolsFor, scopeFor } from './usage/scopes.js';
 export type { Membership, Scope, ScopeAnswer } from './usage/scopes.js';

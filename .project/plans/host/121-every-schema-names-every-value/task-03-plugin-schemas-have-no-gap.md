@@ -1,6 +1,6 @@
 ---
 title: The first-party plugin schemas have no gap
-status: todo
+status: implemented
 depends:
   - task-01-every-schema-entry-point-checks.md
 layer: "agent-acp, agent-cofold, computer, activepieces"
@@ -56,9 +56,9 @@ refs:
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Files:** none yet.
+- **Done so far:** `machine` in `agent-acp` is an object with typed fields. Its `env` values are a string, `{ fromEnv }` or `{ "$secret" }`. Its `copy` is an array of `{ source, target }`, and its `seed` is an array of `{ source, target, keep, drop }`. Its `part` and `state` are strings. `adapter` and `policy` left the cofold options schema in `packages/agent-cofold/package.json`. `policy` also left the engine's record fields. Both stay fields of `CofoldOptions` for an embedder. Each `profiles` field in `packages/computer/package.json` has the type its description names. The activepieces child sends the props of an ARRAY prop, and `PropDescription` carries them. `inputOf` maps an ARRAY prop with props to an array of objects, and one with no props to an array of strings. It maps an OBJECT or DYNAMIC prop to `additionalProperties: {}`, and a JSON prop to `{}`. The cofold README says `adapter` and `policy` are an embedder's.
+- **Next action:** Softov reads the report.
+- **Files:** `packages/agent-acp/src/plugin.ts`, `packages/agent-cofold/package.json`, `packages/agent-cofold/src/plugin.ts`, `packages/agent-cofold/README.md`, `packages/agent-cofold/test/agent-cofold-options.test.ts`, `packages/agent-cofold/test/agent-cofold-plugin.test.ts`, `packages/agent-cofold/test/engine.test.ts`, `packages/computer/package.json`, `packages/activepieces/src/wire.ts`, `packages/activepieces/src/child.ts`, `packages/activepieces/src/mapping.ts`, `packages/activepieces/test/mapping.test.ts`, `packages/server/test/plugin-load.test.ts`.
 - **Open questions:** none.
-- **Departures:** none.
+- **Departures:** an action that names no prop a client can draw now has no `input`. `{ type: 'object' }` with no properties is the hole this task removes, and a capability's `input` is optional. The plan's Gaps table counted the 226 fields of the 14 pieces, and the walk found 23 such actions. A JSON prop with no `title` maps to `{}`, not to an object with one key. `devcontainer.plugins` in the computer options also had no `items`, which the plan did not list. It is now a string or an object with the fields of a plugin entry. Some cofold tests pass an embedder's `adapter` through the loader. They now expect the loader's one `is not an option ... passed through` line. The options test asserts that `adapter` and `policy` pass through.
 - **Watch out for:** the cofold options schema is not closed, so an embedder's `adapter` still passes the check after the field leaves the schema.

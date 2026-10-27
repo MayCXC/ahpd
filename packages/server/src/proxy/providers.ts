@@ -13,6 +13,7 @@
 
 import { check, type JsonSchema } from '@cofold/commands';
 import { isRecord, MODEL_DIALECTS, type ModelDialect } from '@ahpd/sdk';
+import type { MapSchema } from '../commands/options.js';
 
 /** The APIs a provider can be called in, as the name the connector writes. */
 export const DIALECTS = MODEL_DIALECTS;
@@ -92,14 +93,18 @@ export const modelEntrySchema: JsonSchema = {
 /**
  * What `proxy` holds.
  *
- * The entries under `models` are not described here, because the JSON Schema
- * this family checks has no way of saying that an object is a map: every key
- * would have to be written out. `proxyProblems` checks them.
+ * `models` carries the schema of one model name's entries, which is what a
+ * client draws a row from. `check` copies a map value without holding it, so
+ * `proxyProblems` checks each entry itself and a bad one is named rather than
+ * refusing the whole file.
  */
 export const proxySchema: JsonSchema = {
   type: 'object',
   properties: {
-    models: { type: 'object' },
+    models: {
+      type: 'object',
+      additionalProperties: { type: 'array', items: modelEntrySchema },
+    } as MapSchema as JsonSchema,
     sessionCalls: { type: 'string', enum: SESSION_CALLS },
   },
 };

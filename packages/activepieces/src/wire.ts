@@ -36,6 +36,13 @@ export interface PropDescription {
   required: boolean;
   /** The values of a static dropdown, in the order the piece lists them. */
   options?: unknown[];
+  /**
+   * The props of one item, for an `ARRAY` prop the piece describes by them.
+   *
+   * The framework writes them as the array prop's `properties`. An array
+   * without them is a list of strings.
+   */
+  props?: Record<string, PropDescription>;
 }
 
 /** One auth a piece takes, as the child describes it. */

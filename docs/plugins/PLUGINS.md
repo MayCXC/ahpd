@@ -76,6 +76,25 @@ Options that fail the schema are reported and the plugin is skipped, like any ot
 
 A module does not export its schema. One that still exports `optionsSchema` is refused with `plugin agent-mine skipped: <url> exports an optionsSchema, which the daemon no longer reads; write it in ahpd.optionsSchema of package.json, or as optionsSchema in a plugin.json for a standalone plugin`. The old `ahpd.options` flags are gone for the same reason: a package that still writes them is refused with an error naming `ahpd.optionsSchema`, because the schema's `required` list already says which options the configuration must set.
 
+### Naming every value
+
+Every schema a client draws has to name the value under each field, because a client that is told only `{ "type": "object" }` draws "No parameters defined." and an edit there can destroy what was written. The daemon walks each schema a plugin gives it and reports a gap; it does not refuse the plugin for one.
+
+A gap is an object with neither `properties` nor an `additionalProperties` schema, an array with no `items`, or a field with none of `type`, `enum`, `const`, `oneOf` or `anyOf`. The walk reports it as one warning line naming the plugin, the place and the path, such as `agent-claude: engine claude env: object with no properties`, and the load continues. A bare `{}` is not a gap: it is the schema that names every JSON value, and a client draws it as JSON text.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": { "type": "object", "additionalProperties": { "type": "string" } },
+    "args": { "type": "array", "items": { "type": "string" } },
+    "model": { "type": "string" }
+  }
+}
+```
+
+The walk runs on each schema a plugin registers: the manifest's `optionsSchema`, an engine's or an adapter's `schema`, each capability's `input`, a trigger's `configSchema`, an agent's `schema()` and a session config key. A backend's session config schema is made when a client asks for it, so it is walked there, once for each backend, and a gap is one line in the daemon's log. Every hole is checked when the plugin registers, so a plugin author sees it at load rather than a person seeing an empty form later.
+
 ### Marking a credential
 
 An option the daemon would not print is one the schema marks `writeOnly`, and that is how a credential is declared. The value is checked as any other is, but no answer carries it:

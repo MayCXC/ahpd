@@ -2,8 +2,8 @@
  * The models a Claude harness offers, when its operator names them.
  *
  * The CLI only knows Anthropic's names, so a harness pointed at another
- * endpoint names its own: by id, or by fetching the endpoint's model list and
- * keeping the ids that match a pattern.
+ * endpoint names its own: `models` writes them by id, and `modelSources`
+ * fetches an endpoint's model list and keeps the ids that match a pattern.
  */
 
 /** One model as a picker draws it. */
@@ -24,18 +24,24 @@ export interface OfferedModel {
  */
 export type ModelKey = string | { fromEnv: string };
 
+/** One entry of the `models` option: a model id, and the name it is drawn with. */
+export interface ModelEntry {
+  id: string;
+  name?: string;
+}
+
 /**
- * One entry of the `models` option.
+ * One entry of the `modelSources` option.
  *
- * A model id, a model with a name, or a fetch: `fetch` is a URL answering an
- * OpenAI-shaped `{ data: [{ id, name? }] }`, `match` keeps the ids it covers
- * (`*` is any run of characters), and `key` is the bearer token sent with the
- * request.
+ * `fetch` is a URL answering an OpenAI-shaped `{ data: [{ id, name? }] }`,
+ * `match` keeps the ids it covers (`*` is any run of characters), and `key` is
+ * the bearer token sent with the request.
  */
-export type ModelEntry =
-  | string
-  | { id: string; name?: string }
-  | { fetch: string; match?: string; key?: ModelKey };
+export interface ModelSource {
+  fetch: string;
+  match?: string;
+  key?: ModelKey;
+}
 
 /** Whether a value is a token's text or the daemon variable it is read from. */
 const isKey = (value: unknown): value is ModelKey => {
@@ -67,22 +73,25 @@ export const modelsProblem = (value: unknown, by = 'options.models'): string | u
   if (!Array.isArray(value)) return `${by} is not a list`;
   for (const [index, entry] of value.entries()) {
     const at = `${by}[${String(index)}]`;
-    if (typeof entry === 'string') {
-      if (entry === '') return `${at} is an empty id`;
-      continue;
-    }
-    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return `${at} is not a model id or an object`;
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return `${at} is not an object with an id`;
     const held = entry as Record<string, unknown>;
-    if (typeof held.id === 'string' && held.id !== '') {
-      if (held.name !== undefined && typeof held.name !== 'string') return `${at}.name is not a string`;
-      continue;
-    }
-    if (typeof held.fetch === 'string' && held.fetch !== '') {
-      if (held.match !== undefined && typeof held.match !== 'string') return `${at}.match is not a string`;
-      if (held.key !== undefined && !isKey(held.key)) return `${at}.key is not a string or { fromEnv }`;
-      continue;
-    }
-    return `${at} has neither an id nor a fetch`;
+    if (typeof held.id !== 'string' || held.id === '') return `${at} has no id`;
+    if (held.name !== undefined && typeof held.name !== 'string') return `${at}.name is not a string`;
+  }
+  return undefined;
+};
+
+/** What is wrong with a `modelSources` list, named; nothing when it holds. */
+export const sourcesProblem = (value: unknown, by = 'options.modelSources'): string | undefined => {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) return `${by} is not a list`;
+  for (const [index, entry] of value.entries()) {
+    const at = `${by}[${String(index)}]`;
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return `${at} is not an object with a fetch`;
+    const held = entry as Record<string, unknown>;
+    if (typeof held.fetch !== 'string' || held.fetch === '') return `${at} has no fetch`;
+    if (held.match !== undefined && typeof held.match !== 'string') return `${at}.match is not a string`;
+    if (held.key !== undefined && !isKey(held.key)) return `${at}.key is not a string or { fromEnv }`;
   }
   return undefined;
 };
@@ -106,9 +115,9 @@ const tokenOf = (key: ModelKey | undefined): string | undefined => {
   return typeof key === 'string' ? key : process.env[key.fromEnv];
 };
 
-/** One fetch entry's models; nothing, and a line said, when the endpoint fails. */
+/** One source's models; nothing, and a line said, when the endpoint fails. */
 const fetched = async (
-  entry: { fetch: string; match?: string; key?: ModelKey },
+  entry: ModelSource,
   log: (line: string) => void,
   get: typeof fetch,
 ): Promise<OfferedModel[]> => {
@@ -132,17 +141,20 @@ const fetched = async (
   }
 };
 
-/** Every model the `models` option names, in its order, each id once. */
+/**
+ * Every model the two lists name, each id once: the written models first, in
+ * their order, then each source's list, in the order the sources are written.
+ */
 export const ownModels = async (
-  entries: readonly ModelEntry[],
+  models: readonly ModelEntry[] = [],
+  sources: readonly ModelSource[] = [],
   log: (line: string) => void = () => {},
   get: typeof fetch = fetch,
 ): Promise<OfferedModel[]> => {
-  const lists = await Promise.all(entries.map(async (entry): Promise<OfferedModel[]> => {
-    if (typeof entry === 'string') return [{ id: entry, name: entry }];
-    if ('id' in entry) return [{ id: entry.id, name: entry.name ?? entry.id }];
-    return fetched(entry, log, get);
-  }));
+  const lists = await Promise.all([
+    ...models.map(async (entry): Promise<OfferedModel[]> => [{ id: entry.id, name: entry.name ?? entry.id }]),
+    ...sources.map(async (entry): Promise<OfferedModel[]> => fetched(entry, log, get)),
+  ]);
   return unique(lists.flat());
 };
 
