@@ -18,7 +18,7 @@ covers:
   - packages/agent-claude/src/transcript.ts
   - packages/agent-claude/src/options.ts
 decisions:
-  - decisions/a-session-is-held-under-its-providers-name.md
+  - decisions/a-new-session-is-held-under-the-protocols-uri.md
   - decisions/a-pasted-image-goes-as-an-image-when-it-fits.md
   - decisions/subagent-chats-are-restored-from-the-cli-meta-file.md
 refs:

@@ -4,7 +4,7 @@ domain: plugin
 status: planned
 priority: high
 created: 2026-10-24
-revalidated: 2026-10-24
+revalidated: 2026-10-27
 requires: []
 refs:
   - "[code://packages/agent-cofold/src/agent.ts#L171-L181](../../../../packages/agent-cofold/src/agent.ts#L171-L181) - `endpointOf`, which finds a provider only from a configured model"
@@ -59,6 +59,7 @@ turn -> modelOf -> connectionOf(strict=true) -> the provider the reference names
 | A key goes only to the endpoint it belongs to. A file provider gets its own `apiKey`. The lent key and `options.apiKey` go only to the endpoint whose origin `resourceOf` names. The first provider's key never goes to another endpoint | (defaulted: listing every provider would otherwise send one provider's key to all of them) | 01 |
 | The listing and a turn use the same key rule, so a listed model runs on the endpoint and key it was read from | (defaulted: `connectionOf` already serves both) | 01 |
 | A provider that fails to list adds no rows, and the others still list | (defaulted: `listModels` already answers an empty list on any error) | 01 |
+| The session schema has no `model` field, so a new session's picker draws the agent's `models`, as for Claude, pi and ACP agents | Softov, 2026-10-27: "Remove `model` from the schema" | 04 |
 
 ## Proposed architecture
 
@@ -75,6 +76,7 @@ turn -> modelOf -> connectionOf(strict=true) -> the provider the reference names
 | [01 - List every provider under its own id](task-01-list-every-provider-under-its-id.md) | todo | - |
 | [02 - The cofold prefix names only an unowned endpoint](task-02-cofold-prefix-only-unowned-endpoint.md) | todo | 01 |
 | [03 - The README says how models are listed](task-03-readme-says-how-models-are-listed.md) | todo | 02 |
+| [04 - A new Cofold session picks a model](task-04-a-new-session-picks-a-model.md) | todo | - |
 
 ## Risks and tradeoffs
 
@@ -84,7 +86,8 @@ turn -> modelOf -> connectionOf(strict=true) -> the provider the reference names
 ## Resume state
 
 - **Done so far:** nothing.
-- **Next action:** task 01.
+- **Reopened:** 2026-10-27, a new Cofold session showed no Model picker in ahpw. Task 04 removes `model` from the session schema.
+- **Next action:** task 01. Task 04 depends on no other task.
 - **Open questions:** none.
 - **Watch out for:** `infoOf` searches every catalogue by reference already, so it needs no change. Keep the five-second catalogue limit per provider, and ask the providers in parallel.
 

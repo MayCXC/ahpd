@@ -257,8 +257,9 @@ Reference: [00-host.md](host/00-host.md)
 | [123 - Agent kinds on their own channel](host/123-agent-kinds-on-their-own-channel/plan.md) | high | active 2026-10-25; tasks 02 and 03 implemented, wait on Softov | host 122 | ahpw plugins 08 |
 | [124 - A shell's marks stay out of its output](host/124-a-shells-marks-stay-out-of-its-output/plan.md) | high | built 2026-10-27 ([implemented.md](host/124-a-shells-marks-stay-out-of-its-output/implemented.md)) | - | - |
 | [125 - A split character arrives whole](host/125-a-split-character-arrives-whole/plan.md) | medium | built 2026-10-27 ([implemented.md](host/125-a-split-character-arrives-whole/implemented.md)) | - | - |
+| [126 - A new session is an `ahp-session:` URI](host/126-a-new-session-is-an-ahp-session-uri/plan.md) | medium | planned 2026-10-27; five tasks, todo | - | ahpc and ahpw create `ahp-session:` sessions |
 
-Next free number in `host`: `126`.
+Next free number in `host`: `127`.
 
 ## claude
 
@@ -408,7 +409,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [60 - A connector shows whether it works](plugin/60-a-connector-shows-whether-it-works/plan.md) | medium | active 2026-10-23; four tasks, all implemented | - | proxy 04 |
 | [61 - A plugin icon has a dark variant](plugin/61-a-plugin-icon-has-a-dark-variant/plan.md) | medium | built 2026-10-24 ([implemented.md](plugin/61-a-plugin-icon-has-a-dark-variant/implemented.md)); merged in #86 | plugin 58 | - |
 | [62 - A working connector is ready, not open](plugin/62-a-working-connector-is-ready/plan.md) | medium | active 2026-10-24; one task, implemented | - | - |
-| [63 - agent-cofold lists models under their provider id](plugin/63-cofold-lists-models-by-provider/plan.md) | high | planned 2026-10-24; three tasks | - | - |
+| [63 - agent-cofold lists models under their provider id](plugin/63-cofold-lists-models-by-provider/plan.md) | high | planned 2026-10-24; four tasks, task 04 added 2026-10-27 | - | - |
 | [64 - An admin installs and removes a plugin from the UI](plugin/64-an-admin-installs-a-plugin-from-the-ui/plan.md) | medium | active 2026-10-25; three tasks, all implemented | plugin 59 | - |
 | [65 - A disabled plugin describes itself](plugin/65-a-disabled-plugin-describes-itself/plan.md) | medium | active 2026-10-25; four tasks, all implemented | plugin 64 | the ahpw plugin page for a disabled plugin; `definePlugin` |
 | [66 - A reopened bot chat keeps its mark](plugin/66-a-reopened-bot-chat-keeps-its-mark/plan.md) | high | active 2026-10-25; tasks 01 and 02 implemented | - | ahpw, which reads the mark from `_meta` and needs no change |
