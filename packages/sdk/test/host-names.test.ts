@@ -375,6 +375,58 @@ describe('a session asked for by the name a client computed', () => {
   });
 });
 
+describe('a session that runs no chat', () => {
+  it('reports the customizations of its stored provider, whatever its URI names', async () => {
+    const { echo } = await import('../../../examples/echo/agent.js');
+    const seed = { id: 'seed-one', type: 'plugin', name: 'A seeded plugin' };
+    const stamp = new Date(0).toISOString();
+    const kept = memorySessions();
+    kept.setProvider('one', 'slow');
+    kept.setUri?.('one', 'ahp-session:/one');
+    const host = createHost({
+      path: '/home/softov',
+      agents: [{
+        ...echo({ path: '/home/softov', pace: 0 }),
+        provider: 'slow',
+        displayName: 'Slow',
+        list: async () => [{ id: 'one', title: 'One', createdAt: stamp, modifiedAt: stamp, workingDirectories: ['file:///home/softov'] }],
+        transcript: async () => [],
+        probe: async () => ({ models: [], commands: [], customizations: [seed] }),
+      }],
+      ...machine(),
+      sessions: kept,
+    });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
+    await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/one' } });
+
+    // A client plugin makes the host say the session's customizations again,
+    // with no chat of the session running to ask.
+    client.handle({
+      method: 'dispatchAction',
+      params: {
+        channel: 'ahp-session:/one',
+        action: {
+          type: 'session/activeClientSet',
+          activeClient: { clientId: 'probe', tools: [], customizations: [{ type: 'plugin', uri: 'file:///plugin', nonce: 'n' }] },
+        },
+      },
+    });
+    await settle();
+
+    const changed = p.notes
+      .filter((n) => n.method === 'action')
+      .map((n) => (n.params as { action: { type: string; customizations?: unknown[] } }).action)
+      .filter((action) => action.type === 'session/customizationsChanged')
+      .at(-1);
+    // The scheme `ahp-session` names no provider: the row's provider does,
+    // and that is what the session reports.
+    expect(changed?.customizations).toContainEqual(seed);
+  });
+});
+
 /*
  * A session asked for by the name its creator used.
  *

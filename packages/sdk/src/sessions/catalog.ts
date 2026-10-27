@@ -84,9 +84,9 @@ export const activityOf = (emit: Emit): Activity => {
 /**
  * `ahp-session:/<id>`, the protocol's own spelling of a session URI.
  *
- * What the host names an id no backend has named. A session it holds or
- * lists is named `<provider>:/<id>`, and a client may use any scheme for it -
- * see {@link idOf}.
+ * What the host names an id no backend has named, and the name of every new
+ * session it makes. A session made before that keeps its `<provider>:/<id>`
+ * name, and a client may use any scheme for it - see {@link idOf}.
  */
 export const uriFor = (sessionId: string): string => `ahp-session:/${sessionId}`;
 

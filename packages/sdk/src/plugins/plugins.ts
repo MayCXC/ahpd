@@ -1188,10 +1188,11 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       return readSecret(vault, name, work);
     },
     /*
-     * The store is keyed by id and a machine records the session URI, so the
-     * name is asked of the URI. `false` rather than a throw when there is no
-     * store, the way `recordUsage` drops: a host that keeps no sessions has no
-     * leftovers of its own to adopt, which is an answer and not a failure.
+     * The store is keyed by id and keeps the name the host holds the session
+     * under, so a machine's recorded URI is compared with that name. `false`
+     * rather than a throw when there is no store, the way `recordUsage` drops:
+     * a host that keeps no sessions has no leftovers of its own to adopt, which
+     * is an answer and not a failure.
      *
      * Awaited because a plugin can ask before the host it is being applied to
      * has named its store, and the answer has to be the same whatever else is
@@ -1201,15 +1202,22 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       const sessions = await options.sessions?.();
       if (sessions === undefined || sessions.config(idOf(uri)) === undefined) return false;
       /*
-       * The provider has to be the URI's own scheme.
+       * The URI has to be the name this host holds the session under.
        *
        * A session id comes from the client's channel, so a client that opens
        * `echo:/one` after a session named `acp:/one` has gone writes the same
        * row, and a leftover labelled for that id would be adopted as though it
        * were a session of this kind - a machine with another backend's needs
        * charged to a session that cannot run in it.
+       *
+       * A row written before names were kept has no name, and is compared with
+       * the provider as it was: the scheme was the name then, and a machine
+       * made for that session records it.
        */
-      return sessions.provider(idOf(uri)) === schemeOf(uri);
+      const held = sessions.uri?.(idOf(uri));
+      return held === undefined
+        ? sessions.provider(idOf(uri)) === schemeOf(uri)
+        : held === uri;
     },
     /*
      * Whose a session is, asked of the same store `sessionKept` reads and
