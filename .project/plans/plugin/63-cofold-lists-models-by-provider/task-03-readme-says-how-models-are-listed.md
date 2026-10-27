@@ -1,6 +1,6 @@
 ---
 title: The README says how models are listed
-status: todo
+status: doing
 depends: [task-02-cofold-prefix-only-unowned-endpoint.md]
 layer: "docs"
 refs:
@@ -29,7 +29,7 @@ The README says that each model is listed as `<provider id>/<model id>`, for eve
 
 ## Resume
 
-- **Done so far:** nothing.
+- **Done so far:** nothing yet.
 - **Next action:** step 1.
 - **Files:** none yet.
 - **Open questions:** none.
