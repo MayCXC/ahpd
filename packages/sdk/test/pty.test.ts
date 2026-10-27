@@ -216,8 +216,8 @@ describe('the line a pipe spawn is given', () => {
       calls.push({ shell: nextShell, args, options });
       return {
         stdin: { writable: false, end: () => {} },
-        stdout: { on: () => {} },
-        stderr: { on: () => {} },
+        stdout: { setEncoding: () => {}, on: () => {} },
+        stderr: { setEncoding: () => {}, on: () => {} },
         pid: undefined,
         on: () => {},
         kill: () => {},
@@ -493,6 +493,17 @@ describe('a shell opened with a command', () => {
       new Promise((resolve) => { setTimeout(() => { resolve('late'); }, 200); }),
     ]);
     expect(again).toMatchObject({ exitCode: 7 });
+  });
+
+  it('hands over a character whole when its bytes arrive in two reads', async () => {
+    // The two bytes of `é`, written a moment apart, so the pipe hands them
+    // over in two reads. Decoded one read at a time, each is a replacement
+    // character.
+    const terminal = run({
+      command: process.execPath,
+      args: ['-e', 'process.stdout.write(Buffer.from([0xc3])); setTimeout(() => process.stdout.write(Buffer.from([0xa9, 0x0a])), 200)'],
+    });
+    expect(await whole(terminal)).toBe('é\n');
   });
 });
 

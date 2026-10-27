@@ -256,8 +256,9 @@ Reference: [00-host.md](host/00-host.md)
 | [122 - Agents are records on their own channel](host/122-agents-are-records-on-their-own-channel/plan.md) | high | active 2026-10-24; merged in #89, waits on the check by hand | - | - |
 | [123 - Agent kinds on their own channel](host/123-agent-kinds-on-their-own-channel/plan.md) | high | active 2026-10-25; tasks 02 and 03 implemented, wait on Softov | host 122 | ahpw plugins 08 |
 | [124 - A shell's marks stay out of its output](host/124-a-shells-marks-stay-out-of-its-output/plan.md) | high | built 2026-10-27 ([implemented.md](host/124-a-shells-marks-stay-out-of-its-output/implemented.md)) | - | - |
+| [125 - A split character arrives whole](host/125-a-split-character-arrives-whole/plan.md) | medium | built 2026-10-27 ([implemented.md](host/125-a-split-character-arrives-whole/implemented.md)) | - | - |
 
-Next free number in `host`: `125`.
+Next free number in `host`: `126`.
 
 ## claude
 

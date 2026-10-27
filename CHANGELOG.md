@@ -16,6 +16,7 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 ### Terminals
 
 - The output a shell printed before a mark goes out before the mark's action, so the output between `terminal/commandExecuted` and `terminal/commandFinished` is the command's. A mark that arrives in two reads is still read and taken out. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#command-boundaries).
+- On pipes, a character whose bytes arrive in two reads reaches the client whole rather than as two replacement characters: each pipe is decoded as one stream. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#pipes-or-a-pseudoterminal).
 
 ## 0.14.0 - 2026-10-26
 
