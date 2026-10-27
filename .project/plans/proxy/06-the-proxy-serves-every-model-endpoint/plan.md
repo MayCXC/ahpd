@@ -1,7 +1,7 @@
 ---
 title: The proxy serves every model endpoint
 domain: proxy
-status: planned
+status: active
 priority: high
 created: 2026-10-24
 revalidated: 2026-10-24
@@ -113,7 +113,7 @@ GET /responses/{id} -> decode id -> connector, original id -> may the caller use
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Tokens are counted](task-01-tokens-are-counted.md) | todo | - |
+| [01 - Tokens are counted](task-01-tokens-are-counted.md) | doing | - |
 | [02 - Embeddings are served](task-02-embeddings-are-served.md) | todo | 01 |
 | [03 - Responses are served](task-03-responses-are-served.md) | todo | 01 |
 | [04 - Images are served](task-04-images-are-served.md) | todo | 01 |
@@ -130,8 +130,8 @@ GET /responses/{id} -> decode id -> connector, original id -> may the caller use
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** check the refs against main after proxy 05 merges, then [task-01-tokens-are-counted.md](task-01-tokens-are-counted.md).
+- **Done so far:** nothing yet.
+- **Next action:** [task-01-tokens-are-counted.md](task-01-tokens-are-counted.md) is doing: the dialect rows and the two counters.
 - **Open questions:** none.
 - **Watch out for:** a dialect is now more than chat. Code that lists dialects for a chat call, such as the 404 hint in `route`, keeps to the dialects of the same kind.
 
