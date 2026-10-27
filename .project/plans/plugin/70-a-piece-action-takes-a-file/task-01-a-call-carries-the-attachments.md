@@ -1,6 +1,6 @@
 ---
 title: An action call carries the attachments folder
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -41,3 +41,10 @@ An adapter that does not read the new argument is not changed.
 - `pnpm -s typecheck && pnpm -s build && pnpm -s boundary && pnpm -s test` passes.
 
 ## Resume
+
+- **Done so far:** `Adapter.run` takes an optional fourth argument, `call`, of `{ files?: string }`, documented as the folder where one session's attachments are kept. `ConnectorsChannel.run` takes that folder and hands `adapter.run` a `call` only when the session has one. An adapter on a host with no store sees the same absence a session with no folder gives it. `ActionHost` carries `attachmentsDir(uri)`, and the action tool reads `host.attachmentsDir(at.session)` before it runs, so the folder travels with the call and no caller names one. The host builds that member in `tooling.ts` as `kept.attachmentsDir?.(idOf(uri))`, which is the session store's own answer. Two cases in `packages/sdk/test/connector-actions.test.ts` pin the two answers. A `fileSessions` store gives the adapter the calling session's folder, and the default `memorySessions` store gives it no `files`. `PLUGINS.md` says what `call.files` is, beside `Adapter.run`.
+- **Next action:** [task-02-a-file-prop-takes-a-string.md](task-02-a-file-prop-takes-a-string.md).
+- **Files:** `packages/sdk/src/types/connectors.ts`, `packages/sdk/src/connectors/actions.ts`, `packages/sdk/src/connectors/channel.ts`, `packages/sdk/src/host/tooling.ts`, `packages/sdk/test/connector-actions.test.ts`, `docs/plugins/PLUGINS.md`, this task file, the plan and the index. The session cannot commit, so they are left in the worktree.
+- **Open questions:** none.
+- **Departures:** none.
+- **Watch out for:** the call carries the folder and never the session, so an adapter resolves nothing of its own. A session with no folder gets no `call`, rather than a `call` without `files`. That is the shape `exactOptionalPropertyTypes` asks for, and the one an adapter reads without a second check.

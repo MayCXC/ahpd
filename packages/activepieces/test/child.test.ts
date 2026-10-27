@@ -1,4 +1,7 @@
 import { fork } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ChildProcess } from 'node:child_process';
@@ -25,6 +28,19 @@ afterEach(() => {
   for (const one of loose) one.kill();
   loose = [];
 });
+
+/** The paths a case made, removed after it. */
+const made: string[] = [];
+afterEach(() => {
+  for (const one of made.splice(0)) rmSync(one, { recursive: true, force: true });
+});
+
+/** One empty folder for a case's attachments. */
+function madeFolder(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'ahpd-child-'));
+  made.push(dir);
+  return dir;
+}
 
 /** One child, forked the way the plugin forks it, with the environment a case needs. */
 function start(env: Record<string, string> = {}): ChildProcess {
@@ -54,6 +70,23 @@ const described = (answer: Answer): DescribedAnswer => {
   if (answer.type !== 'described') throw new Error(`the child answered ${answer.type}: ${answer.type === 'failed' ? answer.message : ''}`);
   return answer;
 };
+
+/** The message of a request the child refused. */
+const failed = (answer: Answer): string => {
+  if (answer.type !== 'failed') throw new Error(`the child answered ${answer.type}`);
+  return answer.message;
+};
+
+/** One request that runs one action of the fixture piece, in a folder when there is one. */
+const run = (action: string, input: Record<string, unknown>, files?: string): Record<string, unknown> => ({
+  type: 'run',
+  piece: fixture('piece-run.mjs'),
+  connector: 'work',
+  action,
+  auth: { type: 'SECRET_TEXT', secret_text: 'sk-test' },
+  input,
+  ...(files === undefined ? {} : { files }),
+});
 
 /** One child's exit, and the code it exited with. */
 function exit(child: ChildProcess): Promise<number | null> {
@@ -141,5 +174,107 @@ describe('a child asks for pieces', () => {
     const ended = exit(child);
     child.disconnect();
     expect(await ended).toBe(0);
+  });
+});
+
+describe('a call carries a file', () => {
+  it('turns a FILE value that names an attachment into the file a piece reads', async () => {
+    const dir = madeFolder();
+    writeFileSync(join(dir, 'notes.txt'), 'hello');
+
+    const answer = await ask(start(), run('read', { file: 'notes.txt' }, dir));
+
+    expect(answer).toEqual({
+      type: 'ran',
+      id: 1,
+      result: {
+        filename: 'notes.txt',
+        extension: 'txt',
+        size: 5,
+        text: 'hello',
+        base64: Buffer.from('hello').toString('base64'),
+      },
+    });
+  });
+
+  it('turns a data: URI into a file, with no folder', async () => {
+    const answer = await ask(start(), run('read', { file: 'data:text/plain,hi' }));
+
+    expect(answer).toMatchObject({ type: 'ran', result: { filename: 'file.txt', text: 'hi', size: 2 } });
+  });
+
+  it('refuses a FILE value that leaves the folder, and names neither the folder nor the bytes', async () => {
+    const dir = madeFolder();
+    const outside = join(tmpdir(), `${basename(dir)}-outside.txt`);
+    writeFileSync(outside, 'outside-bytes');
+    made.push(outside);
+
+    const said = failed(await ask(start(), run('read', { file: `../${basename(outside)}` }, dir)));
+
+    expect(said).toContain('is not a file in this session');
+    expect(said).not.toContain(dir);
+    expect(said).not.toContain('outside-bytes');
+  });
+
+  it('refuses a FILE value that names a file when the call has no folder', async () => {
+    const said = failed(await ask(start(), run('read', { file: 'notes.txt' })));
+
+    expect(said).toBe('notes.txt names a file, and this call has no attachments folder');
+  });
+});
+
+describe('a written file is an attachment', () => {
+  it('writes a file into the folder, and answers its path', async () => {
+    const dir = madeFolder();
+
+    const answer = await ask(start(), run('write', { name: 'report.txt', text: 'hello' }, dir));
+
+    expect(answer).toMatchObject({ type: 'ran', result: { path: join(dir, 'report.txt') } });
+    expect(readFileSync(join(dir, 'report.txt'), 'utf8')).toBe('hello');
+  });
+
+  it('numbers a name another call already wrote, before the extension', async () => {
+    const dir = madeFolder();
+
+    const first = await ask(start(), run('write', { name: 'report.txt', text: 'one' }, dir));
+    const second = await ask(start(), run('write', { name: 'report.txt', text: 'two' }, dir));
+
+    expect(first).toMatchObject({ result: { path: join(dir, 'report.txt') } });
+    expect(second).toMatchObject({ result: { path: join(dir, 'report-1.txt') } });
+    expect(readFileSync(join(dir, 'report.txt'), 'utf8')).toBe('one');
+    expect(readFileSync(join(dir, 'report-1.txt'), 'utf8')).toBe('two');
+  });
+
+  it('keeps only the name a piece asked for, without the path in it', async () => {
+    const dir = madeFolder();
+
+    const answer = await ask(start(), run('write', { name: '../../evil.txt', text: 'hello' }, dir));
+
+    expect(answer).toMatchObject({ result: { path: join(dir, 'evil.txt') } });
+    expect(readFileSync(join(dir, 'evil.txt'), 'utf8')).toBe('hello');
+  });
+
+  it('replaces a character a file name may not hold', async () => {
+    const dir = madeFolder();
+
+    const answer = await ask(start(), run('write', { name: 'a b:c?.txt', text: 'x' }, dir));
+
+    expect(answer).toMatchObject({ result: { path: join(dir, 'a-b-c-.txt') } });
+  });
+
+  it('cuts a long name to 80 characters, and keeps its extension', async () => {
+    const dir = madeFolder();
+    const held = join(dir, `${'x'.repeat(76)}.txt`);
+
+    const answer = await ask(start(), run('write', { name: `${'x'.repeat(100)}.txt`, text: 'x' }, dir));
+
+    expect(answer).toMatchObject({ result: { path: held } });
+    expect(readFileSync(held, 'utf8')).toBe('x');
+  });
+
+  it('refuses a write when the call has no folder', async () => {
+    const said = failed(await ask(start(), run('write', { name: 'report.txt', text: 'hello' })));
+
+    expect(said).toBe('this plugin does not offer files');
   });
 });

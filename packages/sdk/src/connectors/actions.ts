@@ -40,6 +40,14 @@ export interface ActionHost {
    * run unchecked.
    */
   principalOf(uri: string): Principal | 'nobody' | undefined;
+  /**
+   * Where one session's attachments are kept, or nothing where its store
+   * keeps no files.
+   *
+   * The folder travels with each call, so an adapter's action reads a file
+   * the session holds and writes a file the session keeps.
+   */
+  attachmentsDir(uri: string): string | undefined;
   /** Where a tool name two actions claim is reported. */
   onProblem(message: string): void;
 }
@@ -154,8 +162,11 @@ const actionTool = (
       if (reader === 'nobody') {
         throw new Error(`${alias}: this session's owner has to sign in once before ${name} can run.`);
       }
+      // The folder is read now, as the bindings are: it belongs to the session
+      // this call came from, and a call names no folder of its own.
+      const files = host.attachmentsDir(at.session);
       try {
-        const answer = await run(id, reader, action, rest);
+        const answer = await run(id, reader, action, rest, files);
         return typeof answer === 'string' ? answer : JSON.stringify(answer) ?? 'Done.';
       }
       catch (error) {

@@ -134,6 +134,13 @@ export interface RunRequest {
   auth: Record<string, unknown>;
   /** The input of the call, each prop by the name the piece reads it by. */
   input: Record<string, unknown>;
+  /**
+   * The calling session's attachments folder, when it has one.
+   *
+   * A `FILE` value that names an attachment is read from here, and
+   * `files.write` puts a written file here.
+   */
+  files?: string;
 }
 
 /** What the child answered a `describe` with. */

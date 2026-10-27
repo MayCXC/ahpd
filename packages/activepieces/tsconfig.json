@@ -2,7 +2,12 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    // The child is run from this folder in development, by Node and not by a
+    // test runner, so a module it loads names the real `.ts` file. The build
+    // rewrites each such specifier to the `.js` file it emits.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src/**/*.ts"]
 }

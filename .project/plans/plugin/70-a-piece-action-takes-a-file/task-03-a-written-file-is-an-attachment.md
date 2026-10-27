@@ -1,6 +1,6 @@
 ---
 title: A written file lands in the attachments
-status: todo
+status: implemented
 depends: [task-01-a-call-carries-the-attachments.md]
 layer: "activepieces"
 refs:
@@ -37,3 +37,10 @@ A call with no folder still refuses the write.
 - `pnpm -s typecheck && pnpm -s build && pnpm -s boundary && pnpm -s test` passes.
 
 ## Resume
+
+- **Done so far:** a call with a folder runs with a `files` service. Its `write({ fileName, data })` puts the bytes in that folder and answers the file's absolute path. The name is reduced to its basename, and every character a file name may not hold becomes `-`. When nothing is left, the name is `file`. The name is cut at 80 characters with its extension kept, which is the length the host's own attachments are named to. A name another call already wrote takes a number before its extension. The file is created with the `wx` flag at mode 0400, so an existing file is never replaced and a written file is read-only. A write that fails for any reason other than the name being taken answers `the file could not be written`. That message names neither the path nor the bytes. A call with no folder still runs with `refused('files')`, so the piece is told `this plugin does not offer files`. `docs/plugins/activepieces.md` says what a `FILE` value may be, which addresses are refused, and where a written file goes.
+- **Next action:** none. The plan is implemented and active, and no task follows this one.
+- **Files:** `packages/activepieces/src/child.ts`, `packages/activepieces/test/child.test.ts`, `packages/activepieces/test/fixtures/piece-run.mjs`, `docs/plugins/activepieces.md`, this task file, the plan and the index. The session cannot commit, so they are left in the worktree.
+- **Open questions:** none.
+- **Departures:** a later review asked for the 80 character name. `child.test.ts` has the case: a name of 100 characters with `.txt` lands at 80 and keeps the extension.
+- **Watch out for:** the child gets the folder in the run request and never resolves one of its own. There is no path for a piece to name. The write is in the child, so a file an action writes is in the folder the daemon's own attachments live in. It is removed with the session like any other attachment. A written file's bytes never appear in an answer, a problem line or the daemon's output. The action's output names the path, and the piece reads the file if it needs it.

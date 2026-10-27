@@ -101,7 +101,7 @@ describe('a piece becomes an adapter', () => {
     expect(mapped.adapter).not.toHaveProperty('icons');
   });
 
-  it('maps each prop type, and leaves out a MARKDOWN prop and an optional file', () => {
+  it('maps each prop type, and leaves out a MARKDOWN prop', () => {
     const props: Record<string, PropDescription> = {
       short: { type: 'SHORT_TEXT', displayName: 'Short', required: false },
       long: { type: 'LONG_TEXT', displayName: 'Long', required: false },
@@ -131,11 +131,14 @@ describe('a piece becomes an adapter', () => {
     expect(properties['format']).toMatchObject({ type: 'string', enum: ['plain', 'markdown'] });
     expect(properties['channel']).toMatchObject({ type: 'string', description: 'The channel to post in. Give the id.' });
     expect(properties['when']).toMatchObject({ type: 'string', format: 'date-time' });
+    expect(properties['file']).toMatchObject({
+      type: 'string',
+      description: 'An https: URL, a data: URI or the name of a session attachment.',
+    });
     expect(properties).not.toHaveProperty('note');
-    expect(properties).not.toHaveProperty('file');
   });
 
-  it('leaves out an action that needs a file, and reports it', () => {
+  it('offers an action that needs a file, with the file required', () => {
     const mapped = adapterOf(piece({
       auth: { type: 'SECRET_TEXT', displayName: 'API Key' },
       actions: [
@@ -148,9 +151,30 @@ describe('a piece becomes an adapter', () => {
       ],
     }));
 
-    expect(mapped.adapter?.capabilities.map((one) => one.name)).toEqual(['say']);
-    expect(mapped.notes).toHaveLength(1);
-    expect(mapped.notes[0]).toContain('upload-file');
+    expect(mapped.adapter?.capabilities.map((one) => one.name)).toEqual(['say', 'upload-file']);
+    expect(mapped.notes).toEqual([]);
+    const upload = mapped.adapter?.capabilities.find((one) => one.name === 'upload-file');
+    expect(upload?.input?.['required']).toEqual(['file']);
+  });
+
+  it('keeps a file optional, and puts the prop own description before the three forms', () => {
+    const mapped = adapterOf(piece({
+      auth: { type: 'SECRET_TEXT', displayName: 'API Key' },
+      actions: [action({
+        name: 'send',
+        props: { file: { type: 'FILE', displayName: 'File', description: 'The file to send.', required: false } },
+      })],
+    }));
+    const send = mapped.adapter?.capabilities[0];
+
+    expect(send?.input?.['properties']).toMatchObject({
+      file: {
+        type: 'string',
+        title: 'File',
+        description: 'The file to send. An https: URL, a data: URI or the name of a session attachment.',
+      },
+    });
+    expect(send?.input).not.toHaveProperty('required');
   });
 
   it('makes each action an action capability, titled and described by the piece', () => {
