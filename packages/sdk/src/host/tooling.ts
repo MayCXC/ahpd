@@ -1,5 +1,5 @@
 import { isAbsolute, join } from 'node:path';
-import { idOf } from '../sessions/catalog.js';
+import { idOf, uriFor } from '../sessions/catalog.js';
 import { localPath, uriOf } from '../resources/fileuri.js';
 import { frozenCopy } from '../utils/frozen.js';
 import { accepts } from '../utils/configvalues.js';
@@ -1701,8 +1701,8 @@ export function createTooling(ctx: HostContext): Tooling {
       }
       const provider = asked.provider ?? sessions.get(uri)?.agent.provider ?? ctx.first?.provider;
       if (provider === undefined) throw new Error(NO_AGENT);
-      // Held under its provider's name, as a client's `createSession` is.
-      const made = `${provider}:/${crypto.randomUUID()}`;
+      // Named the way a client's `createSession` names a session.
+      const made = uriFor(crypto.randomUUID());
       const config: Record<string, unknown> = {
         ...(asked.isolation !== undefined ? { isolation: asked.isolation } : {}),
         ...(asked.model !== undefined ? { model: asked.model } : {}),

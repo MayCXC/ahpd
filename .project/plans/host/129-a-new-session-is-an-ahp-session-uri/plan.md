@@ -120,7 +120,7 @@ restart -> listing -> adopt(row) -> the name from the row -> listSessions and ro
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The store keeps a session's URI](task-01-the-store-keeps-a-sessions-uri.md) | implemented | - |
-| [02 - A new session is held as `ahp-session:`](task-02-a-new-session-is-held-as-ahp-session.md) | todo | 01 |
+| [02 - A new session is held as `ahp-session:`](task-02-a-new-session-is-held-as-ahp-session.md) | implemented | 01 |
 | [03 - A listed session is named from its row](task-03-a-listed-session-is-named-from-its-row.md) | todo | 01 |
 | [04 - No provider is read from a scheme](task-04-no-provider-is-read-from-a-scheme.md) | todo | 01 |
 | [05 - The docs name the protocol's URI](task-05-the-docs-name-the-protocols-uri.md) | todo | 02, 03, 04 |
@@ -134,8 +134,8 @@ restart -> listing -> adopt(row) -> the name from the row -> listSessions and ro
 
 ## Resume state
 
-- **Done so far:** task 01 implemented 2026-10-27; `uri` is kept by both stores and survives a restart.
-- **Next action:** [task-02-a-new-session-is-held-as-ahp-session.md](task-02-a-new-session-is-held-as-ahp-session.md).
+- **Done so far:** tasks 01 and 02 implemented 2026-10-27; the store keeps a `uri`, and every session this host makes is named `ahp-session:/<id>` and kept in its row.
+- **Next action:** [task-03-a-listed-session-is-named-from-its-row.md](task-03-a-listed-session-is-named-from-its-row.md).
 - **Open questions:** none.
 - **Watch out for:** `keepProvider` also writes the provider under the backend's own id, and that id must not get the host's name. The aliases in `routing.ts` stay, because ahpc, ahpw and old names use them.
 

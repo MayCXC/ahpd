@@ -1,5 +1,5 @@
 import { computerSource } from '../machines/computers.js';
-import { Status, idOf } from '../sessions/catalog.js';
+import { Status, idOf, uriFor } from '../sessions/catalog.js';
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { EVENT_TRIGGERS, pluginTriggerTypes, sameOwnerOrHost, wrongIn } from '../automations/automations.js';
 import { presetById } from '../automations/triggerpresets.js';
@@ -702,8 +702,8 @@ export function createAutomations(ctx: HostContext): Automations {
   const beginSession = async (wanted: StartSession, named?: (uri: string) => void): Promise<string> => {
     const provider = wanted.provider ?? ctx.first?.provider;
     if (provider === undefined) throw new Error(NO_AGENT);
-    // Held under its provider's name, as a client's `createSession` is.
-    const uri = `${provider}:/${crypto.randomUUID()}`;
+    // Named the way a client's `createSession` names a session.
+    const uri = uriFor(crypto.randomUUID());
     unheld(uri);
     /*
      * Told before anything is made, which is what puts a plugin's own answer
