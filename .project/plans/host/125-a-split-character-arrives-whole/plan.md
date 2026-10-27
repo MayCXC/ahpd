@@ -1,7 +1,7 @@
 ---
 title: A split character arrives whole
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-27
 revalidated: 2026-10-27
@@ -54,7 +54,7 @@ child stdout or stderr -> data -> said -> terminal/data -> the client
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Each pipe decodes as a stream](task-01-each-pipe-decodes-as-a-stream.md) | todo | - |
+| [01 - Each pipe decodes as a stream](task-01-each-pipe-decodes-as-a-stream.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -62,13 +62,13 @@ child stdout or stderr -> data -> said -> terminal/data -> the client
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-27.
-- **Next action:** [task-01-each-pipe-decodes-as-a-stream.md](task-01-each-pipe-decodes-as-a-stream.md).
+- **Done so far:** planned and built 2026-10-27; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the case must split the character between two writes, or the old code passes it too.
 
 ## Final verification checklist
 
-- [ ] `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
-- [ ] The new case fails on the store before this change.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
+- [x] The new case fails on the store before this change.
+- [x] `plans/index.md` updated.
