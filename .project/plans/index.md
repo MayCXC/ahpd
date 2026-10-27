@@ -546,7 +546,7 @@ Reference: [00-proxy.md](proxy/00-proxy.md)
 | [03 - A refused port in the proxy tests stays refused](proxy/03-a-refused-port-in-the-proxy-tests-stays-refused/plan.md) | high | built 2026-10-21 (implemented.md); merged in #53 | - | - |
 | [04 - A model provider is a connector](proxy/04-providers-are-connectors/plan.md) | high | active 2026-10-24; four tasks, all implemented; icons await curation and `config-dev.json` awaits the move | plugin 60 | - |
 | [05 - A provider's own models are callable, and the proxy answers at the root](proxy/05-a-providers-own-models-are-callable/plan.md) | high | active 2026-10-24; six tasks done, merged in #88; waits on pending/proxy-05-model-checks.md | proxy 04 | proxy 06 |
-| [06 - The proxy serves every model endpoint](proxy/06-the-proxy-serves-every-model-endpoint/plan.md) | high | active 2026-10-27; seven tasks, tasks 01-04 implemented; batches are proxy 07 | proxy 05 | - |
+| [06 - The proxy serves every model endpoint](proxy/06-the-proxy-serves-every-model-endpoint/plan.md) | high | active 2026-10-27; seven tasks, tasks 01-05 implemented or doing; batches are proxy 07 | proxy 05 | - |
 
 Next free number in `proxy`: `07`.
 

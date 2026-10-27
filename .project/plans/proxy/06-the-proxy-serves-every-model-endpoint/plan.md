@@ -117,7 +117,7 @@ GET /responses/{id} -> decode id -> connector, original id -> may the caller use
 | [02 - Embeddings are served](task-02-embeddings-are-served.md) | implemented | 01 |
 | [03 - Responses are served](task-03-responses-are-served.md) | implemented | 01 |
 | [04 - Images are served](task-04-images-are-served.md) | implemented | 01 |
-| [05 - Audio is served](task-05-audio-is-served.md) | todo | 04 |
+| [05 - Audio is served](task-05-audio-is-served.md) | doing | 04 |
 | [06 - Rerank is served](task-06-rerank-is-served.md) | todo | 01 |
 | [07 - The docs list every endpoint](task-07-the-docs-list-every-endpoint.md) | todo | 01-06 |
 
@@ -131,7 +131,7 @@ GET /responses/{id} -> decode id -> connector, original id -> may the caller use
 ## Resume state
 
 - **Done so far:** task 01 is implemented. A dialect is one row with its caller paths, upstream path, family, kind and usage reader. `anthropic-count-tokens` and `openai-input-tokens` answer at their paths, `ModelProvider.paths` replaces an upstream path, and a count call writes no usage record.
-- **Next action:** [task-05-audio-is-served.md](task-05-audio-is-served.md).
+- **Next action:** [task-05-audio-is-served.md](task-05-audio-is-served.md) is doing: speech characters and transcription tokens or seconds.
 - **Task 04:** a multipart body is read with `Request.formData()`, its `model` is rewritten, and it is sent as `FormData`. Image usage reads `input_tokens`/`output_tokens` and the chat shape, and OpenRouter sends images to `/images`.
 - **Task 03:** a Responses id is `resp_` and the base64url of `<connector>:<provider id>`, rewritten in JSON and each SSE event. Follow-ups go only to that connector, `previous_response_id` pins a create, and usage comes from `response.completed`.
 - **Task 02:** `openai-embeddings` answers at `/embeddings` and `/v1/embeddings`, reads `usage.prompt_tokens`, and keeps the provider cost OpenRouter reports.
