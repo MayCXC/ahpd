@@ -10,24 +10,22 @@ Current progress and pending items only, as of 2026-10-28.
 ## Main
 
 - The last release is 0.14.0 (`v0.14.0`). The CHANGELOG holds 0.14.1 as unreleased.
-- The last code merge on main is PR #118 (`98c935e7`), host/114. PR #117 (the scroll story on the home page) merged before it. Main is at `3ad45a0b`, the x-ahpd/me plan.
+- The last code merge on main is PR #119 (`26a39ad0`), host/116. PR #118 (host/114) and PR #117 (the scroll story on the home page) merged before it.
 - The README is rewritten for people who run ahpd (`a22c1934`). The brief it came from is `ahp-review/ahpd-review/ahpd-readme-2026-10-27/`.
-- PR #119 (host/116, a plugin opens a canvas on a chat) is open and green. The `processes` job failed once on a flaky test and passed on a rerun.
 - `nested-process.test.ts` "a resumed session continues the transcript" is flaky on main too. It fails about one run in two on this machine.
-- x-ahpd/me (host/20261028-0947) is built and not committed, on branch `host/20261028-0947-a-connection-asks-who-it-is` in `/github/ahpd.worktrees/x-ahpd-me`.
+- PR #120 (x-ahpd/me, host/20261028-0947) is open, from `/github/ahpd.worktrees/x-ahpd-me`.
 - `/github/ahpd` is on main, and the tree is clean. Fetch, and check the base before you cut a build worktree.
 - Softov's dev daemon runs from source on port 37537. He restarted it after #114.
 - Code goes through a PR on `softov/ahpd`. Plan-only commits go to main. Run `gh pr checks` with `-R softov/ahpd` outside a repo.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by every test run. Restore it with `git checkout --` and never print it.
 - On this machine, two Docker tests time out: `computer-devcontainer` and `computer-disposable`. They time out on main too, and CI passes them.
-- The worktrees in `/github/ahpd.worktrees/` are `build-agents-1e7e1075` (host/116, PR #119), `x-ahpd-me` (x-ahpd/me), `build-agents-5dac8e0d` (host/114, merged), `docs-host-story` (merged) and `build-agents-fda88f4a` (the old container/05 p8). The merged ones can go on Softov's word. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
+- The worktrees in `/github/ahpd.worktrees/` are `x-ahpd-me` (PR #120), `build-agents-1e7e1075` (host/116, merged), `build-agents-5dac8e0d` (host/114, merged), `docs-host-story` (merged) and `build-agents-fda88f4a` (the old container/05 p8). The merged ones can go on Softov's word. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
 - The local branch `fork/maycxc-24-25-26-127-128` is the closed PR #110. It is not on main, and #113 replaced it.
 
 ## Waiting for Softov
 
-- PR #119, host/116: review and merge.
-- x-ahpd/me: review, the PR text, and his OK to commit and push. `kind` has a third value, `plugin`, which the plan did not name.
-- host/114: review.
+- PR #120, x-ahpd/me: review and merge. `kind` has a third value, `plugin`, which the plan did not name.
+- host/114 and host/116: review.
 - After the daemon restart, open a terminal in ahpw and in ahpc. `supportsCommandDetection` is now false until the shell prints its first mark.
 - host/126: review. ahpc and ahpw must create `ahp-session:` sessions.
 - daemon/29: the final checklist in its plan.
