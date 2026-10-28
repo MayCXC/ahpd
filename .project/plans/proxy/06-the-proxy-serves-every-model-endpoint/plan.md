@@ -1,7 +1,7 @@
 ---
 title: The proxy serves every model endpoint
 domain: proxy
-status: planned
+status: active
 priority: high
 created: 2026-10-24
 revalidated: 2026-10-24
@@ -113,13 +113,13 @@ GET /responses/{id} -> decode id -> connector, original id -> may the caller use
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Tokens are counted](task-01-tokens-are-counted.md) | todo | - |
-| [02 - Embeddings are served](task-02-embeddings-are-served.md) | todo | 01 |
-| [03 - Responses are served](task-03-responses-are-served.md) | todo | 01 |
-| [04 - Images are served](task-04-images-are-served.md) | todo | 01 |
-| [05 - Audio is served](task-05-audio-is-served.md) | todo | 04 |
-| [06 - Rerank is served](task-06-rerank-is-served.md) | todo | 01 |
-| [07 - The docs list every endpoint](task-07-the-docs-list-every-endpoint.md) | todo | 01-06 |
+| [01 - Tokens are counted](task-01-tokens-are-counted.md) | implemented | - |
+| [02 - Embeddings are served](task-02-embeddings-are-served.md) | implemented | 01 |
+| [03 - Responses are served](task-03-responses-are-served.md) | implemented | 01 |
+| [04 - Images are served](task-04-images-are-served.md) | implemented | 01 |
+| [05 - Audio is served](task-05-audio-is-served.md) | implemented | 04 |
+| [06 - Rerank is served](task-06-rerank-is-served.md) | implemented | 01 |
+| [07 - The docs list every endpoint](task-07-the-docs-list-every-endpoint.md) | implemented | 01-06 |
 
 ## Risks and tradeoffs
 
@@ -130,11 +130,11 @@ GET /responses/{id} -> decode id -> connector, original id -> may the caller use
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** check the refs against main after proxy 05 merges, then [task-01-tokens-are-counted.md](task-01-tokens-are-counted.md).
+- **Done so far:** all seven tasks are implemented. A dialect is one row: caller paths, upstream path, family, kind and usage reader. The proxy answers count tokens, embeddings, Responses and their follow-ups, images, speech, transcriptions and rerank.
+An OpenAI endpoint answers at the root as well. A Responses id holds its connector and is rewritten in JSON and SSE. `ModelPrice` carries `characters` and `minutes`. The two docs and `00-proxy.md` list the endpoints. The plan's final checklist is still open because no task is `done`.
+- **Next action:** run the final verification checklist by hand, then write `implemented.md` and close the plan.
 - **Open questions:** none.
-- **Watch out for:** a dialect is now more than chat. Code that lists dialects for a chat call, such as the 404 hint in `route`, keeps to the dialects of the same kind.
-
+- **Watch out for:** a dialect is now more than chat. The 404 hint in `route` stays among dialects of the same kind, so a chat refusal never names `/rerank`.
 ## Final verification checklist
 
 - [ ] The OpenAI SDK, with base URL `http://host:port`, answers embeddings, Responses with a follow-up, images, speech and a transcription through a real `openai` connector.

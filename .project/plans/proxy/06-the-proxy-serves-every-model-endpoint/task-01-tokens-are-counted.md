@@ -1,6 +1,6 @@
 ---
 title: Tokens are counted
-status: todo
+status: implemented
 depends: []
 layer: "server"
 refs:

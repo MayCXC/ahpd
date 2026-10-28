@@ -16,7 +16,7 @@ With `httpApi.port` it moves with `/api` to the API's own port. With `httpApi` o
 
 ## Pointing a tool at it
 
-`http://127.0.0.1:<port>` is the base URL for both an OpenAI SDK and an Anthropic SDK. The OpenAI paths answer at the root as well as under `/v1`, and `/v1/messages` is Anthropic's only path.
+`http://127.0.0.1:<port>` is the base URL for both an OpenAI SDK and an Anthropic SDK. The OpenAI paths answer at the root as well as under `/v1`; Anthropic's `/v1/messages` and its count path keep their `/v1`.
 
 | Tool | Base URL | Credential |
 | --- | --- | --- |
@@ -27,13 +27,24 @@ With `httpApi.port` it moves with `/api` to the API's own port. With `httpApi` o
 ANTHROPIC_BASE_URL=http://127.0.0.1:9187 ANTHROPIC_API_KEY=$AHPD_TOKEN claude
 ```
 
-| Path | Read as |
-| --- | --- |
-| `POST /v1/chat/completions`, `POST /chat/completions` | OpenAI's chat completions (`openai-chat`) |
-| `POST /v1/messages` | Anthropic's messages (`anthropic-messages`) |
-| `GET /v1/models`, `GET /models` | The names you may call |
+| Path | Dialect | Recorded | Host adapters |
+| --- | --- | --- | --- |
+| `POST /v1/chat/completions`, `POST /chat/completions` | `openai-chat` | yes | `openai`, `openrouter`, `openai-compatible` |
+| `POST /v1/messages` | `anthropic-messages` | yes | `anthropic` |
+| `POST /v1/messages/count_tokens` | `anthropic-count-tokens` | no | `anthropic` |
+| `POST /responses/input_tokens`, `POST /v1/responses/input_tokens` | `openai-input-tokens` | no | `openai` |
+| `POST /embeddings`, `POST /v1/embeddings` | `openai-embeddings` | yes | `openai`, `openrouter` |
+| `POST /responses`, `POST /v1/responses`, `POST /responses/compact`, `POST /v1/responses/compact` | `openai-responses` | yes | `openai`, `openrouter` (create only) |
+| `GET`, `DELETE /responses/{id}`; `POST /responses/{id}/cancel`; `GET /responses/{id}/input_items` | `openai-responses` | no | `openai` |
+| `POST /images/generations`, `POST /images/edits`, `POST /images/variations`, each at the root and under `/v1` | `openai-images` | yes | `openai`, `openrouter` (at `/images`) |
+| `POST /audio/speech`, `POST /v1/audio/speech` | `openai-speech` | yes | `openai` |
+| `POST /audio/transcriptions`, `POST /audio/translations`, each at the root and under `/v1` | `openai-transcriptions` | yes | `openai` |
+| `POST /rerank`, `POST /v1/rerank`, `POST /v2/rerank` | `rerank` | yes | `openrouter` |
+| `GET /v1/models`, `GET /models` | the models list | no | - |
 
-Any other path under `/v1` is 404. `/messages` at the root is not the proxy, and neither is a path under `/models` or `/chat/completions`.
+Any other path under `/v1` is 404. `/messages` at the root is not the proxy, and neither is a path under `/models` or `/chat/completions`. An `openai-compatible` connector serves the dialects its `accepts` names, and chat alone by default.
+
+A Responses id holds the connector that made it, so a follow-up goes to that connector and nowhere else, with no fallback. The id is the proxy's, not the provider's. A token count costs nothing, so it writes no usage record.
 
 The `Host` may be one of the API's own names, or `127.0.0.1`, `localhost` or `[::1]` at any port, so a tunnel or an SSH forward that lands on another loopback port still reaches it. A browser `Origin` that is not the daemon's own is refused, as it is on `/api`.
 
@@ -61,9 +72,9 @@ A provider is a connector, made from one of the four adapters the host ships. It
 
 | Adapter | Config | Called in |
 | --- | --- | --- |
-| `openrouter` | `key`, required; `endpoint`, which defaults to `https://openrouter.ai/api/v1` | `openai-chat` |
-| `anthropic` | `key`, required; `endpoint`, which defaults to `https://api.anthropic.com` | `anthropic-messages` |
-| `openai` | `key`, required; `endpoint`, which defaults to `https://api.openai.com/v1` | `openai-chat` |
+| `openrouter` | `key`, required; `endpoint`, which defaults to `https://openrouter.ai/api/v1` | `openai-chat`, `openai-embeddings`, `openai-responses`, `openai-images` (at `/images`), `openai-speech`, `openai-transcriptions`, `rerank` |
+| `anthropic` | `key`, required; `endpoint`, which defaults to `https://api.anthropic.com` | `anthropic-messages`, `anthropic-count-tokens` |
+| `openai` | `key`, required; `endpoint`, which defaults to `https://api.openai.com/v1` | `openai-chat`, `openai-input-tokens`, `openai-embeddings`, `openai-responses`, `openai-images`, `openai-speech`, `openai-transcriptions` |
 | `openai-compatible` | `endpoint`, required; `key`, optional; `accepts`, which defaults to `["openai-chat"]` | `accepts` |
 
 A client makes one with `x-ahpd/connectors/put`. This is the host's OpenRouter account, whose key goes to the vault:
@@ -125,9 +136,10 @@ The table is for an alias: one name over one or more providers. It wins over a f
 
 A name the table does not hold is read as `<provider>/<id>`, split at the first slash. The prefix is the adapter's name, so `openrouter/anthropic/claude-sonnet-5.5` is OpenRouter's own model `anthropic/claude-sonnet-5.5`. An `openai-compatible` connector has no vendor name, so its prefix is its own id: `local/llama-3` is the connector `local`'s model `llama-3`. Every ready connector with that prefix serves the call, in the order above. A policy is asked on the whole name, so `openrouter/*` allows every OpenRouter model. A call is sent even when the connector's list does not hold the id yet, and the provider's own 404 names the model.
 
-The body is sent unchanged except for `model`, which becomes that provider's own id. The provider's key goes in its dialect's header: `Authorization: Bearer` for `openai-chat`, `x-api-key` for `anthropic-messages`. Your token, `X-AHP-Scope`, cookies, connection headers (with any header your `Connection` header names) and the account headers below are not sent. Nothing is added to the body: an OpenAI stream that does not ask for `stream_options.include_usage` is recorded without tokens.
+The body is sent unchanged except for `model`, which becomes that provider's own id.
+A multipart body is read as a form. Its `model` field is replaced, and the form is sent again, so its files and other fields pass through. The provider's key goes in its dialect's header: `Authorization: Bearer` for the `openai` family, `x-api-key` for `anthropic`'s. Your token, `X-AHP-Scope`, cookies, connection headers (with any header your `Connection` header names) and the account headers below are not sent. Nothing is added to the body: an OpenAI stream that does not ask for `stream_options.include_usage` is recorded without tokens.
 
-The upstream URL is the provider's endpoint plus `/chat/completions` for `openai-chat`, or `/v1/messages` for `anthropic-messages`. Redirects are not followed.
+The upstream URL is the provider's endpoint plus the dialect's path. A chat call uses `/chat/completions`; a message uses `/v1/messages`; an image edit uses the caller's path. A connector's `paths` replaces one dialect's path, as OpenRouter's `openai-images` names `/images`. Redirects are not followed.
 
 The answer comes back with the provider's status, headers and body as they came, SSE included, less the account headers below. A provider's own error is passed through as it came.
 
@@ -189,7 +201,9 @@ It answers in Anthropic's list shape when `anthropic-version` is sent, and OpenA
 
 Each answered call writes one usage record with `source: "proxy"`: the model name, the adapter that answered, the connector whose key paid, the tokens the answer reported, the owner (`user:<id>`, or `root:<host>` for the deployment token), the team and project, and the pools those give. A record is written when the stream ends, is cut, or fails. `ahpd usage` shows them.
 
-A record carries two costs. `providerCost` is what the provider reported, when it reported one: OpenRouter sends `usage.cost` with `cost_details`, which give the amount and what was sent and what came back. `cost` is what the pools are charged. A `price` on the entry, or a fetched `pricing` for a model the table does not hold, is the price of the call (`from: "price"`). Cache tokens are charged at the input price. Without a price, the cost is the provider's own figure (`from: "harness"`), so a call nobody priced is charged what it cost. A price that names one side and not the other gives no cost at all when the unnamed side has tokens, because an absent price is not a price of zero; a side priced at 0 is free.
+A record carries two costs. `providerCost` is what the provider reported, when it reported one: OpenRouter sends `usage.cost` with `cost_details`, which give the amount and what was sent and what came back. `cost` is what the pools are charged. A `price` on the entry, or a fetched `pricing` for a model the table does not hold, is the price of the call (`from: "price"`). Cache tokens are charged at the input price. A speech call is charged by `characters` and a transcription by `minutes`. Without a price, the cost is the provider's own figure (`from: "harness"`), so a call nobody priced is charged what it cost. A price that names one side and not the other gives no cost at all when the unnamed side has tokens, because an absent price is not a price of zero; a side priced at 0 is free.
+
+`characters` is dollars per million characters of a speech `input`. `minutes` is dollars per minute of audio a transcription reports in `usage.seconds`. A price that names neither loads as before: the call is recorded, with no cost of its own when the provider named none.
 
 ## Session calls
 

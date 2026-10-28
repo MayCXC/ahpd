@@ -19,7 +19,7 @@ import { serve, toNodeListener, type RequestHandler } from '@cofold/remote';
 import type { Runner } from '@cofold/commands';
 import { plainAnswer, routeOf, ROUTE_ROOT, serveRequests, type Door, type NodeRequestListener, type Route, type Users } from '@ahpd/sdk';
 import { authorizeOverHttp } from './commands/authorize.js';
-import { ROOT_PATHS } from './proxy/dialects.js';
+import { isRootPath } from './proxy/dialects.js';
 
 /** The path the API is served under, on whichever listener carries it. */
 export const API_PREFIX = '/api';
@@ -143,7 +143,7 @@ export const isUnder = (path: string, prefix: string): boolean => path === prefi
  */
 export function withoutApi(door: Door, api?: RequestHandler): RequestHandler {
   return guarded((request, path) => {
-    if (isUnder(path, API_PREFIX) || isUnder(path, PROXY_PREFIX) || ROOT_PATHS.includes(path)) {
+    if (isUnder(path, API_PREFIX) || isUnder(path, PROXY_PREFIX) || isRootPath(path)) {
       return api === undefined ? Promise.resolve(json(404, { message: `No API at ${path}` })) : api(request);
     }
     return plainAnswer(door, request);

@@ -329,7 +329,11 @@ export function hostAdapters(options: HostAdapterOptions = {}): Record<string, A
     open,
     provider: (connector: Connector): ModelProvider => ({
       endpoint: endpointOf(connector, OPENROUTER_ENDPOINT),
-      accepts: ['openai-chat'],
+      accepts: [
+        'openai-chat', 'openai-embeddings', 'openai-responses', 'openai-images', 'openai-speech', 'openai-transcriptions',
+        'rerank',
+      ],
+      paths: { 'openai-images': '/images' },
       key: required(connector, 'key'),
     }),
     check: async (connector: Connector) => probe(
@@ -398,7 +402,7 @@ export function hostAdapters(options: HostAdapterOptions = {}): Record<string, A
     open,
     provider: (connector: Connector): ModelProvider => ({
       endpoint: endpointOf(connector, ANTHROPIC_ENDPOINT),
-      accepts: ['anthropic-messages'],
+      accepts: ['anthropic-messages', 'anthropic-count-tokens'],
       key: required(connector, 'key'),
     }),
     check: async (connector: Connector) => probe(
@@ -426,7 +430,10 @@ export function hostAdapters(options: HostAdapterOptions = {}): Record<string, A
     open,
     provider: (connector: Connector): ModelProvider => ({
       endpoint: endpointOf(connector, OPENAI_ENDPOINT),
-      accepts: ['openai-chat'],
+      accepts: [
+        'openai-chat', 'openai-input-tokens', 'openai-embeddings', 'openai-responses', 'openai-images', 'openai-speech',
+        'openai-transcriptions',
+      ],
       key: required(connector, 'key'),
     }),
     check: async (connector: Connector) => probe(
