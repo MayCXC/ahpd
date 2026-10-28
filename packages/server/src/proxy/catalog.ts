@@ -62,6 +62,8 @@ export interface ModelCatalog {
   refresh(): Promise<void>;
   /** Every connector's list, in owner and id order. */
   listed(): readonly ListedModels[];
+  /** One connector's list and when it was last read or tried, or nothing before its first read. */
+  listOf(connector: ProviderConnector): { models: readonly ProviderModel[]; at: number } | undefined;
   /** One model a connector listed, by the provider's own id. */
   modelOf(connector: ProviderConnector, id: string): ProviderModel | undefined;
   /** What that model costs there, in the entry's units: dollars per million tokens. */
@@ -151,6 +153,10 @@ export const modelCatalog = (options: CatalogOptions): ModelCatalog => {
     listed: () => [...rows.values()]
       .sort((one, two) => keyOf(one.connector).localeCompare(keyOf(two.connector)))
       .map((row) => ({ connector: row.connector, models: row.models })),
+    listOf: (connector) => {
+      const row = rows.get(keyOf(connector));
+      return row === undefined ? undefined : { models: row.models, at: row.at };
+    },
     modelOf: find,
     priceOf: (connector, id) => priceOfModel(find(connector, id)),
     stop: () => { clearInterval(timer); },

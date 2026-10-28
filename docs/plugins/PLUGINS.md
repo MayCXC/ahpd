@@ -1419,7 +1419,7 @@ A row also carries a `health` when the host knows one, and no `health` key when 
 
 `connector:list` opens the channel, and reads the caller's own connectors, their teams' and the host's, and no other person's. `connector:all` reads every row, and is admitted without `connector:list`. A caller with neither grant reads no connector, its own included, and is refused the subscription. A subscribe also takes `?owner=me`, which narrows the listing to the caller's own connectors.
 
-Five commands serve a connector:
+Six commands serve a connector:
 
 | Method | Grant | What it does |
 | --- | --- | --- |
@@ -1428,6 +1428,7 @@ Five commands serve a connector:
 | `x-ahpd/connectors/check` | `connector:put`, and the owner's | Runs the check of `{ id }` again and answers the row. It refuses a connector that is not ready, or one whose adapter has no `check` |
 | `x-ahpd/connectors/signin` | `connector:put`, and the owner's | Starts a sign-in for `{ id, adapter, owner, title?, config }`, checks what a put checks except the field the adapter's `signIn` names, and answers `{ url, state }`. It refuses an adapter with no `signIn` |
 | `x-ahpd/connectors/signin-finish` | `connector:put`, and the owner's | Takes `{ state, code }`, asks the put's owner checks again, exchanges the code through the adapter and runs the put with the key. Answers the row |
+| `x-ahpd/connectors/models` | `connector:list` for a connector the caller reads, or `connector:all` | Answers `{ models, at }` for the open provider connector `{ id }`: each model as the provider lists it, with `model`, the name a caller sends to the proxy, and `callable`, whether this caller may call it now. `at` is when the list was last read. It refuses a connector whose adapter serves no models |
 
 A sign-in is served for an adapter that declares `signIn`, and it fills the one field that adapter names. The start makes a PKCE verifier and a state, and keeps both the verifier and the put's params in memory for ten minutes. It answers the URL the adapter builds from the S256 challenge and the state. The finish refuses a state this host never made, one that has expired, and one another caller started. It uses a state once, and only its starter can use it, so a stranger cannot burn it.
 

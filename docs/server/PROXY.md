@@ -197,6 +197,10 @@ It answers in Anthropic's list shape when `anthropic-version` is sent, and OpenA
 }
 ```
 
+A ready connector's list is read the first time the proxy sees the connector, and again each hour. A read that fails keeps the list the connector had.
+
+A client reads one connector's list with `x-ahpd/connectors/models`, as [PLUGINS.md](../plugins/PLUGINS.md) says. Each model carries `model`, the name a caller sends, and `callable`, whether that caller may call it now, as this list decides it. A connector whose list was never read is read first, so a client sees the models of a connector it just made.
+
 ## What is recorded
 
 Each answered call writes one usage record with `source: "proxy"`: the model name, the adapter that answered, the connector whose key paid, the tokens the answer reported, the owner (`user:<id>`, or `root:<host>` for the deployment token), the team and project, and the pools those give. A record is written when the stream ends, is cut, or fails. `ahpd usage` shows them.

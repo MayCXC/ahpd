@@ -42,6 +42,11 @@
  * used once. Neither answer, row, error nor log carries the code, the verifier
  * or the key.
  *
+ * `x-ahpd/connectors/models` takes `{ id }` and answers the models one open
+ * provider connector serves, as the model proxy's catalog last read them, with
+ * the name a caller sends and whether this reader may call each one. It is
+ * served on a host that hands the channel a `models` reader.
+ *
  * `connector:list` reads the caller's own connectors, their teams' and the
  * host's; `connector:all` reads every connector. A caller with neither reads
  * no connector, its own included. A connector of an adapter no plugin
@@ -71,7 +76,7 @@ import {
 import { isRecordSlug } from '../resources/records.js';
 import { recordsChannel, type RecordsChannel } from '../resources/recordschannel.js';
 import { bag, isRecord, reason } from '../utils/values.js';
-import type { CallOutcome, CheckResult, Connector, ConnectorHealth, ConnectorOwner, ConnectorRef, ProviderConnector, ServedAdapter } from '../types/connectors.js';
+import type { CallOutcome, CheckResult, Connector, ConnectorHealth, ConnectorModels, ConnectorOwner, ConnectorRef, ProviderConnector, ServedAdapter } from '../types/connectors.js';
 import type { PluginMethod } from '../types/plugin.js';
 import type { RecordCollection, StoredRecord } from '../types/records.js';
 import type { Grant, Principal } from '../types/users.js';
@@ -86,6 +91,7 @@ const REMOVE = `${DOMAIN}/remove`;
 const CHECK = `${DOMAIN}/check`;
 const SIGNIN = `${DOMAIN}/signin`;
 const SIGNIN_FINISH = `${DOMAIN}/signin-finish`;
+const MODELS = `${DOMAIN}/models`;
 
 /** How long one sign-in waits for the code a person pastes, in milliseconds. */
 const SIGNIN_LIMIT_MS = 10 * 60 * 1000;
@@ -136,6 +142,14 @@ export interface ConnectorsChannelOptions {
    * Absent on a host with no automations store, which checks no reference.
    */
   automations?(id: string): { owner?: Owner | undefined } | undefined;
+  /**
+   * The models one open provider connector serves, for one reader.
+   *
+   * Taken as an option because the catalog the list is kept in, and the routes
+   * and policies that say what a reader may call, belong to the server's model
+   * proxy. Absent: the host serves no `x-ahpd/connectors/models`.
+   */
+  models?(connector: ProviderConnector, reader: Principal | undefined): Promise<ConnectorModels>;
   /** Where a connector that could not be opened is said. */
   onProblem?(message: string): void;
 }
@@ -190,7 +204,7 @@ interface Prepared {
 export interface ConnectorsChannel {
   /** What `servedRecords` takes. */
   channel: RecordsChannel;
-  /** `x-ahpd/connectors/put`, `remove`, `check`, `signin` and `signin-finish`, by name. */
+  /** `x-ahpd/connectors/put`, `remove`, `check`, `signin`, `signin-finish` and `models`, by name. */
   methods: Record<string, PluginMethod>;
   /**
    * Run one action on one open connector for one reader.
@@ -923,12 +937,74 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     },
   };
 
+  /** Every open connector whose adapter serves models, as `providers` answers them. */
+  const providers = (): ProviderConnector[] => {
+    const adapters = options.adapters();
+    const listed: ProviderConnector[] = [];
+    for (const [id, entry] of open) {
+      const adapter = adapters[entry.connector.adapter];
+      if (adapter === undefined || typeof adapter.provider !== 'function') continue;
+      try {
+        /*
+         * The list is read here, bound to this open connector, so the caller
+         * gets the models and never the resolved config or the key.
+         */
+        const read = adapter.models;
+        listed.push({
+          id,
+          adapter: adapter.name,
+          owner: entry.connector.owner,
+          provider: adapter.provider(entry.connector),
+          ...(typeof read === 'function' ? { models: () => read(entry.connector) } : {}),
+        });
+      } catch (error) {
+        const line = `${id} serves no model: ${reason(error)}`;
+        if (providerProblems.has(line)) continue;
+        providerProblems.add(line);
+        problem(line);
+      }
+    }
+    return listed.sort((one, two) => one.id.localeCompare(two.id));
+  };
+
+  /*
+   * The owner is read fresh before the reader check, as `check` reads it, so a
+   * connector made since the last listing is not refused for want of one.
+   */
+  const models: PluginMethod = {
+    grant: 'connector:all' as Grant,
+    describe: () => ({ title: 'List a connector\'s models', description: 'Answers the models one open provider connector serves, and which of them the caller may call.' }),
+    authorize: async (params, reader) => {
+      const id = params.id;
+      if (typeof id !== 'string') return false;
+      const before = await options.collection.get(id);
+      if (before === undefined) return false;
+      owners.set(id, asOwner(before.owner));
+      return mayRead(id, reader);
+    },
+    handle: async (params, reader) => {
+      const id = idParam(MODELS, params);
+      const read = options.models;
+      if (read === undefined) throw new RpcError(INVALID_PARAMS, `this host lists no connector's models`);
+      const before = await options.collection.get(id);
+      if (before === undefined) throw new RpcError(INVALID_PARAMS, `${SCHEME} holds no ${id}`);
+      owners.set(id, asOwner(before.owner));
+      if (reader !== undefined && !mayRead(id, reader)) throw new RpcError(DENIED, `${id} is not ${reader.id}'s to read`);
+      if (!open.has(id)) throw new RpcError(INVALID_PARAMS, `${id} is not an open connector`);
+      const connector = providers().find((one) => one.id === id);
+      if (connector === undefined) throw new RpcError(INVALID_PARAMS, `${id} serves no models`);
+      if (connector.models === undefined) throw new RpcError(INVALID_PARAMS, `${connector.adapter} lists no models`);
+      return read(connector, reader);
+    },
+  };
+
   const methods: Record<string, PluginMethod> = {
     [PUT]: put,
     [REMOVE]: remove,
     [CHECK]: check,
     [SIGNIN]: signin,
     [SIGNIN_FINISH]: signinFinish,
+    ...(options.models === undefined ? {} : { [MODELS]: models }),
   };
 
   return {
@@ -936,34 +1012,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     methods,
     run,
     note,
-    providers: () => {
-      const adapters = options.adapters();
-      const listed: ProviderConnector[] = [];
-      for (const [id, entry] of open) {
-        const adapter = adapters[entry.connector.adapter];
-        if (adapter === undefined || typeof adapter.provider !== 'function') continue;
-        try {
-          /*
-           * The list is read here, bound to this open connector, so the caller
-           * gets the models and never the resolved config or the key.
-           */
-          const read = adapter.models;
-          listed.push({
-            id,
-            adapter: adapter.name,
-            owner: entry.connector.owner,
-            provider: adapter.provider(entry.connector),
-            ...(typeof read === 'function' ? { models: () => read(entry.connector) } : {}),
-          });
-        } catch (error) {
-          const line = `${id} serves no model: ${reason(error)}`;
-          if (providerProblems.has(line)) continue;
-          providerProblems.add(line);
-          problem(line);
-        }
-      }
-      return listed.sort((one, two) => one.id.localeCompare(two.id));
-    },
+    providers,
     refresh: () => channel.refresh(),
     refs: () => [...known.values()],
     /*
