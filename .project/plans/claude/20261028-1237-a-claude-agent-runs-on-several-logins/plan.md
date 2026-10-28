@@ -1,7 +1,7 @@
 ---
 title: A Claude agent runs on several logins
 domain: claude
-status: active
+status: built
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -104,7 +104,9 @@ turn begins -> refreshPreset finds the conversation's login -> query env CLAUDE_
 | A turn that showed something before its refusal fails as it does today, and the next turn starts on the next login. | meridian's spec, "No failover after content streams" | 02 |
 | A turn whose turn before it on the CLI has no entry in `ends`, one read back after a restart, fails the same way, and never starts the conversation over. | `(defaulted: the conversation holds the turns before the refused one, and only a cut keeps them)`; the measurement in *Searches performed* | 02 |
 | A conversation refused on its first turn starts over under its id: the CLI stops, the SDK's `deleteSession` removes the conversation, and a new CLI starts with no resume. Only a conversation this process started on this host does, since a resumed one holds more and a machine's files are not this host's. | Aaron, 2026-10-28: "seems like conversations should just have a zero point before any turns to fall back to in that case?"; the reference's `_removeAllTurns`; the plan it requires | 02 |
-| When every login cools down or was tried, the turn waits until the earliest cooldown ends, says until when, and then tries again; a cancel ends the wait. | Aaron, 2026-10-28: "retry all the accounts with backoff"; meridian `server.ts` L2114-L2122 | 02 |
+| A conversation whose delete fails comes back as it is, on the new login, and the turn fails with the refusal and the reason. | The plan it requires, whose failed delete brings the chat back resumed and refuses with the reason | 02 |
+| The CLI that a start-over stops ends before the next CLI exists, and that end does not stop the session. | SDK 0.3.301 `sdk.mjs`: `Query.close` ends the frames at once, and `performCleanup` waits up to 2 seconds for the CLI to exit | 02 |
+| When every login cools down or was tried, the turn waits until the earliest cooldown ends, says until when, and then tries again; a cancel ends the wait. The login it waited for is tried when no other is back, since a timer can fire before the clock passes its deadline. | Aaron, 2026-10-28: "retry all the accounts with backoff"; meridian `server.ts` L2114-L2122 | 02 |
 | `authentication_failed` and every other error fail the turn as they do today, and move nothing. | meridian `errors.ts` L658-L669 | 02 |
 
 ## Proposed architecture
@@ -119,8 +121,8 @@ turn begins -> refreshPreset finds the conversation's login -> query env CLAUDE_
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - a-conversation-runs-on-its-own-login](task-01-a-conversation-runs-on-its-own-login.md) | todo | - |
-| [02 - a-refused-login-hands-the-turn-on](task-02-a-refused-login-hands-the-turn-on.md) | todo | 01 |
+| [01 - a-conversation-runs-on-its-own-login](task-01-a-conversation-runs-on-its-own-login.md) | done | - |
+| [02 - a-refused-login-hands-the-turn-on](task-02-a-refused-login-hands-the-turn-on.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -130,14 +132,14 @@ turn begins -> refreshPreset finds the conversation's login -> query env CLAUDE_
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-conversation-runs-on-its-own-login.md](task-01-a-conversation-runs-on-its-own-login.md).
+- **Done so far:** tasks 01 and 02, 2026-10-28; [implemented.md](implemented.md) says what exists.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the CLI writes a refused prompt, so a turn that runs again without a cut shows the model its prompt twice.
 
 ## Final verification checklist
 
-- [ ] Each new case fails before its task and passes after it.
-- [ ] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and `pnpm schema` pass.
-- [ ] The agent-claude and sdk suites pass at one worker.
-- [ ] The README says how to give an agent its logins, and the spec has the scenario.
+- [x] Each new case fails before its task and passes after it.
+- [x] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and `pnpm schema` pass.
+- [x] The agent-claude and sdk suites pass at one worker.
+- [x] The README says how to give an agent its logins, and the spec has the scenario.

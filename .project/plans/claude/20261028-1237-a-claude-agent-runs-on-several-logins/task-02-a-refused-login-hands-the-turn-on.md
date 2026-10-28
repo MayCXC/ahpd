@@ -1,6 +1,6 @@
 ---
 title: A refused login hands the turn on
-status: todo
+status: done
 depends: [task-01-a-conversation-runs-on-its-own-login.md]
 layer: "agent-claude"
 refs:
@@ -36,14 +36,19 @@ When every login cools down, the turn waits for the earliest one.
 3. Mark the session's login on an `assistant` frame of the lead conversation whose `error` is `rate_limit` or `billing_error`.
 4. Move a refused turn only when it has no response part yet.
 5. Move it only when the last turn before it that ran on the CLI has an entry in `ends`.
-6. Leave the synthetic reply of a turn that moves out of its parts.
-7. On that turn's `result`, pick the next login that it has not tried and that is not cooling down.
-8. Start a new CLI on that login, resumed at the cut point.
-9. Send the turn's prompt again with its attachments, under `writtenAs(turnId, true)`.
-10. When no login remains, show until when the turn waits.
-11. Try again when the earliest cooldown ends.
-12. End the wait and the move in `cancel`.
-13. Write the `logins` field and the refusal into the README, and the scenario into the spec.
+6. With no turn before it, move a conversation this process started on this host by starting it over.
+7. Leave the synthetic reply of a turn that moves out of its parts.
+8. On that turn's `result`, pick the next login that it has not tried and that is not cooling down.
+9. Start a new CLI on that login, resumed at the cut point.
+10. For a start-over, wait for the old CLI to stop, then delete the conversation.
+11. Mark the CLI that a move closes, so that its end does not stop the session.
+12. Start the new CLI of a start-over with no resume.
+13. When the delete fails, resume the conversation as it is, and fail the turn with the refusal.
+14. Send the turn's prompt again with its attachments, under `writtenAs(turnId, true)`.
+15. When no login remains, show until when the turn waits.
+16. Try again when the earliest cooldown ends, on that login if no other login is back.
+17. End the wait and the move in `cancel` and in the session's `close`.
+18. Write the `logins` field and the refusal into the README, and the scenario into the spec.
 
 ## Validation
 
@@ -52,9 +57,14 @@ When every login cools down, the turn waits for the earliest one.
   - That turn resumes at the previous turn's end, and sends its prompt once more.
   - That turn never shows the synthetic reply.
   - A refusal after the turn shows a part fails the turn, and the next turn starts on the next login.
-  - A refusal on a conversation's first turn fails the turn.
+  - A refusal on a conversation's first turn starts it over under its id.
+  - A start-over goes on when the CLI that it stops raises as it ends.
+  - A conversation that started over runs its next turn.
+  - A conversation that the start-over cannot delete comes back as it was, and the turn fails with the refusal.
+  - A refusal after a turn read back from a transcript fails the turn, and starts nothing over.
   - With every login cooling down, the turn waits, and then runs on the earliest.
   - A cancel during the wait ends the turn and starts no CLI.
+  - A session closed during the wait starts no CLI.
   - `authentication_failed` fails the turn and moves nothing.
   - A `billing_error` cools a login down for 10 minutes.
 - Run `pnpm vitest run packages/agent-claude --maxWorkers=1` and `pnpm vitest run packages/sdk --maxWorkers=1`, and expect them to pass.
@@ -62,4 +72,17 @@ When every login cools down, the turn waits for the earliest one.
 - Run `lint-prose.mjs` on the README section and the spec scenario, and expect no finding.
 
 ## Resume
+
+Done 2026-10-28, on the branch of [A chat truncated whole starts over](../../host/20261028-1303-a-chat-truncated-whole-starts-over/plan.md).
+Ten of the twelve refusal cases fail on task 01's code.
+The case of a refused sign-in passes there too, because it keeps today's behaviour.
+The case of a session closed during a wait passes there, because nothing waits.
+It fails on this task's code without the stop in `close`.
+The SDK's `close` ends the frames at once, and its dispose waits up to 2 seconds for the CLI to exit.
+So the CLI that a start-over stops ends before the next CLI exists.
+An end that marks the session gone fails the next turn with `The agent stopped`.
+A CLI that raises as it ends fails the refused turn with the raise.
+The mark of the CLI that a move closed keeps both ends quiet.
+A timer can fire before the clock passes its deadline: 51 of 200 Node timers did.
+So a wait tries the login it waited for, and not the first login of the order.
 

@@ -1,6 +1,6 @@
 ---
 title: A conversation runs on its own login
-status: todo
+status: done
 depends: []
 layer: "agent-claude"
 refs:
@@ -62,4 +62,9 @@ The CLI gets the login's token as `CLAUDE_CODE_OAUTH_TOKEN`.
 - Run the new cases on the code before this task, and expect them to fail.
 
 ## Resume
+
+Done 2026-10-28.
+Six of the seven cases fail on the code before this task.
+The case of a record with no `logins` passes there too, because it keeps today's behaviour.
+The engine's list of fields in `engine.test.ts` gained `logins`.
 
