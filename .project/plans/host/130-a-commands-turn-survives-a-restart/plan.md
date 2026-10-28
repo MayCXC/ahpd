@@ -1,10 +1,10 @@
 ---
 title: A `!` command's turn survives a restart
 domain: host
-status: built
+status: active
 priority: medium
 created: 2026-10-27
-revalidated: 2026-10-27
+revalidated: 2026-10-28
 requires:
   - plans/host/129-a-tool-results-terminal-lasts-as-long-as-its-chat/plan.md
 changes:
@@ -40,6 +40,9 @@ The files read and the patterns to reuse are the `refs` above, and the refs of e
 - `rg -n "transcript\?\.\(|\.transcript\(" packages/sdk/src/host` - five reads of a transcript: `past`, two in a wake, a chat's snapshot and a retained terminal's rebuild.
 - `rg -n "commandTurns" packages/sdk/src` - the host knows a `!` turn from its start to its end.
 - `rg -n "onTurnRecorded" packages` - only agent-claude names a turn's transcript id, and the host copies a sender to it.
+- On SDK 0.3.301 the CLI echoes no streamed prompt, and agent-claude names a turn's transcript id from that echo, so it never does.
+  A prompt sent with a `uuid` is written to the transcript under that uuid.
+- On SDK 0.3.301 a Claude fork made with `resume`, `forkSession` and `resumeSessionAt` keeps the source's message uuids.
 - `rg -n "id: message.id|const turnId = entry.id|crypto.randomUUID" packages/agent-*/src` - cofold and pi read a turn back under the id of the prompt that they stored, and ACP under a new UUID.
 - `rg -n "ran:|const ran" packages/agent-*/src` - every backend builds a `!` turn in memory and writes it to no store of its own.
 
@@ -55,7 +58,8 @@ restart -> a transcript read -> each local turn goes back after its anchor -> se
 - A `!` turn is lost when the daemon starts again, in every backend.
 - The retained terminal of a `!` call cannot be rebuilt after a restart, because no turn names it.
 - A truncation or a fork at a `!` turn is refused, because the backend has no end point for it.
-- A cofold turn and a pi turn are read back under another id than the client's, and nothing tells the host that id.
+- A cofold turn, a pi turn and a Claude turn are read back under another id than the client's.
+  Nothing tells the host that id.
 - An ACP chat read back after a restart is its server's replay, and every load names its turns with new UUIDs.
 
 ## Answers
@@ -68,7 +72,8 @@ restart -> a transcript read -> each local turn goes back after its anchor -> se
 | A truncation or a fork at a local turn goes to the backend at the turn before it. | https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentSideEffects.ts#L1954-L1982; https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentService.ts#L7183-L7195 | p1 |
 | A cofold turn stores its prompt under the id that the client gave the turn. | npm://@cofold/agents@0.4.0 - `RunArgs.messageId`: "A client that supplies it can match run.started to its send" | p2 |
 | A pi turn names the entry of its prompt through `onTurnRecorded`. | [code://packages/sdk/src/types/agent.ts#L517-L530](../../../../packages/sdk/src/types/agent.ts#L517-L530); [code://packages/agent-pi/src/replay.ts#L127-L130](../../../../packages/agent-pi/src/replay.ts#L127-L130) | p3 |
-| A Claude turn needs no change: agent-claude already names each lead turn's transcript id. | [code://packages/agent-claude/src/session/query.ts#L773-L788](../../../../packages/agent-claude/src/session/query.ts#L773-L788) | - |
+| A Claude turn writes its prompt under the turn's id when it is a UUID, and otherwise under a uuid that it names through `onTurnRecorded`. | https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeAgentSession.ts#L1294-L1298 | p4 |
+| A local turn copied into a Claude fork keeps its anchor, because the fork keeps the source's message uuids. | npm://@anthropic-ai/claude-agent-sdk@0.3.301, measured | p1 |
 | A local turn after an ACP turn is dropped after a restart, as the reference drops a local turn whose anchor is gone. A local turn before every ACP turn comes back. | https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentHostLocalTurns.ts#L221; [code://packages/agent-acp/src/transcript.ts#L110-L120](../../../../packages/agent-acp/src/transcript.ts#L110-L120) | - |
 
 ## Proposed architecture
@@ -86,16 +91,16 @@ restart -> a transcript read -> each local turn goes back after its anchor -> se
 | [p1 - The host keeps a command's turn for its chat](../130-p1-the-host-keeps-a-commands-turn/plan.md) | built 2026-10-27 | - |
 | [p2 - A cofold turn keeps the id it was given](../130-p2-a-cofold-turn-keeps-its-id/plan.md) | built 2026-10-27 | - |
 | [p3 - A pi turn names the entry that holds it](../130-p3-a-pi-turn-names-its-entry/plan.md) | built 2026-10-27 | - |
+| [p4 - A Claude turn is written under its id](../130-p4-a-claude-turn-is-written-under-its-id/plan.md) | planned 2026-10-28 | - |
 
 ## Risks and tradeoffs
 
 - A turn that never reaches the transcript anchors nothing after a restart - the local turn after it is dropped as an orphan.
-- A fork may give the copied turns new ids - the check on a daemon forks a Claude chat to find out.
 
 ## Resume state
 
-- **Done so far:** planned and built 2026-10-27; see [implemented.md](implemented.md).
-- **Next action:** none.
+- **Done so far:** p1 to p3 planned and built 2026-10-27; see [implemented.md](implemented.md). p4 planned 2026-10-28.
+- **Next action:** p4.
 - **Open questions:** none.
 - **Watch out for:** a backend's turn id and its transcript's id are two names for one turn, and only the transcript's survives a restart.
 
