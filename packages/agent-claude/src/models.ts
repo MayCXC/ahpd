@@ -110,7 +110,7 @@ const matcher = (pattern: string | undefined): ((id: string) => boolean) => {
  * A record's key is already the text the channel resolved, so it is sent as it
  * is; a `{ fromEnv }` names a variable of the daemon's own environment.
  */
-const tokenOf = (key: ModelKey | undefined): string | undefined => {
+export const tokenOf = (key: ModelKey | undefined): string | undefined => {
   if (key === undefined) return undefined;
   return typeof key === 'string' ? key : process.env[key.fromEnv];
 };

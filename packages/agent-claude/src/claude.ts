@@ -4,6 +4,7 @@ import { createSession, EFFORT_LABELS, EFFORTS } from './session.js';
 import { restoreSavedOutputs } from './session/savedoutput.js';
 import { turnsOf, subagentsOf } from './transcript.js';
 import { catalogue, findSession, forgetSession, transcriptOf, written } from './catalog.js';
+import { Cooldowns } from './logins.js';
 import { offeredModels, ownModels, type ModelEntry, type ModelSource, type OfferedModel } from './models.js';
 import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -192,6 +193,15 @@ export function claude(options: ClaudeOptions): Agent {
 
   /** The models the two lists name, fetched once and kept. */
   let named: Promise<OfferedModel[]> | undefined;
+
+  /**
+   * The cooldowns of this agent's logins, one for all of its sessions.
+   *
+   * A login is one account, and a refusal one conversation met is one the next
+   * would meet too, so every session of the agent reads the same marks, as every
+   * request through one meridian proxy does.
+   */
+  const cooldowns = new Cooldowns();
   /** A list the CLI reported, as this harness offers it. */
   const offer = async <T extends OfferedModel>(cli: T[]): Promise<(T | OfferedModel)[]> => {
     if (options.models === undefined && options.modelSources === undefined) return cli;
@@ -731,6 +741,7 @@ export function claude(options: ClaudeOptions): Agent {
       ...(options.preset === undefined ? {} : { preset: options.preset }),
       ...(options.presetOf === undefined ? {} : { presetOf: options.presetOf }),
       ...(options.models === undefined && options.modelSources === undefined ? {} : { offerModels: offer }),
+      cooldowns,
       });
     },
   };

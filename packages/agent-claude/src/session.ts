@@ -8,6 +8,7 @@ import { createAsking } from './session/asking.js';
 import { contributed, createClientTools } from './session/clienttools.js';
 import { createConfig, listsOf } from './session/config.js';
 import type { ClaudeSessionOptions, SessionContext } from './session/context.js';
+import { createLogins } from './session/logins.js';
 import { createParts } from './session/parts.js';
 import { createQuery } from './session/query.js';
 import { createSavedOutputs } from './session/savedoutput.js';
@@ -120,6 +121,7 @@ export function createSession(options: ClaudeSessionOptions): Session {
   Object.assign(ctx, createStream(ctx));
   Object.assign(ctx, createSavedOutputs(ctx));
   Object.assign(ctx, asking);
+  Object.assign(ctx, createLogins(ctx));
   Object.assign(ctx, createQuery(ctx));
   Object.assign(ctx, servers);
   Object.assign(ctx, lifecycle);
@@ -155,6 +157,8 @@ export function createSession(options: ClaudeSessionOptions): Session {
   if (ctx.offering.length > 0) ctx.declared.ahp = contributed(ctx.offering, ctx.ranByClient) as Bag;
 
   // ------------------------------------------------------------------ the run
+  // The login the first CLI signs in with, which the query's environment reads.
+  ctx.login = ctx.loginFor(ctx.values);
   ctx.handle = ctx.startQuery(ctx.running, true);
   void ctx.describe().catch(() => {});
 

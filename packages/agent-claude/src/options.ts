@@ -211,6 +211,44 @@ export const env: Declaration = {
 };
 
 /**
+ * One Claude login a record runs on.
+ *
+ * `token` is what `claude setup-token` prints, which the CLI reads as
+ * `CLAUDE_CODE_OAUTH_TOKEN`. It is a credential, so a form does not draw its
+ * value back: the vault keeps it, as it keeps a model source's `key`, and a
+ * host record may name a daemon variable with `{ fromEnv }` instead.
+ * https://code.claude.com/docs/en/authentication#generate-a-long-lived-token
+ */
+const LOGIN: Bag = {
+  type: 'object',
+  properties: {
+    name: { type: 'string' },
+    token: {
+      writeOnly: true,
+      secretAtUse: true,
+      oneOf: [REFERENCE('fromEnv'), { type: 'string' }],
+    },
+  },
+  required: ['name', 'token'],
+};
+
+/**
+ * The Claude logins one agent runs on.
+ *
+ * Read where the CLI's environment is built, as `enableTasks` is, because
+ * which login a conversation runs on is decided per conversation and again
+ * after a refusal, not once for the query: `logins.ts` orders them and keeps
+ * their cooldowns, and `session/logins.ts` picks one.
+ */
+export const logins: Declaration = {
+  schema: {
+    type: 'array',
+    items: LOGIN,
+    description: 'Claude logins this agent runs on, each a name and a token from claude setup-token. A conversation keeps one while it is not cooling down.',
+  },
+};
+
+/**
  * Arguments the CLI is started with, beyond the ones this backend builds.
  *
  * The SDK's own shape: a name without the `--`, its value, and `null` for a
@@ -232,7 +270,7 @@ export const extraArgs: Declaration = {
 };
 
 /** Every declared option, by the name a record gives it. */
-export const DECLARED: Record<string, Declaration> = { sandbox, thinking, hostTasks, enableTasks, outputStyle, env, extraArgs };
+export const DECLARED: Record<string, Declaration> = { sandbox, thinking, hostTasks, enableTasks, outputStyle, env, logins, extraArgs };
 
 /** One model a record writes out: an id, and the name the picker draws. */
 const MODEL: Bag = {

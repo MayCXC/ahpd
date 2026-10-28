@@ -138,8 +138,23 @@ export function createQuery(ctx: SessionContext): Query {
   const denied = ctx.options.deniedMcpServers ?? [];
 
   /**
-   * What a CLI in a machine is started with: the variant's own `env`, a pushed
-   * credential over it, and `CLAUDE_CONFIG_DIR` last.
+   * What the CLI signs in with beyond the record's own `env`: the login this
+   * conversation runs on, and a pushed credential over it.
+   *
+   * The login is `CLAUDE_CODE_OAUTH_TOKEN`, the variable `claude setup-token`'s
+   * token is read from. A pushed credential is laid over it rather than under,
+   * because a client that signed in chose that key for its own sessions; the
+   * CLI then signs in with the key, which it takes before the token.
+   * https://code.claude.com/docs/en/authentication#authentication-precedence
+   */
+  const signIn = (): Record<string, string> => ({
+    ...(ctx.login === undefined ? {} : { CLAUDE_CODE_OAUTH_TOKEN: ctx.login.token }),
+    ...ctx.options.env,
+  });
+
+  /**
+   * What a CLI in a machine is started with: the variant's own `env`, its login
+   * and a pushed credential over it, and `CLAUDE_CONFIG_DIR` last.
    *
    * Nothing of the daemon's environment: its `HOME` and `PATH` are this host's,
    * and a key it holds is the one variant's that names it with `{ fromEnv }`,
@@ -149,7 +164,7 @@ export function createQuery(ctx: SessionContext): Query {
    */
   const inMachine = (): Record<string, string> => {
     const out: Record<string, string> = {};
-    for (const [name, value] of Object.entries({ ...ownEnvOf(ctx.values), ...ctx.options.env })) {
+    for (const [name, value] of Object.entries({ ...ownEnvOf(ctx.values), ...signIn() })) {
       if (typeof value === 'string') out[name] = value;
     }
     const dir = ctx.options.spawnConfigDir;
@@ -169,7 +184,7 @@ export function createQuery(ctx: SessionContext): Query {
   const taskToolsEnv = (): Bag => {
     if (ctx.values['enableTasks'] === false || hostHoldsTasks(ctx.values, ctx.offering)) return {};
     const env = ctx.options.spawn === undefined
-      ? { ...(fromPreset().env as Bag | undefined ?? process.env), ...ctx.options.env }
+      ? { ...(fromPreset().env as Bag | undefined ?? process.env), ...signIn() }
       : inMachine();
     if (env.CLAUDE_CODE_ENABLE_TASKS !== undefined) return {};
     return { env: { ...env, CLAUDE_CODE_ENABLE_TASKS: '1' } };
@@ -384,9 +399,9 @@ export function createQuery(ctx: SessionContext): Query {
        * The SDK's `env` *replaces* the subprocess environment rather than
        * merging with it, so handing it a lone credential is a subprocess with
        * no `PATH` and no `HOME` - which fails as something that has nothing to
-       * do with authentication. Absent when nobody pushed a token, and then
-       * the subprocess simply inherits, which is how every session worked
-       * before this and how an automation's still does.
+       * do with authentication. Absent when the record names no variable, the
+       * agent has no login and nobody pushed a token: the subprocess then
+       * inherits the daemon's environment, as an automation's does.
        */
       ...fromPreset(),
       /*
@@ -406,7 +421,7 @@ export function createQuery(ctx: SessionContext): Query {
           deniedMcpServers: denied.map((serverName) => ({ serverName })),
         },
       }),
-      ...(ctx.options.env ? { env: { ...(fromPreset().env as Bag | undefined ?? process.env), ...ctx.options.env } } : {}),
+      ...(Object.keys(signIn()).length > 0 ? { env: { ...(fromPreset().env as Bag | undefined ?? process.env), ...signIn() } } : {}),
       // In a machine, the env above is replaced by the variant's own alone.
       ...(ctx.options.spawn === undefined ? {} : { env: inMachine() }),
       // The switch for the task tools Claude keeps to itself.
@@ -520,15 +535,20 @@ export function createQuery(ctx: SessionContext): Query {
     },
   } as Parameters<typeof query>[0]));
 
+  /** What a CLI is started from, as the string `startedWith` holds: the record's values and the login. */
+  const startedFrom = (values: Bag, login: SessionContext['login']): string =>
+    JSON.stringify({ values, login: login?.name ?? null });
+
   /**
    * A query for this session, and what it was built from.
    *
-   * The values are recorded here rather than at each call site, because every
-   * query a session builds is one of these: `begin` is where the record is read
-   * again, and it compares against what the CLI answering now was started with.
+   * The values and the login are recorded here rather than at each call site,
+   * because every query a session builds is one of these: `begin` is where the
+   * record is read again and the login chosen again, and it compares both
+   * against what the CLI answering now was started with.
    */
   const startQuery = (agent: string | undefined, first: boolean): ReturnType<typeof query> => {
-    ctx.startedWith = JSON.stringify(ctx.values);
+    ctx.startedWith = startedFrom(ctx.values, ctx.login);
     return buildQuery(agent, first);
   };
 
@@ -889,14 +909,15 @@ export function createQuery(ctx: SessionContext): Query {
   };
 
   /**
-   * Read a record's values again, and put a new CLI on the conversation when
-   * they changed.
+   * Read a record's values again, find the login the turn runs on, and put a
+   * new CLI on the conversation when either changed.
    *
    * An edit applies at the next turn, which is the whole of the promise: the
    * turn already running finishes on the CLI it started on, and the turn that
    * begins after the edit is answered by a CLI built from what the record says
-   * now. Nothing to do for a preset, which no running daemon can edit - the
-   * values were read once and are what they were.
+   * now. A preset, which no running daemon can edit, keeps the values it was
+   * read with, and only its login can change: a login that cools down hands the
+   * next turn to the conversation's next login.
    *
    * The conversation moves as a `switchAgent` restart moves it: the new query
    * resumes the id the CLI gave this session, so the transcript, the model and
@@ -906,16 +927,16 @@ export function createQuery(ctx: SessionContext): Query {
    */
   const refreshPreset = (): string | undefined => {
     const live = ctx.options.presetOf;
-    if (live === undefined) return undefined;
-    const now = ctx.valuesOf(live());
-    const said = JSON.stringify(now);
-    if (said === ctx.startedWith) return undefined;
+    const now = live === undefined ? ctx.values : ctx.valuesOf(live());
+    const login = ctx.loginFor(now);
+    if (startedFrom(now, login) === ctx.startedWith) return undefined;
     const was = ctx.handle;
     try { was.close(); }
     catch (error: unknown) {
-      return `The harness would not stop for the record: ${error instanceof Error ? error.message : String(error)}`;
+      return `The harness would not stop for the record or its login: ${error instanceof Error ? error.message : String(error)}`;
     }
     ctx.values = now;
+    ctx.login = login;
     ctx.gone = undefined;
     ctx.handle = startQuery(ctx.running, false);
     void consume();
