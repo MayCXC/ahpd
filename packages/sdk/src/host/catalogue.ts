@@ -1,7 +1,7 @@
-import { ROOT, subagentChatUri } from './channels.js';
+import { ROOT, chatUriFor, subagentChatUri } from './channels.js';
 import { accountKey } from './root.js';
-import { Status, idFor, idOf, uriFor } from '../sessions/catalog.js';
-import { localPath } from '../resources/fileuri.js';
+import { Status, idFor, idOf, titleFrom, uriFor } from '../sessions/catalog.js';
+import { localPath, uriOf } from '../resources/fileuri.js';
 import { statSync } from 'node:fs';
 import type { Summary, SummaryChat } from '../types/catalog.js';
 import type { ChangesSummary } from '../types/changes.js';
@@ -927,6 +927,26 @@ export function createCatalogue(ctx: HostContext): Catalogue {
       found.push(adopt(one.agent, one.row, recorded !== undefined && !agents.has(recorded) ? recorded : undefined, stored.has(one.row.id)));
     }
     /*
+     * The sessions whose turns are all this host's own: `!` commands, kept in
+     * the session's folder.
+     *
+     * No agent wrote anything, so no listing offers one and no lookup finds
+     * it, and this host lists it from what it kept, as it lists a nested
+     * session. One whose agent is not loaded waits for it, as a listed row
+     * does.
+     */
+    for (const [id, folder] of kept.recordedFolders?.() ?? []) {
+      if (claimed.has(id) || offered.has(id) || kept.nested?.(id) !== undefined) continue;
+      if (found.some((one) => idFor(one.resource) === id)) continue;
+      const turns = ctx.keptTurnsOf(id);
+      if (turns.length === 0) continue;
+      const recorded = kept.provider(id);
+      const agent = recorded === undefined ? undefined : agents.get(recorded);
+      const reader = agent ?? [...agents.values()][0];
+      if (reader === undefined) continue;
+      found.push(adopt(reader, keptRow(id, folder, turns), agent === undefined ? recorded : undefined, stored.has(id)));
+    }
+    /*
      * What a refusing backend had last time, kept as it was.
      *
      * A backend that did not answer said nothing about its sessions, and this
@@ -960,6 +980,8 @@ export function createCatalogue(ctx: HostContext): Catalogue {
      * host cannot say it is gone. Nor can it say so of a row whose directory or
      * whose provider nothing has ever named. Both are kept: what is kept for
      * them is the owner, the title and the senders of a session somebody opened.
+     * A row whose turns this host keeps itself is kept as well, because it opens
+     * from them whatever a backend lists.
      */
     const forgotten: Array<[string, Record<string, unknown> | undefined]> = [];
     const gone = (id: string): boolean => {
@@ -971,6 +993,8 @@ export function createCatalogue(ctx: HostContext): Catalogue {
       const named = names.get(id);
       const dir_ = named === undefined ? undefined : ctx.dirOf(named);
       if (named === undefined || dir_ === undefined || !read.has(dir_)) return false;
+      // A session whose turns this host keeps is one it can open from them.
+      if (ctx.keptTurnsOf(id).length > 0) return false;
       /*
        * A session about to be forgotten, and the config it is being forgotten
        * with, kept for after the prune.
@@ -1013,6 +1037,37 @@ export function createCatalogue(ctx: HostContext): Catalogue {
    * names every session on the machine, and a file for each is a file for
    * sessions this host never ran.
    */
+  /**
+   * A row for a session listed from the turns this host keeps for it.
+   *
+   * Its title is its default chat's own where somebody named it, and else its
+   * first turn's, as a backend titles a session after its first prompt. Its
+   * dates are its first turn's start and its last turn's end, which is where
+   * the protocol's reducer moves a chat when a turn completes. A turn that
+   * names no start adds nothing to them, and a row with no start at all dates
+   * from the epoch, as a transcript entry with no time does.
+   */
+  const keptRow = (id: string, folder: string, turns: readonly Bag[]): Listed => {
+    const startOf = (turn: Bag): number => (typeof turn.startedAt === 'string' ? Date.parse(turn.startedAt) : Number.NaN);
+    const dated = turns.filter((turn) => Number.isFinite(startOf(turn))).sort((a, b) => startOf(a) - startOf(b));
+    const first = dated[0];
+    const last = dated.at(-1);
+    const name = kept.uri?.(id);
+    const named = name === undefined ? undefined : kept.chatTitle(id, chatUriFor(name));
+    const message = (first ?? turns[0])?.message;
+    const said = typeof message === 'object' && message !== null ? (message as { text?: unknown }).text : undefined;
+    const epoch = new Date(0).toISOString();
+    return {
+      id,
+      title: named ?? titleFrom(typeof said === 'string' ? said : '', 'New session'),
+      createdAt: first === undefined ? epoch : new Date(startOf(first)).toISOString(),
+      modifiedAt: last === undefined
+        ? epoch
+        : new Date(startOf(last) + (typeof last.duration === 'number' ? last.duration : 0)).toISOString(),
+      workingDirectories: [uriOf(folder)],
+    };
+  };
+
   const adopt = (agent: Agent, row: Listed, waiting?: string, stored = false): Summary => {
     const provider = waiting ?? agent.provider;
     const keptName = kept.uri?.(row.id);

@@ -73,6 +73,10 @@ interface Counts {
   tools?: Map<string, BoundTool[]>;
   /** The echo backend's pace, in milliseconds a reply takes. */
   pace?: number;
+  /** Whether the backend forks: each turn its session holds ends at `end:<turn>`. */
+  forks?: boolean;
+  /** Every start the backend was handed, in order. */
+  made?: Start[];
 }
 
 /** The echo backend, counting the sessions it starts and resumes. */
@@ -80,6 +84,7 @@ const counted = (dir: string, counts: Counts): Agent => {
   const base = echo({ path: dir, pace: counts.pace ?? 0 });
   return {
     ...base,
+    ...(counts.forks === true ? { chats: { ...base.chats, fork: true } } : {}),
     transcript: async (id: string) => {
       if (counts.slowTranscript !== undefined && counts.starts.length > counts.slowTranscript.after) await counts.slowTranscript.until;
       return await base.transcript?.(id);
@@ -87,10 +92,13 @@ const counted = (dir: string, counts: Counts): Agent => {
     create: (start: Start): Session => {
       if (start.resume !== undefined && counts.failResume === true) throw new Error('The conversation could not be loaded');
       counts.starts.push(start.resume);
+      counts.made?.push(start);
       counts.tools?.set(start.chatUri, start.tools ?? []);
       const session = base.create(start);
+      const holds = (turnId: string): boolean => session.allTurns().some((turn) => turn.id === turnId);
       return {
         ...session,
+        ...(counts.forks === true ? { forkPoint: (turnId: string) => (holds(turnId) ? `end:${turnId}` : undefined) } : {}),
         close: (reason?: 'dispose' | 'stopping') => {
           counts.closes += 1;
           return session.close(reason);
@@ -405,4 +413,36 @@ it('wakes a sleeping session to rename it', async () => {
   expect(counts.starts).toEqual([undefined, 'one']);
   expect(p.notes.some((note) => note.channel === one.resource && (note.action as Bag | undefined)?.type === 'session/titleChanged')).toBe(true);
   expect(kept.chatTitle('one', String((await read(one.resource)).defaultChat))).toBe('renamed');
+});
+
+it('wakes a sleeping session for a chat forked from it, and forks at the turn', async () => {
+  const counts: Counts = { starts: [], closes: 0, forks: true, made: [] };
+  const { client, open, sleep, read, active } = await serving(counts);
+  const one = await open('one');
+  await sleep(one);
+  expect(await active()).toBe(0);
+
+  await client.handle({
+    method: 'createChat',
+    params: { channel: one.channel, chat: 'ahp-chat:/copy', source: { kind: 'fork', chat: one.chat, turnId: 't1' } },
+  });
+  expect(await active()).toBe(1);
+  // The wake resumes the session, and the fork resumes it again at the turn's point.
+  expect(counts.starts).toEqual([undefined, 'one', 'one']);
+  expect(counts.made?.at(-1)).toMatchObject({ chatUri: 'ahp-chat:/copy', resume: 'one', forkAt: 'end:t1' });
+  const chats = ((await read(one.channel)).chats as Bag[]).map((chat) => chat.resource);
+  expect(chats).toContain('ahp-chat:/copy');
+});
+
+it('wakes a sleeping session for a new chat in it', async () => {
+  const counts: Counts = { starts: [], closes: 0 };
+  const { client, open, sleep, read, active } = await serving(counts);
+  const one = await open('one');
+  await sleep(one);
+
+  await client.handle({ method: 'createChat', params: { channel: one.channel, chat: 'ahp-chat:/second' } });
+  expect(await active()).toBe(1);
+  expect(counts.starts).toEqual([undefined, 'one', undefined]);
+  const chats = ((await read(one.channel)).chats as Bag[]).map((chat) => chat.resource);
+  expect(chats).toContain('ahp-chat:/second');
 });

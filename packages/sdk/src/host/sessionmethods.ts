@@ -57,12 +57,12 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
     about, activeSessionsMoved, admitted, agents, answeredAs, backendsOwn, beginOrRun, beside, byChat,
     charged, chatAgent, chatConfig, chatIdOf, chatOf,
     chatSummary, chatsReordered, claimable, claims, dir, dispatch, drafts, dropChat, flushDeltas,
-    forWhom, forgetSendersIn, heldAs,
+    forWhom, forgetSendersIn, heldAs, hold,
     isolating, isolated, keepChat, keepProvider, kept, leadOf, allRows, log, madeFrom, meantBy, messageFrom,
     movable, movableMoved, openSession, openedBy, options, orderChats,
-    ownerFor, past, placedIn, presence, replayable, removeSession, respell, retool, scoping, seeded,
+    ownerFor, owners, past, placedIn, presence, replayable, removeSession, respell, retool, scoping, seeded,
     seenBy, sessionAdded, sessionChannel, sessionFor, sessionOfChat, sessionSchema, sessions, settle,
-    snapshotOf, spawn, spellingOf, subagentSummary, subagents, summaryMoved, unheld, waitingFor, watches,
+    snapshotOf, spawn, spellingOf, subagentSummary, subagents, summaryMoved, unheld, waitingFor, wake, watches,
     withSender,
   } = ctx;
 
@@ -355,7 +355,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
     return undefined;
   };
 
-  return {
+  const methods: SessionMethods = {
     /**
      * A snapshot, and everything that happened while it was being taken.
      *
@@ -1112,6 +1112,25 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       const uri = heldAs(String(params.channel ?? ''));
       const chatUri = String(params.chat ?? '');
       const held = sessions.get(uri);
+      /*
+       * A session asleep in the catalogue, woken for the chat and the call
+       * made again on the session that is live, as every other action on a
+       * sleeping session is. A fork needs it live: the point it is cut at is
+       * the source chat's to name. Held from before the wake until the chat
+       * is made, so the sweep cannot let it go in between.
+       */
+      if (!held && owners.has(uri)) {
+        const missing = waitingFor(idOf(uri));
+        if (missing !== undefined) throw new RpcError(-32002, `${missing} is not loaded on this host`);
+        const release = hold(uri);
+        try {
+          await wake(uri, undefined, connection);
+          if (!sessions.has(uri))
+            throw new RpcError(-32001, `No agent for session ${uri}`);
+          return await methods.createChat(params);
+        }
+        finally { release(); }
+      }
       if (!held)
         throw new RpcError(-32001, `No agent for session ${uri}`);
       if (idOf(chatUri) === '' || chatUri.indexOf(':') <= 0)
@@ -1670,4 +1689,5 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       return { items: found.slice(0, SEEDS).map((name) => ({ value: name, label: name })) };
     },
   };
+  return methods;
 }

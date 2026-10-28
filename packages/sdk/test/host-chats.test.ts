@@ -191,8 +191,9 @@ describe('dropping the turns after one', () => {
     expect(state.activeTurn).toBeUndefined();
   });
 
-  it('will not empty a conversation entire, and says why', async () => {
+  it('starts a conversation emptied entire over, with the agent\'s copy deleted', async () => {
     const { client, peer: p, chatUri } = await twice();
+    const before = sessionQueries().length;
     client.handle({
       method: 'dispatchAction',
       params: { channel: chatUri, action: { type: 'chat/truncated' } },
@@ -200,12 +201,21 @@ describe('dropping the turns after one', () => {
     await settle();
     /*
      * `turnId` is optional and its absence means "clear everything", which as
-     * a rewind is a cut at a point before the first prompt - and there is no
-     * such entry for the backend to be pointed at. Refused rather than served
-     * as an emptied screen in front of an agent that remembers all of it.
+     * a rewind is a cut before the first prompt, with no entry to name. The
+     * CLI forgets it instead, as the reference's agent does: its conversation
+     * is deleted and a new CLI starts with nothing to resume.
      */
-    const refused = actions(p).filter((e) => e.rejectionReason !== undefined).at(-1);
-    expect(refused?.rejectionReason).toContain('not a conversation entire');
+    expect(actions(p).filter((e) => e.rejectionReason !== undefined)).toEqual([]);
+    expect(sdk.deleted).toEqual(['sdk-1']);
+    expect(sessionQueries().length).toBe(before + 1);
+    const fresh = sessionQueries().at(-1);
+    expect(fresh?.options.resume).toBeUndefined();
+    expect(fresh?.options.resumeSessionAt).toBeUndefined();
+    expect(actions(p, chatUri).some((e) => e.action.type === 'chat/truncated')).toBe(true);
+    const state = (await client.handle({ method: 'subscribe', params: { channel: chatUri } }) as {
+      snapshot: { state: { turns: unknown[] } };
+    }).snapshot.state;
+    expect(state.turns).toEqual([]);
   });
 });
 

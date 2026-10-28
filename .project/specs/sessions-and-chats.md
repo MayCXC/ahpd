@@ -136,12 +136,54 @@ See [`code://packages/sdk/src/host/localturns.ts`](../../packages/sdk/src/host/l
 
 WHEN a client truncates a chat or forks it at a local turn
 THEN the host asks the backend for the point of the nearest earlier turn that is not a local turn
-AND it refuses a truncation when there is no such turn.
+AND with no such turn, a truncation starts the chat over and keeps the turns up to the local turn.
+*A chat truncated whole starts over* says how.
 
 WHEN a truncation drops local turns
 THEN their files go with them.
 WHEN a fork copies local turns
 THEN the new chat keeps them.
+
+### A turn read back is a point to fork and cut at
+
+WHEN the Claude backend reads a chat back from its transcript
+THEN it names each turn's last prompt, tool result or answer entry
+AND a session that resumes that conversation answers `forkPoint` and `endPoint` with it.
+
+WHEN a session forks that conversation
+THEN it starts without those entries, because a fork is a new conversation.
+
+The reason: a session names a turn's end from its own CLI's frames, and the CLI that sent a turn read back is gone.
+See [`code://packages/agent-claude/src/transcript.ts`](../../packages/agent-claude/src/transcript.ts).
+
+### A new chat wakes a sleeping session
+
+WHEN a client makes a chat in a session asleep in the catalogue, a fork among them
+THEN the host wakes the session and holds it until the chat is made
+AND it makes the chat in the live session.
+
+See [`code://packages/sdk/src/host/sessionmethods.ts`](../../packages/sdk/src/host/sessionmethods.ts).
+
+### A chat truncated whole starts over
+
+WHEN a client sends `chat/truncated` with no `turnId`
+AND the chat's backend has `delete`
+THEN the host stops the chat's backend and waits for it to stop
+AND it deletes the backend's conversation for the chat
+AND it says the action to every client of the chat
+AND it forgets the dropped turns' terminal outputs and local turns
+AND it starts the chat's backend with no resume and no turns.
+WHEN the chat's backend has no `delete`
+THEN the host refuses the action, and the chat stays as it was.
+WHEN the delete fails
+THEN the host refuses the action with the reason, and the chat starts again resumed on the conversation it had.
+WHEN an action reaches the chat while it starts over
+THEN the action waits, and goes to the new backend.
+
+The reason: as a rewind, a truncation with no turn is a cut before the first prompt.
+A screen emptied in front of that agent would leave it remembering what the clients dropped.
+The reference deletes the conversation and starts a fresh one for the same chat and id.
+See [`code://packages/sdk/src/host/chatactions.ts`](../../packages/sdk/src/host/chatactions.ts) and https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeAgent.ts#L1141-L1168.
 
 ### A failed transcript read is not an empty session
 
@@ -229,7 +271,14 @@ AND the row's recorded provider answered
 AND the row's folder was among the folders read
 THEN the host removes a row that no backend listed.
 
+WHEN the host keeps local turns for such a row
+THEN it keeps the row and lists it from those turns
+AND the row's title is the default chat's stored title, or else the first turn's text
+AND the row's dates are the first turn's start and the last turn's end
+AND a read of a chat whose backend holds no transcript answers the chat's local turns.
+
 The reason: a backend that did not answer, or a folder not read, says nothing about a row.
+A row whose turns the host keeps is a row the host can open again.
 See [`code://packages/sdk/src/sessions/sessions.ts`](../../packages/sdk/src/sessions/sessions.ts).
 
 ### A closed chat is hidden or deleted

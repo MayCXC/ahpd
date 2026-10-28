@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Turn } from '@microsoft/agent-host-protocol';
 import {
-  resetSdk, actions, claude, createHost, echo, emit, hello, machine, peer, sdk, settle,
+  resetSdk, actions, claude, createHost, echo, emit, hello, machine, peer, sdk, settle, wrote,
 } from './support/host.js';
 import { fileSessions } from '../src/sessions/sessions.js';
 import { uriOf } from '../src/resources/resources.js';
@@ -92,6 +92,8 @@ interface Knobs {
   transcript?: (id: string) => Bag[] | undefined;
   /** What a listing answers, for a host that has not run the session. */
   listed?: Listed[];
+  /** The conversations the backend deleted, for a backend that can delete. */
+  deleted?: string[];
 }
 
 const knobs = (): Knobs => ({ starts: [], ending: 'complete' });
@@ -106,9 +108,12 @@ const backend = (k: Knobs): Agent => {
     ...base,
     chats: { fork: true },
     list: async () => (k.listed === undefined ? await base.list?.() ?? [] : [...k.listed]),
+    ...(k.deleted === undefined ? {} : { delete: async (id: string) => { k.deleted?.push(id); } }),
     transcript: async (id, at) => {
-      const own = k.transcript?.(id);
-      return own === undefined ? await base.transcript?.(id, at) : own as WireTurn<Turn>[];
+      // A case's own answer is the answer, nothing included: a backend with no
+      // conversation under an id answers nothing for it.
+      if (k.transcript !== undefined) return k.transcript(id) as WireTurn<Turn>[] | undefined;
+      return await base.transcript?.(id, at);
     },
     create: (start: Start): Session => {
       k.starts.push(start);
@@ -391,6 +396,28 @@ describe('a cut at a command\'s turn', () => {
     expect(k.starts.length).toBe(starts);
   });
 
+  it('starts over at a command\'s turn with no turn before it, and keeps the command\'s turn', async () => {
+    const k = { ...knobs(), deleted: [] as string[] };
+    const store = fileSessions({ dir: join(temp(), 'sessions') });
+    const { client, p, chat } = await opened(k, store);
+    say(client, chat, 't1', '!echo alone');
+    await ended(p, chat, 't1');
+    say(client, chat, 't2', '!echo after');
+    await ended(p, chat, 't2');
+    void client.handle({ method: 'dispatchAction', params: { channel: chat, action: { type: 'chat/truncated', turnId: 't1' } } });
+    await settle(30);
+    // The backend saw no turn before it, so its conversation goes whole, as the
+    // reference truncates with no turn when a local turn has no anchor; the
+    // chat keeps the command's turn, which the host holds.
+    expect(actions(p).filter((e) => e.rejectionReason !== undefined)).toEqual([]);
+    expect(k.deleted).toEqual(['live']);
+    const start = startOf(k, chat);
+    expect(start.resume).toBeUndefined();
+    expect(((start.seed ?? []) as Bag[]).map((turn) => turn.id)).toEqual(['t1']);
+    expect(await turnsOf(client, chat)).toEqual(['t1']);
+    expect(keptIn(store, 'live').map((one) => one.turnId)).toEqual(['t1']);
+  });
+
   it('forks the backend at the turn before it, and the fork keeps the command\'s turn', async () => {
     const { client, chat, k, store } = await cut();
     await client.handle({ method: 'createChat', params: { channel: LIVE, chat: TAIL, source: { kind: 'fork', chat, turnId: 't2' } } });
@@ -434,6 +461,61 @@ describe('a chat\'s command\'s turns', () => {
     await settle(20);
     expect(keptIn(store, 'live')).toEqual([]);
     expect(keptIn(store, 'two').map((one) => one.turnId)).toEqual(['p1']);
+  });
+});
+
+describe('a session that ran only commands', () => {
+  /**
+   * A first host that ran `texts` as turns and closed, and a second on the same
+   * store where no backend lists the session or holds a conversation for it.
+   */
+  const reopened = async (texts: string[]) => {
+    const dir = join(temp(), 'sessions');
+    const before = await opened(knobs(), fileSessions({ dir }));
+    for (const [index, text] of texts.entries()) {
+      const turnId = `t${String(index + 1)}`;
+      say(before.client, before.chat, turnId, text);
+      await ended(before.p, before.chat, turnId);
+    }
+    await before.host.close();
+    const second = knobs();
+    second.listed = [];
+    second.transcript = () => undefined;
+    const store = fileSessions({ dir });
+    const after = await hostAt(second, store);
+    return { ...after, chat: before.chat, k: second, store };
+  };
+  /** The rows a listing answers. */
+  const listed = async (client: Client): Promise<Bag[]> =>
+    ((await client.handle({ method: 'listSessions', params: {} })) as { items: Bag[] }).items;
+
+  it('is listed after a restart from the turns the host kept, by every listing', async () => {
+    const { client, host, store } = await reopened(['!echo first', '!echo second']);
+    const row = (await listed(client)).find((one) => one.resource === LIVE);
+    const kept = keptIn(store, 'live').map((one) => one.turn as Bag);
+    expect(row).toMatchObject({ title: '!echo first', createdAt: kept[0]?.startedAt });
+    expect(Date.parse(String(row?.modifiedAt))).toBeGreaterThanOrEqual(Date.parse(String(kept[1]?.startedAt)));
+    // The prune of the first listing is what lost such a session: a second one still holds it.
+    expect((await listed(client)).map((one) => one.resource)).toContain(LIVE);
+    expect(keptIn(store, 'live').map((one) => one.turnId)).toEqual(['t1', 't2']);
+    await host.close();
+  });
+
+  it('opens with its commands\' turns, and a turn sent after the restart runs after them', async () => {
+    const { client, host, p, chat } = await reopened(['!echo first']);
+    await listed(client);
+    expect(await turnsOf(client, chat)).toEqual(['t1']);
+    say(client, chat, 't2', 'hello again');
+    await ended(p, chat, 't2');
+    expect(await turnsOf(client, chat)).toEqual(['t1', 't2']);
+    await host.close();
+  });
+
+  it('is pruned after a restart when it ran nothing at all', async () => {
+    const { client, host } = await reopened([]);
+    await listed(client);
+    expect((await listed(client)).map((one) => one.resource)).not.toContain(LIVE);
+    await host.close();
   });
 });
 
@@ -489,6 +571,41 @@ describe('a Claude chat', () => {
     const rebuilt = await stateOf(after.client, terminal);
     expect(rebuilt.content).toEqual([{ type: 'unclassified', value: expect.stringContaining('after-the-reply') }]);
     expect(rebuilt.lifecycle).toEqual({ status: 'exited', exitCode: 0 });
+    await after.host.close();
+  });
+
+  it('forks a session asleep since a restart at a command\'s turn, where the Claude turn read back before it ended', async () => {
+    const dir = join(temp(), 'sessions');
+    const before = await shelled(dir);
+    const uri = 'claude:/forked';
+    await before.client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude', workingDirectories: [uriOf(DIR)] } });
+    const chat = String((await stateOf(before.client, uri)).defaultChat);
+    await stateOf(before.client, chat);
+    say(before.client, chat, 't1', 'first');
+    await settle();
+    const written = String(sdk.uuids[0]);
+    await emit({ type: 'assistant', uuid: 'reply-1', message: { id: 'm1', content: [{ type: 'text', text: 'one' }] } });
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+    await ended(before.p, chat, 't1');
+    say(before.client, chat, 't2', '!echo after-the-reply');
+    await ended(before.p, chat, 't2');
+    await before.host.close();
+
+    sdk.sessions.push({ sessionId: 'forked', summary: 'first', lastModified: 1, cwd: DIR });
+    sdk.transcript.push(
+      { type: 'user', uuid: written, message: { role: 'user', content: 'first' } },
+      { type: 'assistant', uuid: 'reply-1', message: { content: [{ type: 'text', text: 'one' }] } },
+    );
+    wrote('forked', DIR);
+    const after = await shelled(dir);
+    await stateOf(after.client, uri);
+    // Nothing has woken it: the fork does, and the turn read back names where it ended.
+    await after.client.handle({
+      method: 'createChat',
+      params: { channel: uri, chat: 'ahp-chat:/forked-copy', source: { kind: 'fork', chat, turnId: 't2' } },
+    });
+    const forked = sdk.queries.find((one) => one.options.forkSession === true);
+    expect(forked?.options).toMatchObject({ resume: 'forked', forkSession: true, resumeSessionAt: 'reply-1' });
     await after.host.close();
   });
 });

@@ -192,6 +192,17 @@ export function claude(options: ClaudeOptions): Agent {
 
   /** The models the two lists name, fetched once and kept. */
   let named: Promise<OfferedModel[]> | undefined;
+  /*
+   * Where each turn of a conversation ended, as the last read of its
+   * transcript named it, by the conversation's id.
+   *
+   * A session names the end of a turn it watched from its CLI's frames, and
+   * the turns a resumed session opens with were watched by a CLI that is gone.
+   * The host reads the transcript before it resumes a conversation, so the
+   * read names them, and the session that resumes it starts from them. Each
+   * read of a conversation replaces what an earlier one named.
+   */
+  const readEnds = new Map<string, ReadonlyMap<string, string>>();
   /** A list the CLI reported, as this harness offers it. */
   const offer = async <T extends OfferedModel>(cli: T[]): Promise<(T | OfferedModel)[]> => {
     if (options.models === undefined && options.modelSources === undefined) return cli;
@@ -541,7 +552,9 @@ export function claude(options: ClaudeOptions): Agent {
     transcript: async (id, at, outputs) => {
       const found = await findSession(dirs, id, at?.workingDirectory);
       if (found === undefined) return undefined;
-      const turns = await turnsOf(id, found.dir);
+      const ends = new Map<string, string>();
+      const turns = await turnsOf(id, found.dir, ends);
+      readEnds.set(id, ends);
       /*
        * The transcript holds what the model was sent, so a `Bash` call whose
        * output was too large to send comes back with Claude's notice alone.
@@ -614,6 +627,10 @@ export function claude(options: ClaudeOptions): Agent {
         : undefined;
       // The new conversation's name: the chat's own, or else the id it was asked to resume.
       const chatId = start.chatId ?? (resumed === undefined ? start.resume : undefined);
+      // Where the turns read back ended, for a session that carries the same
+      // conversation on. A fork is a conversation of its own, whose entries
+      // its CLI writes.
+      const readBack = resumed === undefined || start.forkAt !== undefined ? undefined : readEnds.get(resumed);
       return createSession({
       ...(inside === undefined ? {} : { spawn: inside, spawnExecutable: executable, spawnConfigDir: configDir }),
       ...(options.workerStop !== undefined ? { workerStop: options.workerStop } : {}),
@@ -687,6 +704,7 @@ export function claude(options: ClaudeOptions): Agent {
         ...(start.forkAt !== undefined ? { forkAt: start.forkAt } : {}),
         ...(start.rewindAt !== undefined ? { rewindAt: start.rewindAt } : {}),
       }),
+      ...(readBack === undefined ? {} : { seedEnds: readBack }),
       ...(start.context !== undefined ? { context: start.context } : {}),
       ...(start.seed ? { seed: start.seed } : {}),
       ...(start.onFileEdit ? { onFileEdit: start.onFileEdit } : {}),

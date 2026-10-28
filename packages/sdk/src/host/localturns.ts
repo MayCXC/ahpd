@@ -36,7 +36,11 @@ export interface LocalTurns {
    * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/localCommands/localChatCommand.ts#L227-L245
    */
   keepLocalTurn(session: string, chat: string, turns: readonly Bag[], turnId: string): void;
-  /** One chat's transcript, read with the outputs it is handed and with its local turns put back. */
+  /**
+   * One chat's transcript, read with the outputs it is handed and with its
+   * local turns put back, or the local turns alone for a chat whose backend
+   * holds no transcript.
+   */
   transcriptOf(
     agent: Agent,
     id: string,
@@ -58,6 +62,14 @@ export interface LocalTurns {
   copyLocalTurns(session: string, from: string, to: string, turns: readonly Bag[]): void;
   /** Forget every local turn and transcript id a chat kept. */
   forgetChatLocalTurns(session: string, chat: string): void;
+  /**
+   * Every turn a session's chats keep, by the session's id, in no order.
+   *
+   * What a session whose turns are all the host's own holds: no backend lists
+   * it or holds a conversation for it, so the catalogue keeps and lists it from
+   * these, and a read of it answers them.
+   */
+  keptTurnsOf(id: string): Bag[];
   /** Take a chat's local turns to the session it moved to. */
   moveChatLocalTurns(from: string, to: string, chat: string): void;
 }
@@ -113,7 +125,11 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
   /** Every file a chat kept that this version wrote and that holds a turn, in no order. */
   const keptIn = (session: string, chat: string): Kept[] => {
     const folder = folderOf(session, chat);
-    if (folder === undefined || !existsSync(folder)) return [];
+    return folder === undefined ? [] : keptInFolder(folder);
+  };
+  /** The same, read from one chat's folder. */
+  const keptInFolder = (folder: string): Kept[] => {
+    if (!existsSync(folder)) return [];
     let names: string[];
     try { names = readdirSync(folder); }
     catch (error) {
@@ -219,7 +235,10 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
     chat: string,
   ): Promise<WireTurn<Turn>[] | undefined> => {
     const turns = await agent.transcript?.(id, at, ctx.outputsFor(session, chat));
-    return turns === undefined ? undefined : withLocalTurns(session, chat, turns);
+    // A chat whose turns are all this host's own has no transcript, and reads
+    // as the turns it keeps, as a nested session opens from its record.
+    if (turns === undefined) return keptIn(session, chat).length > 0 ? withLocalTurns(session, chat, []) : undefined;
+    return withLocalTurns(session, chat, turns);
   };
 
   const concreteTurnOf = (session: string, chat: string, turns: readonly Bag[], at: number): string | undefined => {
@@ -281,8 +300,21 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
     catch (error) { ctx.log(`could not move ${was} to ${now}: ${reason(error)}`); }
   };
 
+  const keptTurnsOf = (id: string): Bag[] => {
+    const dir = ctx.kept.attachmentsDir?.(id);
+    const turns = dir === undefined ? undefined : join(dir, TURNS);
+    if (turns === undefined || !existsSync(turns)) return [];
+    let chats: string[];
+    try { chats = readdirSync(turns); }
+    catch (error) {
+      ctx.log(`could not read ${turns}: ${reason(error)}`);
+      return [];
+    }
+    return chats.flatMap((chat) => keptInFolder(join(turns, chat)).map((kept) => kept.turn));
+  };
+
   return {
     turnRecordedAs, keepLocalTurn, transcriptOf, withLocalTurns, concreteTurnOf,
-    forgetLocalTurns, copyLocalTurns, forgetChatLocalTurns, moveChatLocalTurns,
+    forgetLocalTurns, copyLocalTurns, forgetChatLocalTurns, moveChatLocalTurns, keptTurnsOf,
   };
 }

@@ -1,0 +1,141 @@
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, expect, it, vi } from 'vitest';
+import type { Bag, Session, Start } from '@ahpd/sdk';
+
+/*
+ * Where a turn read back off a transcript ended.
+ *
+ * A fork copies a conversation through the last entry of a turn, and a rewind
+ * keeps everything up to it. A session names that entry for a turn it watched
+ * from the frames its CLI sent. A turn read back was sent by a CLI that is
+ * gone, so the read names its end by the same rule, and a session that resumes
+ * the conversation answers from what the read named.
+ */
+
+const sdk = vi.hoisted(() => ({ messages: [] as Record<string, unknown>[] }));
+
+vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
+  createSdkMcpServer: (given: Record<string, unknown>) => ({ type: 'sdk', name: given.name, tools: given.tools }),
+  getSessionMessages: async () => sdk.messages,
+  getSessionInfo: async (id: string, options?: { dir?: string }) => ({ sessionId: id, summary: 'read back', lastModified: 0, cwd: options?.dir }),
+  query: () => ({
+    async *[Symbol.asyncIterator]() { /* nothing streamed */ },
+    interrupt: async () => {},
+    setPermissionMode: async () => {},
+    setModel: async () => {},
+    applyFlagSettings: async () => {},
+    toggleMcpServer: async () => {},
+    reconnectMcpServer: async () => {},
+    setMcpServers: async () => {},
+    initializationResult: async () => ({}),
+    mcpServerStatus: async () => [],
+    reloadSkills: async () => ({ skills: [] }),
+    reloadPlugins: async () => ({ plugins: [] }),
+    supportedModels: async () => [],
+    streamInput: async () => {},
+    close: () => {},
+  }),
+}));
+
+const { claude } = await import('../src/claude.js');
+
+const home = realpathSync(mkdtempSync(join(tmpdir(), 'ahpd-claude-read-ends-')));
+const FOLDER = join(home, 'work');
+mkdirSync(FOLDER, { recursive: true });
+const before = process.env.CLAUDE_CONFIG_DIR;
+process.env.CLAUDE_CONFIG_DIR = join(home, 'config');
+afterAll(() => {
+  if (before === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+  else process.env.CLAUDE_CONFIG_DIR = before;
+  rmSync(home, { recursive: true, force: true });
+});
+
+/** The transcript the CLI writes for a conversation of `FOLDER`, which is what makes a start a resume. */
+const written = (id: string): void => {
+  const project = join(home, 'config', 'projects', FOLDER.replace(/[^A-Za-z0-9]/g, '-'));
+  mkdirSync(project, { recursive: true });
+  writeFileSync(join(project, `${id}.jsonl`), '{}\n');
+};
+
+const frame = (kind: 'user' | 'assistant', uuid: string, message: unknown): Record<string, unknown> => ({
+  type: kind, uuid, timestamp: '2020-01-01T00:00:00.000Z', message,
+});
+const prompt = (uuid: string, text: string): Record<string, unknown> => frame('user', uuid, { role: 'user', content: text });
+const results = (uuid: string, id: string, text: string): Record<string, unknown> => frame('user', uuid, {
+  role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: text }],
+});
+const said = (uuid: string, id: string, blocks: unknown[]): Record<string, unknown> => frame('assistant', uuid, {
+  id, model: 'claude-opus-5', content: blocks, usage: { input_tokens: 1, output_tokens: 1 },
+});
+
+/** Two turns: one that ran a tool before it answered, and one that answered at once. */
+const CONVERSATION = [
+  prompt('u1', 'look around'),
+  said('a1', 'm1', [{ type: 'tool_use', id: 'toolu_1', name: 'Bash', input: { command: 'ls' } }]),
+  results('u2', 'toolu_1', 'a b c'),
+  said('a2', 'm2', [{ type: 'text', text: 'Three files.' }]),
+  prompt('u3', 'and now'),
+  said('a3', 'm3', [{ type: 'text', text: 'Done.' }]),
+];
+
+const START: Start = {
+  uri: 'ahp-session:/read-ends',
+  chatUri: 'ahp-chat:/read-ends',
+  workingDirectory: FOLDER,
+  settings: {},
+  clientToolTimeoutMs: 0,
+  schema: () => ({ type: 'object', properties: {} }),
+  emit: () => {},
+};
+
+/** One agent's read of a conversation, and a session it then starts with `start`. */
+const readThenStart = async (id: string, start: Partial<Start>, messages = CONVERSATION): Promise<Session> => {
+  const agent = claude({ paths: [FOLDER] });
+  sdk.messages = messages;
+  written(id);
+  const turns = await agent.transcript?.(id, { workingDirectory: FOLDER });
+  if (turns === undefined) throw new Error('the read found no conversation');
+  return agent.create({ ...START, resume: id, seed: turns as unknown as Bag[], ...start });
+};
+
+it('answers each turn read back with its last entry, for a session that resumes the conversation', async () => {
+  const session = await readThenStart('0a0a0a0a-2222-4222-8222-000000000001', {});
+  expect(session.forkPoint?.('u1')).toBe('a2');
+  expect(session.endPoint?.('u1')).toBe('a2');
+  expect(session.forkPoint?.('u3')).toBe('a3');
+  expect(session.endPoint?.('u3')).toBe('a3');
+});
+
+it('ends a turn that stopped after a tool result at that result, as a live turn ends at its last frame', async () => {
+  const session = await readThenStart('0a0a0a0a-2222-4222-8222-000000000002', {}, [
+    prompt('u1', 'look around'),
+    said('a1', 'm1', [{ type: 'tool_use', id: 'toolu_1', name: 'Bash', input: { command: 'ls' } }]),
+    results('u2', 'toolu_1', 'a b c'),
+    prompt('u3', 'never mind'),
+    said('a3', 'm3', [{ type: 'text', text: 'All right.' }]),
+  ]);
+  expect(session.endPoint?.('u1')).toBe('u2');
+  expect(session.endPoint?.('u3')).toBe('a3');
+  // A frame of tool results is part of a turn, never one of its own.
+  expect(session.endPoint?.('u2')).toBeUndefined();
+});
+
+it('answers no point read back for a session that forks the conversation', async () => {
+  const session = await readThenStart('0a0a0a0a-2222-4222-8222-000000000003', {
+    chatUri: 'ahp-chat:/read-ends-fork',
+    chatId: '0a0a0a0a-2222-4222-8222-000000000004',
+    forkAt: 'a2',
+  });
+  expect(session.forkPoint?.('u1')).toBeUndefined();
+});
+
+it('answers no point for a session that resumes a conversation nothing read', async () => {
+  const agent = claude({ paths: [FOLDER] });
+  const id = '0a0a0a0a-2222-4222-8222-000000000005';
+  written(id);
+  const session = agent.create({ ...START, resume: id, seed: [{ id: 'u1', message: { text: 'look around' } }] });
+  expect(session.forkPoint?.('u1')).toBeUndefined();
+  expect(session.endPoint?.('u1')).toBeUndefined();
+});
