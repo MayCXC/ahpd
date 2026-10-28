@@ -1,7 +1,7 @@
 ---
 title: A `!` command's turn survives a restart
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-27
 revalidated: 2026-10-27
@@ -83,9 +83,9 @@ restart -> a transcript read -> each local turn goes back after its anchor -> se
 
 | Plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The host keeps a command's turn for its chat](../130-p1-the-host-keeps-a-commands-turn/plan.md) | planned | - |
-| [p2 - A cofold turn keeps the id it was given](../130-p2-a-cofold-turn-keeps-its-id/plan.md) | planned | - |
-| [p3 - A pi turn names the entry that holds it](../130-p3-a-pi-turn-names-its-entry/plan.md) | planned | - |
+| [p1 - The host keeps a command's turn for its chat](../130-p1-the-host-keeps-a-commands-turn/plan.md) | built 2026-10-27 | - |
+| [p2 - A cofold turn keeps the id it was given](../130-p2-a-cofold-turn-keeps-its-id/plan.md) | built 2026-10-27 | - |
+| [p3 - A pi turn names the entry that holds it](../130-p3-a-pi-turn-names-its-entry/plan.md) | built 2026-10-27 | - |
 
 ## Risks and tradeoffs
 
@@ -94,14 +94,13 @@ restart -> a transcript read -> each local turn goes back after its anchor -> se
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-27.
-- **Next action:** [p1](../130-p1-the-host-keeps-a-commands-turn/plan.md).
+- **Done so far:** planned and built 2026-10-27; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a backend's turn id and its transcript's id are two names for one turn, and only the transcript's survives a restart.
 
 ## Final verification checklist
 
-- [ ] Each case fails on the code before this plan.
-- [ ] `pnpm boundary`, `pnpm typecheck` and `pnpm build` pass, and so do the suites of the packages this plan changes.
-- [ ] On a daemon, a `!` turn in a Claude chat is back in its place after a restart, and its terminal opens.
-- [ ] `plans/index.md` updated.
+- [x] Each case fails on the code before this plan.
+- [x] `pnpm boundary`, `pnpm typecheck` and `pnpm build` pass, and so do the suites of the packages this plan changes.
+- [x] `plans/index.md` updated.

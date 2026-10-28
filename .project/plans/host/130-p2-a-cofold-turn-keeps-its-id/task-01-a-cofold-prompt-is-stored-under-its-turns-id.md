@@ -1,6 +1,6 @@
 ---
 title: A cofold prompt is stored under its turn's id
-status: todo
+status: done
 depends: []
 layer: "agent-cofold"
 refs:
@@ -28,4 +28,7 @@ A cofold turn's prompt is stored under the turn's id, and the turn is read back 
 - `pnpm vitest run packages/agent-cofold` passes.
 
 ## Resume
+
+- **Done:** 2026-10-27.
+  `agent-cofold-tools.test.ts` began `t1` twice in one conversation, and its second turn is now `t2`.
 

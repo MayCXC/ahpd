@@ -1,7 +1,7 @@
 ---
 title: The host keeps a command's turn for its chat
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-27
 revalidated: 2026-10-27
@@ -83,7 +83,7 @@ chat/truncated or a fork at a local turn -> the turn before it -> endPoint or fo
 | A file is checked as the reference checks a record: the turn's `id` is the file's `turnId`, and it has a `message.text`, a `message.origin.kind`, `responseParts` and a `state`. A file that fails is skipped. | https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentHostLocalTurns.ts#L171-L200 | 02 |
 | Every read of a transcript goes through one host read that adds `outputsFor` and puts the local turns back. | https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentService.ts#L9802-L9814 | 02 |
 | The local turns with no anchor go first, then each after its anchor in `seq` order. One whose anchor the transcript does not hold is dropped. | https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentHostLocalTurns.ts#L202-L234 | 02 |
-| A local turn whose id the transcript holds already is not put back a second time. | `(defaulted: an ACP record keeps the host's seed, which carries the local turns, [code://packages/agent-acp/src/catalog.ts#L217-L220](../../../../packages/agent-acp/src/catalog.ts#L217-L220))` | 02 |
+| A local turn that the transcript holds already stays where the transcript has it. The other local turns of its anchor go in around it by `seq`, and none goes in twice. | `(defaulted: an ACP record keeps the host's seed, which carries the local turns, [code://packages/agent-acp/src/catalog.ts#L217-L220](../../../../packages/agent-acp/src/catalog.ts#L217-L220))` | 02 |
 | A truncation at a local turn asks the backend for the end point of the turn before it. With no such turn, it is refused as a clear of the whole conversation is. | https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentSideEffects.ts#L1960-L1966; [code://packages/sdk/src/host/chatactions.ts#L1486-L1498](../../../../packages/sdk/src/host/chatactions.ts#L1486-L1498) | 03 |
 | A truncation forgets the local turns that it drops. | https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentSideEffects.ts#L1977-L1981 | 03 |
 | A fork at a local turn asks the backend for the fork point of the turn before it, and is refused when there is none. | https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentService.ts#L7183-L7195 | 03 |
@@ -103,11 +103,11 @@ chat/truncated or a fork at a local turn -> the turn before it -> endPoint or fo
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A command's turn is kept when it ends](task-01-a-commands-turn-is-kept-when-it-ends.md) | todo | - |
-| [02 - A transcript read puts the local turns back](task-02-a-transcript-read-puts-the-local-turns-back.md) | todo | 01 |
-| [03 - A cut at a local turn goes to the turn before it](task-03-a-cut-at-a-local-turn-goes-to-the-turn-before-it.md) | todo | 01 |
-| [04 - Local turns go and move with their chat](task-04-local-turns-go-and-move-with-their-chat.md) | todo | 01 |
-| [05 - The docs say what the host keeps](task-05-the-docs-say-what-the-host-keeps.md) | todo | 02, 03, 04 |
+| [01 - A command's turn is kept when it ends](task-01-a-commands-turn-is-kept-when-it-ends.md) | done | - |
+| [02 - A transcript read puts the local turns back](task-02-a-transcript-read-puts-the-local-turns-back.md) | done | 01 |
+| [03 - A cut at a local turn goes to the turn before it](task-03-a-cut-at-a-local-turn-goes-to-the-turn-before-it.md) | done | 01 |
+| [04 - Local turns go and move with their chat](task-04-local-turns-go-and-move-with-their-chat.md) | done | 01 |
+| [05 - The docs say what the host keeps](task-05-the-docs-say-what-the-host-keeps.md) | done | 02, 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -116,13 +116,13 @@ chat/truncated or a fork at a local turn -> the turn before it -> endPoint or fo
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-commands-turn-is-kept-when-it-ends.md](task-01-a-commands-turn-is-kept-when-it-ends.md).
+- **Done so far:** planned and built 2026-10-27; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a turn in `allTurns()` has the client's id until a restart, so an anchor is always the transcript's id.
 
 ## Final verification checklist
 
-- [ ] Each case fails on the code before this plan.
-- [ ] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and the sdk suite pass.
-- [ ] `plans/index.md` updated.
+- [x] Each case fails on the code before this plan.
+- [x] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and the sdk suite pass.
+- [x] `plans/index.md` updated.

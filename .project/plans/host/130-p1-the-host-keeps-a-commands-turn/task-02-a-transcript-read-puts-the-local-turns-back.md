@@ -1,6 +1,6 @@
 ---
 title: A transcript read puts the local turns back
-status: todo
+status: done
 depends: [task-01-a-commands-turn-is-kept-when-it-ends.md]
 layer: "sdk"
 refs:
@@ -30,13 +30,14 @@ That read hands the backend the chat's outputs, and puts the chat's local turns 
 ## Steps
 
 1. Read the chat's files, and skip one that is not version 1 or that fails the reference's check.
-2. Skip a local turn whose id the transcript's turns hold already.
+2. Leave a local turn that the transcript holds already where the transcript has it.
 3. Put the local turns with no anchor first, in `seq` order.
 4. Put each other local turn after the turn its anchor names, in `seq` order.
-5. Drop a local turn whose anchor no turn of the transcript has.
-6. Answer the transcript's own array when the chat has no local turns.
-7. Write `transcriptOf(agent, id, at, session, chat)`, which reads `agent.transcript` with `outputsFor` and answers `withLocalTurns`.
-8. Read through `transcriptOf` at the five places, with the session and chat each passes to `outputsFor`.
+5. Put a local turn before a held local turn of the same anchor when its `seq` is lower.
+6. Drop a local turn whose anchor no turn of the transcript has.
+7. Answer a copy of the transcript's turns when the chat has no local turns.
+8. Write `transcriptOf(agent, id, at, session, chat)`, which reads `agent.transcript` with `outputsFor` and answers `withLocalTurns`.
+9. Read through `transcriptOf` at the five places, with the session and chat each passes to `outputsFor`.
 
 ## Validation
 
@@ -44,9 +45,13 @@ That read hands the backend the chat's outputs, and puts the chat's local turns 
 - A chat that is not the first, woken from its own transcript, holds its `!` turn too.
 - A `!` turn with no anchor comes first, and two `!` turns after one turn keep their order.
 - A `!` turn whose anchor the transcript no longer holds is not there.
-- A transcript that holds a local turn already shows it once.
+- A transcript that holds a local turn already shows it once, and the next local turn after it.
 - After a restart, a subscribe to the `!` call's terminal answers the exited terminal with its output.
 - `pnpm vitest run packages/sdk/test/host-local-turns.test.ts packages/sdk/test/host-retained-terminals.test.ts` passes.
 
 ## Resume
+
+- **Done:** 2026-10-27.
+  A held local turn stays in place, and the others of its anchor go in around it by `seq`.
+  The plan's first answer put a later one before it.
 

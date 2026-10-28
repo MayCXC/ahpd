@@ -1,7 +1,7 @@
 ---
 title: A pi turn names the entry that holds it
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-27
 revalidated: 2026-10-27
@@ -64,7 +64,7 @@ begin -> leaf before the prompt -> prompt -> agent_settled -> the first user ent
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A pi turn says its prompt's entry](task-01-a-pi-turn-says-its-prompts-entry.md) | todo | - |
+| [01 - A pi turn says its prompt's entry](task-01-a-pi-turn-says-its-prompts-entry.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -72,13 +72,13 @@ begin -> leaf before the prompt -> prompt -> agent_settled -> the first user ent
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-pi-turn-says-its-prompts-entry.md](task-01-a-pi-turn-says-its-prompts-entry.md).
+- **Done so far:** planned and built 2026-10-27; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** pi writes the prompt's entry after its listeners hear `message_end`, so the leaf at that event is the entry before the prompt.
 
 ## Final verification checklist
 
-- [ ] The case fails on the code before this plan.
-- [ ] The agent-pi suite passes.
-- [ ] `plans/index.md` updated.
+- [x] The case fails on the code before this plan.
+- [x] The agent-pi suite passes.
+- [x] `plans/index.md` updated.

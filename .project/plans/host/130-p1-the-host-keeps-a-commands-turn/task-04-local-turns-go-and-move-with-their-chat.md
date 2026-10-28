@@ -1,6 +1,6 @@
 ---
 title: Local turns go and move with their chat
-status: todo
+status: done
 depends: [task-01-a-commands-turn-is-kept-when-it-ends.md]
 layer: "sdk"
 refs:
@@ -37,4 +37,6 @@ A chat that moves to another session takes its local turns to that session's fol
 - `pnpm vitest run packages/sdk/test/host-local-turns.test.ts` passes.
 
 ## Resume
+
+- **Done:** 2026-10-27.
 

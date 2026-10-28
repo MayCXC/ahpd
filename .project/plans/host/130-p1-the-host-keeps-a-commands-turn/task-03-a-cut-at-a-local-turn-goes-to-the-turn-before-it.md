@@ -1,6 +1,6 @@
 ---
 title: A cut at a local turn goes to the turn before it
-status: todo
+status: done
 depends: [task-01-a-commands-turn-is-kept-when-it-ends.md]
 layer: "sdk"
 refs:
@@ -47,4 +47,6 @@ A truncation forgets the local turns that it drops, and a fork keeps the forked 
 - `pnpm vitest run packages/sdk/test/host-local-turns.test.ts` passes.
 
 ## Resume
+
+- **Done:** 2026-10-27.
 

@@ -1,7 +1,7 @@
 ---
 title: A cofold turn keeps the id it was given
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-27
 revalidated: 2026-10-27
@@ -56,7 +56,7 @@ beginTurn(turnId) -> launch -> run({ messageId: turnId }) -> cofold stores the p
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A cofold prompt is stored under its turn's id](task-01-a-cofold-prompt-is-stored-under-its-turns-id.md) | todo | - |
+| [01 - A cofold prompt is stored under its turn's id](task-01-a-cofold-prompt-is-stored-under-its-turns-id.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -64,13 +64,13 @@ beginTurn(turnId) -> launch -> run({ messageId: turnId }) -> cofold stores the p
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-cofold-prompt-is-stored-under-its-turns-id.md](task-01-a-cofold-prompt-is-stored-under-its-turns-id.md).
+- **Done so far:** planned and built 2026-10-27; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a run that resumes a paused turn keeps the run it had, and takes no new id.
 
 ## Final verification checklist
 
-- [ ] The case fails on the code before this plan.
-- [ ] The agent-cofold suite passes.
-- [ ] `plans/index.md` updated.
+- [x] The case fails on the code before this plan.
+- [x] The agent-cofold suite passes.
+- [x] `plans/index.md` updated.

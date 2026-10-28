@@ -1,6 +1,6 @@
 ---
 title: The docs say what the host keeps
-status: todo
+status: done
 depends: [task-02-a-transcript-read-puts-the-local-turns-back.md, task-03-a-cut-at-a-local-turn-goes-to-the-turn-before-it.md, task-04-local-turns-go-and-move-with-their-chat.md]
 layer: "docs"
 refs:
@@ -40,4 +40,8 @@ The docs, the port's comment and the spec say what the host keeps, where it puts
 - Each link in the changed docs resolves.
 
 ## Resume
+
+- **Done:** 2026-10-27.
+  `TERMINALS.md` has a paragraph after the `!` command's, and `CHATS.md` a sentence on each cut.
+  `AGENT.md` says which id a turn is read back under.
 

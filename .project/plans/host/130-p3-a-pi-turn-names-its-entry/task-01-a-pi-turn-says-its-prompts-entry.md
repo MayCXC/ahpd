@@ -1,6 +1,6 @@
 ---
 title: A pi turn says its prompt's entry
-status: todo
+status: done
 depends: []
 layer: "agent-pi"
 refs:
@@ -38,4 +38,7 @@ When a pi turn settles, it tells the host the id of its prompt's entry in pi's f
 - `pnpm vitest run packages/agent-pi` passes.
 
 ## Resume
+
+- **Done:** 2026-10-27.
+  `promptOf` holds the read, so `agent-pi-disk.test.ts` checks it on a file pi's own manager wrote; three suites with backends of their own gained `promptAfter`.
 

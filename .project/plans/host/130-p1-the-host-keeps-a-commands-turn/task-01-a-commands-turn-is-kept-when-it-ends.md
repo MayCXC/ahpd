@@ -1,6 +1,6 @@
 ---
 title: A command's turn is kept when it ends
-status: todo
+status: done
 depends: []
 layer: "sdk"
 refs:
@@ -53,4 +53,8 @@ The file names the turn's anchor by its transcript id, and a `seq` that orders t
 - `pnpm vitest run packages/sdk/test/host-local-turns.test.ts` passes.
 
 ## Resume
+
+- **Done:** 2026-10-27.
+  The area's own cases are in `packages/sdk/test/localturns.test.ts`, which the plan did not name.
+  They need the new area, so they live apart from the host's cases, which run on the code before this plan.
 
