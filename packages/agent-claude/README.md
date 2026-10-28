@@ -64,7 +64,7 @@ An agent is a record on `x-ahpd-agents`: `{ id, engine, owner, name, description
 | `thinking` | `adaptive` | Extended thinking: `adaptive` lets the agent decide when to think, `disabled` is none |
 | `outputStyle` | none | The name of a style from the CLI's own settings |
 | `env` | none | Variables for the CLI's process, laid over the daemon's own environment on this host, and the whole of it in a machine |
-| `logins` | none | Claude logins the agent runs on, each `{ "name", "token" }` with a token from `claude setup-token`. See [Several logins](#several-logins) |
+| `logins` | none | The Claude logins the agent runs on, by the id of a `claude-login` connector, in the order a turn tries them. See [Several logins](#several-logins) |
 | `extraArgs` | none | Arguments the CLI is started with beyond the ones this backend builds. **Host records only** |
 | `hostTasks` | `true` | Whether Claude leaves its own task tools to the host's `task_add`. Off keeps them, and their calls write the session's plan |
 | `enableTasks` | `true` | Start the CLI with `CLAUDE_CODE_ENABLE_TASKS=1` whenever Claude keeps its own task tools |
@@ -208,35 +208,30 @@ Sessions use whatever the Claude CLI is signed in with. A client can push a toke
 
 ### Several logins
 
-A record's `logins` are the Claude accounts the agent runs on. Each is a name and a token from `claude setup-token`, which needs a Pro, Max, Team or Enterprise plan. A token written as text moves to the vault when the record is saved, as a model source's `key` does. A host record may name a daemon variable with `{ "fromEnv": "NAME" }` instead. The CLI gets the token as `CLAUDE_CODE_OAUTH_TOKEN`, laid over the record's `env`. An `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` that reaches the CLI comes before it, in Claude Code's own order of credentials.
+A Claude login is a connector of the adapter `claude-login`, which this plugin registers: one Claude account's token, kept in the host's vault. A person makes one with `x-ahpd/connectors/signin`, which answers claude.ai's sign-in page for a one-year token, the page `claude setup-token` opens. They paste the code the page shows into `x-ahpd/connectors/signin-finish`, which makes the connector. A token `claude setup-token` printed is put with `x-ahpd/connectors/put` instead. Either needs a Pro, Max, Team or Enterprise plan. A put of the same id replaces the token, and `x-ahpd/connectors/remove` takes the login away.
+
+A record names its logins by connector id, in the order a turn tries them. A put is refused when it names an id the host serves no `claude-login` connector for. It is refused too when the login is neither the record owner's nor the host's.
 
 ```json
-{
-  "id": "claude",
-  "engine": "claude",
-  "owner": "host",
-  "name": "Claude Code",
-  "config": {
-    "logins": [
-      { "name": "first", "token": { "$secret": "host:claude-first" } },
-      { "name": "second", "token": { "$secret": "host:claude-second" } }
-    ]
-  }
-}
+{ "id": "claude", "engine": "claude", "owner": "host", "name": "Claude Code", "config": { "logins": ["claude-first", "claude-second"] } }
 ```
 
-The backend that starts the CLI routes the conversations over the logins:
+A turn uses the logins as the [model proxy](https://github.com/softov/ahpd/blob/main/docs/server/PROXY.md) uses the entries of a name:
 
-- Each conversation orders the logins by a rendezvous score of its chat's URI and each login's name. So conversations spread over the logins, and a chat keeps its order across a restart.
-- A conversation runs on the first login of its order and keeps it while it works, because the prompt cache belongs to the account.
-- A turn the API refuses with `rate_limit` or `billing_error` puts that login in a cooldown for every session of the agent. The cooldown lasts until the reset that the CLI's `rate_limit_event` names for a `five_hour` or `seven_day` window. It is capped at 6 hours and 8 days, and lasts 10 minutes otherwise.
-- A refused turn that showed nothing yet runs again on the next login it has not tried. A new CLI resumes the conversation at the end of the turn before it, as a truncation does. The prompt goes out again, and the refusal is not shown.
-- A conversation refused on its first turn has no turn to go back to. One that this process started on this host starts over under its id, as a chat truncated whole does. One resumed, or one in a machine, fails the turn. So does one whose conversation cannot be deleted, which comes back as it was on the next login.
-- A refused turn that showed something fails, and the next turn starts on the next login. So does a turn after one read back from a transcript, which has no end to cut back to.
-- When every login is cooling down or was tried, the turn waits until the earliest cooldown ends, and says until when. Then it tries them again, and a stop ends the wait.
-- An authentication failure, and any error the account does not decide, fails the turn and moves nothing.
+- A turn runs on the first login in the record's order that is open, that the record's owner may use, and that is not resting. The CLI gets its token as `CLAUDE_CODE_OAUTH_TOKEN`, laid over the record's `env`, in a machine too. A cloud provider's switch, `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_API_KEY` stay out of that CLI's environment, because the CLI takes each before the token.
+- A record that names no login runs on the agent's own credential: the CLI's sign-in, the record's `env` or the daemon's environment. A session a client pushed a key for runs on that key and on no login. A turn whose record names logins, none of them open, is refused, and the refusal names each one, as the proxy's 503 does.
+- A request that fails with no connection, a 429 or a 5xx goes to the next login the turn has not tried. This happens only while the turn has shown nothing. The CLI says these as `server_error`, `rate_limit` and `overloaded`, once its own retries on that login are spent. A new CLI resumes the conversation at the end of the turn before it, as a truncation does, and the prompt goes out again. The failure is not shown.
+- A conversation that failed on its first turn has no turn to go back to. One that this process started on this host starts over under its id, as a chat truncated whole does. One resumed, or one in a machine, ends the turn with the failure. So does one whose conversation cannot be deleted, which comes back as it was.
+- A failure after the turn showed something ends the turn with it, and nothing runs again. So does a failure after a turn read back from a transcript, which has no end to cut back to.
+- A refused credential, a 401 or a 403, ends the turn with `Claude refused login <id> (<kind>)`, and no other login is tried. The CLI says it as `authentication_failed`, `oauth_org_not_allowed` or `verification_required`. A person signs the login in again.
+- A failure that names a retry time keeps that login out of every session until then, as a client backs off by a `retry-after`. A `rejected` `rate_limit_event` names it, and the CLI's own words end with `resets <time>`. A put of the login brings it back at once.
+- Nothing else is kept between turns: a login that failed with no retry time is tried again at the next turn.
+- When no login is left to try, the turn ends with the last failure and the first login back, with when. A turn that starts with every open login resting ends at once the same way.
+- Any other error ends the turn as it always did, with the CLI's words. So do `billing_error`, a 402, and `account_on_hold`, which is no single status. The [API's errors](https://docs.claude.com/en/api/errors) give each status.
 
-The CLI keeps its conversations in one configuration folder for every login, so a login resumes what another one wrote. Keep no sign-in of its own in that folder, so a refused token has nothing to fall back to.
+Each failure of a login goes to the daemon's log with the CLI's words. The plugin then asks the host to check that connector, so its row shows its health. The check counts one prompt's tokens with the login's token, which costs nothing, and a refused token answers it `denied`. The plugin asks as a client of its own host. On a host with a users directory, its configuration entry needs the grants `connector:put` and `connector:host` to check the host's logins. A person's login is never the plugin's to check, and shows its health when its owner checks it.
+
+Rests are kept in memory, so a restart clears them, and the next failure names the time again. The CLI keeps its conversations in one configuration folder for every login, so a login resumes what another one wrote. A refused token does not fall back to a sign-in kept in that folder.
 
 ### In a machine
 
