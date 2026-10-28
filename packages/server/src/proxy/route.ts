@@ -187,7 +187,8 @@ const distinct = (names: readonly string[]): string[] => [...new Set(names)];
  * `openrouter/anthropic/claude-sonnet-5.5` is OpenRouter's own
  * `anthropic/claude-sonnet-5.5`. Nothing when either side is empty.
  */
-export const fetchedName = (name: string): { prefix: string; id: string } | undefined => {  const at = name.indexOf('/');
+export const fetchedName = (name: string): { prefix: string; id: string } | undefined => {
+  const at = name.indexOf('/');
   if (at <= 0 || at === name.length - 1) return undefined;
   return { prefix: name.slice(0, at), id: name.slice(at + 1) };
 };
