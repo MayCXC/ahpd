@@ -127,7 +127,7 @@ tool call (host/118) -> adapter.run(connector, action, input) -> child -> action
 ## Resume state
 
 - **Done so far:** the plan, 2026-10-13. Rewritten on 2026-10-23 for the adapter model of plan 53 and host/118. Tasks 01 to 05 implemented 2026-10-23: the package, its child, the mapping, `run`, the three first pieces and the docs page. `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `pnpm -s docs:build` and `packages/activepieces`'s 21 cases pass.
-- **Next action:** none; every task is implemented and waiting for the commit by hand. The checks by hand are in [.project/pending/plugin-50-first-pieces.md](../../../pending/plugin-50-first-pieces.md), and the license rows rest on the idea of 2026-10-06 until that file's license check runs.
+- **Next action:** none; every task is implemented and merged in #75, and waits for Softov's review. The checks by hand are in [.project/pending/plugin-50-first-pieces.md](../../../pending/plugin-50-first-pieces.md), and the license rows rest on the idea of 2026-10-06 until that file's license check runs.
 - **Open questions:** the run request carries `connector` beside the fields of task 03's step 3, because the child keeps one store for each connector. `nameOf` also names an adapter from a piece named by a file URL, which is how a test names a fixture.
 - **Watch out for:** a piece bundles its own copy of the framework, so find it by its `_actions` member, not by `instanceof`.
 

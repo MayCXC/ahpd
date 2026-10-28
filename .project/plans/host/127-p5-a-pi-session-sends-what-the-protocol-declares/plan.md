@@ -1,7 +1,7 @@
 ---
 title: A pi session sends what the protocol declares
 domain: host
-status: planned
+status: built
 priority: high
 created: 2026-10-27
 revalidated: 2026-10-27

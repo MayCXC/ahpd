@@ -1,7 +1,7 @@
 ---
 title: Terminal commands approved by rule
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -117,7 +117,7 @@ Child plans, each scoped to one package or two.
 | Plan | Package | Status | Depends on |
 | --- | --- | --- | --- |
 | [p1 - A command is split and matched](../100-p1-a-command-is-split-and-matched/plan.md) | sdk | built | - |
-| [p2 - A session gets its owner's command check](../100-p2-a-session-gets-its-owners-command-check/plan.md) | sdk, server | planned | p1 |
+| [p2 - A session gets its owner's command check](../100-p2-a-session-gets-its-owners-command-check/plan.md) | sdk, server | active | p1 |
 | [p3 - Another parser replaces the splitter](../100-p3-another-parser-replaces-the-splitter/plan.md) | sdk, server | built | p1 |
 | [p4 - Claude and ACP ask only for unmatched commands](../100-p4-claude-and-acp-ask-for-unmatched-commands/plan.md) | agent-claude, agent-acp | built | p2 |
 | [p5 - pi and cofold ask only for unmatched commands](../100-p5-pi-and-cofold-ask-for-unmatched-commands/plan.md) | agent-pi, agent-cofold | built | p2 |

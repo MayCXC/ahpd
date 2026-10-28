@@ -122,9 +122,8 @@ turn ends -> checkpoint -> Session Changes (or Branch Changes) -> summary.change
   The gates and the sdk suite pass with 2999 tests.
   On review (2026-10-18), `commit-tree` got a fixed `ahpd` identity, so a checkpoint is written where git has no identity, with a test.
 - **Next action:** None - every task is implemented.
-  Nothing is set to `done`, and `.project/plans/index.md` is untouched, as asked.
-  The sdk's files under `git status` are the plan's work, uncommitted.
-  Restore `packages/sdk/test/fixtures/wire.jsonl` with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`; the suite dirties it.
+  Nothing is set to `done`.
+  The work is committed in `06596413` and waits for Softov's review.
 - **Open questions:** none.
 - **Watch out for:** The idea's line refs are stale, so use the refs above.
   `look` stays, because the `uncommitted` scope and the folder's facts read it.

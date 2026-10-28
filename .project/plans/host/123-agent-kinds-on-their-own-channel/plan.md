@@ -77,11 +77,11 @@ plugin registerAgentKind -> fold agentKinds -> kinds channel reads agentKinds() 
 ## Resume state
 
 - **Done so far:** task 01 is merged in #90. No kind row has an icon, because no agent plugin sets icons on its kind.
-- **Next action:** Softov checks tasks 02 and 03 with [pending/host-123-engines-checks.md](../../../pending/host-123-engines-checks.md). Both are implemented on main and not committed. ahpw plugins 08 task 05 follows.
+- **Next action:** Softov checks tasks 02 and 03 with [pending/host-123-engines-checks.md](../../../pending/host-123-engines-checks.md). Both are merged in #91. ahpw plugins 08 task 05 follows.
 - **Open questions:** none.
 - **Watch out for:** a row never carries `open`. A function does not serialize.
 - **Watch out for:** in `--stdio` mode, the problem lines of the record channels, usage and policies go to stdout, which carries the protocol. This is older than this plan, and no task fixes it.
 
 ## Final verification checklist
 
-- [ ] A subscribe to `x-ahpd-agent-kinds://` on a daemon with agent-claude and agent-cofold lists `claude` and `cofold`.
+- [ ] A subscribe to `x-ahpd-engines://` on a daemon with agent-claude and agent-cofold lists `claude` and `cofold`.

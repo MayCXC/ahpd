@@ -112,8 +112,8 @@ initialize / root state -> _meta['ahpd.resourceProviders'] (schemes only)
 
 ## Resume state
 
-- **Done so far:** built 2026-10-04 in `6795e9b`; see [implemented.md](implemented.md). Task 05 was built 2026-10-13 and is `implemented`, uncommitted; see its Resume.
-- **Next action:** none. Task 05 is the last task, and it and the four before it stay `implemented` until Softov reviews them.
+- **Done so far:** built 2026-10-04 in `6795e9b`; see [implemented.md](implemented.md). Task 05 was built 2026-10-13 and committed in `bee2b166`; see its Resume.
+- **Next action:** Softov reviews task 05, the last task that is `implemented`. Tasks 01 to 04 are `done`.
 - **Open questions:** none; Softov's answers of 2026-10-04 are in the table above.
 - **Watch out for:** ahpapp must read `put` where it read `write` in `ahpd.resourceProviders` before the client-visible rename is relied on.
 
