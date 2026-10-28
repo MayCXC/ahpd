@@ -627,7 +627,7 @@ export function createHandlers(ctx: SessionContext): Handlers {
     });
     emit('session', {
       type: 'session/inputNeededSet',
-      request: { id: requestId, chat: start.chatUri, kind: 'toolConfirmation', turnId, toolCall: call },
+      request: { id: requestId, chat: start.chatUri, kind: 'toolConfirmation', turnId, toolCall: { ...call } },
     });
     doing('Waiting on you');
     touch();
