@@ -106,7 +106,7 @@ async function turn(mode: string | undefined, path = 'a.txt') {
 
 it('advertises an approvals mode and a thinking level, in the window own names', () => {
   const props = properties(cofoldAgent({}));
-  expect(Object.keys(props)).toEqual(['model', 'baseUrl', 'instructions', 'permissionMode', 'effortLevel']);
+  expect(Object.keys(props)).toEqual(['baseUrl', 'instructions', 'permissionMode', 'effortLevel']);
   expect(props.permissionMode).toMatchObject({ scope: 'session', sessionMutable: true, default: 'auto' });
   expect(props.permissionMode?.enum).toEqual([...PERMISSION_MODES]);
   expect((props.permissionMode?.enumLabels as string[]).length).toBe(PERMISSION_MODES.length);

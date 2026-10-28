@@ -1,6 +1,6 @@
 ---
 title: A new Cofold session picks a model
-status: doing
+status: implemented
 depends: []
 layer: "plugin"
 refs:
@@ -40,9 +40,17 @@ Today the session schema has a `model` field with no values, and a client that p
 
 ## Resume
 
-- **Done so far:** nothing yet.
-- **Next action:** step 1.
-- **Files:** none yet.
+- **Done so far:** `model` is gone from the session schema.
+  `defaults()` no longer names it either, so a new session's config carries no model.
+  Every read of `settings.model` stays, so a session made with that setting still runs on its model.
+  The two schema tests now expect `baseUrl`, `instructions`, `permissionMode` and `effortLevel` alone.
+  A new turn test sends a model on the message and checks the endpoint, key and model id it runs on.
+  `rg -n "'model'" packages/agent-cofold/src` finds only `LIVE_KEYS` and `NOT_A_RECORD`, neither of which is a session setting.
+  `pnpm -s typecheck`, the full `packages/agent-cofold` suite, `pnpm -s build` and `pnpm -s boundary` pass.
+  The two by-hand checks in Validation are not run.
+- **Next action:** none.
+- **Files:** `packages/agent-cofold/src/agent.ts`, `packages/agent-cofold/test/agent-cofold.test.ts`, `packages/agent-cofold/test/agent-cofold-modes.test.ts`, `packages/agent-cofold/test/agent-cofold-turn.test.ts`, `packages/agent-cofold/test/agent-cofold-config.test.ts`, this task file, `plan.md` and `plans/index.md`.
 - **Open questions:** none.
-- **Departures:** none.
+- **Departures:** this task's Files list did not name the defaults or the config test.
+  The `model` default had to go with the schema field, so its test now checks that the harness model still reaches `modelOf`.
 - **Watch out for:** the agent record's `model` is the agent's default, from the Settings tab. It is not the session schema's `model`, and it stays.

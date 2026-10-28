@@ -489,12 +489,14 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
   const harness = harnessConfig();
 
   /**
-   * What a session may be told, and what the model is.
+   * What a session may be told.
    *
-   * `model` and `baseUrl` are configuration, which the protocol lets a client
-   * change on a running session through `session/configChanged`. The key is
-   * not here: a bearer token is a credential, and the protocol's path for one
-   * is `authenticate` against a protected resource advertised below.
+   * `baseUrl` is configuration, which the protocol lets a client change on a
+   * running session through `session/configChanged`. The model is not here: it
+   * belongs to the turn, and the list reaches a client through `Session.models`
+   * and the agent's `models`. The key is not here either: a bearer token is a
+   * credential, and the protocol's path for one is `authenticate` against a
+   * protected resource advertised below.
    *
    * The mode and the effort are the two controls a client draws beyond the
    * text fields, and each is offered only where this backend can honour it:
@@ -506,12 +508,6 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
   const schema = (): Bag => ({
     type: 'object',
     properties: {
-      model: {
-        type: 'string',
-        title: 'Model',
-        description: 'The model id the endpoint serves, e.g. deepseek-chat.',
-        sessionMutable: true,
-      },
       baseUrl: {
         type: 'string',
         title: 'Endpoint',
@@ -567,13 +563,14 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
   });
 
   /**
-   * What a session starts at: the package's own, under the harness file's.
+   * What a session starts at: an endpoint that was configured.
    *
-   * Only what was actually configured, because a default invented for a model
-   * nobody can reach is a session that fails at the first call.
+   * The model is not a session setting: a turn names it, and a turn that names
+   * none falls back to the plugin option or the harness file through
+   * `modelReferenceOf`. A default invented for a model nobody can reach is a
+   * session that fails at the first call, so only what was configured is here.
    */
   const defaults = (): Record<string, unknown> => ({
-    ...(options.model !== undefined ? { model: options.model } : harness.model !== undefined ? { model: harness.model } : {}),
     ...(options.baseUrl !== undefined ? { baseUrl: options.baseUrl } : {}),
   });
 

@@ -76,7 +76,7 @@ turn -> modelOf -> connectionOf(strict=true) -> the provider the reference names
 | [01 - List every provider under its own id](task-01-list-every-provider-under-its-id.md) | implemented | - |
 | [02 - The cofold prefix names only an unowned endpoint](task-02-cofold-prefix-only-unowned-endpoint.md) | implemented | 01 |
 | [03 - The README says how models are listed](task-03-readme-says-how-models-are-listed.md) | implemented | 02 |
-| [04 - A new Cofold session picks a model](task-04-a-new-session-picks-a-model.md) | doing | - |
+| [04 - A new Cofold session picks a model](task-04-a-new-session-picks-a-model.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -85,13 +85,14 @@ turn -> modelOf -> connectionOf(strict=true) -> the provider the reference names
 
 ## Resume state
 
-- **Done so far:** tasks 01 to 03 are implemented.
+- **Done so far:** tasks 01 to 04 are implemented.
   Every provider in the cofold file is listed under its own id, each with its own key.
   The `cofold` prefix remains only for an explicit `baseUrl` or the local endpoint.
   The README says how models are named.
-  The `packages/agent-cofold` suite, `pnpm -s typecheck`, `pnpm -s build` and `pnpm -s docs:build` pass.
+  The session schema has no `model`, so a new session's picker draws the agent's `models`.
+  `pnpm -s typecheck`, the full `packages/agent-cofold` suite, `pnpm -s build`, `pnpm -s boundary` and `pnpm -s docs:build` pass.
 - **Reopened:** 2026-10-27, a new Cofold session showed no Model picker in ahpw. Task 04 removes `model` from the session schema.
-- **Next action:** task 04, starting at step 1. It depends on no other task.
+- **Next action:** none. The two by-hand checks on Softov's daemon remain.
 - **Open questions:** none.
 - **Watch out for:** `infoOf` searches every catalogue by reference already, so it needs no change. Keep the five-second catalogue limit per provider, and ask the providers in parallel.
 
@@ -99,4 +100,4 @@ turn -> modelOf -> connectionOf(strict=true) -> the provider the reference names
 
 - [ ] On Softov's daemon, the agent-cofold model list shows `open_router/...` ids and no `cofold/...` id.
 - [ ] One turn on a listed `open_router/...` model answers.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

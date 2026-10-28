@@ -19,9 +19,12 @@ it('answers provider cofold with the settings a session may carry', () => {
   expect(agent.displayName).toBe('Cofold');
   // No key: a bearer token is a credential, and the protocol's path for one is
   // `authenticate` against the protected resource below, not session config.
+  // No model either: a model belongs to the turn, so a client draws the picker
+  // from the agent's `models` rather than from a schema field with no values.
   // The mode and the effort are the two controls a window draws, and the cases
   // for what each one means are `agent-cofold-modes.test.ts`.
-  expect(Object.keys(properties(agent))).toEqual(['model', 'baseUrl', 'instructions', 'permissionMode', 'effortLevel']);
+  expect(Object.keys(properties(agent))).toEqual(['baseUrl', 'instructions', 'permissionMode', 'effortLevel']);
+  expect(properties(agent)).not.toHaveProperty('model');
 });
 
 it('advertises the resource a client may lend a token for', () => {
@@ -39,7 +42,9 @@ it('names the resource after the endpoint only when that is an https URL', () =>
 
 it('defaults name only keys the schema declares', () => {
   const agent = cofoldAgent({ model: 'deepseek-chat', baseUrl: 'https://api.deepseek.com/v1' });
-  expect(agent.defaults()).toEqual({ model: 'deepseek-chat', baseUrl: 'https://api.deepseek.com/v1' });
+  // A model is a choice on the turn, not a session setting. The configured one
+  // still reaches a turn that names none through `modelOf` and `options.model`.
+  expect(agent.defaults()).toEqual({ baseUrl: 'https://api.deepseek.com/v1' });
   for (const key of Object.keys(agent.defaults())) {
     expect(properties(agent)).toHaveProperty(key);
   }
