@@ -1,6 +1,6 @@
 ---
 title: List every provider under its own id
-status: todo
+status: implemented
 depends: []
 layer: "agent-cofold"
 refs:
@@ -43,9 +43,25 @@ The model list has the models of every file provider, each id as `<provider id>/
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Files:** none yet.
+- **Done so far:** `connectionsOf` answers one `Connection` per file provider.
+  Each connection has its own id, `apiKey` and `headers`.
+  An explicit `baseUrl` or an empty file gives the one connection `connectionOf` resolves.
+  `connectionOf` and `connectionsOf` share `keyOf`.
+  A file provider's key goes only to its own endpoint.
+  The lent key and the plugin key go only where the endpoint's origin is `resourceOf`.
+  The `providers[0].apiKey` fallback is gone.
+  `probe` asks every connection in parallel and merges the rows in file order.
+  It keeps the configured reference first when no catalogue carries it.
+  `create` merges `knownCatalogue` over every connection.
+  Tests added: two providers listed under their own ids, each asked with its own key and no other.
+  One failing provider leaves the others listing.
+  The resolve-back test now runs with no configured model.
+  The full `packages/agent-cofold` suite passes, and `pnpm -s typecheck` passes.
+- **Next action:** none. Task 02 follows.
+- **Files:** `packages/agent-cofold/src/agent.ts`, `packages/agent-cofold/test/agent-cofold-models.test.ts`, this task file, `plan.md` and `plans/index.md`.
 - **Open questions:** none.
 - **Departures:** none.
-- **Watch out for:** a key must never reach an endpoint of another provider. A status, error or log must not carry a key.
+- **Watch out for:** a key must never reach an endpoint of another provider.
+  It does not: `keyOf` picks a key by the connection's own base URL and the origin `resourceOf` names.
+  `connectionOf` still sends a named provider's `headers` with an explicit `baseUrl`, as it did before.
+  This task moved keys only.

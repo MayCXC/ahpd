@@ -102,12 +102,15 @@ it('runs on the model the harness named, with that provider endpoint and key', a
   expect(seen.authorization).toBe('Bearer k');
 });
 
-it('advertises the endpoint the harness named and defaults to its model', () => {
+it('advertises the endpoint the harness named, and runs on its model without a session setting', () => {
   put(CONFIG);
   const agent = cofoldAgent({});
   expect(resourceOf({})).toBe('https://openrouter.ai');
   expect(agent.protectedResources).toEqual([{ resource: 'https://openrouter.ai', resource_name: 'Cofold', required: false }]);
-  expect(agent.defaults()).toMatchObject({ model: 'open_router/~deepseek/deepseek-flash-latest' });
+  // The model is the turn's choice, so it is not a session default; a turn
+  // that names none still reaches the harness model through `modelOf`.
+  expect(agent.defaults()).not.toHaveProperty('model');
+  expect(modelOf({}).modelId).toBe('~deepseek/deepseek-flash-latest');
 });
 
 it('lets the plugin and the session win over the harness, and refuses a provider it does not carry', () => {

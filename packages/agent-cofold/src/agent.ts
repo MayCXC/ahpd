@@ -209,8 +209,9 @@ export interface Connection {
    * The prefix a model this endpoint serves is offered under.
    *
    * The harness provider that owns the endpoint, so a choice selects the same
-   * provider back; this backend's own id when no entry owns it, which `modelOf`
-   * accepts for the endpoint it was configured with.
+   * provider back; this backend's own id only for an endpoint no entry owns,
+   * which is an explicit `baseUrl` or the local endpoint when the file carries
+   * no provider.
    */
   prefix: string;
 }
@@ -230,6 +231,46 @@ export const modelReferenceOf = (
   harness: HarnessConfig,
 ): string | undefined => text(settings.model) ?? options.model ?? harness.model;
 
+/** Whether two URLs name the same origin, so a key lent for one is not sent to another. */
+const sameOrigin = (one: string, other: string): boolean => {
+  try {
+    return new URL(one).origin === new URL(other).origin;
+  }
+  catch {
+    return false;
+  }
+};
+
+/**
+ * The key one endpoint is asked with, and no other endpoint's.
+ *
+ * A file provider's own key belongs to the endpoint the file names it for. A
+ * token a client lent belongs to the resource this backend advertises -
+ * `resourceOf` - and is sent only where that resource's origin is the
+ * endpoint's. The plugin's own key belongs to `options.baseUrl`, or, when no
+ * endpoint was given, to the provider the configured model names; it does not
+ * follow `resourceOf`, because an http endpoint advertises no resource and the
+ * key still belongs to it. Listing every provider would otherwise carry one
+ * provider's key to all of them.
+ */
+const keyOf = (
+  baseUrl: string,
+  options: CofoldOptions,
+  credentials: Record<string, string>,
+  harness: HarnessConfig,
+  owner?: HarnessProvider,
+): Connection['apiKey'] => {
+  const own = owner !== undefined && owner.baseUrl === baseUrl
+    ? owner.apiKey
+    : harness.providers.find((one) => one.baseUrl === baseUrl)?.apiKey;
+  const resource = resourceOf(options, harness);
+  const lent = sameOrigin(baseUrl, resource) ? text(credentials[resource]) : undefined;
+  const option = options.baseUrl !== undefined
+    ? sameOrigin(baseUrl, options.baseUrl)
+    : endpointOf(options, harness)?.baseUrl === baseUrl;
+  return lent ?? (option ? options.apiKey : undefined) ?? own;
+};
+
 /**
  * Resolve the connection a model setting names, without requiring that a model
  * was chosen: a probe lists what an endpoint serves before anybody picks.
@@ -237,7 +278,8 @@ export const modelReferenceOf = (
  * `strict` is the difference between asking and running. A call that builds an
  * adapter refuses a missing model and a reference naming a provider the file
  * does not carry; a call that only reads a catalogue falls back to the first
- * provider's endpoint and lists what it has.
+ * provider's endpoint and lists what it has. `connectionsOf` is the listing
+ * case with more than one provider to ask.
  */
 const connectionOf = (
   options: CofoldOptions,
@@ -251,22 +293,25 @@ const connectionOf = (
   const named = reference === undefined ? undefined : splitModel(reference);
   const provider = endpointOf(options, harness, reference);
   const explicitBase = text(settings.baseUrl) ?? options.baseUrl;
-  // A reference under this backend's own id names the endpoint it was
-  // configured with rather than a provider the harness file would have to hold.
-  const ownRef = named !== undefined && named.provider === own;
   if (strict) {
     if (reference === undefined) {
       throw new Error(`${own}: no model is configured and this backend has no default; add "model" (as "<provider>/<model>") to ${harness.path}`);
     }
-    if (named !== undefined && provider === undefined && explicitBase === undefined && !ownRef) {
+    /*
+     * This backend's own id is not a provider the file has to carry. It names
+     * an endpoint only where one was given outright, or where the file carries
+     * no provider at all; any other reference has to match a file provider.
+     */
+    if (named !== undefined && provider === undefined && explicitBase === undefined) {
       const known = harness.providers.map((one) => one.id);
-      throw new Error(`${own}: model "${reference}" names provider "${named.provider}", and ${harness.path} configures ${known.length === 0 ? 'none' : known.join(', ')}`);
+      if (known.length > 0 || named.provider !== own) {
+        throw new Error(`${own}: model "${reference}" names provider "${named.provider}", and ${harness.path} configures ${known.length === 0 ? 'none' : known.join(', ')}`);
+      }
     }
   }
   const model = reference === undefined ? undefined : (named === undefined ? reference : named.modelId);
   const baseUrl = explicitBase ?? provider?.baseUrl ?? harness.providers[0]?.baseUrl ?? LOCAL_ENDPOINT;
-  const lent = credentials[resourceOf(options, harness)];
-  const key = text(lent) ?? options.apiKey ?? provider?.apiKey ?? harness.providers[0]?.apiKey;
+  const key = keyOf(baseUrl, options, credentials, harness, provider);
   return {
     ...(reference === undefined ? {} : { reference }),
     ...(model === undefined ? {} : { model }),
@@ -275,6 +320,37 @@ const connectionOf = (
     ...(provider?.headers === undefined ? {} : { headers: provider.headers }),
     prefix: provider?.id ?? own,
   };
+};
+
+/**
+ * Every connection a catalogue is read from.
+ *
+ * Without an explicit endpoint, the harness configuration's providers are
+ * asked one by one, each under its own id and with its own key, so every
+ * provider a person wrote in the file is listed rather than the first alone.
+ * An explicit `baseUrl` has no provider id to be offered under, and a file
+ * with no provider leaves only this backend's own endpoint, so both answer the
+ * one connection `connectionOf` resolves.
+ */
+const connectionsOf = (
+  options: CofoldOptions,
+  settings: Record<string, unknown>,
+  credentials: Record<string, string>,
+  harness: HarnessConfig,
+): Connection[] => {
+  const explicitBase = text(settings.baseUrl) ?? options.baseUrl;
+  if (explicitBase !== undefined || harness.providers.length === 0) {
+    return [connectionOf(options, settings, credentials, harness, false)];
+  }
+  return harness.providers.map((provider) => {
+    const key = keyOf(provider.baseUrl, options, credentials, harness, provider);
+    return {
+      baseUrl: provider.baseUrl,
+      ...(key === undefined ? {} : { apiKey: key }),
+      ...(provider.headers === undefined ? {} : { headers: provider.headers }),
+      prefix: provider.id,
+    };
+  });
 };
 
 /** How long the endpoint is given to publish its catalogue before the configured model stands alone. */
@@ -413,12 +489,14 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
   const harness = harnessConfig();
 
   /**
-   * What a session may be told, and what the model is.
+   * What a session may be told.
    *
-   * `model` and `baseUrl` are configuration, which the protocol lets a client
-   * change on a running session through `session/configChanged`. The key is
-   * not here: a bearer token is a credential, and the protocol's path for one
-   * is `authenticate` against a protected resource advertised below.
+   * `baseUrl` is configuration, which the protocol lets a client change on a
+   * running session through `session/configChanged`. The model is not here: it
+   * belongs to the turn, and the list reaches a client through `Session.models`
+   * and the agent's `models`. The key is not here either: a bearer token is a
+   * credential, and the protocol's path for one is `authenticate` against a
+   * protected resource advertised below.
    *
    * The mode and the effort are the two controls a client draws beyond the
    * text fields, and each is offered only where this backend can honour it:
@@ -430,12 +508,6 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
   const schema = (): Bag => ({
     type: 'object',
     properties: {
-      model: {
-        type: 'string',
-        title: 'Model',
-        description: 'The model id the endpoint serves, e.g. deepseek-chat.',
-        sessionMutable: true,
-      },
       baseUrl: {
         type: 'string',
         title: 'Endpoint',
@@ -491,13 +563,14 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
   });
 
   /**
-   * What a session starts at: the package's own, under the harness file's.
+   * What a session starts at: an endpoint that was configured.
    *
-   * Only what was actually configured, because a default invented for a model
-   * nobody can reach is a session that fails at the first call.
+   * The model is not a session setting: a turn names it, and a turn that names
+   * none falls back to the plugin option or the harness file through
+   * `modelReferenceOf`. A default invented for a model nobody can reach is a
+   * session that fails at the first call, so only what was configured is here.
    */
   const defaults = (): Record<string, unknown> => ({
-    ...(options.model !== undefined ? { model: options.model } : harness.model !== undefined ? { model: harness.model } : {}),
     ...(options.baseUrl !== undefined ? { baseUrl: options.baseUrl } : {}),
   });
 
@@ -740,11 +813,19 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
      * endpoint in `options` is not necessarily one it wants asked.
      */
     probe: async (): Promise<Offered> => {
-      const connection = connectionOf(options, {}, {}, harness, false);
-      const listed = options.adapter === undefined ? (await catalogueOf(connection)).map(rowOf) : [];
-      const models = connection.reference === undefined || listed.some((model) => model.id === connection.reference)
+      /*
+       * Every provider is asked in parallel, and the rows are merged in the
+       * file's order. A provider that fails answers an empty list, so its rows
+       * are absent and the others are still offered.
+       */
+      const connections = connectionsOf(options, {}, {}, harness);
+      const listed = options.adapter === undefined
+        ? (await Promise.all(connections.map((connection) => catalogueOf(connection)))).flat().map(rowOf)
+        : [];
+      const reference = modelReferenceOf(options, {}, harness);
+      const models = reference === undefined || listed.some((model) => model.id === reference)
         ? listed
-        : [{ id: connection.reference, name: connection.reference }, ...listed];
+        : [{ id: reference, name: reference }, ...listed];
       return { models, customizations: [], commands: await commandsOf(options) };
     },
     /*
@@ -839,7 +920,8 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
         start,
         store,
         harness,
-        (settings, credentials) => knownCatalogue(connectionOf(options, settings, credentials, harness, false)),
+        (settings, credentials) => connectionsOf(options, settings, credentials, harness)
+          .flatMap((connection) => knownCatalogue(connection)),
         held,
       );
     },

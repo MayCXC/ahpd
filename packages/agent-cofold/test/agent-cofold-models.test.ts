@@ -90,6 +90,27 @@ const refusing = (): { calls: () => number } => {
   return { calls: () => calls };
 };
 
+/** A harness file with two providers and no configured model. */
+const TWO = {
+  providers: [
+    { id: 'open_router', baseUrl: 'https://openrouter.ai/api/v1', apiKey: 'k-open' },
+    { id: 'moonshot', baseUrl: 'https://api.moonshot.ai/v1', apiKey: 'k-moon' },
+  ],
+};
+
+/** Stand in for several endpoints, answering each and recording what it was asked. */
+const answeringEach = (bodies: Record<string, unknown>): { seen: { url: string; authorization: unknown }[] } => {
+  const seen: { url: string; authorization: unknown }[] = [];
+  globalThis.fetch = (async (input: unknown, init?: { headers?: Record<string, string> }) => {
+    const url = String(input);
+    seen.push({ url, authorization: init?.headers?.authorization });
+    const body = bodies[new URL(url).host];
+    if (body === undefined) throw new Error(`no endpoint for ${url}`);
+    return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch;
+  return { seen };
+};
+
 /** Stand in for an endpoint that takes the connection and never answers it. */
 const hanging = (): { calls: () => number } => {
   let calls = 0;
@@ -121,6 +142,100 @@ it('offers every model the endpoint serves, under the provider it was read from'
     { id: 'open_router/openai/gpt-4o-mini', name: 'GPT-4o mini' },
     // A row with no name of its own is offered under its id rather than dropped.
     { id: 'open_router/qwen/qwen3-8b', name: 'qwen/qwen3-8b' },
+  ]);
+});
+
+it('offers every provider in the file, each under its own id', async () => {
+  put(TWO);
+  answeringEach({
+    'openrouter.ai': { data: LISTED },
+    'api.moonshot.ai': { data: [{ id: 'moonshotai/kimi-k3.1-pro', name: 'Kimi K3.1 Pro' }] },
+  });
+  const offered = await cofoldAgent({}).probe?.();
+  // The rows are merged in the order the file lists the providers.
+  expect(offered?.models).toEqual([
+    { id: 'open_router/deepseek/deepseek-chat', name: 'DeepSeek V3' },
+    { id: 'open_router/openai/gpt-4o-mini', name: 'GPT-4o mini' },
+    { id: 'open_router/qwen/qwen3-8b', name: 'qwen/qwen3-8b' },
+    { id: 'moonshot/moonshotai/kimi-k3.1-pro', name: 'Kimi K3.1 Pro' },
+  ]);
+});
+
+it('asks each provider with its own key, and sends no other provider key', async () => {
+  put(TWO);
+  const { seen } = answeringEach({
+    'openrouter.ai': { data: [{ id: 'one' }] },
+    'api.moonshot.ai': { data: [{ id: 'two' }] },
+  });
+  await cofoldAgent({}).probe?.();
+  expect(seen).toHaveLength(2);
+  expect(seen).toEqual(expect.arrayContaining([
+    { url: 'https://openrouter.ai/api/v1/models', authorization: 'Bearer k-open' },
+    { url: 'https://api.moonshot.ai/v1/models', authorization: 'Bearer k-moon' },
+  ]));
+
+  /*
+   * A plugin key belongs to the resource this backend advertised, which is the
+   * endpoint the configured model names. It reaches that provider only: the
+   * other one keeps its own key.
+   */
+  put({ ...TWO, model: 'open_router/deepseek/deepseek-chat' });
+  const second = answeringEach({
+    'openrouter.ai': { data: [{ id: 'one' }] },
+    'api.moonshot.ai': { data: [{ id: 'two' }] },
+  });
+  await cofoldAgent({ apiKey: 'k-option' }).probe?.();
+  expect(second.seen).toEqual(expect.arrayContaining([
+    { url: 'https://openrouter.ai/api/v1/models', authorization: 'Bearer k-option' },
+    { url: 'https://api.moonshot.ai/v1/models', authorization: 'Bearer k-moon' },
+  ]));
+});
+
+it('sends the plugin own key to the endpoint it names, even without a resource', async () => {
+  put({ providers: [] });
+  const request = { instructions: 'x', messages: [], tools: [] } as never;
+  const reply = { choices: [{ message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }], usage: {} };
+
+  // An http endpoint publishes no protected resource, but the key the plugin
+  // gave for it still belongs to it.
+  const http = answering(reply);
+  await modelOf({ baseUrl: 'http://127.0.0.1:1234/v1', model: 'm', apiKey: 'x' }).complete(request);
+  expect(http.seen.url).toBe('http://127.0.0.1:1234/v1/chat/completions');
+  expect(http.seen.authorization).toBe('Bearer x');
+
+  // A resource naming another origin does not take the key away from the
+  // endpoint `baseUrl` names.
+  const other = answering(reply);
+  await modelOf({ baseUrl: 'http://127.0.0.1:1234/v1', resource: 'https://ahpd.dev/agent-cofold', model: 'm', apiKey: 'x' }).complete(request);
+  expect(other.seen.authorization).toBe('Bearer x');
+});
+
+it('gives a turn the key of the provider its reference names when two share an endpoint', async () => {
+  put({
+    providers: [
+      { id: 'first', baseUrl: 'https://shared.example/v1', apiKey: 'k-first' },
+      { id: 'second', baseUrl: 'https://shared.example/v1', apiKey: 'k-second' },
+    ],
+  });
+  const { seen } = answering({ choices: [{ message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }], usage: {} });
+  await modelOf({}, { model: 'second/some-model' }).complete({ instructions: 'x', messages: [], tools: [] } as never);
+  expect(seen.url).toBe('https://shared.example/v1/chat/completions');
+  // The listing asked the second provider with its own key, and the turn runs
+  // on that one rather than on the first entry for the same endpoint.
+  expect(seen.authorization).toBe('Bearer k-second');
+});
+
+it('keeps the other providers listing when one fails', async () => {
+  put(TWO);
+  globalThis.fetch = (async (input: unknown) => {
+    if (String(input).startsWith('https://api.moonshot.ai')) throw new Error('connection refused');
+    return new Response(JSON.stringify({ data: LISTED }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch;
+  const offered = await cofoldAgent({}).probe?.();
+  expect(offered?.models.map((model) => model.id)).toEqual([
+    'open_router/deepseek/deepseek-chat',
+    'open_router/openai/gpt-4o-mini',
+    'open_router/qwen/qwen3-8b',
   ]);
 });
 
@@ -186,9 +301,16 @@ it('offers the configured model alone when the endpoint never answers', async ()
 }, 20000);
 
 it('offers ids that resolve back to the endpoint they were read from', async () => {
-  put(CONFIG);
+  // The file names a provider but no model, so the prefix is the provider the
+  // rows were read from rather than the one a configured model would name.
+  put({ providers: CONFIG.providers });
   answering({ data: LISTED });
   const offered = await cofoldAgent({}).probe?.();
+  expect(offered?.models.map((model) => model.id)).toEqual([
+    'open_router/deepseek/deepseek-chat',
+    'open_router/openai/gpt-4o-mini',
+    'open_router/qwen/qwen3-8b',
+  ]);
   for (const model of offered?.models ?? []) {
     expect(modelOf({}, { model: model.id }).modelId).toBe(model.id.replace('open_router/', ''));
   }
@@ -213,6 +335,27 @@ it('offers an endpoint no harness entry owns under this backend own provider id'
   // is selectable even though the harness file carries no provider.
   const resolved = modelOf({ baseUrl: 'https://local.example/v1' }, { model: 'cofold/qwen/qwen3-8b' });
   expect(resolved.modelId).toBe('qwen/qwen3-8b');
+});
+
+it('refuses this backend own prefix for a provider the file carries', () => {
+  put(CONFIG);
+  /*
+   * The file has open_router, so `cofold/...` names no endpoint of its own: it
+   * is a provider reference like any other, and the error names what the file
+   * configures.
+   */
+  expect(() => modelOf({}, { model: 'cofold/qwen/qwen3-8b' })).toThrow(/configures open_router/);
+});
+
+it('resolves this backend own prefix to the local endpoint when the file has no provider', () => {
+  put({ providers: [] });
+  const resolved = modelOf({}, { model: 'cofold/qwen/qwen3-8b' });
+  expect(resolved.modelId).toBe('qwen/qwen3-8b');
+});
+
+it('refuses a named provider when the file carries none', () => {
+  put({ providers: [] });
+  expect(() => modelOf({}, { model: 'absent/model' })).toThrow(/configures none/);
 });
 
 it('never asks the network for a caller that passed an adapter', async () => {

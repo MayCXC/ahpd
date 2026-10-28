@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
@@ -163,6 +163,66 @@ it('carries the configured model when the turn names none', async () => {
 
   const started = actions(p, chatUri).find((e) => e.action.type === 'chat/turnStarted');
   expect((started?.action.message as { model?: { id?: string } }).model?.id).toBe('open_router/y');
+});
+
+it('runs a turn on the model the turn names, with no model in the session config', async () => {
+  /*
+   * The session schema has no `model`, so a new session's config carries none.
+   * The choice a picker sends arrives on the message, and the turn has to run
+   * on it: the endpoint, the key and the model id all come from that reference.
+   */
+  const home = mkdtempSync(join(tmpdir(), 'ahpd-cofold-turn-model-'));
+  const was = process.env.XDG_CONFIG_HOME;
+  process.env.XDG_CONFIG_HOME = home;
+  mkdirSync(join(home, 'cofold'), { recursive: true });
+  writeFileSync(join(home, 'cofold', 'config.json'), JSON.stringify({
+    providers: [
+      { id: 'open_router', baseUrl: 'https://openrouter.ai/api/v1', apiKey: 'k-open' },
+      { id: 'moonshot', baseUrl: 'https://api.moonshot.ai/v1', apiKey: 'k-moon' },
+    ],
+  }));
+  const real = globalThis.fetch;
+  let listed = 0;
+  const sent: { url: string; body: Record<string, unknown>; authorization: unknown }[] = [];
+  globalThis.fetch = (async (input: unknown, init?: { body?: string; headers?: Record<string, string> }) => {
+    const url = String(input);
+    if (url.endsWith('/models')) {
+      listed += 1;
+      return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    sent.push({ url, body: JSON.parse(String(init?.body)) as Record<string, unknown>, authorization: init?.headers?.authorization });
+    return new Response(
+      JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }], usage: {} }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  }) as typeof fetch;
+  try {
+    const host = createHost({ path: mkdtempSync(join(tmpdir(), 'ahpd-cofold-turn-picked-')), agents: [cofoldAgent({ memory: true })] });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle({
+      method: 'initialize',
+      params: { clientId: 'probe', protocolVersions: ['0.9.0'], initialSubscriptions: ['ahp-root://'] },
+    });
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/picked', provider: 'cofold' } });
+    await client.handle({ method: 'subscribe', params: { channel: 'ahp-chat:/picked' } });
+    client.handle({
+      method: 'dispatchAction',
+      params: {
+        channel: 'ahp-chat:/picked',
+        action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi', model: { id: 'moonshot/moonshotai/kimi-k3.1-pro' } } },
+      },
+    });
+    await until(() => ended(p, 'ahp-chat:/picked'));
+    expect(sent.at(-1)?.url).toBe('https://api.moonshot.ai/v1/chat/completions');
+    expect(sent.at(-1)?.body.model).toBe('moonshotai/kimi-k3.1-pro');
+    expect(sent.at(-1)?.authorization).toBe('Bearer k-moon');
+    await until(() => listed >= 2);
+  }
+  finally {
+    globalThis.fetch = real;
+    if (was === undefined) delete process.env.XDG_CONFIG_HOME; else process.env.XDG_CONFIG_HOME = was;
+  }
 });
 
 it('keeps a delta a plain action and starts no second turn from it', async () => {
