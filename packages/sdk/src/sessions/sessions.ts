@@ -249,7 +249,7 @@ export function memorySessions(): SessionStore & Held {
         ...(held.owner === undefined ? {} : { owner: held.owner }),
         ...(held.senders === undefined ? {} : { senders: held.senders }),
         ...(held.provider === undefined ? {} : { provider: held.provider }),
-      ...(held.uri === undefined ? {} : { uri: held.uri }),
+        ...(held.uri === undefined ? {} : { uri: held.uri }),
         ...(held.tools === undefined ? {} : { tools: held.tools }),
         ...(held.trustedFolder === undefined ? {} : { trustedFolder: held.trustedFolder }),
         ...(held.userSettings === undefined ? {} : { userSettings: held.userSettings }),
