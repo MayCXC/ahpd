@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Turn } from '@microsoft/agent-host-protocol';
 import {
-  resetSdk, actions, claude, createHost, echo, emit, hello, machine, peer, sdk, settle,
+  resetSdk, actions, claude, createHost, echo, emit, hello, machine, peer, sdk, settle, wrote,
 } from './support/host.js';
 import { fileSessions } from '../src/sessions/sessions.js';
 import { uriOf } from '../src/resources/resources.js';
@@ -489,6 +489,41 @@ describe('a Claude chat', () => {
     const rebuilt = await stateOf(after.client, terminal);
     expect(rebuilt.content).toEqual([{ type: 'unclassified', value: expect.stringContaining('after-the-reply') }]);
     expect(rebuilt.lifecycle).toEqual({ status: 'exited', exitCode: 0 });
+    await after.host.close();
+  });
+
+  it('forks a session asleep since a restart at a command\'s turn, where the Claude turn read back before it ended', async () => {
+    const dir = join(temp(), 'sessions');
+    const before = await shelled(dir);
+    const uri = 'claude:/forked';
+    await before.client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude', workingDirectories: [uriOf(DIR)] } });
+    const chat = String((await stateOf(before.client, uri)).defaultChat);
+    await stateOf(before.client, chat);
+    say(before.client, chat, 't1', 'first');
+    await settle();
+    const written = String(sdk.uuids[0]);
+    await emit({ type: 'assistant', uuid: 'reply-1', message: { id: 'm1', content: [{ type: 'text', text: 'one' }] } });
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+    await ended(before.p, chat, 't1');
+    say(before.client, chat, 't2', '!echo after-the-reply');
+    await ended(before.p, chat, 't2');
+    await before.host.close();
+
+    sdk.sessions.push({ sessionId: 'forked', summary: 'first', lastModified: 1, cwd: DIR });
+    sdk.transcript.push(
+      { type: 'user', uuid: written, message: { role: 'user', content: 'first' } },
+      { type: 'assistant', uuid: 'reply-1', message: { content: [{ type: 'text', text: 'one' }] } },
+    );
+    wrote('forked', DIR);
+    const after = await shelled(dir);
+    await stateOf(after.client, uri);
+    // Nothing has woken it: the fork does, and the turn read back names where it ended.
+    await after.client.handle({
+      method: 'createChat',
+      params: { channel: uri, chat: 'ahp-chat:/forked-copy', source: { kind: 'fork', chat, turnId: 't2' } },
+    });
+    const forked = sdk.queries.find((one) => one.options.forkSession === true);
+    expect(forked?.options).toMatchObject({ resume: 'forked', forkSession: true, resumeSessionAt: 'reply-1' });
     await after.host.close();
   });
 });
