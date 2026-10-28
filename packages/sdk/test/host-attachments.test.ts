@@ -174,11 +174,16 @@ async function serving(said: Said, dir = temp(), store = true, pace = 0) {
   return { host, client, peer: p, chatUri, dir, turn, state };
 }
 
-/** Every file written under the one session's folder, by name. */
+/**
+ * The files in the one session's folder, by name, which are its attachments.
+ * The host keeps what is its own there, such as the turns a chat began, in
+ * folders beside them.
+ */
 const written = (dir: string): { folder: string; names: string[] } => {
   const folder = join(dir, 'attachments');
-  const session = first(readdirSync(folder));
-  return { folder: join(folder, session), names: readdirSync(join(folder, session)) };
+  const session = join(folder, first(readdirSync(folder)));
+  const names = readdirSync(session, { withFileTypes: true }).filter((one) => one.isFile()).map((one) => one.name);
+  return { folder: session, names };
 };
 
 /** The attachments of what a case recorded, as the wire's own shape. */
@@ -332,8 +337,7 @@ it('removes the folder with its session', async () => {
   const { dir, turn, client } = await serving(said);
   await turn({ type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi', attachments: [png()] } });
   await until(() => said.begun.length > 0);
-  const session = first(readdirSync(join(dir, 'attachments')));
-  expect(readdirSync(join(dir, 'attachments', session))).toHaveLength(1);
+  expect(written(dir).names).toHaveLength(1);
 
   await client.handle({ method: 'disposeSession', params: { channel: 'ahp-session:/one' } });
   await settle();
@@ -367,7 +371,7 @@ it('hands a queued and a steering message their attachments', async () => {
   expect(names).toHaveLength(2);
   const queued = first(sent(first(said.queued)));
   const steered = first(sent(first(said.steered)));
-  // Both are files inside the session's own folder, which is the whole of it.
+  // Both are files inside the session's own folder, and the only ones in it.
   expect(names.map((one) => uriOf(join(folder, one))).sort())
     .toEqual([String(queued.uri), String(steered.uri)].sort());
   expect((queued._meta as Bag)[TAG]).toEqual({ isSnapshot: true, contentType: 'image/png' });

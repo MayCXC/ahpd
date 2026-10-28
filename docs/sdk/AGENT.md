@@ -150,6 +150,19 @@ whose transcript names turns its own way says what it wrote a turn down as with
 CLI's uuid and pi by its prompt's entry. One that keeps the id it was given, as
 cofold stores a prompt under the turn's id, says nothing.
 
+**A turn is read back as it began.** The host records, in the session's folder
+under the chat, the transcript id each turn began under: its own id as it
+starts, whether a client sent it or your backend opened it with
+`queuedMessageId`, and what `onTurnRecorded` says. A read puts a turn your
+transcript holds and the record does not inside the turn before it, and so does
+a turn recorded as the same turn as the one before, which is that turn written
+down again: Claude's CLI writes a steering message it runs after the turn's last
+answer as a prompt of its own, and a retried turn's prompt a second time. The
+joined turn keeps the first one's id and message, takes both answers, ends as
+the later one ended, and spent what both spent. Turns before the first one the
+record holds stay as they are, so a chat from before the record, or one on a
+store with no session folder, reads as your transcript gives it.
+
 ## `Session`
 
 One conversation, across two channels. The host owns the channels and the

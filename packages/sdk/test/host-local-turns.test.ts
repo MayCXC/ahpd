@@ -289,6 +289,24 @@ describe('a host started again on the same store', () => {
     await host.close();
   });
 
+  it('reads a turn the chat never began back inside the turn before it, and a chat with no record as it is', async () => {
+    const held = [said('t1', 'hello there'), said('x1', 'written as its own'), said('t2', 'and then')];
+    const ran = await restarted(async (c, p, ch) => {
+      say(c, ch, 't1', 'hello there');
+      await ended(p, ch, 't1');
+      say(c, ch, 't2', 'and then');
+      await ended(p, ch, 't2');
+    }, held);
+    const turns = (await stateOf(ran.client, ran.chat)).turns as Bag[];
+    expect(turns.map((turn) => turn.id)).toEqual(['t1', 't2']);
+    expect((turns[0]?.responseParts as Bag[]).map((part) => part.content)).toEqual(['hello there', 'written as its own']);
+    await ran.host.close();
+
+    const never = await restarted(async () => {}, held);
+    expect(await turnsOf(never.client, never.chat)).toEqual(['t1', 'x1', 't2']);
+    await never.host.close();
+  });
+
   it('drops a command\'s turn whose anchor the transcript no longer holds', async () => {
     const { client, host, chat } = await restarted(async (c, p, ch) => {
       for (const [turnId, text] of [['t1', 'hello there'], ['t2', '!echo kept'], ['t3', 'gone since'], ['t4', '!echo orphan']] as const) {
@@ -572,6 +590,54 @@ describe('a Claude chat', () => {
     expect(rebuilt.content).toEqual([{ type: 'unclassified', value: expect.stringContaining('after-the-reply') }]);
     expect(rebuilt.lifecycle).toEqual({ status: 'exited', exitCode: 0 });
     await after.host.close();
+  });
+
+  it('has a steering message the CLI answered after the turn\'s last answer back inside that turn after a restart', async () => {
+    const dir = join(temp(), 'sessions');
+    const before = await shelled(dir);
+    const uri = 'claude:/steered';
+    await before.client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude', workingDirectories: [uriOf(DIR)] } });
+    const chat = String((await stateOf(before.client, uri)).defaultChat);
+    await stateOf(before.client, chat);
+    say(before.client, chat, 't1', 'first');
+    await settle();
+    await before.client.handle({
+      method: 'dispatchAction',
+      params: { channel: chat, action: { type: 'chat/pendingMessageSet', kind: 'steering', id: 's1', message: { text: 'and then' } } },
+    });
+    await settle();
+    const [prompt, steer] = sdk.uuids.map(String);
+    // The CLI answers the prompt and ends that exchange, then runs the
+    // steering message as an exchange of its own: the turn ends after both.
+    await emit(
+      { type: 'assistant', uuid: 'reply-1', user_message_uuid: prompt, message: { id: 'm1', content: [{ type: 'text', text: 'one' }] } },
+      { type: 'result', subtype: 'success', is_error: false, duration_ms: 1, user_message_uuids: [prompt] },
+      { type: 'assistant', uuid: 'reply-2', user_message_uuid: steer, message: { id: 'm2', content: [{ type: 'text', text: 'two' }] } },
+      { type: 'result', subtype: 'success', is_error: false, duration_ms: 1, user_message_uuids: [steer] },
+    );
+    await ended(before.p, chat, 't1');
+    await before.host.close();
+
+    // The CLI's transcript holds the steering message as a prompt of its own.
+    sdk.sessions.push({ sessionId: 'steered', summary: 'first', lastModified: 1, cwd: DIR });
+    sdk.transcript.push(
+      { type: 'user', uuid: prompt, message: { role: 'user', content: 'first' } },
+      { type: 'assistant', uuid: 'reply-1', message: { content: [{ type: 'text', text: 'one' }] } },
+      { type: 'user', uuid: steer, message: { role: 'user', content: 'and then' } },
+      { type: 'assistant', uuid: 'reply-2', message: { content: [{ type: 'text', text: 'two' }] } },
+    );
+    const after = await shelled(dir);
+    await stateOf(after.client, uri);
+    const turns = (await stateOf(after.client, chat)).turns as Bag[];
+    expect(turns.map((turn) => turn.id)).toEqual([prompt]);
+    expect((turns[0]?.responseParts as Bag[]).filter((part) => part.kind === 'markdown').map((part) => part.content)).toEqual(['one', 'two']);
+    await after.host.close();
+
+    // A store that kept no record of the chat reads it as its transcript gives it.
+    const elsewhere = await shelled(join(temp(), 'sessions'));
+    await stateOf(elsewhere.client, uri);
+    expect(await turnsOf(elsewhere.client, chat)).toEqual([prompt, steer]);
+    await elsewhere.host.close();
   });
 
   it('forks a session asleep since a restart at a command\'s turn, where the Claude turn read back before it ended', async () => {

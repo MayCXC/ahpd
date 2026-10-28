@@ -22,12 +22,24 @@ import type { HostContext } from './context.js';
  *
  * The anchor is written as the id the backend's transcript gives that turn,
  * which is the id a read after a restart holds. A backend whose transcript
- * names turns its own way says so through `onTurnRecorded`, and this area
- * keeps what it said for as long as the chat is held.
+ * names turns its own way says so through `onTurnRecorded`.
+ *
+ * The same folder records the turns a chat began, by the id its transcript
+ * holds each under, which is what a read needs to show a turn as it ran: a
+ * backend may write one turn as several of its own, as Claude's CLI writes a
+ * steering message it runs after the turn's last answer as a prompt of its
+ * own, while the reference keeps that message's answer in the turn it steered.
+ * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/CONTEXT.md#L1595-L1609
  */
 export interface LocalTurns {
-  /** What `onTurnRecorded` said: the id a chat's transcript holds a turn under. */
-  turnRecordedAs(chat: string, turnId: string, transcriptId: string): void;
+  /**
+   * That a chat's turn began, or was written down again, under a transcript id:
+   * its own id as it starts, and what `onTurnRecorded` says.
+   *
+   * Kept for as long as the chat is held, for the anchors of the turns it
+   * holds, and in the session's folder for a read after a restart.
+   */
+  turnRecordedAs(session: string, chat: string, turnId: string, transcriptId: string): void;
   /**
    * Keep a command's turn that has ended, as the chat holds it in `turns`.
    *
@@ -37,7 +49,8 @@ export interface LocalTurns {
    */
   keepLocalTurn(session: string, chat: string, turns: readonly Bag[], turnId: string): void;
   /**
-   * One chat's transcript, read with the outputs it is handed and with its
+   * One chat's transcript, read with the outputs it is handed, with each turn
+   * it holds no beginning for read back inside the turn before it, and with its
    * local turns put back, or the local turns alone for a chat whose backend
    * holds no transcript.
    */
@@ -48,15 +61,19 @@ export interface LocalTurns {
     session: string,
     chat: string,
   ): Promise<WireTurn<Turn>[] | undefined>;
-  /** A transcript's turns with the chat's local turns put back after their anchors. */
-  withLocalTurns<T>(session: string, chat: string, turns: readonly T[]): T[];
+  /**
+   * A transcript's turns with the chat's local turns put back after their
+   * anchors. `joined` names the turn each transcript id a read put inside
+   * another was put in, which is where a local turn anchored to it goes.
+   */
+  withLocalTurns<T>(session: string, chat: string, turns: readonly T[], joined?: ReadonlyMap<string, string>): T[];
   /**
    * The id a backend cuts or forks at for the turn at `at`: that turn's, or the
    * nearest earlier one's that is not a local turn. Nothing when every turn up
    * to `at` is a local turn.
    */
   concreteTurnOf(session: string, chat: string, turns: readonly Bag[], at: number): string | undefined;
-  /** Forget the local turns among some dropped turns of a chat. */
+  /** Forget the local turns among some dropped turns of a chat, and the transcript ids recorded for them. */
   forgetLocalTurns(session: string, chat: string, turns: readonly Bag[]): void;
   /** Keep a fork's copied local turns, and the transcript ids of its copied turns, for the new chat. */
   copyLocalTurns(session: string, from: string, to: string, turns: readonly Bag[]): void;
@@ -70,7 +87,7 @@ export interface LocalTurns {
    * these, and a read of it answers them.
    */
   keptTurnsOf(id: string): Bag[];
-  /** Take a chat's local turns to the session it moved to. */
+  /** Take a chat's local turns, and the transcript ids it recorded, to the session it moved to. */
   moveChatLocalTurns(from: string, to: string, chat: string): void;
 }
 
@@ -104,6 +121,82 @@ const keptOf = (value: Bag): Kept | undefined => {
   return { turnId, ...(anchor === undefined ? {} : { anchor }), seq, turn };
 };
 
+/** One file of a chat's record: a transcript id, and the turn that began, or was written again, under it. */
+interface Recorded {
+  transcriptId: string;
+  turnId: string;
+}
+
+/** The folder under a session's own where its chats record the transcript ids their turns began under. */
+const RECORDED = 'recorded';
+
+/** Whether a file holds a record this version wrote. */
+const recordedOf = (value: Bag): Recorded | undefined => {
+  const { version, transcriptId, turnId } = value;
+  if (version !== 1 || typeof transcriptId !== 'string' || typeof turnId !== 'string') return undefined;
+  return { transcriptId, turnId };
+};
+
+/** Two numbers added, or the one there is; absent where neither is. */
+const added = (a: unknown, b: unknown): number | undefined => {
+  const one = typeof a === 'number' ? a : undefined;
+  const two = typeof b === 'number' ? b : undefined;
+  return one === undefined && two === undefined ? undefined : (one ?? 0) + (two ?? 0);
+};
+
+/**
+ * What a turn and one read back inside it spent, as one turn's usage: token
+ * counts and costs added and the rest as the later one left it, the model that
+ * answered last and the context as it ended, as agent-pi adds one call's usage
+ * to its turn's.
+ */
+const spentBoth = (first: Bag | undefined, then: Bag | undefined): Bag | undefined => {
+  if (first === undefined || then === undefined) return then ?? first;
+  const was = bag(first._meta);
+  const now = bag(then._meta);
+  const meta: Bag = { ...was, ...now };
+  for (const key of ['ahpd.cacheWriteTokens', 'ahpd.reasoningTokens']) {
+    const sum = added(was[key], now[key]);
+    if (sum !== undefined) meta[key] = sum;
+  }
+  const paid = bag(was['ahpd.cost']);
+  const paying = bag(now['ahpd.cost']);
+  if (typeof paid.amount === 'number' && typeof paying.amount === 'number') {
+    const cost: Bag = { ...paid, ...paying, amount: paid.amount + paying.amount };
+    for (const side of ['input', 'output']) {
+      const sum = added(paid[side], paying[side]);
+      if (sum !== undefined) cost[side] = sum;
+    }
+    meta['ahpd.cost'] = cost;
+  }
+  const out: Bag = { ...first, ...then };
+  for (const key of ['inputTokens', 'outputTokens', 'cacheReadTokens']) {
+    const sum = added(first[key], then[key]);
+    if (sum !== undefined) out[key] = sum;
+  }
+  if (Object.keys(meta).length > 0) out._meta = meta;
+  return out;
+};
+
+/**
+ * A turn with another read back inside it, as one turn: the first's id, start
+ * and message, both answers in the order they came, and the later one's end.
+ */
+const joinedTurn = (first: WireTurn<Turn>, then: WireTurn<Turn>): WireTurn<Turn> => {
+  const usage = spentBoth(first.usage as Bag | undefined, then.usage as Bag | undefined);
+  const began = first.startedAt === undefined ? Number.NaN : Date.parse(first.startedAt);
+  const ended = then.startedAt === undefined || then.duration === undefined
+    ? Number.NaN
+    : Date.parse(then.startedAt) + then.duration;
+  return {
+    ...first,
+    responseParts: [...first.responseParts, ...then.responseParts],
+    state: then.state,
+    usage: usage as WireTurn<Turn>['usage'],
+    ...(Number.isNaN(began) || Number.isNaN(ended) ? {} : { duration: ended - began }),
+  };
+};
+
 export function createLocalTurns(ctx: HostContext): LocalTurns {
   /** Each held chat's transcript ids, by the id its turns go by while they run. */
   const recordedAs = new Map<string, Map<string, string>>();
@@ -120,6 +213,45 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
   const isLocal = (session: string, chat: string, turnId: string): boolean => {
     const file = fileOf(session, chat, turnId);
     return file !== undefined && existsSync(file);
+  };
+
+  /** A chat's record in a session's own, or nothing where the store keeps none. */
+  const recordOf = (session: string, chat: string): string | undefined => {
+    const dir = ctx.kept.attachmentsDir?.(idOf(session));
+    return dir === undefined ? undefined : join(dir, RECORDED, hashOf(chat));
+  };
+  /** Every transcript id a chat recorded, with the turn it began, in no order. */
+  const recordedIn = (session: string, chat: string): Recorded[] => {
+    const folder = recordOf(session, chat);
+    if (folder === undefined || !existsSync(folder)) return [];
+    let names: string[];
+    try { names = readdirSync(folder); }
+    catch (error) {
+      ctx.log(`could not read ${folder}: ${reason(error)}`);
+      return [];
+    }
+    return names.flatMap((name) => {
+      if (!name.endsWith('.json')) return [];
+      const outcome = readJsonObject(join(folder, name));
+      const recorded = outcome.ok ? recordedOf(outcome.value) : undefined;
+      return recorded === undefined ? [] : [recorded];
+    });
+  };
+  /** Write one record of a chat's, under the transcript id it names. */
+  const record = (session: string, chat: string, recorded: Recorded): void => {
+    const folder = recordOf(session, chat);
+    if (folder === undefined) return;
+    try {
+      writeJsonAtomic(join(folder, `${hashOf(recorded.transcriptId)}.json`), { version: 1, ...recorded }, { dirMode: 0o700 });
+    }
+    catch (error) {
+      ctx.log(`could not record the turn ${recorded.turnId} of ${chat}: ${reason(error)}`);
+    }
+  };
+  /** The records of a chat that name one of `turns`, by the transcript's id for it or the client's. */
+  const recordedFor = (session: string, chat: string, turns: readonly Bag[]): Recorded[] => {
+    const named = new Set(turns.flatMap((turn) => str(turn.id) ?? []));
+    return recordedIn(session, chat).filter((one) => named.has(one.transcriptId) || named.has(one.turnId));
   };
 
   /** Every file a chat kept that this version wrote and that holds a turn, in no order. */
@@ -144,10 +276,11 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
     });
   };
 
-  const turnRecordedAs = (chat: string, turnId: string, transcriptId: string): void => {
+  const turnRecordedAs = (session: string, chat: string, turnId: string, transcriptId: string): void => {
     const names = recordedAs.get(chat) ?? new Map<string, string>();
     names.set(turnId, transcriptId);
     recordedAs.set(chat, names);
+    record(session, chat, { transcriptId, turnId });
   };
 
   const keepLocalTurn = (session: string, chat: string, turns: readonly Bag[], turnId: string): void => {
@@ -194,7 +327,7 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
    * of those stays where the transcript has it, the others of its anchor go in
    * around it by `seq`, and none goes in a second time.
    */
-  const withLocalTurns = <T>(session: string, chat: string, turns: readonly T[]): T[] => {
+  const withLocalTurns = <T>(session: string, chat: string, turns: readonly T[], joined?: ReadonlyMap<string, string>): T[] => {
     const kept = keptIn(session, chat);
     if (kept.length === 0) return [...turns];
     const seqOf = new Map(kept.map((one) => [one.turnId, one.seq]));
@@ -202,7 +335,8 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
     // The local turns to put in, by anchor, each anchor's in `seq` order.
     const waiting = new Map<string | undefined, Kept[]>();
     for (const one of kept.filter((each) => !held.has(each.turnId)).sort((a, b) => a.seq - b.seq)) {
-      waiting.set(one.anchor, [...(waiting.get(one.anchor) ?? []), one]);
+      const anchor = one.anchor === undefined ? undefined : joined?.get(one.anchor) ?? one.anchor;
+      waiting.set(anchor, [...(waiting.get(anchor) ?? []), one]);
     }
     const merged: T[] = [];
     // The turns before the first of the backend's own are the ones with no anchor.
@@ -227,6 +361,43 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
     return merged;
   };
 
+  /**
+   * A transcript's turns as the chat began them, and the turn each one read
+   * back inside another went into.
+   *
+   * A turn the chat's record holds no beginning for is one the backend wrote of
+   * its own inside a turn that began before it, so it is read back inside that
+   * turn, as the reference keeps a steering message's answer in the turn it
+   * steered. So is a turn recorded as the same turn as the one before it, which
+   * is that turn written down again. A local turn is the host's own and stays
+   * a turn of its own, and so does every turn before the first one the record
+   * holds: a chat from before its record reads as its transcript gives it.
+   * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/CONTEXT.md#L1597-L1606
+   */
+  const asBegun = (session: string, chat: string, turns: readonly WireTurn<Turn>[]): { turns: WireTurn<Turn>[]; joined: Map<string, string> } => {
+    const joined = new Map<string, string>();
+    const began = new Map(recordedIn(session, chat).map((one) => [one.transcriptId, one.turnId]));
+    if (began.size === 0) return { turns: [...turns], joined };
+    const out: WireTurn<Turn>[] = [];
+    let recorded = false;
+    // The turn the one last kept began as.
+    let last: string | undefined;
+    for (const turn of turns) {
+      const id = String(turn.id);
+      const as = began.get(id);
+      recorded ||= as !== undefined;
+      const into = out.at(-1);
+      if (into !== undefined && recorded && (as === undefined || as === last) && !isLocal(session, chat, id)) {
+        out[out.length - 1] = joinedTurn(into, turn);
+        joined.set(id, String(into.id));
+        continue;
+      }
+      out.push(turn);
+      last = as;
+    }
+    return { turns: out, joined };
+  };
+
   const transcriptOf = async (
     agent: Agent,
     id: string,
@@ -238,7 +409,8 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
     // A chat whose turns are all this host's own has no transcript, and reads
     // as the turns it keeps, as a nested session opens from its record.
     if (turns === undefined) return keptIn(session, chat).length > 0 ? withLocalTurns(session, chat, []) : undefined;
-    return withLocalTurns(session, chat, turns);
+    const begun = asBegun(session, chat, turns);
+    return withLocalTurns(session, chat, begun.turns, begun.joined);
   };
 
   const concreteTurnOf = (session: string, chat: string, turns: readonly Bag[], at: number): string | undefined => {
@@ -250,9 +422,17 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
   };
 
   const forgetLocalTurns = (session: string, chat: string, turns: readonly Bag[]): void => {
-    for (const turn of turns) {
-      const id = str(turn.id);
-      const file = id === undefined ? undefined : fileOf(session, chat, id);
+    const files = [
+      ...turns.flatMap((turn) => {
+        const id = str(turn.id);
+        return id === undefined ? [] : [fileOf(session, chat, id)];
+      }),
+      ...recordedFor(session, chat, turns).map((one) => {
+        const folder = recordOf(session, chat);
+        return folder === undefined ? undefined : join(folder, `${hashOf(one.transcriptId)}.json`);
+      }),
+    ];
+    for (const file of files) {
       if (file === undefined) continue;
       try { rmSync(file, { force: true }); }
       catch (error) { ctx.log(`could not remove ${file}: ${reason(error)}`); }
@@ -261,12 +441,13 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
 
   const copyLocalTurns = (session: string, from: string, to: string, turns: readonly Bag[]): void => {
     const names = recordedAs.get(from);
+    const copied = recordedAs.get(to) ?? new Map<string, string>();
     const folder = folderOf(session, to);
     for (const turn of turns) {
       const id = str(turn.id);
       if (id === undefined) continue;
       const said = names?.get(id);
-      if (said !== undefined) turnRecordedAs(to, id, said);
+      if (said !== undefined) copied.set(id, said);
       const was = fileOf(session, from, id);
       if (folder === undefined || was === undefined || !existsSync(was)) continue;
       const now = join(folder, `${hashOf(id)}.json`);
@@ -276,28 +457,37 @@ export function createLocalTurns(ctx: HostContext): LocalTurns {
       }
       catch (error) { ctx.log(`could not copy ${was} to ${now}: ${reason(error)}`); }
     }
+    if (copied.size > 0) recordedAs.set(to, copied);
+    for (const one of recordedFor(session, from, turns)) record(session, to, one);
   };
 
   const forgetChatLocalTurns = (session: string, chat: string): void => {
     recordedAs.delete(chat);
-    const folder = folderOf(session, chat);
-    if (folder === undefined) return;
-    try { rmSync(folder, { recursive: true, force: true }); }
-    catch (error) { ctx.log(`could not remove ${folder}: ${reason(error)}`); }
+    for (const folder of [folderOf(session, chat), recordOf(session, chat)]) {
+      if (folder === undefined) continue;
+      try { rmSync(folder, { recursive: true, force: true }); }
+      catch (error) { ctx.log(`could not remove ${folder}: ${reason(error)}`); }
+    }
   };
 
-  const moveChatLocalTurns = (from: string, to: string, chat: string): void => {
-    const was = folderOf(from, chat);
-    const now = folderOf(to, chat);
+  /**
+   * One folder's files into another, file by file, as a chat's outputs move,
+   * so a folder the chat left there before keeps what this move does not
+   * replace.
+   */
+  const moveFolder = (was: string | undefined, now: string | undefined): void => {
     if (was === undefined || now === undefined || was === now || !existsSync(was)) return;
     try {
       mkdirSync(now, { recursive: true, mode: 0o700 });
-      // File by file, as a chat's outputs move, so a folder the chat left there
-      // before keeps what this move does not replace.
       for (const name of readdirSync(was)) renameSync(join(was, name), join(now, name));
       rmSync(was, { recursive: true, force: true });
     }
     catch (error) { ctx.log(`could not move ${was} to ${now}: ${reason(error)}`); }
+  };
+
+  const moveChatLocalTurns = (from: string, to: string, chat: string): void => {
+    moveFolder(folderOf(from, chat), folderOf(to, chat));
+    moveFolder(recordOf(from, chat), recordOf(to, chat));
   };
 
   const keptTurnsOf = (id: string): Bag[] => {
