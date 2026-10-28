@@ -1,7 +1,7 @@
 ---
 title: A conversation the CLI never wrote starts under its id
 domain: claude
-status: planned
+status: built
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -78,7 +78,7 @@ restart -> sleep.ts resume -> create(start with resume) -> query({ resume }) -> 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A conversation the CLI never wrote starts under its id](task-01-a-conversation-never-written-starts-under-its-id.md) | todo | - |
+| [01 - A conversation the CLI never wrote starts under its id](task-01-a-conversation-never-written-starts-under-its-id.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -86,14 +86,14 @@ restart -> sleep.ts resume -> create(start with resume) -> query({ resume }) -> 
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-28.
-- **Next action:** task 01.
+- **Done so far:** planned and built 2026-10-28; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a CLI that names its own project folder writes every session there.
   A check by hand in such a shell reads that one folder for every session.
 
 ## Final verification checklist
 
-- [ ] The first case fails on the code before this plan.
-- [ ] The agent-claude suite passes.
-- [ ] `plans/index.md` updated.
+- [x] The first case fails on the code before this plan.
+- [x] The agent-claude suite passes.
+- [x] `plans/index.md` updated.

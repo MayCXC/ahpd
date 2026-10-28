@@ -1,6 +1,6 @@
 ---
 title: A conversation the CLI never wrote starts under its id
-status: todo
+status: done
 depends: []
 layer: "agent-claude"
 refs:
@@ -20,6 +20,8 @@ When the host asks agent-claude to resume an id that the CLI never wrote, the se
 - `UPDATE: packages/agent-claude/src/claude.ts:594-595` - give the id to a chat that resumes nothing and has no id of its own.
 - `UPDATE: packages/agent-claude/src/claude.ts:655-657` - pass `resume`, `forkAt` and `rewindAt` only for a written conversation.
 - `CREATE: packages/agent-claude/test/agent-claude-resume.test.ts` - the cases below, over a temporary `CLAUDE_CONFIG_DIR`.
+- `UPDATE: packages/sdk/test/support/claude-sdk.ts` - a `CLAUDE_CONFIG_DIR` of the fake's own, and `wrote(id, cwd)`.
+- `UPDATE: packages/sdk/test/host-catalogue.test.ts`, `host-chats.test.ts`, `host-files.test.ts`, `host-names.test.ts` - each case that resumes a conversation says the CLI wrote it.
 - `UPDATE: packages/agent-claude/README.md` - say which conversations a session resumes.
 - `UPDATE: .project/specs/agent-backends.md` - the scenario for a conversation the CLI never wrote.
 - `UPDATE: CHANGELOG.md` - the entry under Agents.
@@ -42,3 +44,12 @@ When the host asks agent-claude to resume an id that the CLI never wrote, the se
 - A chat with an id of its own keeps it, and the query carries no `forkSession` and no `resumeSessionAt`.
 - The query resumes a conversation in the folder's project, and one in another folder's project.
 - `pnpm exec vitest run packages/agent-claude` passes.
+- `pnpm exec vitest run packages/sdk` passes, at one worker.
+
+## Resume
+
+- **Done:** 2026-10-28.
+  The three cases for a conversation the CLI never wrote fail on the code before this task.
+  The two for a written one pass on both.
+  A session in a machine is resumed as the host asks, because its files are in the machine.
+  Five sdk cases resumed a conversation that only the fake SDK held, and now say that the CLI wrote it.
