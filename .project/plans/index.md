@@ -315,8 +315,9 @@ Reference: [00-claude.md](claude/00-claude.md)
 | [25 - A stopped call stays stopped](claude/25-a-stopped-call-stays-stopped/plan.md) | high | built 2026-10-27 ([implemented.md](claude/25-a-stopped-call-stays-stopped/implemented.md)) | claude 07 | - |
 | [26 - A restored question keeps its answers](claude/26-a-restored-question-keeps-its-answers/plan.md) | medium | built 2026-10-27 ([implemented.md](claude/26-a-restored-question-keeps-its-answers/implemented.md)) | claude 11 | - |
 | [27 - A conversation the CLI never wrote starts under its id](claude/27-a-conversation-never-written-starts-under-its-id/plan.md) | medium | built 2026-10-28 ([implemented.md](claude/27-a-conversation-never-written-starts-under-its-id/implemented.md)) | - | - |
+| [28 - The Claude cases feed what the CLI sends](claude/28-the-cases-feed-what-the-cli-sends/plan.md) | low | built 2026-10-28 ([implemented.md](claude/28-the-cases-feed-what-the-cli-sends/implemented.md)) | - | - |
 
-Next free number in `claude`: `28`.
+Next free number in `claude`: `29`.
 
 ## documentation
 
