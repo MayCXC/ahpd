@@ -1,6 +1,6 @@
 ---
 title: A fork wakes a sleeping session
-status: todo
+status: done
 depends: []
 layer: sdk
 refs:
@@ -42,3 +42,7 @@ A fork of a sleeping chat then forks at its turn, as on a live session.
 - The sdk suite passes at one worker.
 
 ## Resume
+
+- **Done so far:** steps 1 to 8. Both cases answered -32001 on main.
+- **Next action:** none.
+- **Open questions:** none.

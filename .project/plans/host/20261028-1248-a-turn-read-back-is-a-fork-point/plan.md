@@ -1,7 +1,7 @@
 ---
 title: A Claude turn read back is a point to fork and cut at
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -97,9 +97,9 @@ wake -> transcript (claude) -> the last entry of each turn, kept by conversation
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A fork wakes a sleeping session](task-01-a-fork-wakes-a-sleeping-session.md) | todo | - |
-| [02 - Claude names where a read turn ended](task-02-claude-names-where-a-read-turn-ended.md) | todo | - |
-| [03 - The docs say where a read turn ends](task-03-the-docs-say-where-a-read-turn-ends.md) | todo | 01, 02 |
+| [01 - A fork wakes a sleeping session](task-01-a-fork-wakes-a-sleeping-session.md) | done | - |
+| [02 - Claude names where a read turn ended](task-02-claude-names-where-a-read-turn-ended.md) | done | - |
+| [03 - The docs say where a read turn ends](task-03-the-docs-say-where-a-read-turn-ends.md) | done | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -109,15 +109,15 @@ wake -> transcript (claude) -> the last entry of each turn, kept by conversation
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-28 against main `4a7832af`.
-- **Next action:** [task-01-a-fork-wakes-a-sleeping-session.md](task-01-a-fork-wakes-a-sleeping-session.md).
+- **Done so far:** drafted 2026-10-28 against main `4a7832af`. Tasks 01 to 03 are done on 2026-10-28; see [implemented.md](implemented.md).
+- **Next action:** review.
 - **Open questions:** none.
 - **Watch out for:** the ends of a lead chat come from the read that `past` keeps, which can be older than the wake.
 
 ## Final verification checklist
 
-- [ ] A fork of a sleeping chat wakes the session and forks at the turn.
-- [ ] A new chat in a sleeping session wakes it.
-- [ ] A Claude session that resumes a conversation answers `forkPoint` and `endPoint` for each turn that was read back.
-- [ ] A Claude fork starts with no read ends.
-- [ ] With a real CLI, a fork at a `!` turn of a session asleep since a restart opens and answers a turn.
+- [x] A fork of a sleeping chat wakes the session and forks at the turn.
+- [x] A new chat in a sleeping session wakes it.
+- [x] A Claude session that resumes a conversation answers `forkPoint` and `endPoint` for each turn that was read back.
+- [x] A Claude fork starts with no read ends.
+- [x] With a real CLI, a fork at a `!` turn of a session asleep since a restart opens and answers a turn.

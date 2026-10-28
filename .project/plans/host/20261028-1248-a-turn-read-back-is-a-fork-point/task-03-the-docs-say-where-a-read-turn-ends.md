@@ -1,6 +1,6 @@
 ---
 title: The docs say where a turn read back ends
-status: todo
+status: done
 depends: [task-01-a-fork-wakes-a-sleeping-session.md, task-02-claude-names-where-a-read-turn-ended.md]
 layer: docs
 refs:
@@ -37,3 +37,7 @@ They also say that a new chat wakes a sleeping session.
 - `rg "are not recorded" packages docs` finds nothing.
 
 ## Resume
+
+- **Done so far:** steps 1 to 5, and the truncation row of `AHP.md` and the comment in `chatactions.ts` say the same.
+- **Next action:** none.
+- **Open questions:** none.

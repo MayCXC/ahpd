@@ -1,6 +1,6 @@
 ---
 title: Claude names where a turn it read back ended
-status: todo
+status: done
 depends: []
 layer: agent-claude
 refs:
@@ -50,3 +50,7 @@ The answer is the turn's last `user` or `assistant` entry in the conversation ch
 - The agent-claude and sdk suites pass at one worker.
 
 ## Resume
+
+- **Done so far:** steps 1 to 8. A CLI echo and a compact summary do not move a turn's end, because the read gives neither to the turn.
+- **Next action:** none.
+- **Open questions:** none.
