@@ -1,6 +1,6 @@
 ---
 title: The store keeps a session's URI
-status: done
+status: implemented
 depends: []
 layer: "sdk"
 refs:
