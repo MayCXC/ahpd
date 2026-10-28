@@ -265,8 +265,9 @@ Reference: [00-host.md](host/00-host.md)
 | [127 p4 - A cofold session sends what the protocol declares](host/127-p4-a-cofold-session-sends-what-the-protocol-declares/plan.md) | high | built 2026-10-27 ([implemented.md](host/127-p4-a-cofold-session-sends-what-the-protocol-declares/implemented.md)) | 127 p1 | - |
 | [127 p5 - A pi session sends what the protocol declares](host/127-p5-a-pi-session-sends-what-the-protocol-declares/plan.md) | high | built 2026-10-27 ([implemented.md](host/127-p5-a-pi-session-sends-what-the-protocol-declares/implemented.md)) | host 127 | - |
 | [127 p6 - A bot chat sends what the protocol declares](host/127-p6-a-bot-chat-sends-what-the-protocol-declares/plan.md) | high | built 2026-10-27 ([implemented.md](host/127-p6-a-bot-chat-sends-what-the-protocol-declares/implemented.md)) | host 127 | - |
+| [129 - A terminal a tool result names lasts as long as its chat](host/129-a-tool-results-terminal-lasts-as-long-as-its-chat/plan.md) | medium | built 2026-10-27; [implemented.md](host/129-a-tool-results-terminal-lasts-as-long-as-its-chat/implemented.md) | - | claude 24 |
 
-Next free number in `host`: `128`.
+Next free number in `host`: `130`.
 
 ## claude
 

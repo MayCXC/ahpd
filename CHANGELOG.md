@@ -28,6 +28,10 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 - ACP and pi: a client that subscribes after a call ran reads the call a client that watched built, with its line, its confirmation and its result's content, as the protocol's reducer builds it.
 - Every agent on the root channel has a `description`, which `AgentInfo` requires: the backend's own, or its display name.
 
+### Sessions and VS Code parity
+
+- A terminal a tool call names opens for as long as its chat lasts. A `!` command's terminal and a terminal a backend opens are named `ahp-terminal://shell/<chat>/<key>`, and what each printed is kept in the session's folder when it exits. A subscribe that no live terminal answers gets the exited terminal back: after a client disposed it, after the backend released it, and after the daemon started again. What is kept goes with its turn on a truncation, with its chat and with its session, and moves with its chat. A backend keeps an output of its own with `Start.terminalOutputs`, and a transcript read is handed the outputs of the chat it reads. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#a-terminal-a-tool-result-names).
+
 ## 0.14.0 - 2026-10-26
 
 ### Upgrading
