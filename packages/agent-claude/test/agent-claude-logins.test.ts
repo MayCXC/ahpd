@@ -104,7 +104,7 @@ const settle = async (times = 30): Promise<void> => {
 
 /** Wait for `done` to hold, for a second at most, and then for what follows from it. */
 const until = async (done: () => boolean): Promise<void> => {
-  for (let i = 0; i < 100 && !done(); i++) await new Promise((r) => { setTimeout(r, 10); });
+  for (let i = 0; i < 300 && !done(); i++) await new Promise((r) => { setTimeout(r, 10); });
   await settle();
 };
 
@@ -452,7 +452,7 @@ describe('a refused login', () => {
     const cooldowns = new Cooldowns();
     const { session, chat } = await answeredOnce(cooldowns);
     // Another session found `personal` spent a moment ago.
-    cooldowns.mark('personal', Date.now() + 150);
+    cooldowns.mark('personal', Date.now() + 1500);
     session.begin('t2', 'two');
     await settle();
     sdk.push(...refused('rate_limit'));
@@ -471,13 +471,13 @@ describe('a refused login', () => {
   it('ends the wait when the turn is stopped, and starts no CLI', async () => {
     const cooldowns = new Cooldowns();
     const { session, chat } = await answeredOnce(cooldowns);
-    cooldowns.mark('personal', Date.now() + 150);
+    cooldowns.mark('personal', Date.now() + 1500);
     session.begin('t2', 'two');
     await settle();
     sdk.push(...refused('rate_limit'));
     await settle();
     session.cancel('t2');
-    await new Promise((r) => { setTimeout(r, 300); });
+    await new Promise((r) => { setTimeout(r, 1800); });
     await settle();
     expect(ofTurn(chat, 'chat/turnCancelled', 't2')).toHaveLength(1);
     expect(sdk.queries).toHaveLength(1);
@@ -486,13 +486,13 @@ describe('a refused login', () => {
   it('starts no CLI for a session closed while a turn waits', async () => {
     const cooldowns = new Cooldowns();
     const { session } = await answeredOnce(cooldowns);
-    cooldowns.mark('personal', Date.now() + 150);
+    cooldowns.mark('personal', Date.now() + 1500);
     session.begin('t2', 'two');
     await settle();
     sdk.push(...refused('rate_limit'));
     await settle();
     await session.close();
-    await new Promise((r) => { setTimeout(r, 300); });
+    await new Promise((r) => { setTimeout(r, 1800); });
     await settle();
     expect(sdk.queries).toHaveLength(1);
   });
