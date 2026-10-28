@@ -294,6 +294,7 @@ Reference: [00-claude.md](claude/00-claude.md)
 | [23 - agent-claude is on the Claude Agent SDK 0.3.301](claude/23-agent-claude-is-on-agent-sdk-0-3-301/plan.md) | medium | built 2026-10-16 ([implemented.md](claude/23-agent-claude-is-on-agent-sdk-0-3-301/implemented.md)) | - | - |
 | [25 - A stopped call stays stopped](claude/25-a-stopped-call-stays-stopped/plan.md) | high | built 2026-10-27 ([implemented.md](claude/25-a-stopped-call-stays-stopped/implemented.md)) | claude 07 | - |
 | [26 - A restored question keeps its answers](claude/26-a-restored-question-keeps-its-answers/plan.md) | medium | built 2026-10-27 ([implemented.md](claude/26-a-restored-question-keeps-its-answers/implemented.md)) | claude 11 | - |
+| [24 - A Bash result too large to send is a terminal](claude/24-a-bash-result-too-large-to-send-is-a-terminal/plan.md) | medium | built 2026-10-27; [implemented.md](claude/24-a-bash-result-too-large-to-send-is-a-terminal/implemented.md) | host 129 | - |
 
 Next free number in `claude`: `27`.
 
