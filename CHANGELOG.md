@@ -8,6 +8,8 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 
 - A terminal's `terminal/data` no longer carries the shell's OSC 133 and OSC 7 marks, as the protocol requires of a server. A client that read command boundaries or the directory from the marks reads `terminal/commandExecuted`, `terminal/commandFinished` and `terminal/cwdChanged`.
 - `terminal/commandDetectionAvailable` goes out with the shell's first OSC 133 mark rather than when the terminal opens, and `supportsCommandDetection` is false until then. A shell that prints no marks never announces it.
+- A tool call part is its `kind` and its `toolCall`, as the protocol declares one, from every agent. A client that found a call's part by an `id` beside them finds it by `toolCall.toolCallId`. A system notification part carries no `id` either.
+- An ACP session's commands are the children of one read-only `commands` directory customization, as the protocol holds a prompt, and no longer customizations of their own.
 
 ### Daemon
 
@@ -22,6 +24,9 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 
 - Claude: a call that a stopped turn was in stays cancelled when the CLI answers it after the stop. A client that subscribes later reads what a client that watched built, no `chat/toolCallComplete` without a `turnId` is sent, and the stopped session does not say it is thinking again. An edit such a call made is recorded under its own turn. See [docs/sdk/CHATS.md](docs/sdk/CHATS.md#turns).
 - Claude: an answered `AskUserQuestion` reads back with its answers after a restart, in the session and in a subagent's chat. The answers are read from the transcript entry where the CLI writes them, which the SDK's reader leaves out. See [packages/agent-claude/README.md](packages/agent-claude/README.md#what-it-does).
+- Claude, ACP, cofold, pi and the bot send only what the protocol declares: no `id` on a tool call part or a notice, live or read back from a transcript. Each is driven through a host in its suite, every frame it sends and the chat a late client reads checked with the protocol's own schema. The wire suite reads the chat again after its turn, where it read only the session.
+- ACP and pi: a client that subscribes after a call ran reads the call a client that watched built, with its line, its confirmation and its result's content, as the protocol's reducer builds it.
+- Every agent on the root channel has a `description`, which `AgentInfo` requires: the backend's own, or its display name.
 
 ## 0.14.0 - 2026-10-26
 
