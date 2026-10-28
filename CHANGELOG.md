@@ -21,6 +21,7 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 ### Agents
 
 - Claude: a call that a stopped turn was in stays cancelled when the CLI answers it after the stop. A client that subscribes later reads what a client that watched built, no `chat/toolCallComplete` without a `turnId` is sent, and the stopped session does not say it is thinking again. An edit such a call made is recorded under its own turn. See [docs/sdk/CHATS.md](docs/sdk/CHATS.md#turns).
+- Claude: an answered `AskUserQuestion` reads back with its answers after a restart, in the session and in a subagent's chat. The answers are read from the transcript entry where the CLI writes them, which the SDK's reader leaves out. See [packages/agent-claude/README.md](packages/agent-claude/README.md#what-it-does).
 
 ## 0.14.0 - 2026-10-26
 

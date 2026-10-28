@@ -24,7 +24,6 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [07 - A daemon with no backend names the command that installs one, and an upgrade from 0.6 is told why](daemon/07-no-backend-names-the-install-command/plan.md) | high | built 2026-09-28 ([implemented.md](daemon/07-no-backend-names-the-install-command/implemented.md)) | daemon 03 | - |
 | [08 - The configuration is read through cofold and checked against one schema](daemon/08-the-config-file-is-checked-in-one-place/plan.md) | high | built 2026-09-28 ([implemented.md](daemon/08-the-config-file-is-checked-in-one-place/implemented.md)) | cofold commands/02 | plugin 26 |
 | [09 - A plugin update moves all or the named plugins](daemon/09-a-plugin-update-moves-every-plugin-together/plan.md) | high | built 2026-10-08 ([implemented.md](daemon/09-a-plugin-update-moves-every-plugin-together/implemented.md)); every task done and merged (12 e5134da, 01 and 04 f1acaba), 05 and 07 dropped | - | - |
-
 | [10 - `ahpd configure` sets the daemon up, and a first start at a terminal offers it](daemon/10-a-first-run-sets-the-daemon-up/plan.md) | medium | built 2026-10-02 ([implemented.md](daemon/10-a-first-run-sets-the-daemon-up/implemented.md)) | daemon 09 | - |
 | [11 - Root config carries the daemon's settings and each plugin's options, and a client edits them](daemon/11-root-config-holds-daemon-and-plugin-options/plan.md) | high | built 2026-10-02 ([implemented.md](daemon/11-root-config-holds-daemon-and-plugin-options/implemented.md)) | - | - |
 | [12 - A plugin option is set from the command line, in the file or for one run](daemon/12-a-plugin-option-is-set-from-the-command-line/plan.md) | medium | built 2026-10-04 ([implemented.md](daemon/12-a-plugin-option-is-set-from-the-command-line/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65; by-hand checks not run | - | - |
@@ -102,18 +101,13 @@ Reference: [00-host.md](host/00-host.md)
 | [25 - A forked chat says which chat and turn it came from](host/25-a-forked-chat-says-where-it-came-from/plan.md) | medium | built 2026-09-28 ([implemented.md](host/25-a-forked-chat-says-where-it-came-from/implemented.md)) | - | - |
 | [26 - The session's changes read git's status right, from any folder](host/26-the-changeset-reads-git-status-right/plan.md) | high | built 2026-09-29 ([implemented.md](host/26-the-changeset-reads-git-status-right/implemented.md)) | - | - |
 | [27 - A session reads as running while any of its chats runs, a worker chat included](host/27-a-session-reads-running-while-any-chat-runs/plan.md) | high | built 2026-09-28 ([implemented.md](host/27-a-session-reads-running-while-any-chat-runs/implemented.md)) | - | - |
-
 | [28 - A changeset watch says when it is armed, and nothing between the first read and the watch is missed](host/28-a-changeset-watch-says-when-it-is-armed/plan.md) | high | built 2026-09-28 ([implemented.md](host/28-a-changeset-watch-says-when-it-is-armed/implemented.md)) | - | - |
-
 | [29 - A session that is not running shows its own folder, and its changes follow git](host/29-a-session-not-running-follows-its-own-folder/plan.md) | high | built 2026-09-29 ([implemented.md](host/29-a-session-not-running-follows-its-own-folder/implemented.md)) | - | - |
-
 | [30 - A session is listed under its provider's name, whatever a client created it as, so VS Code opens it](host/30-a-session-is-listed-under-its-providers-name/plan.md) | high | built 2026-10-09 ([implemented.md](host/30-a-session-is-listed-under-its-providers-name/implemented.md)) | - | - |
 | [31 - A session's config outlives a restart, and a stored value the schema no longer offers falls back to the default](host/31-a-sessions-config-outlives-a-restart/plan.md) | high | built 2026-10-07 ([implemented.md](host/31-a-sessions-config-outlives-a-restart/implemented.md)); tasks 01, 02 reviewed 2026-10-06 | - | claude 10 |
 | [32 - The session store is a file per session, and it forgets what no longer exists](host/32-the-session-store-is-a-file-per-session/plan.md) | medium | built 2026-10-02 ([implemented.md](host/32-the-session-store-is-a-file-per-session/implemented.md)) | host 31 | - |
 | [33 - A session tool acts as the person it works for, within VS Code's limits, and can be switched off](host/33-a-session-tool-acts-as-its-person/plan.md) | high | active 2026-10-13; tasks 01-02 done, 03-04 implemented - the switch is read from `config.json`, and a live change reaches a running claude session by declaring the set without `ahp` and then with the new one | host 30 | - |
-
 | [34 - A session and an automation say who owns them, and a turn says who sent it](host/34-work-says-who-owns-it/plan.md) | high | built 2026-10-02 ([implemented.md](host/34-work-says-who-owns-it/implemented.md)) | - | usage meters; shares the turn sender with host 33 |
-
 | [35 - A person belongs to teams and projects, and work names which one it is for](host/35-a-person-belongs-to-teams-and-projects/plan.md) | high | built 2026-10-01 ([implemented.md](host/35-a-person-belongs-to-teams-and-projects/implemented.md)) | - | host 34's scope, the proxy listener, policy |
 | [36 - Users, teams, projects and roles are resources a client lists and edits](host/36-people-are-resources-a-client-manages/plan.md) | medium | built 2026-10-02 ([implemented.md](host/36-people-are-resources-a-client-manages/implemented.md)) | host 35 | ahpapp people/01, usage 04 |
 | [37 - A session two harnesses both list is listed once, under the harness it runs on](host/37-a-session-is-listed-once-under-its-harness/plan.md) | high | built 2026-10-02 ([implemented.md](host/37-a-session-is-listed-once-under-its-harness/implemented.md)) | claude 12 | - |
@@ -274,9 +268,7 @@ Reference: [00-claude.md](claude/00-claude.md)
 | [05 - A replayed Claude exchange is one turn, as it was live](claude/05-a-replayed-exchange-is-one-turn/plan.md) | high | built 2026-09-28 ([implemented.md](claude/05-a-replayed-exchange-is-one-turn/implemented.md)) | - | - |
 | [06 - A stop in a worker chat stops that worker, unless configured to stop the session](claude/06-a-stop-in-a-worker-chat-stops-that-worker/plan.md) | medium | built 2026-09-28 ([implemented.md](claude/06-a-stop-in-a-worker-chat-stops-that-worker/implemented.md)) | claude 04 | - |
 | [07 - A Claude turn ends with no tool call left running or waiting](claude/07-a-turn-ends-with-no-call-left-open/plan.md) | high | built 2026-09-28 ([implemented.md](claude/07-a-turn-ends-with-no-call-left-open/implemented.md)) | - | - |
-
 | [08 - A Claude tool call's toolInput is its whole input, and invocationMessage stays the short line](claude/08-tool-input-is-the-whole-input/plan.md) | high | built 2026-10-03 ([implemented.md](claude/08-tool-input-is-the-whole-input/implemented.md)) | - | - |
-
 | [09 - A message runs on the custom agent it picked](claude/09-a-message-runs-on-the-agent-it-picked/plan.md) | high | built 2026-10-04 ([implemented.md](claude/09-a-message-runs-on-the-agent-it-picked/implemented.md)) | - | - |
 | [10 - A Claude session runs on a preset, and the ahpd-only chips move into it](claude/10-a-claude-session-runs-on-a-preset/plan.md) | high | built 2026-10-09 ([implemented.md](claude/10-a-claude-session-runs-on-a-preset/implemented.md)) | host 31 | - |
 | [11 - An answered AskUserQuestion call carries its answers, live and after a restart](claude/11-an-answered-question-carries-its-answers/plan.md) | medium | built 2026-10-04 ([implemented.md](claude/11-an-answered-question-carries-its-answers/implemented.md)) | claude 08 | ahpapp chat/01 |
@@ -293,8 +285,9 @@ Reference: [00-claude.md](claude/00-claude.md)
 | [22 - A Claude session fails cleanly](claude/22-a-claude-session-fails-cleanly/plan.md) | medium | built 2026-10-11 ([implemented.md](claude/22-a-claude-session-fails-cleanly/implemented.md)) | - | - |
 | [23 - agent-claude is on the Claude Agent SDK 0.3.301](claude/23-agent-claude-is-on-agent-sdk-0-3-301/plan.md) | medium | built 2026-10-16 ([implemented.md](claude/23-agent-claude-is-on-agent-sdk-0-3-301/implemented.md)) | - | - |
 | [25 - A stopped call stays stopped](claude/25-a-stopped-call-stays-stopped/plan.md) | high | built 2026-10-27 ([implemented.md](claude/25-a-stopped-call-stays-stopped/implemented.md)) | claude 07 | - |
+| [26 - A restored question keeps its answers](claude/26-a-restored-question-keeps-its-answers/plan.md) | medium | built 2026-10-27 ([implemented.md](claude/26-a-restored-question-keeps-its-answers/implemented.md)) | claude 11 | - |
 
-Next free number in `claude`: `26`.
+Next free number in `claude`: `27`.
 
 ## documentation
 
@@ -342,27 +335,21 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [24 - The log says when each plugin starts loading and how long it took](plugin/24-the-log-times-each-plugin/plan.md) | medium | built 2026-09-28 ([implemented.md](plugin/24-the-log-times-each-plugin/implemented.md)) | plugin 01 | - |
 | [25 - A plugin's agent sees every path the daemon serves](plugin/25-a-plugin-agent-sees-every-served-path/plan.md) | high | built 2026-09-28 ([implemented.md](plugin/25-a-plugin-agent-sees-every-served-path/implemented.md)) | plugin 01 | - |
 | [26 - A plugin declares a schema for its options, and the loader checks it](plugin/26-a-plugin-declares-its-options-schema/plan.md) | medium | built 2026-09-28 ([implemented.md](plugin/26-a-plugin-declares-its-options-schema/implemented.md)) | daemon 08 | - |
-
 | [27 - An answer given the moment a cofold request opens reaches the run](plugin/27-an-early-answer-reaches-the-paused-run/plan.md) | high | built 2026-09-28 ([implemented.md](plugin/27-an-early-answer-reaches-the-paused-run/implemented.md)) | plugin 03 | - |
-
 | [28 - A test that ends a session waits for its cleanup to finish before removing its folder](plugin/28-a-closed-session-test-waits-for-its-run/plan.md) | high | built 2026-09-29 ([implemented.md](plugin/28-a-closed-session-test-waits-for-its-run/implemented.md)) | plugin 27 | - |
-
 | [29 - A tool call says when it started and how long it ran, live and in history](plugin/29-a-tool-call-says-when-it-ran/plan.md) | medium | built 2026-10-03 ([implemented.md](plugin/29-a-tool-call-says-when-it-ran/implemented.md)) | - | - |
 | [29 p1 - The sdk has one helper that builds and keeps a tool call's timing _meta](plugin/29-p1-the-sdk-keeps-a-calls-times/plan.md) | medium | built 2026-10-03 ([implemented.md](plugin/29-p1-the-sdk-keeps-a-calls-times/implemented.md)) | plugin 29 | - |
 | [29 p2 - Claude tool calls carry their start and end, live and restored](plugin/29-p2-claude-stamps-its-calls/plan.md) | medium | built 2026-10-03 ([implemented.md](plugin/29-p2-claude-stamps-its-calls/implemented.md)) | plugin 29 | - |
 | [29 p3 - pi tool calls carry their start and end, live and restored](plugin/29-p3-pi-stamps-its-calls/plan.md) | medium | built 2026-10-03 ([implemented.md](plugin/29-p3-pi-stamps-its-calls/implemented.md)) | plugin 29 | - |
 | [29 p4 - ACP tool calls carry their start and end while the daemon runs](plugin/29-p4-acp-stamps-its-calls/plan.md) | medium | built 2026-10-03 ([implemented.md](plugin/29-p4-acp-stamps-its-calls/implemented.md)) | plugin 29 | - |
 | [29 p5 - cofold tool calls carry their start and end live too, and restored calls keep their kind](plugin/29-p5-cofold-stamps-its-live-calls/plan.md) | medium | built 2026-10-03 ([implemented.md](plugin/29-p5-cofold-stamps-its-live-calls/implemented.md)) | plugin 29 | - |
-
 | [30 - Two more tests wait for what their session is still doing](plugin/30-two-more-tests-wait-for-their-session/plan.md) | high | built 2026-09-30 ([implemented.md](plugin/30-two-more-tests-wait-for-their-session/implemented.md)) | plugin 28 | - |
 | [31 - A plugin file takes the nearest manifest only when it is a plugin's](plugin/31-a-plugin-file-takes-only-a-plugin-manifest/plan.md) | low | built 2026-10-07 ([implemented.md](plugin/31-a-plugin-file-takes-only-a-plugin-manifest/implemented.md)); task 01 reviewed 2026-10-06 | - | - |
-
 | [32 - A turn's usage is every model call it made, sent as it runs, with the harness's cost](plugin/32-a-turns-usage-is-every-call-it-made/plan.md) | high | built 2026-10-01; p1-p4 | - | the agent meter |
 | [32 p1 - claude counts every call, subagents and cache writes included, with its cost](plugin/32-p1-claude-counts-every-call/plan.md) | high | built 2026-10-01 ([implemented.md](plugin/32-p1-claude-counts-every-call/implemented.md)) | plugin 32 | - |
 | [32 p2 - pi sums every call of a turn, with its cost](plugin/32-p2-pi-sums-its-calls/plan.md) | high | built 2026-10-01 ([implemented.md](plugin/32-p2-pi-sums-its-calls/implemented.md)) | plugin 32 | - |
 | [32 p3 - cofold counts each step, and sends the run's cost](plugin/32-p3-cofold-counts-each-step/plan.md) | high | built 2026-10-01 ([implemented.md](plugin/32-p3-cofold-counts-each-step/implemented.md)) | plugin 32 | - |
 | [32 p4 - ACP sends the cost and tokens its agent reports](plugin/32-p4-acp-reports-what-it-has/plan.md) | medium | built 2026-10-01 ([implemented.md](plugin/32-p4-acp-reports-what-it-has/implemented.md)) | plugin 32 | - |
-
 | [33 - A phone hears when a session needs a person](plugin/33-a-phone-hears-a-session-needs-a-person/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/33-a-phone-hears-a-session-needs-a-person/implemented.md)) | plugin 17 | - |
 | [34 - The cofold session is split into one file per area, and session.ts composes them](plugin/34-cofold-session-is-split-by-area/plan.md) | high | built 2026-10-04 ([implemented.md](plugin/34-cofold-session-is-split-by-area/implemented.md)); every task done, reviewed 2026-10-10 | - | - |
 | [35 - A cofold session uses what published cofold already ships - listed models with their price, compaction, and a question for the person](plugin/35-cofold-uses-what-cofold-ships/plan.md) | high | built 2026-10-06 ([implemented.md](plugin/35-cofold-uses-what-cofold-ships/implemented.md)); reviewed and merged 2026-10-06 | plugin 05, plugin 32 p3 | - |
