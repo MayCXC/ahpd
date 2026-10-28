@@ -340,6 +340,31 @@ it('adds the roles an issuer\'s claim names to the ones on the record', async ()
   expect(held?.can('file:write')).toBe(true);
 });
 
+it('keeps the roles a sign-in added apart, and frozen', async () => {
+  wrote({ roles: { operators: ['*:*'] }, users: [
+    { id: 'ana', roles: ['guest'], token: '', issuer: 'https://idp.test', rolesFrom: 'groups' },
+    { id: 'sam', roles: ['guest'], token: '' },
+  ] });
+  const users = fileUsers({
+    path,
+    issuerFor: () => claiming('https://idp.test', {
+      'at-1': { subject: 'ana', claims: { groups: ['operators'] } },
+    }),
+  });
+
+  const held = await users.verify('at-1');
+  expect(held?.roles).toEqual(['guest', 'operators']);
+  expect(held?.rolesFromSignIn).toEqual(['operators']);
+  expect(() => { (held as { rolesFromSignIn: unknown }).rolesFromSignIn = []; }).toThrow(TypeError);
+  expect(() => { (held!.rolesFromSignIn as string[]).push('admin'); }).toThrow(TypeError);
+
+  // A minted secret reads no claim, so it adds no roles.
+  const secret = await users.mint('sam');
+  const sam = await users.verify(secret);
+  expect(sam?.id).toBe('sam');
+  expect(sam?.rolesFromSignIn).toBeUndefined();
+});
+
 it('reads a claim that is one string, reports a value that names no role, and forgives an absent claim', async () => {
   const said: string[] = [];
   wrote({ users: [

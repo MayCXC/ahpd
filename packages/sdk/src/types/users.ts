@@ -40,8 +40,15 @@ export type Grant = `${string}:${string}`;
 export interface Principal {
   /** The id on their record. */
   readonly id: string;
-  /** The roles the record gave them, as written. */
+  /** The roles the record gave them, as written, and the roles their sign-in added. */
   readonly roles: readonly string[];
+  /**
+   * The roles their sign-in added, which `roles` holds too.
+   *
+   * Read from the claim the record's `rolesFrom` names, once, at sign-in.
+   * Absent when the sign-in added none, which is every minted secret.
+   */
+  readonly rolesFromSignIn?: readonly string[];
   /**
    * The id of the minted token they signed in with, when it was one.
    *
@@ -122,6 +129,39 @@ export interface Principal {
    * as on a host with no directory.
    */
   readonly teams?: readonly Named[];
+}
+
+/**
+ * Who a connection is, as `x-ahpd/me` answers it.
+ *
+ * A person, a plugin's own connection, or the root connection. Root holds every
+ * grant, which is `*:*` here and not the list of every grant.
+ */
+export interface Me {
+  /** Whose work this connection's work is: `user:<id>`, `plugin:<name>` or `root:<host>`. */
+  principal: string;
+  /** Which of the three the connection is. */
+  kind: 'user' | 'plugin' | 'root';
+  /** The id on their record. Absent for root, which has none. */
+  id?: string;
+  /** The record's roles and the roles their sign-in added. Empty for root. */
+  roles: string[];
+  /** The roles their sign-in added alone, which `roles` holds too. */
+  rolesFromSignIn: string[];
+  /** What the connection may do now, narrowed to a minted token's own grants. */
+  grants: Grant[];
+  /** The id of the minted token the connection signed in with, when it was one. */
+  token?: string;
+  /** The usage pools their work is charged to. */
+  pools: string[];
+  /** The teams and projects their work may be charged to, as written. Absent for root. */
+  memberships?: string[];
+  /** The membership work that names no scope of its own is charged to. */
+  primary?: string;
+  /** The issuer the record names, as written, when it names one. */
+  issuer?: string;
+  /** The claim the record reads roles from, as written, when it names one. */
+  rolesFrom?: string;
 }
 
 /**

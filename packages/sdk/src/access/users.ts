@@ -1045,6 +1045,8 @@ export function fileUsers(options: FileUserOptions): Users {
       // reads: a provider handed this principal could otherwise add a role to
       // the person it was signed in as. See the comment above.
       roles: Object.freeze([...record.roles, ...fromIssuer]),
+      // The claim's own share of `roles`, frozen for the same reason.
+      ...(fromIssuer.length === 0 ? {} : { rolesFromSignIn: Object.freeze([...fromIssuer]) }),
       /*
        * Whether the token they arrived with signs them in as well.
        *
