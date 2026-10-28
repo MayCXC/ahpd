@@ -185,6 +185,8 @@ A subagent Claude runs is its own chat. Every `Task` and `Agent` call opens one 
 
 Sessions the host is not running are read from Claude's transcripts, so clients can browse and read them without starting a process. The agent starts when a turn is sent.
 
+A session the host resumes picks up the conversation the CLI wrote under that id, in any project folder. The CLI writes a conversation when its first message reaches it, so a chat nobody spoke to, or one whose CLI could not sign in, has none, and the CLI refuses to resume it. Such a session starts a new conversation under that id instead, under the chat's own id where it has one, as VS Code's agent host does.
+
 ## The agent a message picks
 
 A client sends the agent on every message, as `message.agent`, and the turn runs on it. A message naming none runs on the SDK's default agent.

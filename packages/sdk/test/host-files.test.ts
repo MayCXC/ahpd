@@ -11,7 +11,7 @@ import type { ComputerPort, MachineSource } from '../src/types/computers.js';
 import type { GitDir, Worktrees } from '../src/types/worktrees.js';
 import {
   resetSdk, actions, claude, complete, createHost, emit, hello, hostTools, list, machine, open,
-  peer, read, resolve, serving, sessionQueries, settle, running,
+  peer, read, resolve, serving, sessionQueries, settle, running, wrote,
 } from './support/host.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
@@ -631,8 +631,10 @@ describe('more than one directory', () => {
     // untrusted until a client says otherwise and this case is about the
     // restart rather than about the question.
     p.request = async () => ({ trusted: true });
-    // The CLI names the conversation, and that name is what a resume asks for.
+    // The CLI names the conversation, and that name is what a resume asks for,
+    // once the CLI has written it.
     await emit({ type: 'system', subtype: 'init', session_id: 'sdk-wide' });
+    wrote('sdk-wide', String(sessionQueries().at(-1)?.options.cwd));
     const before = sessionQueries().length;
     client.handle({
       method: 'dispatchAction',

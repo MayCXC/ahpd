@@ -81,6 +81,15 @@ export async function findSession(
 /** `~/.claude/projects`, or the same under `CLAUDE_CONFIG_DIR` where it is set. */
 const projectsDir = (): string => join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude'), 'projects');
 
+/** Whether an id can name a transcript file, which is all an id here is ever looked up as. */
+const fileNamed = (id: string): boolean => /^[A-Za-z0-9-]+$/.test(id);
+
+/** Whether `project` holds a transcript for `id` that is not empty. */
+const holds = (project: string, id: string): boolean => {
+  try { return statSync(join(projectsDir(), project, `${id}.jsonl`)).size > 0; }
+  catch { return false; }
+};
+
 /**
  * Whether the project folder of `folder` holds a transcript for `id` that is not
  * empty, which is where the SDK finds it without looking anywhere else.
@@ -90,12 +99,32 @@ const projectsDir = (): string => join(process.env.CLAUDE_CONFIG_DIR ?? join(hom
  * transcript.
  */
 function hasTranscript(id: string, folder: string): boolean {
-  if (!/^[A-Za-z0-9-]+$/.test(id)) return false;
+  if (!fileNamed(id)) return false;
   let real = folder;
   try { real = realpathSync(folder); }
   catch { /* a folder that is gone keeps its transcript under the name it had */ }
-  try { return statSync(join(projectsDir(), real.replace(/[^A-Za-z0-9]/g, '-'), `${id}.jsonl`)).size > 0; }
+  return holds(real.replace(/[^A-Za-z0-9]/g, '-'), id);
+}
+
+/**
+ * Whether the CLI wrote a conversation under `id`, which is the only kind of id
+ * its resume takes: it ends at startup with `No conversation found` for any
+ * other.
+ *
+ * The project of `folder` is read first, because the CLI writes a session of
+ * that folder there. Every other project follows, because the CLI's resume finds
+ * a conversation under any of them, as the reference asks the SDK with no
+ * folder at all. The files are read rather than the SDK asked, because a session
+ * is built synchronously and its CLI starts as it is.
+ * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeAgent.ts#L1728-L1744
+ */
+export function written(id: string, folder: string): boolean {
+  if (hasTranscript(id, folder)) return true;
+  if (!fileNamed(id)) return false;
+  let projects: string[];
+  try { projects = readdirSync(projectsDir()); }
   catch { return false; }
+  return projects.some((project) => holds(project, id));
 }
 
 /**

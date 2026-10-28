@@ -10,7 +10,7 @@ import type { Request } from '../src/types/rpc.js';
 import type { HostOptions } from '../src/types/host.js';
 import {
   claude, createHost, echo, machine, resetSdk, actions, emit, hello, open, peer,
-  sdk, serving, sessionQueries, settle, running,
+  sdk, serving, sessionQueries, settle, running, wrote,
 } from './support/host.js';
 import type { Agent, Listed } from '../src/types/agent.js';
 
@@ -239,6 +239,7 @@ describe('a session that already happened', () => {
   it('resumes rather than replays when somebody says something', async () => {
     sdk.sessions.push(older);
     sdk.transcript.push({ type: 'user', uuid: 'u1', message: { role: 'user', content: 'earlier' } });
+    wrote(older.sessionId, older.cwd);
     const client = open();
     await client.handle(hello(['0.9.0']));
     await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/older' } });

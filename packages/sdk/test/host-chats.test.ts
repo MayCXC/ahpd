@@ -6,7 +6,7 @@ import type { Turn } from '@microsoft/agent-host-protocol';
 import type { WireTurn } from '../src/types/wire.js';
 import {
   resetSdk, actions, claude, createHost, echo, emit, hello, machine, open, peer, sdk, serving,
-  sessionQueries, settle, running,
+  sessionQueries, settle, running, wrote,
 } from './support/host.js';
 import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import { idOf } from '../src/sessions/catalog.js';
@@ -70,6 +70,8 @@ describe('dropping the turns after one', () => {
     await emit({ type: 'user', session_id: 'sdk-1', uuid: 'prompt-1', message: { role: 'user', content: 'first' } });
     await emit({ type: 'assistant', uuid: 'reply-1', message: { id: 'm1', content: [{ type: 'text', text: 'one' }] } });
     await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+    // Written, where the CLI runs, once the first message reached it.
+    wrote('sdk-1', String(sessionQueries().at(-1)?.options.cwd));
     client.handle({
       method: 'dispatchAction',
       params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId: 't2', message: { text: 'second' } } },
@@ -220,6 +222,8 @@ describe('a chat made out of another', () => {
     await emit({ type: 'user', session_id: 'sdk-1', uuid: 'sdk-prompt-1', message: { role: 'user', content: 'hi' } });
     await emit({ type: 'assistant', uuid: 'sdk-reply-1', message: { id: 'm1', content: [{ type: 'text', text: 'hello' }] } });
     await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+    // Written, where the CLI runs, once the first message reached it.
+    wrote('sdk-1', String(sessionQueries().at(-1)?.options.cwd));
 
     await client.handle({
       method: 'createChat',
