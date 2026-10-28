@@ -45,7 +45,7 @@ Today the session schema has a `model` field with no values, and a client that p
   Every read of `settings.model` stays, so a session made with that setting still runs on its model.
   The two schema tests now expect `baseUrl`, `instructions`, `permissionMode` and `effortLevel` alone.
   A new turn test sends a model on the message and checks the endpoint, key and model id it runs on.
-  `rg -n "'model'" packages/agent-cofold/src` finds only `LIVE_KEYS` and `NOT_A_RECORD`, neither of which is a session setting.
+  A search for `'model'` in `packages/agent-cofold/src` finds only `LIVE_KEYS` and `NOT_A_RECORD`, neither of which is a session setting.
   `pnpm -s typecheck`, the full `packages/agent-cofold` suite, `pnpm -s build` and `pnpm -s boundary` pass.
   The two by-hand checks in Validation are not run.
 - **Next action:** none.
