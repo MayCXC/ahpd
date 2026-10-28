@@ -678,14 +678,14 @@ describe('closed', () => {
       return existsSync(session) ? readFileSync(session, 'utf8') : null;
     };
     const sessionsAfter = read();
-    expect(closed).toEqual(['echo:/one']);
+    expect(closed).toEqual(['ahp-session:/one']);
     expect(clock.armed).toBeUndefined();
 
     // A schedule that comes round after the close starts nothing and writes nothing.
     fire?.();
     await new Promise((done) => { setTimeout(done, 10); });
     expect(host.turning()).toEqual([]);
-    expect(closed).toEqual(['echo:/one']);
+    expect(closed).toEqual(['ahp-session:/one']);
     expect(existsSync(state) ? readFileSync(state, 'utf8') : '').toBe(written);
     // A change the host would store, made after the close, reaches no file.
     await client.handle({ method: 'disposeSession', params: { channel: 'ahp-session:/one' } }).catch(() => undefined);

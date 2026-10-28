@@ -570,9 +570,16 @@ export function createSpawn(ctx: HostContext): Spawn {
    *
    * The working folder goes under the agent's id as well, so a backend that
    * finds the session by that id is told where it ran.
+   *
+   * The name the host holds the session under is written under the host's id
+   * only, and only when the row has none: a name belongs to the session this
+   * host made, and the backend's own id is a second key for the same row. The
+   * id it is written under is the host's, because that is what `names` is
+   * keyed by and what a listed session is found again by.
    */
   const keepProvider = (uri: string, agent: Agent, session: Session): void => {
     kept.setProvider(idOf(uri), agent.provider);
+    if (kept.uri?.(idOf(uri)) === undefined) kept.setUri?.(idOf(uri), uri);
     const own = session.agentId();
     if (own !== undefined && own !== '') {
       kept.setProvider(own, agent.provider);
@@ -1716,8 +1723,8 @@ export function createSpawn(ctx: HostContext): Spawn {
      */
     const named_ = titleOf(uri, chatUri);
     if (named_ !== undefined) session.setTitle?.(named_);
-    // The name it is held under, which is its provider's. Recorded so every
-    // other answer about it uses that same string.
+    // The name it is held under, which is the session's own and not its
+    // provider's. Recorded so every other answer about it uses that same string.
     names.set(idOf(uri), uri);
     byChat.set(chatUri, { uri, chat: session });
     /*

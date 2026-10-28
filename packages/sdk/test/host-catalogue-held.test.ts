@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHost, hello, machine, peer, resetSdk, settle } from './support/host.js';
 import { echo } from '../../../examples/echo/agent.js';
-import type { Agent, Listed } from '@ahpd/sdk';
+import { memorySessions } from '../src/sessions/sessions.js';
+import type { Agent, Listed, SessionStore } from '@ahpd/sdk';
 
 /*
  * The catalogue is held, and a refresh says what it found.
@@ -96,9 +97,9 @@ const listed = async (client: { handle(request: unknown): Promise<unknown> }) =>
  * `runs` is which backend to build it over, for a case about one this fixture
  * is not.
  */
-const started = async (runs: (here: Store) => Agent = backend) => {
+const started = async (runs: (here: Store) => Agent = backend, sessions?: SessionStore) => {
   const here = store([row('one', 'One')]);
-  const host = createHost({ path: PATH, agents: [runs(here)], ...machine() });
+  const host = createHost({ path: PATH, agents: [runs(here)], ...machine(), ...(sessions === undefined ? {} : { sessions }) });
   const p = peer();
   const client = host.accept(p);
   await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
@@ -142,7 +143,7 @@ describe('the catalogue is held', () => {
     // so a client paging a catalogue is not a client reading the machine.
     expect(first).toBeGreaterThanOrEqual(WAIT - 20);
     expect(second).toBeLessThan(10);
-    expect(answer.items.map((one) => one.resource)).toEqual(['slow:/one']);
+    expect(answer.items.map((one) => one.resource)).toEqual(['ahp-session:/one']);
     // And answering from the held rows started no pass of its own: the one the
     // first answer started behind it is still running, and this joined it.
     expect(here.calls).toBe(passed);
@@ -158,8 +159,8 @@ describe('the catalogue is held', () => {
     const [one, two] = await Promise.all([listed(client), listed(client)]);
     await until(() => here.calls > passed);
 
-    expect(one.items.map((row_) => row_.resource)).toEqual(['slow:/one']);
-    expect(two.items.map((row_) => row_.resource)).toEqual(['slow:/one']);
+    expect(one.items.map((row_) => row_.resource)).toEqual(['ahp-session:/one']);
+    expect(two.items.map((row_) => row_.resource)).toEqual(['ahp-session:/one']);
     // One pass between them, not one each. Asked this way the host used to run
     // two, and a run of subscribes to sessions nobody has ran one per subscribe.
     expect(here.calls).toBe(passed + 1);
@@ -177,7 +178,7 @@ describe('the catalogue is held', () => {
     // A backend that is not answering is a backend with nothing to say, not one
     // whose sessions have been deleted: the rows that were there are still true,
     // so a failed refresh costs a client what it had rather than an empty list.
-    expect(answer.items.map((one) => one.resource)).toEqual(['slow:/one']);
+    expect(answer.items.map((one) => one.resource)).toEqual(['ahp-session:/one']);
   });
 });
 
@@ -196,7 +197,7 @@ describe('a refresh says what it found', () => {
     await listed(client);
     await until(() => said(notes, 'root/sessionAdded').length > 0);
 
-    expect(said(notes, 'root/sessionAdded').map((one) => one.summary?.resource)).toEqual(['slow:/two']);
+    expect(said(notes, 'root/sessionAdded').map((one) => one.summary?.resource)).toEqual(['ahp-session:/two']);
     expect(said(notes, 'root/sessionAdded')[0]?.summary?.title).toBe('Two');
 
     // And the other way round, which is how a client hears that a transcript was
@@ -206,7 +207,7 @@ describe('a refresh says what it found', () => {
     await listed(client);
     await until(() => said(notes, 'root/sessionRemoved').length > 0);
 
-    expect(said(notes, 'root/sessionRemoved').map((one) => one.session)).toEqual(['slow:/two']);
+    expect(said(notes, 'root/sessionRemoved').map((one) => one.session)).toEqual(['ahp-session:/two']);
   });
 
   it('sends one change for a row that moved, and nothing for the ones that did not', async () => {
@@ -232,7 +233,7 @@ describe('a refresh says what it found', () => {
     await until(() => said(notes, 'root/sessionSummaryChanged').length > 0);
 
     const moved = said(notes, 'root/sessionSummaryChanged');
-    expect(moved.map((one) => one.session)).toEqual(['slow:/two']);
+    expect(moved.map((one) => one.session)).toEqual(['ahp-session:/two']);
     // A partial, not a whole row: `resource` is who it is and every client has
     // it, and a client applies what it is sent over what it already holds.
     expect(moved[0]?.changes?.title).toBe('Two, retitled');
@@ -271,7 +272,7 @@ describe('a backend that refuses keeps what it had', () => {
     const { first, second, client, notes } = await two();
     await until(() => first.done >= 1 && second.done >= 1);
     await settle(4);
-    expect(await resources(client)).toEqual(['first:/a', 'first:/gone', 'second:/b']);
+    expect(await resources(client)).toEqual(['ahp-session:/a', 'ahp-session:/b', 'ahp-session:/gone']);
 
     // The second backend goes dark and the first stops listing one row. Both are
     // ordinary things to happen, and only one of them is a session deleted.
@@ -281,13 +282,13 @@ describe('a backend that refuses keeps what it had', () => {
     await listed(client);
     await until(() => said(notes, 'root/sessionRemoved').length > 0);
 
-    expect(said(notes, 'root/sessionRemoved').map((one) => one.session)).toEqual(['first:/gone']);
+    expect(said(notes, 'root/sessionRemoved').map((one) => one.session)).toEqual(['ahp-session:/gone']);
     // A client that closes a session it has open when it is told the session is
     // gone is the cost of getting this wrong, so nothing is said for a store that
     // did not answer, however many rows it would have listed.
     expect(notes.filter((one) => one.method === 'root/sessionRemoved')).toHaveLength(1);
     // And the rows it did list last are still there to answer with.
-    expect(await resources(client)).toEqual(['first:/a', 'second:/b']);
+    expect(await resources(client)).toEqual(['ahp-session:/a', 'ahp-session:/b']);
 
     // Once it answers again and no longer lists it, that is what a gone session
     // looks like: the removal is about the answer, not about the earlier silence.
@@ -297,8 +298,8 @@ describe('a backend that refuses keeps what it had', () => {
     await listed(client);
     await until(() => said(notes, 'root/sessionRemoved').length > 0);
 
-    expect(said(notes, 'root/sessionRemoved').map((one) => one.session)).toEqual(['second:/b']);
-    expect(await resources(client)).toEqual(['first:/a']);
+    expect(said(notes, 'root/sessionRemoved').map((one) => one.session)).toEqual(['ahp-session:/b']);
+    expect(await resources(client)).toEqual(['ahp-session:/a']);
   });
 });
 
@@ -332,10 +333,10 @@ describe('a refresh and a session this host is running', () => {
   it('never says a session it opened and gave a turn is gone', async () => {
     const { here, client, notes } = await started();
     await filled(here);
-    expect((await listed(client)).items.map((one) => one.resource)).toEqual(['slow:/one']);
+    expect((await listed(client)).items.map((one) => one.resource)).toEqual(['ahp-session:/one']);
     await passed(here, 2);
 
-    const chat = await give(client, 'slow:/one');
+    const chat = await give(client, 'ahp-session:/one');
     notes.length = 0;
     await listed(client);
     await passed(here, 3);
@@ -349,7 +350,7 @@ describe('a refresh and a session this host is running', () => {
       params: { channel: chat, action: { type: 'chat/turnStarted', turnId: 't2', message: { text: 'again' } } },
     });
     await settle(8);
-    expect(said(notes, 'root/sessionSummaryChanged').map((one) => one.session)).toContain('slow:/one');
+    expect(said(notes, 'root/sessionSummaryChanged').map((one) => one.session)).toContain('ahp-session:/one');
   });
 
   it('never says a session created while a refresh was out is gone', async () => {
@@ -413,26 +414,26 @@ describe('a session deleted from the catalogue', () => {
   it('leaves the held rows, and is said gone once', async () => {
     const { here, client, notes } = await started();
     await filled(here);
-    expect((await listed(client)).items.map((one) => one.resource)).toEqual(['slow:/one']);
+    expect((await listed(client)).items.map((one) => one.resource)).toEqual(['ahp-session:/one']);
     await passed(here, 2);
 
     notes.length = 0;
-    await client.handle({ method: 'disposeSession', params: { channel: 'slow:/one' } });
+    await client.handle({ method: 'disposeSession', params: { channel: 'ahp-session:/one' } });
     await settle(4);
-    expect(gone(notes, 'slow:/one')).toHaveLength(1);
+    expect(gone(notes, 'ahp-session:/one')).toHaveLength(1);
 
     // The next answer is the catalogue the client deleted it out of, and the
     // pass behind that answer does not say it a second time: a row already
     // said to be gone is not news again.
     expect((await listed(client)).items.map((one) => one.resource)).toEqual([]);
     await passed(here, 3);
-    expect(gone(notes, 'slow:/one')).toHaveLength(1);
+    expect(gone(notes, 'ahp-session:/one')).toHaveLength(1);
   });
 
   it('is not put back by a pass that read the store before the delete', async () => {
     const { here, client, notes } = await started(readingEarly);
     await filled(here);
-    expect((await listed(client)).items.map((one) => one.resource)).toEqual(['slow:/one']);
+    expect((await listed(client)).items.map((one) => one.resource)).toEqual(['ahp-session:/one']);
     await passed(here, 2);
 
     // This answer starts a pass that has the row in what it read, and the
@@ -441,10 +442,61 @@ describe('a session deleted from the catalogue', () => {
     // delete, however long it was out.
     await listed(client);
     notes.length = 0;
-    await client.handle({ method: 'disposeSession', params: { channel: 'slow:/one' } });
+    await client.handle({ method: 'disposeSession', params: { channel: 'ahp-session:/one' } });
     await passed(here, 3);
 
-    expect(gone(notes, 'slow:/one')).toHaveLength(1);
+    expect(gone(notes, 'ahp-session:/one')).toHaveLength(1);
     expect((await listed(client)).items.map((one) => one.resource)).toEqual([]);
+  });
+});
+
+describe('a listed session is named from its row', () => {
+  const opened = async (client: { handle(request: unknown): Promise<unknown> }, channel: string) =>
+    await client.handle({ method: 'subscribe', params: { channel } }) as {
+      snapshot: { resource: string; state: { title: string } };
+    };
+
+  it('takes the name a row already holds, so an old session keeps it', async () => {
+    const kept = memorySessions();
+    kept.setProvider('one', 'slow');
+    kept.setUri?.('one', 'claude:/one');
+    const { here, client } = await started(backend, kept);
+    await filled(here);
+    expect((await listed(client)).items.map((one) => one.resource)).toEqual(['claude:/one']);
+  });
+
+  it('names a row with a provider and no name from the provider, and stores that name', async () => {
+    const kept = memorySessions();
+    kept.setProvider('one', 'slow');
+    const { here, client } = await started(backend, kept);
+    await filled(here);
+    expect((await listed(client)).items.map((one) => one.resource)).toEqual(['slow:/one']);
+    expect(kept.uri?.('one')).toBe('slow:/one');
+  });
+
+  it('names a row with no provider and no name after the agent that lists it', async () => {
+    const kept = memorySessions();
+    kept.setFlags('one', 1);
+    const { here, client } = await started(backend, kept);
+    await filled(here);
+    expect((await listed(client)).items.map((one) => one.resource)).toEqual(['slow:/one']);
+    expect(kept.uri?.('one')).toBe('slow:/one');
+  });
+
+  it('names a session on disk with no row as the protocol\'s URI, and writes no row', async () => {
+    const kept = memorySessions();
+    const { here, client } = await started(backend, kept);
+    await filled(here);
+    expect((await listed(client)).items.map((one) => one.resource)).toEqual(['ahp-session:/one']);
+    expect(kept.sessions()).toEqual([]);
+  });
+
+  it('still opens a session listed as the protocol\'s URI under a provider\'s scheme', async () => {
+    const kept = memorySessions();
+    const { here, client } = await started(backend, kept);
+    await filled(here);
+    const one = await opened(client, 'slow:/one');
+    expect(one.snapshot.resource).toBe('slow:/one');
+    expect(one.snapshot.state.title).toBe('One');
   });
 });

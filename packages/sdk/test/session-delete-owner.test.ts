@@ -184,7 +184,7 @@ it('lets the owner delete their own session', async () => {
   await dispose(clients.ana!, 'mine');
 
   expect(back.deleted).toEqual([{ id: 'mine', directory: DIR }]);
-  expect(await listed(clients.ana!)).not.toContain('echo:/mine');
+  expect(await listed(clients.ana!)).not.toContain('ahp-session:/mine');
 });
 
 it('lets a caller holding session:* delete a session that is not theirs', async () => {
@@ -209,7 +209,7 @@ it('refuses a member who is neither the owner nor a session:* holder, and delete
 
   expect(back.deleted).toEqual([]);
   // And the session is whole, since the refusal comes before the teardown.
-  expect(await listed(clients.ana!)).toContain('echo:/theirs');
+  expect(await listed(clients.ana!)).toContain('ahp-session:/theirs');
 });
 
 it('lets a member delete a session of their own', async () => {
@@ -248,8 +248,8 @@ it('lets the delete_session tool delete a session its own owner made', async () 
   await saying(clients.ana!, 'runner', 'delete the other one now, please');
 
   const tools = back.tools();
-  expect(await tools.delete_session?.run?.({ session: 'echo:/doomed' }))
-    .toContain('Deleted session echo:/doomed');
+  expect(await tools.delete_session?.run?.({ session: 'ahp-session:/doomed' }))
+    .toContain('Deleted session ahp-session:/doomed');
 
   expect(back.deleted).toEqual([{ id: 'doomed', directory: DIR }]);
 });
@@ -265,7 +265,7 @@ it('refuses the delete_session tool for a session its owner does not own', async
   await saying(clients.bob!, 'runner', 'delete the other one now, please');
 
   const tools = back.tools();
-  await expect(tools.delete_session?.run?.({ session: 'echo:/theirs' }))
+  await expect(tools.delete_session?.run?.({ session: 'ahp-session:/theirs' }))
     .rejects.toMatchObject({ message: "Only the session's owner can delete it." });
 
   expect(back.deleted).toEqual([]);
@@ -295,7 +295,7 @@ it('refuses the delete_session tool with no turn running, whatever the record sa
   await settle();
 
   const tools = back.tools();
-  await expect(tools.delete_session?.run?.({ session: 'echo:/theirs' }))
+  await expect(tools.delete_session?.run?.({ session: 'ahp-session:/theirs' }))
     .rejects.toMatchObject({ message: 'this turn may not session:write here' });
   expect(back.deleted).toEqual([]);
 });

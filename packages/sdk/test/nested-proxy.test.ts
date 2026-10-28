@@ -932,6 +932,9 @@ it('a variant the inner host does not serve ends the session naming it, and an a
   const taken = nestedAgent('claude', { plugins: ['@ahpd/agent-claude'], start: async () => plain.proc, timeoutMs: 500 }).create(start(second.emit));
   await until(() => created(plain) !== undefined);
   expect(created(plain)?.params.provider).toBe('claude');
+  // The proxy names the session the way this host names one, and still says
+  // which provider the host inside runs it on.
+  expect(created(plain)?.params.channel).toBe('ahp-session:/outer');
   taken.close();
 });
 
@@ -942,6 +945,7 @@ it('a renamed default agent is created under the provider the inner host serves'
   const session = nestedAgent(work, { plugins: ['@ahpd/agent-cofold'], start: async () => host.proc, timeoutMs: 500 }).create(start(emit));
   await until(() => created(host) !== undefined);
   expect(created(host)?.params.provider).toBe('cofold');
+  expect(created(host)?.params.channel).toBe('ahp-session:/outer');
   session.close();
 });
 
@@ -987,7 +991,7 @@ const scriptedPort = (
     "  else if (m.method === 'subscribe' && m.params.channel === 'ahp-root://') ok({ snapshot: { resource: 'ahp-root://', state: { agents: providers.map((p) => ({ provider: p, displayName: p, description: '', models: [] })), activeSessions: 0 }, fromSeq: 0 } });",
     "  else if (m.method === 'createSession') { fs.appendFileSync(file, m.params.provider + newline); ok({}); }",
     '  else if (m.method === \'listSessions\') ok({ items: held().map((channel) => ({ resource: channel, provider: String(channel).split(":")[0], title: "", status: 0, createdAt: new Date(0).toISOString(), modifiedAt: new Date(0).toISOString(), workingDirectories: [] })) });',
-    "  else if (m.method === 'subscribe') { const channel = m.params.channel; if (!String(channel).startsWith('ahp-')) fs.appendFileSync(store, channel + newline); ok({ snapshot: { resource: channel, state: { turns: turns ? [{ id: 't1', state: 'complete', startedAt: new Date(0).toISOString(), message: { text: 'kept' } }] : [] }, fromSeq: 0 } }); }",
+    "  else if (m.method === 'subscribe') { const channel = m.params.channel; const session = String(channel).startsWith('ahp-session:') || !String(channel).startsWith('ahp-'); if (session) fs.appendFileSync(store, channel + newline); ok({ snapshot: { resource: channel, state: { turns: turns ? [{ id: 't1', state: 'complete', startedAt: new Date(0).toISOString(), message: { text: 'kept' } }] : [] }, fromSeq: 0 } }); }",
     "  else if (m.method === 'disposeSession') { const gone = m.params.channel; fs.writeFileSync(store, held().filter((one) => one !== gone).map((one) => one + newline).join('')); ok({}); }",
     '  else ok({});',
     '});',
@@ -1088,7 +1092,7 @@ it('a nested session is listed after the outer host restarts, from the record it
   const asked = port.asked().length;
   const second = await restartable(dir, port.computers);
   const rows = await rowsOf(second.client);
-  expect(rows.map((one) => [one.resource, one.title])).toEqual([[`${PROVIDER}:/kept`, 'In the box']]);
+  expect(rows.map((one) => [one.resource, one.title])).toEqual([['ahp-session:/kept', 'In the box']]);
   // Listed without asking the machine anything.
   expect(port.asked().length).toBe(asked);
   await second.host.close();
@@ -1107,7 +1111,7 @@ it('a nested session listed after a restart resumes the inner session by id from
   await until(() => port.asked().some(({ method }) => method === 'dispatchAction'), 1000);
   // The inner session is subscribed under the outer id and not created again.
   expect(port.read()).toEqual([PROVIDER]);
-  expect(port.asked().filter(({ method }) => method === 'subscribe').map(({ channel }) => channel)).toContain(`${PROVIDER}:/kept`);
+  expect(port.asked().filter(({ method }) => method === 'subscribe').map(({ channel }) => channel)).toContain('ahp-session:/kept');
   expect(second.peer.seen.some(({ params }) => params?.rejectionReason !== undefined)).toBe(false);
   await second.host.close();
   port.done();
@@ -1182,7 +1186,7 @@ it('a nested session moved to this host before its first turn shows its history'
    */
   const second = await daemon();
   const [row] = await rowsOf(second.client);
-  expect(row?.resource).toBe(`${PROVIDER}:/moved`);
+  expect(row?.resource).toBe('ahp-session:/moved');
   const opened = await second.client.handle({ method: 'subscribe', params: { channel: chatUriFor(String(row?.resource)) } }) as {
     snapshot: { state: { turns: Bag[] } };
   };
@@ -1226,7 +1230,7 @@ it('a nested chat started again keeps the transcript inside the machine', async 
   await client.handle({ method: 'createChat', params: { channel: uri, chat, workingDirectories: [uriOf(REPO_ROOT)] } });
   await client.handle({ method: 'subscribe', params: { channel: chat } });
   const subscribed = (): number =>
-    port.asked().filter(({ method, channel }) => method === 'subscribe' && channel === `${PROVIDER}:/wide`).length;
+    port.asked().filter(({ method, channel }) => method === 'subscribe' && channel === 'ahp-session:/wide').length;
   // The chat's own host inside, up: the second subscription to the session,
   // behind the one the session itself opened with.
   await until(() => subscribed() >= 2, 1000);
@@ -1279,7 +1283,7 @@ it('a nested session whose folders change starts the host inside again, and disp
   await client.handle({ method: 'subscribe', params: { channel: uri } });
   await until(() => port.read().length > 0, 1000);
   const subscribed = (): number =>
-    port.asked().filter(({ method, channel }) => method === 'subscribe' && channel === `${PROVIDER}:/wide`).length;
+    port.asked().filter(({ method, channel }) => method === 'subscribe' && channel === 'ahp-session:/wide').length;
   await until(() => subscribed() >= 1, 1000);
 
   const elsewhere = mkdtempSync(join(tmpdir(), 'ahpd-nested-wide-'));
@@ -1364,7 +1368,7 @@ it('a nested chat a client removes is disposed inside the machine', async () => 
    * the one left, and it is not touched.
    *
    * Every chat of a session names the session it is inside as the one to open
-   * in the machine, so this chat's host inside is `cofold:/two-chats`, the
+   * in the machine, so this chat's host inside is `ahp-session:/two-chats`, the
    * same name the session's own chat opens: that is what the removal names.
    */
   const real: Agent = { ...backend(), runsNested: true };
@@ -1391,7 +1395,7 @@ it('a nested chat a client removes is disposed inside the machine', async () => 
 
   await client.handle({ method: 'disposeChat', params: { channel: chat } });
   await until(() => disposed().length > 0, 1000);
-  expect(disposed()).toEqual([`${PROVIDER}:/two-chats`]);
+  expect(disposed()).toEqual(['ahp-session:/two-chats']);
   await host.close();
   port.done();
 });
@@ -1402,7 +1406,7 @@ it('a nested session whose machine is gone is listed, and its resume ends with a
   await madeAndStopped(dir, port);
   const second = await restartable(dir, { how: async () => ({ command: 'true', args: [] }), nested: async () => undefined });
   const rows = await rowsOf(second.client);
-  expect(rows.map((one) => one.resource)).toEqual([`${PROVIDER}:/kept`]);
+  expect(rows.map((one) => one.resource)).toEqual(['ahp-session:/kept']);
   const uri = String(rows[0]?.resource);
   await second.client.handle({ method: 'subscribe', params: { channel: uri } });
   await second.client.handle({ method: 'dispatchAction', params: { channel: chatUriFor(uri), clientSeq: 1, action: { type: 'chat/turnStarted', turnId: 't2', message: { text: 'again' } } } });
@@ -1437,7 +1441,7 @@ it('a nested session whose profile says record is deleted here, and its copy ins
 
   await second.client.handle({ method: 'disposeSession', params: { channel: String(row?.resource) } });
 
-  expect(port.stored()).toEqual([`${PROVIDER}:/kept`]);
+  expect(port.stored()).toEqual(['ahp-session:/kept']);
   expect(await rowsOf(second.client)).toEqual([]);
   await second.host.close();
   port.done();

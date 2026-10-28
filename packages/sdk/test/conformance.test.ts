@@ -398,7 +398,7 @@ it('reduces a chat\'s background work, and shows it to a client arriving after',
 it('reduces a Bash result too large to send, and serves its terminal exited with the whole output', async () => {
   // A store that keeps a folder for each session, which is where the host
   // keeps the output.
-  const { client, peer: p, chatUri, opened } = await running({ sessions: fileSessions({ dir: mkdtempSync(join(tmpdir(), 'ahpd-kept-')) }) });
+  const { client, peer: p, uri, chatUri, opened } = await running({ sessions: fileSessions({ dir: mkdtempSync(join(tmpdir(), 'ahpd-kept-')) }) });
   dispatch(client, chatUri, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'go' } });
   await settle();
   /*
@@ -437,7 +437,7 @@ it('reduces a Bash result too large to send, and serves its terminal exited with
   ]);
   // Named after the call's chat, as the host holds it, and the call.
   const resource = String(call?.content?.[1]?.resource);
-  expect(retainedTerminalOf(resource)).toEqual({ chat: chatUriFor('claude:/live'), key: 'toolu_big' });
+  expect(retainedTerminalOf(resource)).toEqual({ chat: chatUriFor(uri), key: 'toolu_big' });
 
   /*
    * The channel the call names, subscribed after the command is over: exited,

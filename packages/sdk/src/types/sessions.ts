@@ -251,6 +251,21 @@ export interface SessionStore {
   /** Record it, or forget it with `undefined`. */
   setProvider(id: string, value: string | undefined): void;
   /**
+   * The URI the host holds this session under, or nothing where none was kept.
+   *
+   * A session made today is `ahp-session:/<id>`, and one listed before that
+   * change keeps its `<provider>:/<id>` name. The name is the host's to choose
+   * and not the client's, so it is written down with the row rather than built
+   * again from the row's provider: a restart publishes the name it was made
+   * with, and an old session keeps the name its clients already hold.
+   *
+   * Optional: a store that leaves it out keeps no name, and a row it cannot
+   * answer for is named from its provider as it was before this was kept.
+   */
+  uri?(id: string): string | undefined;
+  /** Record it, or forget it with `undefined`. */
+  setUri?(id: string, value: string | undefined): void;
+  /**
    * The opt-in host tools this session's request named, or nothing where it
    * named none.
    *

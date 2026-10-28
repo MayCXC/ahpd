@@ -407,18 +407,17 @@ it('resumes a paused run and shows the open turn once to a client that subscribe
   const client = after.accept(p);
   await initialize(client);
   /*
-   * A listed session is published under `<provider>:/<id>`, not under the
-   * `ahp-session:` URI the first process created it with: the catalogue names
-   * a row after the provider that owns it, and that is the channel a client
-   * browses and continues it on.
+   * A listed session keeps the `ahp-session:` URI the first process created it
+   * with: the catalogue names a row by the name its record holds, and that is
+   * the channel a client browses and continues it on.
    */
-  const session = await client.handle({ method: 'subscribe', params: { channel: 'cofold:/one' } }) as {
+  const session = await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/one' } }) as {
     snapshot: { state: { defaultChat: string } };
   };
   const chatUri = session.snapshot.state.defaultChat;
   await client.handle({ method: 'subscribe', params: { channel: chatUri } });
   begin(client, chatUri, 't2', 'carry on');
-  await until(() => actions(p, 'cofold:/one').some((e) => e.action.type === 'session/inputNeededSet'));
+  await until(() => actions(p, 'ahp-session:/one').some((e) => e.action.type === 'session/inputNeededSet'));
 
   /*
    * A client that arrives after the resume reads the chat snapshot the way a

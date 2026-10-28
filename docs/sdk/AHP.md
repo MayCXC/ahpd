@@ -588,19 +588,24 @@ anything.
 
 ### Session URIs
 
+The protocol names a session `ahp-session:/<uuid>`, and keeps its provider on
+`SessionSummary.provider` rather than in the URI. This host therefore names
+every session it makes `ahp-session:/<uuid>`.
+
+VS Code did the same on 2026-10-05, in commit `bd64649be19` ("Use proper
+ahp-session: scheme URIs for new AH sessions"). Its older reading of the scheme
+is now a fallback that returns nothing for `ahp-session`. The reason this host
+used `<provider>:/<uuid>` is gone, and that name disagreed with the protocol.
+
+A session that already exists keeps the `<provider>:/<uuid>` name it has, as
+VS Code keeps its legacy names. The host stores each session's URI in its row,
+so a name survives a restart. A session listed from a backend's disk that this
+host never made is `ahp-session:/<id>`.
+
 A session URI is the **client's** to name and this host's to echo, and only the
-id inside one is ever read. This host lists a session as `<provider>:/<uuid>`,
-which is what the only other implementation computes - it builds a session URI
-that way both when it creates a session and when it reopens one it listed.
-
-It used to publish `ahp-session:/<uuid>` instead, and that gave that client two
-strings for one session. Which one it reached for came out of its own stored
-state, so the same session, with the same bytes behind it, drew its
-conversation when addressed as `claude:/<uuid>` and drew nothing when addressed
-as `ahp-session:/<uuid>`. Two captures a minute apart, identical on the wire
-apart from the scheme, is what settled it.
-
-The older spelling is still answered, because only the id is read.
+id inside one is ever read. A client may still create a session on
+`<provider>:/<uuid>`, and that session keeps that URI as its name. Any other
+spelling is an alias.
 
 Both are also *keyed* as one now. They were not: who owns a session, where it
 ran, the bits a client set on it and the settings chosen for it before it starts

@@ -225,7 +225,7 @@ const hosting = async (setup: Setup = {}) => {
   });
   const idOf = (channel: string): string => channel.slice('ahp-session:/'.length);
   /** The session's own resource, which is how the log and the catalogue name it. */
-  const uriOf = (channel: string): string => `echo:/${idOf(channel)}`;
+  const uriOf = (channel: string): string => channel;
   const archived = (channel: string): boolean => (store.flags(idOf(channel)) & Status.IsArchived) !== 0;
   const stamped = (channel: string): string | undefined => store.autoArchivedAt?.(idOf(channel));
   /** Say which pull requests a session took over. */

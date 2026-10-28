@@ -384,7 +384,7 @@ describe('a row two harnesses both list', () => {
       harness('two', ['shared', 'mine'], two),
     ]);
     await settle();
-    expect(await catalogue(client)).toEqual(['one:/shared', 'one:/mine']);
+    expect(await catalogue(client)).toEqual(['ahp-session:/shared', 'ahp-session:/mine']);
   });
 
   it('goes to the harness the host recorded, whichever one loaded first', async () => {
@@ -415,7 +415,7 @@ describe('a row two harnesses both list', () => {
     await settle();
     // A session from before this was recorded, and one whose harness is gone,
     // both open somewhere rather than nowhere.
-    expect(await catalogue(client)).toEqual(['one:/unrecorded']);
+    expect(await catalogue(client)).toEqual(['ahp-session:/unrecorded']);
   });
 
   it('keeps the recorded provider when that harness is not loaded, and waits for it', async () => {
@@ -564,7 +564,7 @@ describe('a row two harnesses both list', () => {
       harness('two', ['only-theirs'], two),
     ]);
     await settle();
-    expect(await catalogue(client)).toEqual(['one:/only-mine', 'two:/only-theirs']);
+    expect(await catalogue(client)).toEqual(['ahp-session:/only-mine', 'ahp-session:/only-theirs']);
   });
 
   it('resumes on the harness the row was kept for', async () => {

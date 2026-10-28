@@ -176,7 +176,7 @@ it('starts the session when the plugin\'s door throws, and says so in the log', 
 
   // The plugin heard as much as it could, and what it does with that is not a
   // reason to refuse the work the person asked for.
-  expect(uri).toMatch(/^claude:\//);
+  expect(uri).toMatch(/^ahp-session:\//);
   expect(lines.some((line) => line.includes(uri) && line.includes('nobody is listening'))).toBe(true);
 });
 
@@ -256,7 +256,7 @@ const started = async (
     method: 'createSession',
     params: { channel: `ahp-session:/${name}`, provider: 'claude', config: { computer: '', permissionMode: 'plan' } },
   });
-  return `claude:/${name}`;
+  return `ahp-session:/${name}`;
 };
 
 it('starts a chat on the backend the plugin names, with that backend\'s config', async () => {

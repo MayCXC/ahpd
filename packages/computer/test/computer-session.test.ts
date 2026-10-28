@@ -361,7 +361,7 @@ it('allows a machine with no label, on every road', async () => {
   const uri = await due.due({
     provider: 'acp', text: 'hi', config: { computer: 'computer://box' }, owner: 'user:ana',
   }) as string;
-  expect(uri).toMatch(/^acp:\//);
+  expect(uri).toMatch(/^ahp-session:\//);
 });
 
 it('refuses the machine in a change made before the first turn, and announces nothing', async () => {

@@ -69,7 +69,7 @@ const started = async (agents: Agent[], together: ReturnType<typeof counting>) =
 
 const listed = async (client: { handle(request: unknown): Promise<unknown> }) =>
   await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
-    items: { resource: string; title: string }[];
+    items: { resource: string; title: string; provider: string }[];
   };
 
 describe('the backends are asked at once', () => {
@@ -101,10 +101,11 @@ describe('the backends are asked at once', () => {
     ], together);
 
     const answer = await listed(client);
-    // One row, under the first backend's name - which is the answer a host
-    // gave when it asked the backends in turn, and is what stops the same
+    // One row, whose provider is the first backend's - which is the answer a
+    // host gave when it asked the backends in turn, and is what stops the same
     // sessions listing under a different provider on a machine where the
     // faster store happened to be configured second.
-    expect(answer.items.map((one) => one.resource)).toEqual(['first-loaded:/shared']);
+    expect(answer.items.map((one) => one.resource)).toEqual(['ahp-session:/shared']);
+    expect(answer.items[0]?.provider).toBe('first-loaded');
   });
 });

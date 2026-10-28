@@ -42,7 +42,7 @@ import { AhpClient, RpcError } from '@microsoft/agent-host-protocol/client';
 import type { AhpTransport, Subscription, TransportFrame } from '@microsoft/agent-host-protocol/client';
 import { chatReducer, rootReducer, sessionReducer, SUPPORTED_PROTOCOL_VERSIONS } from '@microsoft/agent-host-protocol';
 import type { ChatAction, ChatState, RootAction, RootState, SessionAction, SessionState, StateAction } from '@microsoft/agent-host-protocol';
-import { idOf } from './catalog.js';
+import { idOf, uriFor } from './catalog.js';
 import { posixUriOf, uriOf } from '../resources/fileuri.js';
 import { machinePathOf } from '../machines/machine.js';
 import { subagentChatUri } from '../host/channels.js';
@@ -911,7 +911,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
     root = listed.result.snapshot?.state as RootState | undefined;
     void pumpRoot(listed.subscription);
     innerProvider = servedAs((root?.agents ?? []).map((agent) => agent.provider));
-    innerSession = `${innerProvider}:/${sessionId}`;
+    innerSession = uriFor(sessionId);
     innerChat = defaultChatFor(innerSession);
     /*
      * This host's trust in the session's folder, carried to the folder inside.

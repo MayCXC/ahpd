@@ -39,9 +39,9 @@ export function createRouting(ctx: HostContext): Routing {
   const { agents, claims, sessions, byChat, subagents, owners, names, homeId, fire } = ctx;
 
   /**
-   * `spaceOf`, and a scheme that names a provider here is a session's: a
-   * session is held as `<provider>:/<id>`, and one a backend keeps on disk
-   * has that name before anything has listed it.
+   * `spaceOf`, and a scheme that names a provider here is a session's: that was
+   * the name of every session before this host named one `ahp-session:`, an old
+   * session keeps it, and a client may still ask by it.
    */
   const spaceHere = (uri: string): Space | undefined => (agents.has(schemeOf(uri)) ? 'session' : spaceOf(uri));
 
@@ -58,11 +58,10 @@ export function createRouting(ctx: HostContext): Routing {
   /**
    * The name this host publishes a session under, by the id inside it.
    *
-   * `<provider>:/<id>`, the provider as the *scheme*, whether the session was
-   * created here, resumed or listed from a backend's disk: VS Code builds a
-   * session URI that way and reads the provider back off the scheme. The id is
-   * the identity and the scheme is whose it is, so any other spelling a client
-   * used, `ahp-session:/<id>` included, resolves through `heldAs`.
+   * The name the session's row kept, or `ahp-session:/<id>` for an id nothing
+   * has named. A provider's scheme is an old name: a session made before this
+   * host named one `ahp-session:` keeps it, and a client may ask by it. The id
+   * is the identity, so any spelling a client used resolves through `heldAs`.
    */
   const nameOf = (id: string): string => names.get(id) ?? uriFor(id);
   /**

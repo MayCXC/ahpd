@@ -1,5 +1,5 @@
 import { isAbsolute, join } from 'node:path';
-import { idOf } from '../sessions/catalog.js';
+import { idOf, uriFor } from '../sessions/catalog.js';
 import { localPath, uriOf } from '../resources/fileuri.js';
 import { frozenCopy } from '../utils/frozen.js';
 import { accepts } from '../utils/configvalues.js';
@@ -13,7 +13,7 @@ import { SESSION_TOOL_NAMES } from '../tools/session.js';
 import { bag, reason, str } from '../utils/values.js';
 import { groupOf } from '../access/users.js';
 import { enablementKeyOf } from '../plugins/enablement.js';
-import { ROOT, chatIdFor, chatUriFor, schemeOf } from './channels.js';
+import { ROOT, chatIdFor, chatUriFor } from './channels.js';
 import { NO_AGENT, need } from './common.js';
 import { preambleOf } from './preamble.js';
 import { startsRead } from './chatactions.js';
@@ -1026,9 +1026,17 @@ export function createTooling(ctx: HostContext): Tooling {
    * the same session say the same thing.
    */
   const reportedBy = (uri: string): Bag[] => {
-    const held = sessions.get(uri);
+    const name = heldAs(uri);
+    const held = sessions.get(name);
     const lead = held === undefined ? undefined : leadOf(held);
-    return lead === undefined ? about(schemeOf(heldAs(uri))).seeds as Bag[] : lead.customizations();
+    if (lead !== undefined) return lead.customizations();
+    // Nothing runs, so the answer is what the backend said it offers. The
+    // provider is the one the session's row kept, never the scheme of its URI:
+    // a new session is `ahp-session:/<id>` and its scheme says nothing about
+    // whose it is. A session no row claims belongs to no backend here, and
+    // reports nothing.
+    const provider = kept.provider(idOf(name)) ?? held?.agent.provider;
+    return provider === undefined ? [] : about(provider).seeds as Bag[];
   };
 
   /** Copy one client's plugins, answering one state per plugin and never throwing. */
@@ -1701,8 +1709,8 @@ export function createTooling(ctx: HostContext): Tooling {
       }
       const provider = asked.provider ?? sessions.get(uri)?.agent.provider ?? ctx.first?.provider;
       if (provider === undefined) throw new Error(NO_AGENT);
-      // Held under its provider's name, as a client's `createSession` is.
-      const made = `${provider}:/${crypto.randomUUID()}`;
+      // Named the way a client's `createSession` names a session.
+      const made = uriFor(crypto.randomUUID());
       const config: Record<string, unknown> = {
         ...(asked.isolation !== undefined ? { isolation: asked.isolation } : {}),
         ...(asked.model !== undefined ? { model: asked.model } : {}),

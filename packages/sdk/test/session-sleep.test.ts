@@ -142,7 +142,7 @@ async function serving(knobs: Knobs, options: Options = {}) {
   const open = async (name: string) => {
     const channel = `ahp-session:/${name}`;
     /** The session's own name, which the catalogue lists it by. */
-    const resource = `echo:/${name}`;
+    const resource = `ahp-session:/${name}`;
     await client.handle({ method: 'createSession', params: { channel, provider: 'echo' } });
     const opened = await client.handle({ method: 'subscribe', params: { channel } }) as {
       snapshot: { state: { defaultChat: string } };
@@ -313,7 +313,7 @@ it('sleeps the least recently used quiet session over the count limit', async ()
   expect(knobs.closed).toEqual(['one']);
   // The oldest turn start went, and every one of them is still listed.
   const rows = await listed();
-  expect(rows).toEqual(expect.arrayContaining([one.resource, two.resource, 'echo:/three']));
+  expect(rows).toEqual(expect.arrayContaining([one.resource, two.resource, 'ahp-session:/three']));
   expect(rows).toHaveLength(3);
 });
 

@@ -147,7 +147,7 @@ async function serving(world: { dir: string; kept: SessionStore; time: Clock; co
   const open = async (name: string) => {
     await client.handle({ method: 'createSession', params: { channel: `ahp-session:/${name}`, provider: 'echo' } });
     // The name the session is held by, which its chat record is kept under.
-    const channel = `echo:/${name}`;
+    const channel = `ahp-session:/${name}`;
     const chat = String((await read(channel)).defaultChat);
     await prompt(chat, `hello ${name}`);
     await until(async () => (await turnsOf(chat)).length === 1, `the first turn of ${name}`);

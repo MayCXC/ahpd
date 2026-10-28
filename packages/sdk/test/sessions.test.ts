@@ -906,6 +906,42 @@ it('keeps which harness a session runs on across a restart, and forgets it with 
   expect(memorySessions().provider('a')).toBeUndefined();
 });
 
+it('keeps the name a session is held under across a restart, and writes no file for a name alone', async () => {
+  const dir = join(root, 'sessions');
+  const store = fileSessions({ dir });
+  store.setProvider('a', 'claude');
+  store.setUri?.('a', 'ahp-session:/one');
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'a')).toEqual({ version: 1, id: 'a', provider: 'claude', uri: 'ahp-session:/one' });
+  // Read back by a second store on the same folder, which is what a restart is.
+  const second = fileSessions({ dir });
+  expect(second.uri?.('a')).toBe('ahp-session:/one');
+  expect(second.provider('a')).toBe('claude');
+  // A row that holds only a name says nothing: it is a session this host never
+  // ran, so it is no file.
+  second.setUri?.('lone', 'ahp-session:/lone');
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'lone')).toBeUndefined();
+  expect(second.uri?.('lone')).toBeUndefined();
+  second.setUri?.('a', undefined);
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'a')).toEqual({ version: 1, id: 'a', provider: 'claude' });
+});
+
+it('reads a file row whose name is not a string as a row with no name', async () => {
+  const dir = join(root, 'sessions');
+  const store = fileSessions({ dir });
+  store.setProvider('a', 'claude');
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  writeFileSync(join(dir, 'b.json'), JSON.stringify({ version: 1, id: 'b', provider: 'claude', uri: 7 }));
+  writeFileSync(join(dir, 'c.json'), JSON.stringify({ version: 1, id: 'c', provider: 'claude', uri: '' }));
+  const second = fileSessions({ dir });
+  expect(second.uri?.('b')).toBeUndefined();
+  expect(second.uri?.('c')).toBeUndefined();
+  expect(second.provider('b')).toBe('claude');
+  expect(second.provider('c')).toBe('claude');
+});
+
 it('keeps the folder a session works in across a restart, and reads a row without one as before', async () => {
   const dir = join(root, 'sessions');
   const store = fileSessions({ dir });
@@ -1456,19 +1492,19 @@ it('answers only the sessions the caller owns, when it asks for its own', async 
     method: 'listSessions',
     params: { channel: ROOT, _meta: { 'ahpd.owner': 'me' } },
   }) as Listing;
-  expect(mine.items.map((row) => row.resource).sort()).toEqual(['echo:/ana-one', 'echo:/ana-two']);
+  expect(mine.items.map((row) => row.resource).sort()).toEqual(['ahp-session:/ana-one', 'ahp-session:/ana-two']);
   const theirs = await benClient.handle({
     method: 'listSessions',
     params: { channel: ROOT, _meta: { 'ahpd.owner': 'me' } },
   }) as Listing;
-  expect(theirs.items.map((row) => row.resource)).toEqual(['echo:/ben-one']);
+  expect(theirs.items.map((row) => row.resource)).toEqual(['ahp-session:/ben-one']);
 });
 
 it('answers every session when no owner is asked for', async () => {
   const { anaClient } = await twoOwners();
   const listed = await anaClient.handle({ method: 'listSessions', params: { channel: ROOT } }) as Listing;
   expect(listed.items.map((row) => row.resource).sort())
-    .toEqual(['echo:/ana-one', 'echo:/ana-two', 'echo:/ben-one']);
+    .toEqual(['ahp-session:/ana-one', 'ahp-session:/ana-two', 'ahp-session:/ben-one']);
 });
 
 it('pages a filtered listing on the filtered rows', async () => {
@@ -1487,7 +1523,7 @@ it('pages a filtered listing on the filtered rows', async () => {
   // The second page is the other row she owns, and it is the last one.
   expect(second.nextCursor).toBeUndefined();
   const seen = [...first.items, ...second.items].map((row) => row.resource).sort();
-  expect(seen).toEqual(['echo:/ana-one', 'echo:/ana-two']);
+  expect(seen).toEqual(['ahp-session:/ana-one', 'ahp-session:/ana-two']);
 });
 
 it('refuses an owner filter that is not me', async () => {

@@ -1,5 +1,5 @@
 import type { ChangesetFile } from '@microsoft/agent-host-protocol';
-import { idOf, Status } from '../sessions/catalog.js';
+import { idOf, Status, uriFor } from '../sessions/catalog.js';
 import { localPath, uriOf } from '../resources/fileuri.js';
 import { chatUriFor } from './channels.js';
 import { startsRead } from './chatactions.js';
@@ -261,13 +261,13 @@ export function createChangesets(ctx: HostContext): Changesets {
   /**
    * A model on a session of its own, asked one question and let go of.
    *
-   * The session is named after its provider, works in the directory the
+   * The session is named `ahp-session:/<uuid>`, works in the directory the
    * changeset is about, is offered no tools at all and runs one turn. It is
    * disposed of once it has answered, so nothing of it is left - the answer is
    * the whole of what it was for.
    */
   const askModel = (provider: string, model: string, dir: string): ChangeWordsAsk => async (prompt: string): Promise<string | undefined> => {
-    const uri = `${provider}:/${crypto.randomUUID()}`;
+    const uri = uriFor(crypto.randomUUID());
     const turnId = crypto.randomUUID();
     let watching: ReturnType<typeof watchTurn> | undefined;
     try {

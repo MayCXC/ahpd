@@ -44,6 +44,11 @@ it('answers whether it keeps a session, from the store and by the id in the URI'
   const store = memorySessions();
   store.setConfig('one', { computer: 'computer://box' });
   store.setProvider('one', 'echo');
+  // The name this host holds it under, which a machine records.
+  store.setUri?.('one', 'ahp-session:/one');
+  // An old row, written before names were kept.
+  store.setConfig('two', { computer: 'computer://box' });
+  store.setProvider('two', 'echo');
   const context: LoaderContext = {
     path: '/tmp/plugin-host',
     paths: ['/tmp/plugin-host'],
@@ -54,13 +59,17 @@ it('answers whether it keeps a session, from the store and by the id in the URI'
     say: () => {},
   };
 
-  // The URI's scheme is the backend's own, so a session kept under another
-  // provider's id is not this one: the store is keyed by the id inside the
-  // URI, and a client that opens `echo:/one` after a session named `acp:/one`
-  // has gone writes the same row.
-  expect(await pluginHost('fixture', context, { sessions: () => store }).host.sessionKept('echo:/one')).toBe(true);
+  // The held name is what a machine's label records, so a session kept under
+  // another provider's id is not this one: the store is keyed by the id inside
+  // the URI, and a client that opens `echo:/one` after a session named
+  // `acp:/one` has gone writes the same row.
+  expect(await pluginHost('fixture', context, { sessions: () => store }).host.sessionKept('ahp-session:/one')).toBe(true);
+  expect(await pluginHost('fixture', context, { sessions: () => store }).host.sessionKept('echo:/one')).toBe(false);
   expect(await pluginHost('fixture', context, { sessions: () => store }).host.sessionKept('acp:/one')).toBe(false);
-  expect(await pluginHost('fixture', context, { sessions: () => store }).host.sessionKept('echo:/two')).toBe(false);
+  expect(await pluginHost('fixture', context, { sessions: () => store }).host.sessionKept('ahp-session:/two')).toBe(false);
+  // A row with no name keeps the check it had: its provider was its scheme.
+  expect(await pluginHost('fixture', context, { sessions: () => store }).host.sessionKept('echo:/two')).toBe(true);
+  expect(await pluginHost('fixture', context, { sessions: () => store }).host.sessionKept('ahp-session:/three')).toBe(false);
   // A host that keeps no sessions has no leftovers of its own to adopt, which
   // is an answer rather than a failure.
   expect(await pluginHost('fixture', context).host.sessionKept('echo:/one')).toBe(false);

@@ -133,13 +133,12 @@ async function anyone(host: ReturnType<typeof createHost>, notes: Notes = []): P
 /** The session every test below works in, as the client that starts it names it. */
 const SESSION = 'ahp-session:/one';
 /**
- * The same session as this host holds it: `<provider>:/<id>`.
+ * The same session as this host holds it: the URI the client sent.
  *
- * A client names a session and the host names its scheme, so the URI a backend
- * is started with is not the one the client sent - and the URI a backend is
+ * A session created on `ahp-session:` keeps that name, and the URI a backend is
  * started with is the only one `turns` knows a chat by.
  */
-const HELD = `${CHAT_PROVIDER}:/one`;
+const HELD = SESSION;
 const CHAT = 'ahp-chat:/one';
 
 /** A bot, a chat with it, and a client watching that chat. */

@@ -699,12 +699,12 @@ it('holds the before side a diff carried, which the file itself no longer has', 
   begin(client, chatUri, 't1', 'paint it');
   await until(() => ended(p, chatUri));
 
-  // The host gave the session the provider's own id, which is what its
+  // The host gave the session the name its client asked for, which is what its
   // changeset is keyed by. The `after` side is read off the file, so the row is
   // only whole once that read has landed.
   let row: ChangesetFile | undefined;
   await until(async () => {
-    row = (await changes.state?.(path, 'acp:/one', 'turn/t1'))?.files[0];
+    row = (await changes.state?.(path, 'ahp-session:/one', 'turn/t1'))?.files[0];
     return row?.edit.after !== undefined;
   });
   // The file on disk is what the agent left, so the before side can only be

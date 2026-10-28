@@ -55,7 +55,7 @@ it('reads a session spelt as a file or as a watch as what it is spelt as', async
     'file:///one: file:///one is not a session here',
     'file:///one: file:///one is not a session here',
     'file:///one/annotations: file:///one/annotations is not a session here',
-    'claude:/one: g may not session:rename here',
+    'ahp-session:/one: g may not session:rename here',
   ]);
 
   // The session and a watch under a name of its own both still work.
@@ -382,9 +382,9 @@ it('keeps every family of action to its own kind of channel', async () => {
   await admin.send('ahp-automations://', { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } });
   expect(admin.refused().slice(before)).toEqual([
     'ahp-terminal:/t: ahp-terminal:/t is not a session here',
-    'claude:/one: claude:/one is not a terminal here',
-    'claude:/one: claude:/one is not an automation channel here',
-    'claude:/one: claude:/one is not the root here',
+    'ahp-session:/one: claude:/one is not a terminal here',
+    'ahp-session:/one: claude:/one is not an automation channel here',
+    'ahp-session:/one: claude:/one is not the root here',
     'file:///x: file:///x is not an automation channel here',
     'ahp-automations://: ahp-automations:// is not a session here',
     'ahp-automations://: ahp-automations:// is not a session here',

@@ -867,7 +867,7 @@ it('announces the session\'s counts on the first subscribe in a directory outsid
   const { peer: p } = await firstOperations(dir);
   // The row is published under its provider's name, and its last move holds
   // the counts once the folder was read.
-  const counted = rowsMoved(p, 'echo:/s').at(-1);
+  const counted = rowsMoved(p, 'ahp-session:/s').at(-1);
   expect((counted?.changes as { files?: number } | undefined)?.files).toBe(1);
 });
 
@@ -932,7 +932,7 @@ it('lists a stored session outside the path with its counts, with no turn and no
   const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
     items: { resource: string; changes?: { files?: number } }[];
   };
-  expect(listed.items.find((one) => one.resource === 'echo:/stored')?.changes?.files).toBe(1);
+  expect(listed.items.find((one) => one.resource === 'ahp-session:/stored')?.changes?.files).toBe(1);
   expect(reads.get(dir)).toBe(1);
 });
 
@@ -946,8 +946,8 @@ it('tells a client already connected that a stored session\'s counts arrived', a
   const p = peer();
   const client = host.accept(p);
   await client.handle(hello);
-  await waitFor(() => rowsMoved(p, 'echo:/stored').length > 0);
-  const moved = rowsMoved(p, 'echo:/stored').at(-1);
+  await waitFor(() => rowsMoved(p, 'ahp-session:/stored').length > 0);
+  const moved = rowsMoved(p, 'ahp-session:/stored').at(-1);
   expect((moved?.changes as { files?: number } | undefined)?.files).toBe(1);
 });
 
@@ -982,8 +982,8 @@ it('tells a client watching a stored session\'s changeset that a commit cleared 
   const client = host.accept(p);
   await client.handle(hello);
   await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
-  const changeset = 'echo:/stored/changeset/uncommitted';
-  await client.handle({ method: 'subscribe', params: { channel: 'echo:/stored' } });
+  const changeset = 'ahp-session:/stored/changeset/uncommitted';
+  await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/stored' } });
   const answer = await client.handle({ method: 'subscribe', params: { channel: changeset } }) as {
     snapshot: { state: { files: unknown[] } };
   };
@@ -1004,7 +1004,7 @@ it('keeps a stored session\'s git watch while its changeset is watched, and clos
   const client = host.accept(peer());
   await client.handle(hello);
   await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
-  const changeset = 'echo:/stored/changeset/uncommitted';
+  const changeset = 'ahp-session:/stored/changeset/uncommitted';
   await client.handle({ method: 'subscribe', params: { channel: changeset } });
   await waitFor(() => calls.watches === 1 && calls.finished === calls.refresh);
 
@@ -1026,7 +1026,7 @@ it('keeps a stored session\'s git watch while its changeset is watched, and clos
  * tool calls would otherwise cost a `git diff` apiece.
  */
 
-const SESSION = 'echo:/s';
+const SESSION = 'ahp-session:/s';
 
 /** A repository in a folder of its own, so the trees cut beside it are cleaned with it. */
 const insideAProject = (): string => {

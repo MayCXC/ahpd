@@ -86,10 +86,11 @@ export const URI_KEYS = new Set([
  *
  * Not for its *scheme*: any scheme is taken. VS Code names a session after its
  * provider (`claude:/<uuid>`) and a terminal `agenthost-terminal:/<uuid>`, and
- * the protocol's own example is `ahp-session:/<uuid>`. For a session the
- * client names the id and the host names the scheme: `createSession` holds it
- * as `<provider>:/<id>` and the client's URI is an alias of that - decision
- * `a-session-is-held-under-its-providers-name`.
+ * the protocol's own example is `ahp-session:/<uuid>`. For a session the client
+ * names the id and the host names the URI: a new session is
+ * `ahp-session:/<id>`, a client's other spelling is an alias, and an old
+ * session keeps its `<provider>:/<id>` name - decision
+ * `a-new-session-is-held-under-the-protocols-uri`.
  */
 export const named = (uri: string, what: string): string => {
   const colon = uri.indexOf(':');

@@ -1,5 +1,5 @@
 import { INTERNAL_ERROR, INVALID_PARAMS, RpcError } from '../rpc.js';
-import { idOf } from '../sessions/catalog.js';
+import { idOf, uriFor } from '../sessions/catalog.js';
 import { computerId } from '../machines/computers.js';
 import { tail, older } from '../sessions/paging.js';
 import { namesOf } from '../usage/scopes.js';
@@ -8,7 +8,7 @@ import { bag, ownerFilter } from '../utils/values.js';
 import { configOf } from '../sessions/remotesession.js';
 import { CLOSING, NO_AGENT } from './common.js';
 import { mayUseAgent, ownershipOf } from '../agents/usable.js';
-import { chatIdFor, named, ROOT } from './channels.js';
+import { chatIdFor, named, ROOT, schemeOf } from './channels.js';
 import { preambleOf, withPreamble } from './preamble.js';
 import { startsRead } from './chatactions.js';
 import { SEEDS } from './sessionconfig.js';
@@ -156,7 +156,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
      * moved beside a session working somewhere else goes on where it was.
      */
     const folders = beside.get(chatUri) ?? held.additional;
-    const into = to ?? `${held.agent.provider}:/${own}`;
+    const into = to ?? uriFor(own);
     const dest = to === undefined ? undefined : sessions.get(to);
     if (to === undefined) {
       named(into, 'session');
@@ -924,11 +924,12 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
      * what makes the session addressable before this host has answered, so
      * the client can subscribe to it without a round trip in between.
      *
-     * Held as `<provider>:/<id>`, with the id from the client's URI, which
-     * is the name a listed session has and the one VS Code routes on. The
-     * client's own URI stays a name for it: `heldAs` resolves it and a
-     * connection subscribed under it is answered in its spelling -
-     * decision `a-session-is-held-under-its-providers-name`.
+     * Held under the name the decision gives: a session on `ahp-session:` or
+     * on the scheme of the provider the request names keeps that URI, and one
+     * on any other channel is held as `ahp-session:/<id>` with the client's
+     * URI an alias. `heldAs` resolves either spelling and a connection
+     * subscribed under the other is answered in its own -
+     * decision `a-new-session-is-held-under-the-protocols-uri`.
      */
     createSession: async (params) => {
       if (ctx.closed) throw new RpcError(INTERNAL_ERROR, CLOSING);
@@ -945,7 +946,8 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
         hasDirectory: options.users !== undefined,
       }))
         throw new RpcError(-32002, `No provider called ${provider}`);
-      const uri = `${provider}:/${idOf(given)}`;
+      const scheme = schemeOf(given);
+      const uri = scheme === 'ahp-session' || scheme === provider ? given : uriFor(idOf(given));
       unheld(uri, given);
       /*
        * Both names, claimed before anything is made for the session, so a

@@ -122,7 +122,7 @@ const turnEnded = (p: ReturnType<typeof peer>, chatUri: string): boolean => p.no
 it('brings the machine\'s work back when a turn ends, and exactly once', async () => {
   const said: string[] = [];
   const { client, peer: p, chatUri } = await running(machinePort(said));
-  await until(() => said.includes('enter box echo:/one'));
+  await until(() => said.includes('enter box ahp-session:/one'));
 
   client.handle({
     method: 'dispatchAction',
@@ -138,7 +138,7 @@ it('brings it back when a turn is cancelled', async () => {
   // A paced backend, so there is a turn left to cancel: one that answers at
   // once is over in the same tick the turn started in.
   const { client, chatUri } = await running(machinePort(said), undefined, undefined, 10);
-  await until(() => said.includes('enter box echo:/one'));
+  await until(() => said.includes('enter box ahp-session:/one'));
 
   client.handle({
     method: 'dispatchAction',
@@ -173,7 +173,7 @@ it('brings it back before a changeset operation runs, and not for a read of the 
   await until(() => said.includes('invoke commit'));
   // The order is the whole point: the host's git has the machine's commit on
   // the branch before anything acts on the folder it is checked out in.
-  expect(said).toEqual(['enter box echo:/one', 'bringBack box', 'invoke commit']);
+  expect(said).toEqual(['enter box ahp-session:/one', 'bringBack box', 'invoke commit']);
 });
 
 it('refuses an operation while the work waits in a ref of ahpd\'s own', async () => {
@@ -197,13 +197,13 @@ it('refuses an operation while the work waits in a ref of ahpd\'s own', async ()
 it('brings it back when the session leaves its machine, before the port is told it left', async () => {
   const said: string[] = [];
   const { client, uri } = await running(machinePort(said));
-  await until(() => said.includes('enter box echo:/one'));
+  await until(() => said.includes('enter box ahp-session:/one'));
 
   await client.handle({ method: 'disposeSession', params: { channel: uri } });
   // The name a port is told is the one this host holds the session by, so a
   // machine's work is asked for under the same name it was counted in under.
-  await until(() => said.includes('leave box echo:/one'));
-  expect(said).toEqual(['enter box echo:/one', 'bringBack box', 'leave box echo:/one']);
+  await until(() => said.includes('leave box ahp-session:/one'));
+  expect(said).toEqual(['enter box ahp-session:/one', 'bringBack box', 'leave box ahp-session:/one']);
 });
 
 it('logs a machine that could not be brought back, and the turn still ends', async () => {
@@ -211,7 +211,7 @@ it('logs a machine that could not be brought back, and the turn still ends', asy
   const lines: string[] = [];
   const port = machinePort(said, async () => { throw new Error('docker is not running'); });
   const { client, peer: p, chatUri } = await running(port, undefined, (line) => { lines.push(line); });
-  await until(() => said.includes('enter box echo:/one'));
+  await until(() => said.includes('enter box ahp-session:/one'));
 
   client.handle({
     method: 'dispatchAction',
@@ -221,7 +221,7 @@ it('logs a machine that could not be brought back, and the turn still ends', asy
   // A turn that could not have its work fetched is still a turn that ended:
   // the failure is a line a person reads, not a turn left running.
   expect(lines.some((one) => one
-    .includes('computers: bringing the work of box back for echo:/one failed: docker is not running')))
+    .includes('computers: bringing the work of box back for ahp-session:/one failed: docker is not running')))
     .toBe(true);
   await until(() => turnEnded(p, chatUri));
 });

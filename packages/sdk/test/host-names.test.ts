@@ -3,6 +3,7 @@ import {
   resetSdk, actions, claude, createHost, hello, machine, open,
   peer, sdk, serving, sessionQueries, settle, running,
 } from './support/host.js';
+import { memorySessions } from '../src/sessions/sessions.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
 
@@ -96,24 +97,23 @@ describe('a session a client names', () => {
     expect(sessionQueries()[0]?.options.sessionId).toBeUndefined();
   });
 
-  it('holds a session created under another scheme as its provider\'s, and answers its creator in its own', async () => {
+  it('holds a session created on the protocol\'s URI under that URI, and answers its creator in its own', async () => {
     const id = '39c2a6f0-8c1e-4d7a-9b6e-2f1d3c4b5a69';
     const p = peer();
     const client = serving('/home/softov').accept(p);
     await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
     await client.handle({ method: 'createSession', params: { channel: `ahp-session:/${id}`, provider: 'claude' } });
 
-    // Listed and announced the way it is after a restart, which is the name
-    // VS Code routes on.
+    // Listed and announced under the name it was made with.
     const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
       items: { resource: string }[];
     };
-    expect(listed.items.map((one) => one.resource)).toEqual([`claude:/${id}`]);
+    expect(listed.items.map((one) => one.resource)).toEqual([`ahp-session:/${id}`]);
     const added = p.notes.filter((n) => n.method === 'root/sessionAdded')
       .map((n) => (n.params as { summary: { resource: string } }).summary.resource);
-    expect(added).toEqual([`claude:/${id}`]);
+    expect(added).toEqual([`ahp-session:/${id}`]);
 
-    // The creator's own name is still the session, in its own spelling.
+    // The creator's own name is the session, in its own spelling.
     const opened = await client.handle({ method: 'subscribe', params: { channel: `ahp-session:/${id}` } }) as {
       snapshot: { resource: string; state: { defaultChat: string } };
     };
@@ -122,6 +122,57 @@ describe('a session a client names', () => {
       .toBe(`ahp-chat://default/${Buffer.from(`ahp-session:/${id}`, 'utf8').toString('base64url')}`);
     // And the backend is handed the id, never the scheme.
     expect(sessionQueries()[0]?.options.sessionId).toBe(id);
+  });
+
+  it('holds a session created on its provider\'s scheme under that scheme', async () => {
+    const id = '2c5b9d1e-7f4a-4c8b-9e3d-6a0f1b2c3d4e';
+    const client = serving('/home/softov').accept(peer());
+    await client.handle(hello(['0.9.0']));
+    await client.handle({ method: 'createSession', params: { channel: `claude:/${id}`, provider: 'claude' } });
+
+    const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
+      items: { resource: string }[];
+    };
+    expect(listed.items.map((one) => one.resource)).toEqual([`claude:/${id}`]);
+  });
+
+  it('holds a session created on another provider\'s scheme under the protocol\'s URI', async () => {
+    const id = '4e8d2f6a-1b3c-4d5e-8f7a-9b0c1d2e3f4a';
+    const client = serving('/home/softov').accept(peer());
+    await client.handle(hello(['0.9.0']));
+    await client.handle({ method: 'createSession', params: { channel: `pi:/${id}`, provider: 'claude' } });
+
+    const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
+      items: { resource: string }[];
+    };
+    expect(listed.items.map((one) => one.resource)).toEqual([`ahp-session:/${id}`]);
+    // The client's own spelling still reaches the session.
+    const opened = await client.handle({ method: 'subscribe', params: { channel: `pi:/${id}` } }) as {
+      snapshot: { resource: string };
+    };
+    expect(opened.snapshot.resource).toBe(`pi:/${id}`);
+  });
+
+  it('keeps the name each new session is held under in its row', async () => {
+    const store = memorySessions();
+    const host = createHost({
+      path: '/home/softov',
+      agents: [claude({ paths: ['/home/softov'] })],
+      ...machine(),
+      sessions: store,
+    });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+    const ids = ['one', 'two', 'three'];
+    await client.handle({ method: 'createSession', params: { channel: `ahp-session:/${ids[0]}`, provider: 'claude' } });
+    await client.handle({ method: 'createSession', params: { channel: `claude:/${ids[1]}`, provider: 'claude' } });
+    await client.handle({ method: 'createSession', params: { channel: `pi:/${ids[2]}`, provider: 'claude' } });
+
+    expect(ids.map((id) => store.uri?.(id))).toEqual([
+      `ahp-session:/${ids[0]}`,
+      `claude:/${ids[1]}`,
+      `ahp-session:/${ids[2]}`,
+    ]);
   });
 
   it('refuses a session whose id another provider already holds', async () => {
@@ -229,31 +280,29 @@ describe('a session asked for by the name a client computed', () => {
     expect(opened.snapshot.state.chats[0]?.resource).toBe(derived('claude:/row'));
   });
 
-  it('names a listed session after its provider', async () => {
+  it('names a listed session nobody here made as the protocol\'s URI', async () => {
     const client = await browsing();
     const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
       items: { resource: string }[];
     };
     /*
-     * One name, and the one the only other implementation computes. It builds
-     * a session URI as `<provider>:/<id>` both when it creates a session and
-     * when it reopens one it listed; publishing `ahp-session:/<id>` gave it
-     * two strings for the same session and it picked between them out of its
-     * own stored state - the same conversation, the same bytes behind it,
-     * drawing or not depending on which it happened to reach for.
+     * A row this host has no record of is a transcript it never ran, so it is
+     * named `ahp-session:/<id>` and nothing is written for it - the protocol's
+     * spelling, which is what VS Code publishes for a session it finds with no
+     * registration of its own.
      */
-    expect(listed.items[0]?.resource).toBe('claude:/row');
+    expect(listed.items[0]?.resource).toBe('ahp-session:/row');
   });
 
-  it('still answers to the name it used to publish', async () => {
+  it('still answers to the provider\'s scheme, the name it used to publish', async () => {
     const client = await browsing();
     await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
     // Only the id inside a session URI is ever read, so the older spelling is
     // still the same session - and anything holding one is not broken by this.
-    const opened = await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/row' } }) as {
+    const opened = await client.handle({ method: 'subscribe', params: { channel: 'claude:/row' } }) as {
       snapshot: { resource: string; state: { title: string } };
     };
-    expect(opened.snapshot.resource).toBe('ahp-session:/row');
+    expect(opened.snapshot.resource).toBe('claude:/row');
     expect(opened.snapshot.state.title).toBe('A real title');
   });
 
@@ -326,10 +375,62 @@ describe('a session asked for by the name a client computed', () => {
   });
 });
 
+describe('a session that runs no chat', () => {
+  it('reports the customizations of its stored provider, whatever its URI names', async () => {
+    const { echo } = await import('../../../examples/echo/agent.js');
+    const seed = { id: 'seed-one', type: 'plugin', name: 'A seeded plugin' };
+    const stamp = new Date(0).toISOString();
+    const kept = memorySessions();
+    kept.setProvider('one', 'slow');
+    kept.setUri?.('one', 'ahp-session:/one');
+    const host = createHost({
+      path: '/home/softov',
+      agents: [{
+        ...echo({ path: '/home/softov', pace: 0 }),
+        provider: 'slow',
+        displayName: 'Slow',
+        list: async () => [{ id: 'one', title: 'One', createdAt: stamp, modifiedAt: stamp, workingDirectories: ['file:///home/softov'] }],
+        transcript: async () => [],
+        probe: async () => ({ models: [], commands: [], customizations: [seed] }),
+      }],
+      ...machine(),
+      sessions: kept,
+    });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
+    await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/one' } });
+
+    // A client plugin makes the host say the session's customizations again,
+    // with no chat of the session running to ask.
+    client.handle({
+      method: 'dispatchAction',
+      params: {
+        channel: 'ahp-session:/one',
+        action: {
+          type: 'session/activeClientSet',
+          activeClient: { clientId: 'probe', tools: [], customizations: [{ type: 'plugin', uri: 'file:///plugin', nonce: 'n' }] },
+        },
+      },
+    });
+    await settle();
+
+    const changed = p.notes
+      .filter((n) => n.method === 'action')
+      .map((n) => (n.params as { action: { type: string; customizations?: unknown[] } }).action)
+      .filter((action) => action.type === 'session/customizationsChanged')
+      .at(-1);
+    // The scheme `ahp-session` names no provider: the row's provider does,
+    // and that is what the session reports.
+    expect(changed?.customizations).toContainEqual(seed);
+  });
+});
+
 /*
  * A session asked for by the name its creator used.
  *
- * A session created as `ahp-session:/<uuid>` is held as `claude:/<uuid>`, and
+ * A session created as `ahp-session:/<uuid>` is held under that same URI, and
  * the creator keeps talking to it under its own name: every request that names
  * the session resolves that name, and every snapshot answered on it is in that
  * spelling.
@@ -337,7 +438,7 @@ describe('a session asked for by the name a client computed', () => {
 describe('a session asked for by the name its creator used', () => {
   const id = '6b1f0e8a-3c2d-4e5f-8a9b-0c1d2e3f4a5b';
   const given = `ahp-session:/${id}`;
-  const held = `claude:/${id}`;
+  const held = given;
   const chatOfSession = (session: string) =>
     `ahp-chat://default/${Buffer.from(session, 'utf8').toString('base64url')}`;
 
@@ -447,7 +548,6 @@ describe('a session asked for by the name its creator used', () => {
     expect(result.type).toBe('replay');
     expect(result.actions.length).toBeGreaterThan(0);
     expect(result.actions.every((one) => one.channel === given)).toBe(true);
-    expect(JSON.stringify(result.actions)).not.toContain(held);
   });
 
   it('replays a chat and a pending approval on a reconnect in the creator\'s spelling, and leaves text alone', async () => {

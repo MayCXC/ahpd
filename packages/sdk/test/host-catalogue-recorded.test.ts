@@ -134,17 +134,17 @@ describe('a session in a folder no backend read', () => {
     // The first answer joins the boot listing, and starts the first refresh of
     // its own behind it.
     expect((await list(client)).items.map((one) => one.resource).sort())
-      .toEqual(['claude:/ember', 'claude:/one']);
+      .toEqual(['ahp-session:/one', 'claude:/ember']);
     await until(() => counted.lists >= 2);
     await settle(4);
 
     notes.length = 0;
     expect((await list(client)).items.map((one) => one.resource).sort())
-      .toEqual(['claude:/ember', 'claude:/one']);
+      .toEqual(['ahp-session:/one', 'claude:/ember']);
     await until(() => counted.lists >= 3);
     await settle(4);
     expect((await list(client)).items.map((one) => one.resource).sort())
-      .toEqual(['claude:/ember', 'claude:/one']);
+      .toEqual(['ahp-session:/one', 'claude:/ember']);
 
     // A row a refresh could not find again would be said gone, and a client
     // told that closes the session it is looking at.

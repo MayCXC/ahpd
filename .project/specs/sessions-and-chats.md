@@ -178,6 +178,37 @@ All backends are asked at the same time, and their answers are read in load orde
 An id that a session claims as one of its chats is not listed as a session.
 See [`code://packages/sdk/src/host/catalogue.ts`](../../packages/sdk/src/host/catalogue.ts).
 
+### A session is named when the host makes it
+
+WHEN a client creates a session on `ahp-session:/<id>`
+THEN the host holds it under that URI.
+
+WHEN a client creates a session on `<provider>:/<id>` and the request names that provider
+THEN the host holds it under that URI.
+
+WHEN a client creates a session on any other channel
+THEN the host holds it as `ahp-session:/<id>`
+AND the client's URI is an alias.
+
+WHEN the host makes a session by itself
+THEN its name is `ahp-session:/<uuid>`.
+
+WHEN the host lists a session that has a stored `uri`
+THEN it names the session from that URI.
+
+WHEN the host lists a session with a stored provider and no `uri`
+THEN it names the session `<provider>:/<id>`
+AND it stores that name.
+
+WHEN the host lists a session with no row
+THEN it names it `ahp-session:/<id>`
+AND it stores nothing for it.
+
+The store keeps the name as `uri`, so a restart publishes the name a session was made with.
+A client reads a session's provider from `SessionSummary.provider`, never from the URI's scheme.
+A session made before this change keeps its `<provider>:/<id>` name.
+See [`code://packages/sdk/src/host/sessionmethods.ts`](../../packages/sdk/src/host/sessionmethods.ts).
+
 ### The session store is one file per session
 
 WHEN the host keeps a session record

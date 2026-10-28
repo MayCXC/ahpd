@@ -40,7 +40,7 @@ describe('the catalogue', () => {
      * session, and the one it reached for came out of its own stored state -
      * so the same conversation drew or did not depending on which it picked.
      */
-    expect(listed.items[0]?.resource).toBe('claude:/new');
+    expect(listed.items[0]?.resource).toBe('ahp-session:/new');
   });
 
   it('counts the sessions it is running, not the transcripts beside them', async () => {
@@ -132,8 +132,8 @@ describe('the catalogue', () => {
     expect(seen).toHaveLength(120);
     expect(new Set(seen).size).toBe(120);
     // Most-recently-modified first, across the pages and not only inside one.
-    expect(seen[0]).toBe('claude:/s119');
-    expect(seen.at(-1)).toBe('claude:/s0');
+    expect(seen[0]).toBe('ahp-session:/s119');
+    expect(seen.at(-1)).toBe('ahp-session:/s0');
   });
 
   it('refuses a cursor it did not issue rather than starting over', async () => {
@@ -850,7 +850,7 @@ describe("a row lists the session's chats", () => {
     const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
       items: { resource: string; chats?: { resource: string; title: string; status: number }[]; defaultChat?: string }[];
     };
-    const row = listed.items.find((one) => one.resource === 'claude:/live');
+    const row = listed.items.find((one) => one.resource === 'ahp-session:/live');
     // A client listing sessions draws their chats from the rows rather than
     // subscribing to each session, so the list has to be on the row - and the
     // default chat is the first of them and named as well.
@@ -874,8 +874,8 @@ describe("a row lists the session's chats", () => {
     expect(status).toBe(Status.InProgress);
     // And the row agrees with the chat, which is what a client listing
     // sessions with no subscription to either reads.
-    expect(chatsOf(p, 'claude:/live').find((one) => one.resource === second)?.status).toBe(status);
-    expect(chatsOf(p, 'claude:/live').find((one) => one.resource === rowOf(p, 'claude:/live')?.defaultChat)?.status)
+    expect(chatsOf(p, 'ahp-session:/live').find((one) => one.resource === second)?.status).toBe(status);
+    expect(chatsOf(p, 'ahp-session:/live').find((one) => one.resource === rowOf(p, 'ahp-session:/live')?.defaultChat)?.status)
       .toBe(Status.Idle | Status.IsRead);
   });
 
@@ -883,20 +883,20 @@ describe("a row lists the session's chats", () => {
     const { client, peer: p, uri } = await running();
     const second = 'ahp-chat:/second';
     const said = () => p.notes.filter((n) => n.method === 'root/sessionSummaryChanged'
-      && (n.params as { session?: string }).session === 'claude:/live').length;
+      && (n.params as { session?: string }).session === 'ahp-session:/live').length;
 
     const before = said();
     await client.handle({ method: 'createChat', params: { channel: uri, chat: second } });
     expect(said()).toBeGreaterThan(before);
-    expect(resourcesOf(p, 'claude:/live')).toContain(second);
+    expect(resourcesOf(p, 'ahp-session:/live')).toContain(second);
 
     const opened = said();
     await client.handle({ method: 'disposeChat', params: { channel: second } });
     expect(said()).toBeGreaterThan(opened);
     // The list replaces the catalog, so the chat being gone from it is what
     // takes it out of a client's list.
-    expect(resourcesOf(p, 'claude:/live')).not.toContain(second);
-    expect(resourcesOf(p, 'claude:/live')).toEqual([rowOf(p, 'claude:/live')?.defaultChat]);
+    expect(resourcesOf(p, 'ahp-session:/live')).not.toContain(second);
+    expect(resourcesOf(p, 'ahp-session:/live')).toEqual([rowOf(p, 'ahp-session:/live')?.defaultChat]);
   });
 
   it('lists a worker chat read back from a backend, and read-only', async () => {
@@ -929,7 +929,7 @@ describe("a row lists the session's chats", () => {
     const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
       items: { resource: string; chats?: { resource: string; title: string; interactivity?: string }[] }[];
     };
-    const row = listed.items.find((one) => one.resource === 'claude:/restored');
+    const row = listed.items.find((one) => one.resource === 'ahp-session:/restored');
     const worker = row?.chats?.find((one) => one.interactivity === 'read-only');
     // A worker is a chat of its session even though no `Session` holds it, and
     // a client that never subscribes to it still has to see that it is there.
@@ -955,7 +955,7 @@ describe('one conversation, one row', () => {
       items: { resource: string }[];
     };
     // One row, under the provider's name the session is held by.
-    expect(listed.items.map((i) => i.resource)).toEqual(['claude:/live']);
+    expect(listed.items.map((i) => i.resource)).toEqual(['ahp-session:/live']);
   });
 });
 
@@ -1035,36 +1035,36 @@ describe('a summary that did not change', () => {
 
   it('sends one summary for however many calls moved nothing', async () => {
     const { client, peer: p } = await running();
-    await retitle(client, 'claude:/live', 'Paging');
-    expect(rowsMoved(p, 'claude:/live')).toHaveLength(1);
+    await retitle(client, 'ahp-session:/live', 'Paging');
+    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(1);
 
     // The same title again, and again: a rename a client makes twice, a
     // `rename_chat` the agent calls after its own, and the diff stat a
     // directory reports the same count for - all of it one row, unchanged.
-    await retitle(client, 'claude:/live', 'Paging');
-    await retitle(client, 'claude:/live', 'Paging');
-    expect(rowsMoved(p, 'claude:/live')).toHaveLength(1);
+    await retitle(client, 'ahp-session:/live', 'Paging');
+    await retitle(client, 'ahp-session:/live', 'Paging');
+    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(1);
   });
 
   it('sends again for a title that moved, and for an activity that moved', async () => {
     const { client, peer: p, chatUri } = await running();
-    await retitle(client, 'claude:/live', 'Paging');
-    expect(rowsMoved(p, 'claude:/live')).toHaveLength(1);
+    await retitle(client, 'ahp-session:/live', 'Paging');
+    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(1);
 
-    await retitle(client, 'claude:/live', 'Paging, again');
-    expect(rowsMoved(p, 'claude:/live')).toHaveLength(2);
-    expect(rowsMoved(p, 'claude:/live').at(-1)?.title).toBe('Paging, again');
+    await retitle(client, 'ahp-session:/live', 'Paging, again');
+    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(2);
+    expect(rowsMoved(p, 'ahp-session:/live').at(-1)?.title).toBe('Paging, again');
 
     // Which was the field that moved last in the measurements: a turn
     // starting and ending. Both have to get through, or the row a client
     // draws goes stale on exactly the session it is watching.
-    const said = rowsMoved(p, 'claude:/live').length;
+    const said = rowsMoved(p, 'ahp-session:/live').length;
     client.handle({
       method: 'dispatchAction',
       params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'read it' } } },
     });
     await settle();
-    const busy = rowsMoved(p, 'claude:/live');
+    const busy = rowsMoved(p, 'ahp-session:/live');
     expect(busy.length).toBeGreaterThan(said);
     expect(busy.at(-1)?.activity).toEqual(expect.any(String));
   });
@@ -1107,22 +1107,22 @@ describe('a summary that did not change', () => {
     // Reading the directory at boot is one read of it, and the summary that
     // comes out is the row's `status` and its counts and nothing else. Waited
     // for by the clock: a read on Windows outlasts a count of ticks.
-    await vi.waitFor(() => { expect(rowsMoved(p, 'claude:/old')).not.toHaveLength(0); }, { timeout: 3000 });
+    await vi.waitFor(() => { expect(rowsMoved(p, 'ahp-session:/old')).not.toHaveLength(0); }, { timeout: 3000 });
     await settle(12);
-    expect(rowsMoved(p, 'claude:/old')).toHaveLength(1);
-    expect(rowsMoved(p, 'claude:/old')[0]).toMatchObject({ status: 1, changes: { files: 4 } });
+    expect(rowsMoved(p, 'ahp-session:/old')).toHaveLength(1);
+    expect(rowsMoved(p, 'ahp-session:/old')[0]).toMatchObject({ status: 1, changes: { files: 4 } });
 
     // A client showing the row's diff re-reads the directory on every change
     // the source reports, which is the same answer for a working tree nobody
     // touched.
-    await client.handle({ method: 'subscribe', params: { channel: 'claude:/old/changeset/uncommitted' } });
+    await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/old/changeset/uncommitted' } });
     await vi.waitFor(() => { expect(counted_.watching).toHaveLength(1); }, { timeout: 3000 });
     await settle(12);
-    const read = rowsMoved(p, 'claude:/old').length;
+    const read = rowsMoved(p, 'ahp-session:/old').length;
     expect(counted_.watching).toHaveLength(1);
     counted_.watching[0]?.();
     await settle(12);
-    expect(rowsMoved(p, 'claude:/old')).toHaveLength(read);
+    expect(rowsMoved(p, 'ahp-session:/old')).toHaveLength(read);
 
     // And a flag is a change, so it goes out - once, and not twice.
     client.handle({
@@ -1130,11 +1130,11 @@ describe('a summary that did not change', () => {
       params: { channel: 'ahp-session:/old', action: { type: 'session/isReadChanged', isRead: true } },
     });
     await settle();
-    expect(rowsMoved(p, 'claude:/old')).toHaveLength(read + 1);
-    expect(rowsMoved(p, 'claude:/old').at(-1)?.status).toBe(33);
+    expect(rowsMoved(p, 'ahp-session:/old')).toHaveLength(read + 1);
+    expect(rowsMoved(p, 'ahp-session:/old').at(-1)?.status).toBe(33);
     counted_.watching[0]?.();
     await settle(12);
-    expect(rowsMoved(p, 'claude:/old')).toHaveLength(read + 1);
+    expect(rowsMoved(p, 'ahp-session:/old')).toHaveLength(read + 1);
   });
 
   it('sends zero counts for a listed row once its folder has no changes', async () => {
@@ -1149,16 +1149,16 @@ describe('a summary that did not change', () => {
     const client = host.accept(p);
     await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
     await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
-    await vi.waitFor(() => { expect(rowsMoved(p, 'claude:/old').at(-1)).toMatchObject({ changes: { files: 4 } }); }, { timeout: 3000 });
+    await vi.waitFor(() => { expect(rowsMoved(p, 'ahp-session:/old').at(-1)).toMatchObject({ changes: { files: 4 } }); }, { timeout: 3000 });
 
     // Everything committed: the folder has no changes, and the partial has to
     // say so, because a partial without `changes` keeps the client's old counts.
-    await client.handle({ method: 'subscribe', params: { channel: 'claude:/old/changeset/uncommitted' } });
+    await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/old/changeset/uncommitted' } });
     await vi.waitFor(() => { expect(counted_.watching).toHaveLength(1); }, { timeout: 3000 });
     files = 0;
     counted_.watching[0]?.();
     await vi.waitFor(() => {
-      expect(rowsMoved(p, 'claude:/old').at(-1)?.changes).toEqual({ files: 0, additions: 0, deletions: 0 });
+      expect(rowsMoved(p, 'ahp-session:/old').at(-1)?.changes).toEqual({ files: 0, additions: 0, deletions: 0 });
     }, { timeout: 3000 });
   });
 
@@ -1174,9 +1174,9 @@ describe('a summary that did not change', () => {
     try {
       const { client, peer: p, uri } = await running();
       await retitle(client, uri, 'Paging');
-      expect(rowsMoved(p, 'claude:/live')).toHaveLength(1);
+      expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(1);
       await retitle(client, uri, 'Paging');
-      expect(rowsMoved(p, 'claude:/live')).toHaveLength(1);
+      expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(1);
 
       await client.handle({ method: 'disposeSession', params: { channel: uri } });
       await settle();
@@ -1185,11 +1185,11 @@ describe('a summary that did not change', () => {
       // The same conversation, under the same name, with nothing on it - and a
       // client that watched it go has an empty row for it. The row it is sent
       // here is byte for byte the row the disposed session last sent.
-      const before = rowsMoved(p, 'claude:/live').length;
+      const before = rowsMoved(p, 'ahp-session:/live').length;
       await retitle(client, uri, 'Paging');
-      expect(rowsMoved(p, 'claude:/live')).toHaveLength(before + 1);
+      expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(before + 1);
       await retitle(client, uri, 'Paging');
-      expect(rowsMoved(p, 'claude:/live')).toHaveLength(before + 1);
+      expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(before + 1);
     }
     finally {
       vi.useRealTimers();
@@ -1313,8 +1313,8 @@ describe("a row's counts are the session's own", () => {
     await opened(client, 'one');
     await opened(client, 'two');
 
-    expect(countsOf(p, 'claude:/one')).toMatchObject({ files: 3 });
-    expect(countsOf(p, 'claude:/two')).toMatchObject({ files: 5 });
+    expect(countsOf(p, 'ahp-session:/one')).toMatchObject({ files: 3 });
+    expect(countsOf(p, 'ahp-session:/two')).toMatchObject({ files: 5 });
     // And the folder's own counts, which both of them are working in, are
     // neither session's: a row that took those would say 99 for each of them.
     expect(source.summary(FOLDER)).toMatchObject({ files: 99 });
@@ -1331,25 +1331,25 @@ describe("a row's counts are the session's own", () => {
     // Its own work is three files and its branch holds seven, and the row is
     // the branch: everything since the tree was cut is this session's work,
     // committed or not, since the directory is its own and nobody else's.
-    expect(countsOf(p, 'claude:/live')).toMatchObject({ files: 7 });
+    expect(countsOf(p, 'ahp-session:/live')).toMatchObject({ files: 7 });
   });
 
   it('moves a row with the work the turn it just ran did', async () => {
     let files = 2;
     const source = { ...ownWork({ live: 2 }), sessionSummary: async () => ({ files }) };
     const { client, peer: p, chatUri } = await turned({ changes: source }, 'live');
-    expect(countsOf(p, 'claude:/live')).toMatchObject({ files: 2 });
+    expect(countsOf(p, 'ahp-session:/live')).toMatchObject({ files: 2 });
 
     files = 6;
     await turn(client, chatUri, 't2');
-    expect(countsOf(p, 'claude:/live')).toMatchObject({ files: 6 });
+    expect(countsOf(p, 'ahp-session:/live')).toMatchObject({ files: 6 });
   });
 
   it('moves a row with the work a turn did before it failed', async () => {
     let files = 2;
     const source = { ...ownWork({ live: 2 }), sessionSummary: async () => ({ files }) };
     const { client, peer: p, chatUri } = await turned({ changes: source }, 'live');
-    expect(countsOf(p, 'claude:/live')).toMatchObject({ files: 2 });
+    expect(countsOf(p, 'ahp-session:/live')).toMatchObject({ files: 2 });
 
     // The turn wrote three more files and then the agent died. What it wrote
     // is still the session's work, so its row moves the way a finished turn's
@@ -1357,14 +1357,14 @@ describe("a row's counts are the session's own", () => {
     // work nobody can see.
     files = 5;
     await failed(client, chatUri, 't2');
-    expect(countsOf(p, 'claude:/live')).toMatchObject({ files: 5 });
+    expect(countsOf(p, 'ahp-session:/live')).toMatchObject({ files: 5 });
   });
 
   it("reads a row's counts back from the store after a restart", async () => {
     const dir = mkdtempSync(join(tmpdir(), 'ahpd-counts-'));
     made.push(dir);
     const first = await turned({ changes: ownWork({ live: 4 }), sessions: fileSessions({ dir }) }, 'live');
-    expect(countsOf(first.peer, 'claude:/live')).toMatchObject({ files: 4 });
+    expect(countsOf(first.peer, 'ahp-session:/live')).toMatchObject({ files: 4 });
     // Written after the change rather than during it, so the next store is
     // given a tick to have a file to read.
     await settle();
@@ -1383,7 +1383,7 @@ describe("a row's counts are the session's own", () => {
 
     // The folder says 99 of its own; what comes back is what the session was
     // measured at before the daemon stopped.
-    expect(listed.items.find((one) => one.resource === 'claude:/live')?.changes?.files).toBe(4);
+    expect(listed.items.find((one) => one.resource === 'ahp-session:/live')?.changes?.files).toBe(4);
   });
 });
 
@@ -1429,7 +1429,7 @@ describe("a listed row's _meta", () => {
     await client.handle(hello(['0.9.0']));
 
     const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as { items: Row[] };
-    expect(listed.items.find((one) => one.resource === 'slow:/one')?._meta).toEqual({ bot: 'motion', color: 'red' });
+    expect(listed.items.find((one) => one.resource === 'ahp-session:/one')?._meta).toEqual({ bot: 'motion', color: 'red' });
   });
 
   it("sends a row's _meta when the row is found rather than listed", async () => {
@@ -1444,7 +1444,7 @@ describe("a listed row's _meta", () => {
     await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
     await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
 
-    const opened = await client.handle({ method: 'subscribe', params: { channel: 'slow:/late' } }) as {
+    const opened = await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/late' } }) as {
       snapshot: { state: { _meta?: Record<string, unknown> } };
     };
     expect(opened.snapshot.state._meta).toEqual({ bot: 'motion' });
@@ -1452,7 +1452,7 @@ describe("a listed row's _meta", () => {
     const added = p.notes
       .filter((one) => one.method === 'root/sessionAdded')
       .map((one) => (one.params as { summary?: Row }).summary);
-    expect(added.find((one) => one?.resource === 'slow:/late')?._meta).toEqual({ bot: 'motion' });
+    expect(added.find((one) => one?.resource === 'ahp-session:/late')?._meta).toEqual({ bot: 'motion' });
   });
 
   it("lets the host's keys win a collision with a listed one", async () => {
@@ -1467,7 +1467,7 @@ describe("a listed row's _meta", () => {
     await client.handle(hello(['0.9.0']));
 
     const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as { items: Row[] };
-    expect(listed.items.find((one) => one.resource === 'slow:/one')?._meta)
+    expect(listed.items.find((one) => one.resource === 'ahp-session:/one')?._meta)
       .toEqual({ git: { branchName: 'main' }, bot: 'motion' });
   });
 });

@@ -129,7 +129,7 @@ it('hands the machine the host\'s branch before a turn starts, and not after', a
   const held = new Promise<void>((resolve) => { letGo = resolve; });
   const port = machinePort(said, async () => await held);
   const { client, peer: p, chatUri } = await running(port);
-  await until(() => said.includes('enter box echo:/one'));
+  await until(() => said.includes('enter box ahp-session:/one'));
 
   client.handle({
     method: 'dispatchAction',
@@ -161,13 +161,13 @@ it('hands it over after a changeset operation, and not for a read', async () => 
   await until(() => said.includes('follow box'));
   // After, and not before: what the operation left on the branch is what the
   // machine is handed, and the fetch that precedes it is the bring-back.
-  expect(said).toEqual(['enter box echo:/one', 'bringBack box', 'invoke commit', 'follow box']);
+  expect(said).toEqual(['enter box ahp-session:/one', 'bringBack box', 'invoke commit', 'follow box']);
 });
 
 it('does not hand it over for a message queued behind a running turn', async () => {
   const said: string[] = [];
   const { client, chatUri } = await running(machinePort(said));
-  await until(() => said.includes('enter box echo:/one'));
+  await until(() => said.includes('enter box ahp-session:/one'));
 
   await client.handle({
     method: 'dispatchAction',
@@ -186,7 +186,7 @@ it('starts the turn anyway where the machine could not be moved, and says so', a
   const lines: string[] = [];
   const port = machinePort(said, async () => { throw new Error('docker is not running'); });
   const { client, peer: p, chatUri } = await running(port, undefined, (line) => { lines.push(line); });
-  await until(() => said.includes('enter box echo:/one'));
+  await until(() => said.includes('enter box ahp-session:/one'));
 
   client.handle({
     method: 'dispatchAction',
@@ -196,7 +196,7 @@ it('starts the turn anyway where the machine could not be moved, and says so', a
   // A machine that could not be moved costs one turn on a branch that is
   // behind, which is what it was before this existed: refusing the turn would
   // cost the work, and the fetch at the turn's end still brings it back.
-  expect(lines.some((one) => one.includes('computers: setting box to the host\'s branch for echo:/one failed: docker is not running'))).toBe(true);
+  expect(lines.some((one) => one.includes('computers: setting box to the host\'s branch for ahp-session:/one failed: docker is not running'))).toBe(true);
 });
 
 it('asks for nothing where the session is in no machine', async () => {
