@@ -929,6 +929,42 @@ const made = await at.createChat(at.session, { provider: 'cofold', config: { voi
 
 A chat a tool opens is counted against the session tree the tool runs in, and one a plugin starts from a wake is counted against nothing, because there is no turn behind it.
 
+### Showing a canvas on a chat
+
+A canvas is a page a plugin draws on the chat a person is reading. The host serves it as the protocol's canvas channel. The chat's state lists its canvases, and each one is a channel of its own holding one `CanvasState`.
+
+| Call | Answers | What it does |
+| --- | --- | --- |
+| `openCanvas(chat, state)` | the canvas channel, `ahp-canvas:/<base64url(chat)>/<uuid>` | Opens a canvas on a chat this host has live, or draws an open one again |
+| `updateCanvas(resource, state)` | nothing | Replaces the state of a canvas this plugin opened, whole |
+| `closeCanvas(resource)` | nothing | Takes a canvas off its chat; a resource that is gone does nothing |
+
+```ts
+const state = {
+  instanceId: 'board-1',
+  extensionId: 'com.acme.boards',
+  canvasId: 'board',
+  title: 'Board',
+  status: 'ready',
+  url: 'https://boards.acme.test/live/board-1',
+} satisfies CanvasState;
+const canvas = host.openCanvas(chat, state);
+host.updateCanvas(canvas, { ...state, status: 'saving' });
+host.closeCanvas(canvas);
+```
+
+The state is your whole claim about the canvas, and the host draws it. `instanceId`, `extensionId` and `canvasId` are required and non-empty, and `title`, `status` and `url` are as the protocol declares them. An `open` under an `instanceId` that is already open on that chat replaces its state and answers the same channel. A canvas that is redrawn is therefore not a second one.
+
+A canvas belongs to the plugin that opened it. Only that plugin can update or close it, and a second plugin naming another's canvas is refused. A client cannot close one either. A canvas is the plugin's claim about a page it serves, and a client that hid one would leave the plugin drawing to nobody.
+
+`url` is one absolute http(s) URL with a host, or absent. Absent is a canvas with nothing to show. It is what a plugin says while its source is down or before it is ready, and clearing `url` is the plugin's to do. The host cannot see when something outside it went away. A URL that is not a page is refused, and the refusal names the rule rather than the URL. The host never writes a canvas URL to its log.
+
+Ask whether a remote person can reach the URL you give. A URL on `localhost` reaches a client on that machine and no other. A plugin that must draw for a remote window therefore serves the page through [its own route](#a-route-authenticates-its-own-caller) or a public address.
+
+The three calls are refused with `Canvases are disabled.` until a window turns `canvasesEnabled` on, and it is off by default. Turning it off leaves open canvases open and refuses the three calls after it. An unload still closes the canvases a plugin had open. That is the host taking back what the plugin drew, rather than the plugin asking.
+
+A canvas lives as long as its chat. A chat that closes, is removed or moves to another session takes its canvases with it. A subscription to one answers `-32008` "Canvas is no longer available", and nothing survives a restart.
+
 ### Writing a usage record
 
 `host.recordUsage(entry)` keeps one `UsageEntry` in the host's `usage` port: a model call, whose `kind` is `model`, or a stretch a computer was up, whose `kind` is `computer`. It is how a plugin says what its work cost, and the store is the host's own, so every record a daemon keeps lands in one place whichever plugin wrote it.

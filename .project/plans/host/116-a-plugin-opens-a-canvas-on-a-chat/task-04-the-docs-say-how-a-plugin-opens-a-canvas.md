@@ -1,6 +1,6 @@
 ---
 title: The docs say how a plugin opens a canvas
-status: todo
+status: implemented
 depends:
   - task-03-a-plugin-opens-a-canvas.md
 layer: "docs"
@@ -40,3 +40,8 @@ The AHP docs say that this host serves the canvas channel to a connection at `0.
 - Run `pnpm docs:build` and expect no dead link.
 
 ## Resume
+
+- **Done so far:** built. `docs/plugins/PLUGINS.md` has a *Showing a canvas on a chat* section with a row for each of the three calls, and it says the state a plugin gives, the resource it gets, the owner rule, the `url` rules, that the plugin clears `url` when its source stops, that a loopback URL does not reach a remote client, and that only a plugin closes a canvas. `docs/sdk/AHP.md` has `chat/canvasesChanged` (the `chat/*` table is 35 of 35), a `canvas/*` section for `canvas/stateChanged`, and the `0.10.0` gate. `docs/sdk/CHATS.md` has a *Canvases* section and the term. `docs/sdk/HOST.md` says six VS Code keys are read and names `canvasesEnabled`. `UPSTREAM.md` ticks the Pass 7 canvas box and names this plan.
+- **Next action:** none. Every task is implemented, and `implemented.md` is written.
+- **Open questions:** none.
+- **Watch out for:** the plan put the keys this host reads in `AHP.md`, but that list is in `HOST.md` *Root config*, so the change went there and `AHP.md` links to it. The three calls are not `register*` methods, so their rows are in a table of the new section rather than in the register table, where every row is a registration. The `chat/*` heading keeps the file's em dash, as its siblings do.
