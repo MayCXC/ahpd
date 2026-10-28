@@ -1,6 +1,6 @@
 ---
 title: A prompt sent while a new CLI starts reaches that CLI
-status: planned
+status: done
 depends: []
 layer: "agent-claude"
 refs:
@@ -37,4 +37,7 @@ The reader of the CLI it replaced takes nothing and ends.
 
 ## Resume
 
-Not started.
+Done 2026-10-28.
+Both cases failed on the code before this task: the new CLI read nothing, and the replaced CLI's reader took the prompt and dropped it.
+Both pass, with the agent-claude cases that read a query's prompt or replace a CLI.
+The agent-claude, sdk and server suites passed at one worker, once, with this change and the plan beside it that makes a turn wait for its tools.

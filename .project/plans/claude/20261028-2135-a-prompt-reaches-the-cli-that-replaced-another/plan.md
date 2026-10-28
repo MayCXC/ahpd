@@ -1,7 +1,7 @@
 ---
 title: A prompt sent while a new Claude CLI starts reaches that CLI
 domain: claude
-status: planned
+status: built
 priority: high
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -78,7 +78,7 @@ turn begins -> refreshPreset or switchAgent: close the CLI, startQuery a new one
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - a-prompt-reaches-the-new-cli](task-01-a-prompt-reaches-the-new-cli.md) | planned | - |
+| [01 - a-prompt-reaches-the-new-cli](task-01-a-prompt-reaches-the-new-cli.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -86,14 +86,14 @@ turn begins -> refreshPreset or switchAgent: close the CLI, startQuery a new one
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** task 01.
+- **Done so far:** task 01, 2026-10-28; [implemented.md](implemented.md) says what exists.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** every path that replaces a CLI goes through `startQuery`; a path that built a query another way would read beside the current one.
 
 ## Final verification checklist
 
-- [ ] Each new case fails before its task and passes after it.
-- [ ] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and `pnpm schema` pass.
-- [ ] The agent-claude, sdk and server suites pass at one worker, once, after the change.
-- [ ] The spec has the scenario and the changelog the entry.
+- [x] Each new case fails before its task and passes after it.
+- [x] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and `pnpm schema` pass.
+- [x] The agent-claude, sdk and server suites pass at one worker, once, after the change.
+- [x] The spec has the scenario and the changelog the entry.
