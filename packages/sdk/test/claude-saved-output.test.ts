@@ -1,5 +1,5 @@
 import { WAIT_MS } from '../../../tools/wait.ts';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -26,21 +26,14 @@ vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/c
 
 beforeEach(resetSdk);
 
-let made: string[] = [];
-/** Every host a case made, closed before its folder goes: Windows will not remove a folder a host still watches. */
+/** Every host a case made, closed after it. Its folder stays for the run's own removal, `tools/test-tmpdir.ts`. */
 let hosts: { close(): Promise<void> }[] = [];
 afterEach(async () => {
   for (const host of hosts) await host.close();
   hosts = [];
-  for (const dir of made) rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
-  made = [];
 });
 
-const temp = (): string => {
-  const dir = mkdtempSync(join(tmpdir(), 'ahpd-claude-saved-'));
-  made.push(dir);
-  return dir;
-};
+const temp = (): string => mkdtempSync(join(tmpdir(), 'ahpd-claude-saved-'));
 
 type Client = { handle(request: unknown): Promise<unknown> };
 
