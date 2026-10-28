@@ -5,6 +5,8 @@ status: active
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
+requires:
+  - plans/host/20261028-1303-a-chat-truncated-whole-starts-over/plan.md
 changes:
   - specs/agent-backends.md
 refs:
@@ -82,6 +84,8 @@ turn begins -> refreshPreset finds the conversation's login -> query env CLAUDE_
 - Nothing reads `rate_limit_event` or the `error` of an assistant frame.
 - A turn read back after a restart has no entry in `ends`.
   So a refusal on the turn after it has no cut point, until the backend records that entry at the transcript read.
+- A conversation refused on its first turn has no entry before its prompt.
+  The plan [A chat truncated whole starts over](../../host/20261028-1303-a-chat-truncated-whole-starts-over/plan.md) gives such a conversation its start-over.
 
 ## Answers
 
@@ -97,8 +101,9 @@ turn begins -> refreshPreset finds the conversation's login -> query env CLAUDE_
 | One record of cooldowns serves every session of an agent, in memory, and a later mark never shortens an earlier one. | meridian `routing.ts` L265-L307 | 02 |
 | A turn that showed nothing before its refusal runs again on the next login it has not tried: a new CLI resumes at the last entry of the turn before it, and the prompt goes out again under a new uuid. | meridian `server.ts` L1845-L1860; [code://packages/agent-claude/src/session/query.ts#L507](../../../../packages/agent-claude/src/session/query.ts#L507); [code://packages/agent-claude/src/session/turns.ts#L88-L92](../../../../packages/agent-claude/src/session/turns.ts#L88-L92) | 02 |
 | The cut point is the entry `ends` holds for the last turn before the refused one that ran on the CLI, which a `!` command's turn does not. | [code://packages/agent-claude/src/session/query.ts#L545](../../../../packages/agent-claude/src/session/query.ts#L545) | 02 |
-| A turn that showed something before its refusal, or that has no cut point, fails as it does today, and the next turn starts on the next login. | meridian's spec, "No failover after content streams"; the measurement in *Searches performed* | 02 |
-| A refusal on a conversation's first turn has no cut point: no entry comes before its prompt, and the CLI refuses the id again. | The measurement in *Searches performed* | 02 |
+| A turn that showed something before its refusal fails as it does today, and the next turn starts on the next login. | meridian's spec, "No failover after content streams" | 02 |
+| A turn whose turn before it on the CLI has no entry in `ends`, one read back after a restart, fails the same way, and never starts the conversation over. | `(defaulted: the conversation holds the turns before the refused one, and only a cut keeps them)`; the measurement in *Searches performed* | 02 |
+| A conversation refused on its first turn starts over under its id: the CLI stops, the SDK's `deleteSession` removes the conversation, and a new CLI starts with no resume. Only a conversation this process started on this host does, since a resumed one holds more and a machine's files are not this host's. | Aaron, 2026-10-28: "seems like conversations should just have a zero point before any turns to fall back to in that case?"; the reference's `_removeAllTurns`; the plan it requires | 02 |
 | When every login cools down or was tried, the turn waits until the earliest cooldown ends, says until when, and then tries again; a cancel ends the wait. | Aaron, 2026-10-28: "retry all the accounts with backoff"; meridian `server.ts` L2114-L2122 | 02 |
 | `authentication_failed` and every other error fail the turn as they do today, and move nothing. | meridian `errors.ts` L658-L669 | 02 |
 
