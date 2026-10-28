@@ -68,6 +68,14 @@ export interface ClaudeSessionOptions extends SessionOptions {
    */
   workerStop?: 'worker' | 'session';
   /**
+   * Where each turn of `seed` ended, in the CLI's own names, by turn id.
+   *
+   * What the read of the transcript named for the conversation this session
+   * resumes: the entry a fork of a turn copies through and a rewind to it
+   * keeps. A turn this session watches run names its own.
+   */
+  seedEnds?: ReadonlyMap<string, string>;
+  /**
    * The declared options this backend's variant holds.
    *
    * Read where the query is built, so a preset and a session go through the

@@ -144,6 +144,26 @@ THEN their files go with them.
 WHEN a fork copies local turns
 THEN the new chat keeps them.
 
+### A turn read back is a point to fork and cut at
+
+WHEN the Claude backend reads a chat back from its transcript
+THEN it names each turn's last prompt, tool result or answer entry
+AND a session that resumes that conversation answers `forkPoint` and `endPoint` with it.
+
+WHEN a session forks that conversation
+THEN it starts without those entries, because a fork is a new conversation.
+
+The reason: a session names a turn's end from its own CLI's frames, and the CLI that sent a turn read back is gone.
+See [`code://packages/agent-claude/src/transcript.ts`](../../packages/agent-claude/src/transcript.ts).
+
+### A new chat wakes a sleeping session
+
+WHEN a client makes a chat in a session asleep in the catalogue, a fork among them
+THEN the host wakes the session and holds it until the chat is made
+AND it makes the chat in the live session.
+
+See [`code://packages/sdk/src/host/sessionmethods.ts`](../../packages/sdk/src/host/sessionmethods.ts).
+
 ### A chat truncated whole starts over
 
 WHEN a client sends `chat/truncated` with no `turnId`
@@ -251,7 +271,14 @@ AND the row's recorded provider answered
 AND the row's folder was among the folders read
 THEN the host removes a row that no backend listed.
 
+WHEN the host keeps local turns for such a row
+THEN it keeps the row and lists it from those turns
+AND the row's title is the default chat's stored title, or else the first turn's text
+AND the row's dates are the first turn's start and the last turn's end
+AND a read of a chat whose backend holds no transcript answers the chat's local turns.
+
 The reason: a backend that did not answer, or a folder not read, says nothing about a row.
+A row whose turns the host keeps is a row the host can open again.
 See [`code://packages/sdk/src/sessions/sessions.ts`](../../packages/sdk/src/sessions/sessions.ts).
 
 ### A closed chat is hidden or deleted

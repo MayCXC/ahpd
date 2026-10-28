@@ -472,10 +472,11 @@ export interface Session {
    * backend may fork and may not truncate, and one that can do both is
    * free to answer the two from different entries.
    *
-   * Optional and, like `forkPoint`, only ever answered for a turn this process
-   * watched run: the backend's names for a turn read back off a transcript are
-   * not recorded, so a session resumed from disk can be truncated no further
-   * back than its own first turn.
+   * Optional and, like `forkPoint`, answered for a turn whose last entry the
+   * backend can name: one this process watched run, or one the backend named
+   * when it read the transcript the session resumes. A turn read back by a
+   * backend that names none has no point, and such a session can be truncated
+   * no further back than its own first turn.
    */
   endPoint?(turnId: string): string | undefined;
   /** Skills, commands, subagents and MCP servers this session was given. */

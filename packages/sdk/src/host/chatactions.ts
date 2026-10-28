@@ -1573,9 +1573,10 @@ export function chatAction(
         break;
       }
       // The backend's own name for the end of that turn. Absent for a
-      // turn this process did not watch run - one read back off a
-      // transcript - and a rewind to a point the backend cannot be told
-      // is the half of this that would silently not happen.
+      // turn the backend cannot name the end of, such as one read back by
+      // a backend that names only the turns it watched, and a rewind to a
+      // point the backend cannot be told is the half of this that would
+      // silently not happen.
       const point = session.endPoint?.(concrete);
       const started = session.agentId();
       const owner = sessions.get(session.uri);
