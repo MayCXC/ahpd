@@ -349,7 +349,7 @@ describe('paging a long history', () => {
     expect(chat.turnsNextCursor).toBe('70');
   });
 
-  it.fails('gives every turn of a live chat when no view is named', async () => {
+  it('gives every turn of a live chat when no view is named', async () => {
     const { client } = await opened();
     await client.handle({
       method: 'dispatchAction',
@@ -364,6 +364,27 @@ describe('paging a long history', () => {
     }).snapshot.state;
     expect(chat.turns).toHaveLength(121);
     expect(chat.turnsNextCursor).toBeUndefined();
+  });
+
+  it('gives a live chat the window its view names', async () => {
+    const { client } = await opened();
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: 'ahp-chat:/long', action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'say ok' } } },
+    });
+    await settle(6);
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+
+    // The backend gives every turn, so the host is the one that cuts.
+    const chat = (await client.handle({
+      method: 'subscribe',
+      params: { channel: 'ahp-chat:/long', view: { turns: 20 } },
+    }) as {
+      snapshot: { state: { turns: { message: { text: string } }[]; turnsNextCursor?: string } };
+    }).snapshot.state;
+    expect(chat.turns).toHaveLength(20);
+    expect(chat.turns[19]?.message.text).toBe('say ok');
+    expect(chat.turnsNextCursor).toBe('101');
   });
 
   it('sends the page to everyone watching, not to the one who asked', async () => {
