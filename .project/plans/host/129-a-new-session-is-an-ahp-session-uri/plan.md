@@ -1,7 +1,7 @@
 ---
 title: A new session is an `ahp-session:` URI
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-27
 revalidated: 2026-10-27
