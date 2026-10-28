@@ -208,7 +208,7 @@ describe('a command typed into the conversation', () => {
     const client = host.accept(p);
     await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
     await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
-    const chatUri = `ahp-chat://default/${Buffer.from('claude:/on-disk', 'utf8').toString('base64url')}`;
+    const chatUri = `ahp-chat://default/${Buffer.from('ahp-session:/on-disk', 'utf8').toString('base64url')}`;
     await client.handle({ method: 'subscribe', params: { channel: chatUri } });
     client.handle({
       method: 'dispatchAction',
@@ -612,7 +612,7 @@ describe('a terminal a backend opens', () => {
     // both know about it.
     expect(listed()).toHaveLength(1);
     expect(listed()[0]?.resource).toMatch(/^ahp-terminal:\//);
-    expect(listed()[0]?.claim).toMatchObject({ kind: 'session', session: 'claude:/shells' });
+    expect(listed()[0]?.claim).toMatchObject({ kind: 'session', session: 'ahp-session:/shells' });
     expect(opened.uri).toBe(listed()[0]?.resource);
 
     opened.release();

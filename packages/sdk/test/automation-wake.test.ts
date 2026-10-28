@@ -32,7 +32,7 @@ const MINE = 'ahp-automation:/mine';
 const HERS = 'ahp-automation:/hers';
 /** The channel a person presses Run on, and the session the gated cases drive. */
 const AUTOMATIONS = 'ahp-automations://';
-const LIVE = 'claude:/live';
+const LIVE = 'ahp-session:/live';
 
 /** The message a person wrote, naming every placeholder this host fills. */
 const MESSAGE = 'Look at {{session}} ({{sessionTitle}}): {{event}} x{{count}} at {{at}} via {{trigger}}';
@@ -222,7 +222,7 @@ it('starts a run with a trigger origin when the rule matches', async () => {
   });
   expect(run['automation']).toBe(AUTOMATION);
   // And it ran something, rather than only being recorded.
-  expect(String(run['primarySession'])).toMatch(/^claude:\//);
+  expect(String(run['primarySession'])).toMatch(/^ahp-session:\//);
 });
 
 it('fills the placeholders and adds the summary block', async () => {
@@ -244,7 +244,7 @@ it('fills the placeholders and adds the summary block', async () => {
   const event = bag(bag(bag(runsOf(store)[0])['origin'])['event']);
   const session = String(event['session']);
   const at = String(event['at']);
-  expect(session).toMatch(/^claude:\//);
+  expect(session).toMatch(/^ahp-session:\//);
   // Every placeholder filled, and the block after the message - which is where
   // a run that names nothing at all still learns what it is answering.
   expect(sdk.said.at(-1)).toBe(
@@ -557,7 +557,7 @@ it('stops a run, and the wake waiting behind it goes with it', async () => {
   });
   await until(() => String(bag(newest(store)['lifecycle'])['status']) === 'cancelled', 'the run to be stopped');
   // The run was stopped in its session's turn rather than only in the store.
-  expect(newest(store)['primarySession']).toMatch(/^claude:\//);
+  expect(newest(store)['primarySession']).toMatch(/^ahp-session:\//);
 
   // And the wake goes with it. A stop is stopping the work, and an automation
   // that starts its next run the moment it was stopped is the opposite of what

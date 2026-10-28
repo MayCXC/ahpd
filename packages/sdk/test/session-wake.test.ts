@@ -158,7 +158,7 @@ async function serving(counts: Counts, automations?: AutomationStore) {
     const chat = String((await read(channel)).defaultChat);
     await prompt(chat, `hello ${name}`);
     await until(async () => (await turnsOf(chat)).length === 1, `the first turn of ${name}`);
-    return { channel, resource: `echo:/${name}`, chat };
+    return { channel, resource: `ahp-session:/${name}`, chat };
   };
 
   /** Stop watching a session and its chat, and let the sweep sleep it. */

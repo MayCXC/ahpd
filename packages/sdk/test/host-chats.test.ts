@@ -856,11 +856,11 @@ describe('more than one chat in a session', () => {
        * under, so a listing of that backend offers it - and a row for it would
        * be a session of its own, opening onto a chat nobody started.
        */
-      expect(listed.items.map((one) => one.resource)).toEqual(['echo:/live']);
+      expect(listed.items.map((one) => one.resource)).toEqual(['ahp-session:/live']);
 
       // The session lists both chats, and opening the peer one answers its own
       // turns rather than the session's. Read only: nothing is started here.
-      const session = await opened(second.client, 'echo:/live');
+      const session = await opened(second.client, 'ahp-session:/live');
       expect(session.state.chats?.map((one) => one.resource)).toEqual([session.state.defaultChat, PEER]);
       expect(said(await opened(second.client, PEER))).toEqual(['second']);
 
@@ -944,7 +944,7 @@ describe('more than one chat in a session', () => {
       const before = starts.length;
 
       const second = await hostAt(dir, agent);
-      await send(second.client, 'echo:/live', 't1', 'again');
+      await send(second.client, 'ahp-session:/live', 't1', 'again');
       // One start, and it is the chat that is the session: a chat somebody
       // closed is not one the session comes back with.
       expect(resuming(starts.slice(before))).toEqual([{ chatId: undefined, resume: 'live', first: 'first' }]);
@@ -986,7 +986,7 @@ describe('more than one chat in a session', () => {
       expect(said(await opened(second.client, PEER))).toEqual(['second', 'third']);
 
       // And the session lists that chat alone: a closed one is not one it has.
-      const session = await opened(second.client, 'echo:/live');
+      const session = await opened(second.client, 'ahp-session:/live');
       expect(session.state.defaultChat).toBe(PEER);
       expect(session.state.chats?.map((one) => one.resource)).toEqual([PEER]);
     }
@@ -1302,7 +1302,7 @@ describe('more than one chat in a session', () => {
        * one it landed in, so it has to be a name the host answers about - the
        * same one a catalogue row offers.
        */
-      expect(answer.session).toBe('echo:/live');
+      expect(answer.session).toBe('ahp-session:/live');
       const published = listed(await opened(client, answer.session));
       expect(published).toHaveLength(4);
       expect(published.indexOf(THIRD)).toBeLessThan(published.indexOf(PEER));
@@ -1449,7 +1449,7 @@ describe('more than one chat in a session', () => {
        * the one they were opened in.
        */
       const second = await hostAt(dir, agent);
-      const session = await opened(second.client, 'echo:/live');
+      const session = await opened(second.client, 'ahp-session:/live');
       expect(listed(session)).toEqual([session.state.defaultChat, THIRD, PEER]);
     }
     finally {
@@ -1509,11 +1509,11 @@ describe('more than one chat in a session', () => {
        */
       expect(resuming(starts.slice(before))).toEqual([{ chatId: UUID, resume: UUID, first: 'over here' }]);
       const mine = starts.at(-1) as Start;
-      expect(mine.uri).toBe('echo:/two');
+      expect(mine.uri).toBe('ahp-session:/two');
       expect(mine.workingDirectory).toBe(DIR);
       expect(mine.additional).toEqual([EXTRA]);
       // The session it landed in, published under a name a client can ask about.
-      expect(answer.session).toBe('echo:/two');
+      expect(answer.session).toBe('ahp-session:/two');
 
       // Out of the source's list, and into the destination's after the anchor.
       const from = await opened(client, LIVE);
@@ -1542,8 +1542,8 @@ describe('more than one chat in a session', () => {
       const rows = p.notes
         .filter((n) => n.method === 'root/sessionSummaryChanged')
         .map((n) => n.params as { session: string; changes: { modifiedAt?: string } });
-      const cameTo = rows.filter((one) => one.session === 'echo:/two');
-      const wentFrom = rows.filter((one) => one.session === 'echo:/live');
+      const cameTo = rows.filter((one) => one.session === 'ahp-session:/two');
+      const wentFrom = rows.filter((one) => one.session === 'ahp-session:/live');
       expect(cameTo.at(-1)?.changes.modifiedAt).toBeDefined();
       expect(wentFrom.at(-1)?.changes.modifiedAt).toBeDefined();
       expect((wentFrom.at(-1) as { changes: { modifiedAt: string } }).changes.modifiedAt
@@ -1577,7 +1577,7 @@ describe('more than one chat in a session', () => {
        * with that inside it. The name is the same chat either way, and which
        * one a client holds is which one it was handed.
        */
-      const called = subagentChatUri('echo:/live', 'toolu_task');
+      const called = subagentChatUri('ahp-session:/live', 'toolu_task');
       const asSaid = subagentChatUri(LIVE, 'toolu_task');
       /*
        * Ended before the move, because a worker mid-turn is the chat's own
@@ -1690,7 +1690,7 @@ describe('more than one chat in a session', () => {
       const refusing: Agent = {
         ...base,
         create: (start: Start): Session => {
-          if (start.chatUri === PEER && start.uri === 'echo:/two')
+          if (start.chatUri === PEER && start.uri === 'ahp-session:/two')
             throw new Error('this backend will not work there');
           return base.create(start);
         },
@@ -1758,9 +1758,9 @@ describe('more than one chat in a session', () => {
        * that conversation as a second session beside it, and a listing would
        * offer the same transcript twice.
        */
-      expect(answer.session).toBe(`echo:/${UUID}`);
+      expect(answer.session).toBe(`ahp-session:/${UUID}`);
       expect(resuming(starts.slice(before))).toEqual([{ chatId: UUID, resume: UUID, first: 'over here' }]);
-      expect(starts.at(-1)?.uri).toBe(`echo:/${UUID}`);
+      expect(starts.at(-1)?.uri).toBe(`ahp-session:/${UUID}`);
 
       const there = await opened(first.client, answer.session);
       expect(there.state.defaultChat).toBe(PEER);
@@ -1791,13 +1791,13 @@ describe('more than one chat in a session', () => {
       const rows = await second.client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
         items: { resource: string }[];
       };
-      expect(rows.items.map((one) => one.resource).sort()).toEqual([`echo:/${UUID}`, 'echo:/live']);
-      const after = await opened(second.client, `echo:/${UUID}`);
+      expect(rows.items.map((one) => one.resource).sort()).toEqual([`ahp-session:/${UUID}`, 'ahp-session:/live']);
+      const after = await opened(second.client, `ahp-session:/${UUID}`);
       expect(after.state.defaultChat).toBe(PEER);
       expect(listed(after)).toEqual([PEER]);
       expect(said(await opened(second.client, PEER))).toEqual(['over here']);
       // And the session it came back with is itself, not a chat of another one.
-      const backAgain = await opened(second.client, 'echo:/live');
+      const backAgain = await opened(second.client, 'ahp-session:/live');
       expect(listed(backAgain)).toEqual([backAgain.state.defaultChat]);
 
       const was = starts.length;
@@ -1829,7 +1829,7 @@ describe('a chat of another backend', () => {
   const LIVE = 'ahp-session:/live';
   // The name this host calls the session once a backend has it: the client's
   // alias is a spelling, and the row, the logs and the refusals use this one.
-  const SESSION = 'one:/live';
+  const SESSION = 'ahp-session:/live';
   const TWO = 'ahp-session:/two';
   const THIRD = 'ahp-chat:/third';
   const UUID = '0f8fad5b-d9cb-469f-a165-70867728950e';

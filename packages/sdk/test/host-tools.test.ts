@@ -51,7 +51,7 @@ describe('tools the host contributes', () => {
     await client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude' } });
     // The name the session is held and listed by, which is the one a tool
     // answers with and is asked by.
-    const held = 'claude:/served';
+    const held = 'ahp-session:/served';
     return { host, client, peer: p, uri, held };
   };
 
@@ -175,7 +175,7 @@ describe('tools the host contributes', () => {
       expect(started?.action.message).toMatchObject({
         text: 'check the makefile',
         origin: { kind: 'agent' },
-        _meta: { 'vscode.chat.delegation': { sourceSession: 'claude:/served' } },
+        _meta: { 'vscode.chat.delegation': { sourceSession: 'ahp-session:/served' } },
       });
     });
 
@@ -191,7 +191,7 @@ describe('tools the host contributes', () => {
         params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'first' } } },
       });
       await settle();
-      const said = await call('send_message', { session: 'claude:/busy', message: 'and then this' }, 0);
+      const said = await call('send_message', { session: 'ahp-session:/busy', message: 'and then this' }, 0);
       expect(said).toBe('Message queued (agent-host-session://claude/busy).');
       await settle();
       const queued = actions(p, chatUri).find((one) => one.action.type === 'chat/pendingMessageSet');
@@ -213,7 +213,7 @@ describe('tools the host contributes', () => {
       const summary = (added?.params as { summary?: { resource: string; title: string; workingDirectories: string[] } } | undefined)?.summary;
       expect(summary?.title).toBe('Port the makefile');
       // Held under its provider's name, as a client's `createSession` is.
-      expect(summary?.resource).toMatch(/^claude:\/[0-9a-f-]+$/);
+      expect(summary?.resource).toMatch(/^ahp-session:\/[0-9a-f-]+$/);
       expect(summary?.workingDirectories).toEqual([uriOf(HERE)]);
       // Its first turn, as the creating agent's.
       const chat = (await client.handle({ method: 'subscribe', params: { channel: summary?.resource } }) as {
@@ -227,7 +227,7 @@ describe('tools the host contributes', () => {
       // And a second session's own tools answer about both.
       const rows = JSON.parse(await call('list_sessions', {})) as { sessions: { session: string }[] };
       expect(rows.sessions.map((one) => one.session)).toContain(summary?.resource);
-      expect(rows.sessions.map((one) => one.session)).toContain('claude:/served');
+      expect(rows.sessions.map((one) => one.session)).toContain('ahp-session:/served');
     });
 
     it('creates a chat in the current session for currentSession work, and refuses a workspace with it', async () => {
@@ -292,12 +292,12 @@ describe('tools the host contributes', () => {
       await client.handle({ method: 'subscribe', params: { channel: 'ahp-root://' } });
       await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/doomed', provider: 'claude' } });
       expect(await call('delete_session', { session: held }, 0)).toContain('refusing to delete the current session');
-      expect(await call('delete_session', { session: 'claude:/doomed' }, 0))
-        .toBe('Deleted session claude:/doomed. Reply with one short sentence confirming the session was deleted.');
+      expect(await call('delete_session', { session: 'ahp-session:/doomed' }, 0))
+        .toBe('Deleted session ahp-session:/doomed. Reply with one short sentence confirming the session was deleted.');
       expect(p.notes.some((one) => one.method === 'root/sessionRemoved'
-        && (one.params as { session?: string }).session === 'claude:/doomed')).toBe(true);
+        && (one.params as { session?: string }).session === 'ahp-session:/doomed')).toBe(true);
       const rows = JSON.parse(await call('list_sessions', {}, 0)) as { sessions: { session: string }[] };
-      expect(rows.sessions.map((one) => one.session)).not.toContain('claude:/doomed');
+      expect(rows.sessions.map((one) => one.session)).not.toContain('ahp-session:/doomed');
     });
 
     it('reads another chat\'s turns, cut to the detail asked for', async () => {
@@ -325,12 +325,12 @@ describe('tools the host contributes', () => {
       first.wake = undefined;
       await settle(8);
       // Read from the second session's tools.
-      const said = JSON.parse(await call('get_session_context', { session: 'claude:/served', detail: 'digest' })) as {
+      const said = JSON.parse(await call('get_session_context', { session: 'ahp-session:/served', detail: 'digest' })) as {
         openLink: string; transcript: { turn: number; state: string; user?: string; assistant?: string }[];
       };
       expect(said.openLink).toBe('agent-host-session://claude/served');
       expect(said.transcript).toEqual([{ turn: 1, state: 'complete', user: 'what is in this directory', assistant: 'Four files.' }]);
-      expect(await call('get_session_context', { session: 'claude:/served', detail: 'everything' })).toContain('detail must be');
+      expect(await call('get_session_context', { session: 'ahp-session:/served', detail: 'everything' })).toContain('detail must be');
     });
 
     it('moves the session once the turn that asked is over, and tells the agent where it is', async () => {
@@ -2164,7 +2164,7 @@ describe('a client\'s call, held by the backend', () => {
     const said = heard.filter((event) => event.type === 'input_needed_set');
     expect(said).toHaveLength(1);
     expect(said[0]).toMatchObject({
-      session: 'holder:/held',
+      session: 'ahp-session:/held',
       id: `toolClientExecution:${held().start.chatUri}:t1:call-1`,
       kind: 'toolClientExecution',
     });
@@ -2864,7 +2864,7 @@ describe('a harness list handed to the host', () => {
     expect(heard).toHaveLength(1);
     expect(heard[0]).toMatchObject({
       type: 'plan_update',
-      session: 'echo:/list',
+      session: 'ahp-session:/list',
       chat,
       turn: 't1',
       harness: 'echo',
@@ -2888,7 +2888,7 @@ describe('a harness list handed to the host', () => {
     expect(heard).toHaveLength(1);
     expect(heard[0]).toMatchObject({
       type: 'plan_update',
-      session: 'echo:/list',
+      session: 'ahp-session:/list',
       turn: 't1',
       harness: 'echo',
       tool: 'TaskUpdate',
@@ -2903,7 +2903,7 @@ describe('a harness list handed to the host', () => {
     await settle();
 
     expect(heard).toHaveLength(1);
-    expect(heard[0]).toMatchObject({ type: 'plan_update', session: 'echo:/list' });
+    expect(heard[0]).toMatchObject({ type: 'plan_update', session: 'ahp-session:/list' });
     expect(heard[0]).not.toHaveProperty('title');
   });
 });

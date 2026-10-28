@@ -40,7 +40,7 @@ const FROM = 'agent-host-claude:/sent-from';
 const CHAT = `${FROM}#chat`;
 /** The session channel a client makes, and the name this host lists it under. */
 const SESSION = 'ahp-session:/sent';
-const NAMED = 'claude:/sent';
+const NAMED = 'ahp-session:/sent';
 
 /**
  * The window's own words to the agent, as its contribution writes them.

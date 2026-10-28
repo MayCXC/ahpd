@@ -364,7 +364,7 @@ describe('what a session tool asks of the turn it runs in', () => {
       snapshot: { state: { defaultChat: string } };
     }).snapshot.state.defaultChat;
     await watching_(client, chat);
-    return { uri, held: `claude:/${name}`, chat };
+    return { uri, held: `ahp-session:/${name}`, chat };
   };
 
   /** A client says a turn has begun in one chat, which is how a turn is sent. */
@@ -588,7 +588,7 @@ describe("VS Code's limits on spawning and messaging", () => {
   const started = async (client: Client, name: string): Promise<{ held: string; at: number }> => {
     await client.handle({ method: 'createSession', params: { channel: `ahp-session:/${name}`, provider: 'claude' } });
     await settle(8);
-    return { held: `claude:/${name}`, at: sessionQueries().length - 1 };
+    return { held: `ahp-session:/${name}`, at: sessionQueries().length - 1 };
   };
 
   /** One session's tools make another, whose own tools are then the newest. */
@@ -828,7 +828,7 @@ describe('a chat opened on a backend of its own', () => {
   };
 
   const state = async (client: Client): Promise<State['snapshot']['state']> =>
-    (await client.handle({ method: 'subscribe', params: { channel: 'claude:/mine' } }) as State).snapshot.state;
+    (await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/mine' } }) as State).snapshot.state;
 
   it('starts the chat on the backend it names, with that backend\'s config', async () => {
     const starts: Start[] = [];

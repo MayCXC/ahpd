@@ -306,8 +306,8 @@ it('writes one record for a turn that completed, saying what its last report sai
     owner: 'user:ana',
     team: 'backend',
     project: 'ahpd',
-    session: 'meter:/metered',
-    chat: 'ahp-chat://default/bWV0ZXI6L21ldGVyZWQ',
+    session: 'ahp-session:/metered',
+    chat: 'ahp-chat://default/YWhwLXNlc3Npb246L21ldGVyZWQ',
     turn: 't1',
     // The turn is written once here, and that record opens it.
     opens: true,
@@ -531,7 +531,7 @@ it('does not let a store that cannot keep the record break the turn', async () =
   await settle();
 
   // The turn ran to its end, and the failure says which session's work it was.
-  expect(said.some((line) => line.includes('meter:/metered') && line.includes('the disk is full'))).toBe(true);
+  expect(said.some((line) => line.includes('ahp-session:/metered') && line.includes('the disk is full'))).toBe(true);
 });
 
 it('counts a worker once, because the turn that delegated it already counted it', async () => {

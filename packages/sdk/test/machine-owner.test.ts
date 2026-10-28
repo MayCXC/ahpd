@@ -129,7 +129,7 @@ it('hands a session-made machine the session\'s owner and scope', async () => {
   // made for a session carries the charge beside the owner.
   expect(asked[0]).toMatchObject({
     source: 'disposable:box',
-    session: 'echo:/owned',
+    session: 'ahp-session:/owned',
     provider: 'echo',
     owner: 'user:ana',
     team: 'backend',

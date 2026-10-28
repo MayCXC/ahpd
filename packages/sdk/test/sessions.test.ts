@@ -1492,19 +1492,19 @@ it('answers only the sessions the caller owns, when it asks for its own', async 
     method: 'listSessions',
     params: { channel: ROOT, _meta: { 'ahpd.owner': 'me' } },
   }) as Listing;
-  expect(mine.items.map((row) => row.resource).sort()).toEqual(['echo:/ana-one', 'echo:/ana-two']);
+  expect(mine.items.map((row) => row.resource).sort()).toEqual(['ahp-session:/ana-one', 'ahp-session:/ana-two']);
   const theirs = await benClient.handle({
     method: 'listSessions',
     params: { channel: ROOT, _meta: { 'ahpd.owner': 'me' } },
   }) as Listing;
-  expect(theirs.items.map((row) => row.resource)).toEqual(['echo:/ben-one']);
+  expect(theirs.items.map((row) => row.resource)).toEqual(['ahp-session:/ben-one']);
 });
 
 it('answers every session when no owner is asked for', async () => {
   const { anaClient } = await twoOwners();
   const listed = await anaClient.handle({ method: 'listSessions', params: { channel: ROOT } }) as Listing;
   expect(listed.items.map((row) => row.resource).sort())
-    .toEqual(['echo:/ana-one', 'echo:/ana-two', 'echo:/ben-one']);
+    .toEqual(['ahp-session:/ana-one', 'ahp-session:/ana-two', 'ahp-session:/ben-one']);
 });
 
 it('pages a filtered listing on the filtered rows', async () => {
@@ -1523,7 +1523,7 @@ it('pages a filtered listing on the filtered rows', async () => {
   // The second page is the other row she owns, and it is the last one.
   expect(second.nextCursor).toBeUndefined();
   const seen = [...first.items, ...second.items].map((row) => row.resource).sort();
-  expect(seen).toEqual(['echo:/ana-one', 'echo:/ana-two']);
+  expect(seen).toEqual(['ahp-session:/ana-one', 'ahp-session:/ana-two']);
 });
 
 it('refuses an owner filter that is not me', async () => {

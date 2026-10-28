@@ -104,7 +104,7 @@ it('asks the backend to delete a running session, once the chat has closed', asy
 
   await dispose(client, 'ahp-session:/held');
 
-  expect(order).toEqual(['close echo:/held', 'delete held']);
+  expect(order).toEqual(['close ahp-session:/held', 'delete held']);
   expect(deleted).toEqual([{ id: 'held', directory: dir }]);
   client.close();
 });
@@ -122,19 +122,19 @@ it('deletes a row it only listed, through the agent that owns it, and tells ever
   const { client, peer: p } = await serving(recording(order, deleted, [row]));
   // Listed first, which is the only thing that gives the host an owner for it.
   const listed = await listing(client);
-  expect(listed).toContain('echo:/listed');
+  expect(listed).toContain('ahp-session:/listed');
 
-  await dispose(client, 'echo:/listed');
+  await dispose(client, 'ahp-session:/listed');
 
   // No chat of this row ever ran here, so nothing is closed - only the
   // backend's copy goes, and every client is told the row is gone.
   expect(order).toEqual(['delete listed']);
   expect(deleted).toEqual([{ id: 'listed', directory: dir }]);
   expect(p.notes.some((one) => one.method === 'root/sessionRemoved'
-    && (one.params as { session?: string }).session === 'echo:/listed')).toBe(true);
+    && (one.params as { session?: string }).session === 'ahp-session:/listed')).toBe(true);
   // And it is not offered again, because the store that answered has nothing
   // to answer with now.
-  expect(await listing(client)).not.toContain('echo:/listed');
+  expect(await listing(client)).not.toContain('ahp-session:/listed');
   client.close();
 });
 
@@ -173,9 +173,9 @@ it('answers a delete that failed, and the session is gone all the same', async (
   // The failure is logged with the session it was about, and the client is
   // still told the session is gone: the teardown happened before the store was
   // touched, and nothing undoes it.
-  expect(said.some((line) => line.includes('could not delete echo:/held from echo: the store would not let go of it'))).toBe(true);
+  expect(said.some((line) => line.includes('could not delete ahp-session:/held from echo: the store would not let go of it'))).toBe(true);
   expect(p.notes.some((one) => one.method === 'root/sessionRemoved'
-    && (one.params as { session?: string }).session === 'echo:/held')).toBe(true);
+    && (one.params as { session?: string }).session === 'ahp-session:/held')).toBe(true);
   // A name in neither map: it is out of `sessions`, and out of `owners`.
   await expect(dispose(client, 'ahp-session:/held')).rejects.toThrow('No agent for session ahp-session:/held');
   client.close();

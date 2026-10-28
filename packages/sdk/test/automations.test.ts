@@ -1069,8 +1069,8 @@ it('settles a run cancelled when its session is disposed mid-turn', async () => 
   const before = await runState(client, run.resource);
   expect(before.lifecycle.status).toBe('running');
   const session = before.sessions[0] ?? '';
-  // Held under its provider's name, as a client's `createSession` is.
-  expect(session).toMatch(/^echo:\/[0-9a-f-]+$/);
+  // Named the way a client's `createSession` names a session.
+  expect(session).toMatch(/^ahp-session:\/[0-9a-f-]+$/);
 
   await client.handle({ method: 'disposeSession', params: { channel: session } });
   await until(async () => (await runState(client, run.resource)).lifecycle.status === 'cancelled');
@@ -1498,8 +1498,8 @@ it('lets go of a session a run was holding when the session is disposed', async 
   const session = String((await client.handle({ method: 'subscribe', params: { channel: run.resource } }) as {
     snapshot: { state: { sessions: string[] } };
   }).snapshot.state.sessions[0] ?? '');
-  // Held under its provider's name, as a client's `createSession` is.
-  expect(session).toMatch(/^echo:\/[0-9a-f-]+$/);
+  // Named the way a client's `createSession` names a session.
+  expect(session).toMatch(/^ahp-session:\/[0-9a-f-]+$/);
 
   await client.handle({ method: 'disposeSession', params: { channel: session } });
   await settle();

@@ -363,7 +363,7 @@ describe('a session with a working tree of its own', () => {
     const rows = await a.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
       items: { resource: string }[];
     };
-    const id = rows.items[0]?.resource.replace('echo:/', '') ?? '';
+    const id = rows.items[0]?.resource.replace('ahp-session:/', '') ?? '';
 
     // What a host that declared the key a string would have written, which is
     // what is on disk now that this host declares it a list.

@@ -217,13 +217,13 @@ it('fires session_start with its provider, and session_end when it is disposed',
 
   const started = of(seen, 'session_start');
   expect(started).toHaveLength(1);
-  expect(started[0]).toMatchObject({ session: 'echo:/one', provider: 'echo', client: 'probe' });
+  expect(started[0]).toMatchObject({ session: 'ahp-session:/one', provider: 'echo', client: 'probe' });
 
   await client.handle({ method: 'disposeSession', params: { channel: 'ahp-session:/one' } });
   await settle();
   const ended = of(seen, 'session_end');
   expect(ended).toHaveLength(1);
-  expect(ended[0]).toMatchObject({ session: 'echo:/one' });
+  expect(ended[0]).toMatchObject({ session: 'ahp-session:/one' });
 });
 
 it('names the creating client, and one client per subscription that opened a session', async () => {
@@ -246,11 +246,11 @@ it('names the creating client, and one client per subscription that opened a ses
 
   const started = of(seen, 'session_start');
   expect(started).toHaveLength(1);
-  expect(started[0]).toMatchObject({ session: 'echo:/opened', client: 'probe' });
+  expect(started[0]).toMatchObject({ session: 'ahp-session:/opened', client: 'probe' });
 
   const opened = of(seen, 'session_opened');
   expect(opened.map((event) => (event as { client: string }).client)).toEqual(['probe', 'second']);
-  expect(opened[0]).toMatchObject({ session: 'echo:/opened' });
+  expect(opened[0]).toMatchObject({ session: 'ahp-session:/opened' });
 });
 
 it('leaves the client off a session no client created', async () => {
@@ -315,7 +315,7 @@ it('fires message, turn_start and turn_end once each, and nothing per delta', as
   // The host's own session and chat URIs, not the client's aliases for them:
   // the event carries what the host calls the channel, which is the identity
   // it uses everywhere, and a session is held under its provider's name.
-  expect(about[0]).toMatchObject({ session: 'echo:/turn', chat: expect.stringMatching(/^ahp-chat:/), turn: 'turn-1', text: 'hello there' });
+  expect(about[0]).toMatchObject({ session: 'ahp-session:/turn', chat: expect.stringMatching(/^ahp-chat:/), turn: 'turn-1', text: 'hello there' });
   expect(about[1]).toMatchObject({ turn: 'turn-1' });
   expect(about[2]).toMatchObject({ turn: 'turn-1', status: 'complete' });
 });
@@ -469,7 +469,7 @@ it('fires tool_call once, after a host tool answered', async () => {
   expect(outcomes).toEqual(['ok']);
   const calls = of(seen, 'tool_call');
   expect(calls).toHaveLength(1);
-  expect(calls[0]).toMatchObject({ session: 'tooler:/tool', tool: 'probe_tool', ok: true });
+  expect(calls[0]).toMatchObject({ session: 'ahp-session:/tool', tool: 'probe_tool', ok: true });
 });
 
 it('tells a host tool which agent the calling session runs', async () => {
@@ -611,8 +611,8 @@ it('fires input_needed_set and input_needed_removed as the backend asks and answ
   // because a plugin that says so watches nothing else. In the order sent.
   const about = seen.filter((event) => event.type === 'input_needed_set' || event.type === 'input_needed_removed');
   expect(about.map((event) => event.type)).toEqual(['input_needed_set', 'input_needed_set', 'input_needed_removed']);
-  expect(about[0]).toMatchObject({ session: 'asker:/ask', chat: 'ahp-chat:/ask', id: 'ask-1', kind: 'chatInput' });
-  expect(about[2]).toMatchObject({ session: 'asker:/ask', id: 'ask-1' });
+  expect(about[0]).toMatchObject({ session: 'ahp-session:/ask', chat: 'ahp-chat:/ask', id: 'ask-1', kind: 'chatInput' });
+  expect(about[2]).toMatchObject({ session: 'ahp-session:/ask', id: 'ask-1' });
 });
 
 it('leaves the event out when the backend sends no id to raise it about', async () => {

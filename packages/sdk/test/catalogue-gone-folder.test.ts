@@ -181,14 +181,14 @@ describe('a folder that has gone', () => {
       rmSync(folder, { recursive: true, force: true });
       await client.handle({
         method: 'dispatchAction',
-        params: { channel: 'echo:/live', action: { type: 'session/titleChanged', title: 'Gone' } },
+        params: { channel: 'ahp-session:/live', action: { type: 'session/titleChanged', title: 'Gone' } },
       });
       await settle(4);
       const moved = notes.filter((one) => one.method === 'root/sessionSummaryChanged').at(-1)?.params as
         { changes?: { workingDirectories?: string[] } } | undefined;
       expect(moved?.changes?.workingDirectories).toEqual([]);
       // And the row a listing builds for it, which is not the summary above.
-      expect((await list(client)).items.find((one) => one.resource === 'echo:/live')?.workingDirectories).toEqual([]);
+      expect((await list(client)).items.find((one) => one.resource === 'ahp-session:/live')?.workingDirectories).toEqual([]);
     }
     // Awaited, with retries: on Windows the host can hold the folder a moment longer.
     finally { await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }

@@ -116,7 +116,7 @@ describe('opening a past session', () => {
 
     const added = notes.filter((one) => one.method === 'root/sessionAdded')
       .map((one) => (one.params as { summary?: { resource: string; title: string } }).summary);
-    expect(added.map((one) => [one?.resource, one?.title])).toEqual([['claude:/late', 'Late']]);
+    expect(added.map((one) => [one?.resource, one?.title])).toEqual([['ahp-session:/late', 'Late']]);
 
     // And it is held now, so a second opening asks nothing of anybody.
     expect((await opened(client, 'claude:/late')).snapshot?.resource).toBe('claude:/late');

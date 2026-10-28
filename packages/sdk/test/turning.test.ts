@@ -17,7 +17,7 @@ import type { Peer } from '../src/types/rpc.js';
 
 const SESSION = 'ahp-session:/one';
 /** The name the host holds it under, which is its provider's. */
-const HELD = 'echo:/one';
+const HELD = 'ahp-session:/one';
 const CHAT = 'ahp-chat:/one';
 
 /**

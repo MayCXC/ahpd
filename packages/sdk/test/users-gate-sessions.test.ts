@@ -66,9 +66,9 @@ it('needs a session\'s write group to drive one, and the act it is refused is th
   await guest.send('ahp-session:/one', { type: 'session/titleChanged', title: 'Mine' });
   await guest.send('claude:/one/annotations', { type: 'annotations/set', annotations: [] });
   expect(guest.refused()).toEqual([
-    'claude:/one: g may not session:rename here',
-    'claude:/one: g may not session:rename here',
-    'claude:/one/annotations: g may not session:review here',
+    'ahp-session:/one: g may not session:rename here',
+    'ahp-session:/one: g may not session:rename here',
+    'ahp-session:/one/annotations: g may not session:review here',
   ]);
 });
 
@@ -140,8 +140,8 @@ it('asks a session\'s grants for a row a backend keeps on disk, under its name o
   await guest.send('elsewhere:/disk', { type: 'session/isReadChanged', isRead: true });
   await guest.send('never-listed:/other', { type: 'session/isReadChanged', isRead: true });
   expect(guest.refused()).toEqual([
-    'claude:/disk: g may not session:mark here',
-    'claude:/disk: g may not session:mark here',
+    'ahp-session:/disk: g may not session:mark here',
+    'ahp-session:/disk: g may not session:mark here',
     'never-listed:/other: g may not session:mark here',
   ]);
 });
@@ -340,7 +340,7 @@ it('needs computer:write to name a source for a session, and no more to name a m
   // And the change that makes one before the first turn, which is asked of the
   // same gate rather than of a session nobody is watching yet.
   await worker.send('claude:/two', { type: 'session/configChanged', config: { computer: 'disposable:s' } });
-  expect(worker.refused()).toEqual(['claude:/two: w may not computer:write here']);
+  expect(worker.refused()).toEqual(['ahp-session:/two: w may not computer:write here']);
 });
 
 it('needs computer:write to name a folder\'s dev container for a session', async () => {
@@ -357,7 +357,7 @@ it('needs computer:write to name a folder\'s dev container for a session', async
     channel: 'ahp-session:/two', provider: 'claude', config: { computer: 'devcontainer:///w/app' },
   })).toMatchObject({ code: -32009, message: 'w may not computer:write here' });
   await worker.send('claude:/one', { type: 'session/configChanged', config: { computer: 'devcontainer:///w/app' } });
-  expect(worker.refused()).toEqual(['claude:/one: w may not computer:write here']);
+  expect(worker.refused()).toEqual(['ahp-session:/one: w may not computer:write here']);
 });
 
 it('asks an automation\'s owner for computer:write, and refuses a run it cannot check', async () => {

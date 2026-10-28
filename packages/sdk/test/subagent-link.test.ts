@@ -63,7 +63,7 @@ function linking(): Agent {
     list: async (): Promise<Listed[]> => [],
     create: (start: Start): Session => {
       chats.set(start.uri, start.chatUri);
-      const title = start.uri === 'fake:/main' ? 'Main' : 'Back';
+      const title = start.uri === 'ahp-session:/main' ? 'Main' : 'Back';
       const turns: Bag[] = [];
       let active: Bag | undefined;
       return {
@@ -97,9 +97,9 @@ function linking(): Agent {
           };
           start.emit('chat', { type: 'chat/turnStarted', turnId, startedAt, message: active.message });
           // Not the main session: nothing happens here but an empty turn.
-          if (start.uri !== 'fake:/main') return;
+          if (start.uri !== 'ahp-session:/main') return;
           const toolCallId = 'toolu_work';
-          const back = chats.get('fake:/back') ?? '';
+          const back = chats.get('ahp-session:/back') ?? '';
           start.emit('chat', {
             type: 'chat/toolCallStart', turnId, toolCallId, toolName: 'subagent', displayName: 'Back',
             _meta: { toolKind: 'subagent' },
@@ -162,8 +162,8 @@ async function linked() {
   await ask('createSession', { channel: 'ahp-session:/back', provider: 'fake' });
   await ask('createSession', { channel: 'ahp-session:/main', provider: 'fake' });
   await settle();
-  const backChat = chats.get('fake:/back') as string;
-  const mainChat = chats.get('fake:/main') as string;
+  const backChat = chats.get('ahp-session:/back') as string;
+  const mainChat = chats.get('ahp-session:/main') as string;
   await ask('subscribe', { channel: mainChat });
   await ask('subscribe', { channel: backChat });
   void client.handle({

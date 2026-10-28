@@ -546,7 +546,7 @@ it('takes an approval given on a worker chat spelt from a session alias', async 
  * The actions about a session, to two clients that name it differently.
  *
  * The creator made it as `ahp-session:/ask` and the host holds it as
- * `fake:/ask`. Each client is sent every URI of the session inside an action in
+ * `ahp-session:/ask`. Each client is sent every URI of the session inside an action in
  * its own spelling, the same as its snapshot, so the worker chat it is told
  * about is one it can subscribe to and answer on.
  */
@@ -736,8 +736,8 @@ async function busyHost() {
   await settle();
   /** The session's catalogue row as the root has announced it so far, one change at a time. */
   const row = (): Bag[] => wire
-    // Published under its provider's name, whatever it was created as.
-    .filter((one) => one.method === 'root/sessionSummaryChanged' && one.params.session === 'fake:/busy')
+    // Published under the name it was created with.
+    .filter((one) => one.method === 'root/sessionSummaryChanged' && one.params.session === 'ahp-session:/busy')
     .map((one) => one.params.changes as Bag);
   /** The activity bits of a status, without the read and archived flags. */
   const activity = (status: unknown): number => Number(status) & 31;
