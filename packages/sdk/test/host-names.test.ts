@@ -253,11 +253,11 @@ describe('a session asked for by the name a client computed', () => {
   const derived = (session: string) =>
     `ahp-chat://default/${Buffer.from(session, 'utf8').toString('base64url')}`;
 
-  const browsing = async () => {
+  const browsing = async (p = peer()) => {
     sdk.sessions.push(listed);
     sdk.transcript.push({ type: 'user', uuid: 'u1', message: { role: 'user', content: 'earlier' } });
     wrote(listed.sessionId, listed.cwd);
-    const client = open();
+    const client = serving('/home/softov').accept(p);
     await client.handle(hello(['0.9.0']));
     // Listed first: that is when this host learns whose the row is, and it is
     // what a client does before it opens one.
@@ -364,6 +364,25 @@ describe('a session asked for by the name a client computed', () => {
     expect(sessionQueries()).toHaveLength(1);
     expect(sessionQueries()[0]?.options.resume).toBe('row');
     expect(sdk.said).toEqual(['and now?']);
+  });
+
+  it('sends the chat it resumes on under the name it was watched by', async () => {
+    const p = peer();
+    const client = await browsing(p);
+    const chat = derived('claude:/row');
+    await client.handle({ method: 'subscribe', params: { channel: 'claude:/row' } });
+    await client.handle({ method: 'subscribe', params: { channel: chat } });
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: chat, clientSeq: 1, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'and now?' } } },
+    });
+    await settle(6);
+
+    // Watched while it slept, under a name the host does not hold it by. The
+    // session wakes as `ahp-session:/row`, and its chat is that one's: keyed
+    // by the client's own spelling, the subscription heard nothing of it.
+    expect(sdk.said).toEqual(['and now?']);
+    expect(actions(p, chat).map((e) => e.action.type)).toContain('chat/turnStarted');
   });
 
   it('serves its annotations under that name too', async () => {

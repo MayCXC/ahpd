@@ -176,7 +176,10 @@ export function createRouting(ctx: HostContext): Routing {
     if (homeId(uri) !== undefined) return uri;
     const session = sessionOfChat(uri);
     if (session === undefined) return uri;
-    return sessions.get(heldAs(session))?.defaultChat ?? chatUriFor(session);
+    // Named from the held session whether it runs or not, so a chat of a
+    // session asleep under another name is the chat it wakes as.
+    const held = heldAs(session);
+    return sessions.get(held)?.defaultChat ?? chatUriFor(held);
   };
 
   /**
