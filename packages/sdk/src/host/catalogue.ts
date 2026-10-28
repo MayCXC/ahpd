@@ -924,7 +924,7 @@ export function createCatalogue(ctx: HostContext): Catalogue {
     for (const one of looked) {
       if (one === undefined) continue;
       const recorded = kept.provider(one.row.id);
-      found.push(adopt(one.agent, one.row, recorded !== undefined && !agents.has(recorded) ? recorded : undefined));
+      found.push(adopt(one.agent, one.row, recorded !== undefined && !agents.has(recorded) ? recorded : undefined, stored.has(one.row.id)));
     }
     /*
      * What a refusing backend had last time, kept as it was.
