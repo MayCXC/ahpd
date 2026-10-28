@@ -4,7 +4,7 @@ status: todo
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/test/host-catalogue.test.ts#L277-L380](../../../../packages/sdk/test/host-catalogue.test.ts#L277-L380) - the paging cases and their `opened` helper, which reads 120 turns from a Claude transcript"
+  - "[code://packages/sdk/test/host-catalogue.test.ts#L278-L381](../../../../packages/sdk/test/host-catalogue.test.ts#L278-L381) - the paging cases and their `opened` helper, which reads 120 turns from a Claude transcript"
   - "[code://packages/sdk/test/support/host.ts](../../../../packages/sdk/test/support/host.ts) - `serving` and `running`, the helpers the paging cases use"
   - "[code://packages/sdk/src/host/snapshots.ts#L483-L500](../../../../packages/sdk/src/host/snapshots.ts#L483-L500) - the snapshot of a session's chat that is not running"
   - "[code://packages/agent-claude/src/session.ts#L256](../../../../packages/agent-claude/src/session.ts#L256) - the cut in a live Claude chat"

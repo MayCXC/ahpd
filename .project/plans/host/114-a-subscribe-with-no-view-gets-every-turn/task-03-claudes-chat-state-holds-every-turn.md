@@ -9,7 +9,7 @@ refs:
   - "[code://packages/agent-acp/src/session.ts#L247](../../../../packages/agent-acp/src/session.ts#L247) - the sibling that gives every turn"
   - "[code://packages/sdk/src/host/tooling.ts#L1637-L1652](../../../../packages/sdk/src/host/tooling.ts#L1637-L1652) - `get_session_context`, which reads `chatState()`"
   - "[code://packages/sdk/src/tools/session.ts#L630](../../../../packages/sdk/src/tools/session.ts#L630) - `transcriptLimit`, the cut that tool keeps"
-  - "[code://packages/sdk/test/host-catalogue.test.ts#L277-L380](../../../../packages/sdk/test/host-catalogue.test.ts#L277-L380) - the live case from task 01"
+  - "[code://packages/sdk/test/host-catalogue.test.ts#L278-L381](../../../../packages/sdk/test/host-catalogue.test.ts#L278-L381) - the live case from task 01"
 ---
 
 ## Objective

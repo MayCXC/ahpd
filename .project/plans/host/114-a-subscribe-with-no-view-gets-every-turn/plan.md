@@ -31,7 +31,7 @@ refs:
   - "[code://packages/sdk/src/tools/session.ts#L630](../../../../packages/sdk/src/tools/session.ts#L630) - `transcriptLimit`, which already cuts that tool's transcript to at most 50 turns"
   - "[code://packages/sdk/src/sessions/nested.ts#L1063](../../../../packages/sdk/src/sessions/nested.ts#L1063) - a nested chat gives the inner host's turns and cursor as they came"
   - "[code://packages/sdk/src/rpc.ts#L166](../../../../packages/sdk/src/rpc.ts#L166) - a client whose queue is past `clientQueueBytes` is closed at the next send"
-  - "[code://packages/sdk/test/host-catalogue.test.ts#L277-L380](../../../../packages/sdk/test/host-catalogue.test.ts#L277-L380) - the paging cases, which expect 50 turns and cursor `70` from a subscribe with no view"
+  - "[code://packages/sdk/test/host-catalogue.test.ts#L278-L381](../../../../packages/sdk/test/host-catalogue.test.ts#L278-L381) - the paging cases, which expect 50 turns and cursor `70` from a subscribe with no view"
   - "[code://packages/sdk/test/sessions.test.ts#L1182-L1203](../../../../packages/sdk/test/sessions.test.ts#L1182-L1203) - the oldest-page case, which sends `fetchTurns` with no cursor to a chat whose snapshot was whole"
   - "[code://docs/sdk/AHP.md#L94](../../../../docs/sdk/AHP.md#L94) - the `fetchTurns` row says \"Newest 50 in the snapshot and a cursor for the rest\""
   - "[code://UPSTREAM.md](../../../../UPSTREAM.md) - Pass 7, \"Large chats\", holds the box this plan closes"
