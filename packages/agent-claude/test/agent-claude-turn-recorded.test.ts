@@ -5,22 +5,23 @@ import { expect, it, vi } from 'vitest';
 import type { Bag, SubagentChat, SubagentRequest } from '@ahpd/sdk';
 
 /*
- * The transcript id a turn was written under, once the CLI has said one.
+ * The id a turn is written under in the CLI's transcript.
  *
- * The SDK sends the lead turn and every subagent it delegates to down one
- * stream, told apart only by `parent_tool_use_id`, and the CLI names each
- * prompt by its own uuid - an id no client chose and no host handed out. So
- * what the host keeps against the turn id a client sent is not what a history
- * read back off the transcript asks about, and the session says the pair once
- * per turn through `onTurnRecorded`.
+ * The CLI writes a streamed prompt under the `uuid` the prompt carries and
+ * echoes nothing back, so the session names it when it sends it: the turn's
+ * own id where that is a UUID, and a uuid of its own otherwise, which it says
+ * to the host once through `onTurnRecorded`. The reference writes a prompt
+ * under its turn id the same way.
  *
  * The capture here is `claude-subagent-ask.jsonl`, a real `claude -p` session
  * that delegated and was answered: its first `user` frame is the worker's own
- * prompt, so it is the frame that must not be reported for the lead turn.
+ * prompt, and the frames after it are tool results, none of which names the
+ * lead turn.
  */
 
 /**
- * The SDK's stream as a queue a test pushes frames into.
+ * The SDK's stream as a queue a test pushes frames into, and the CLI's input
+ * as the list of prompts the session put on it.
  *
  * Pulled one frame at a time, so a test can begin a turn between two frames
  * the way a live stream allows. Each query reads the feed that was current
@@ -32,8 +33,10 @@ const sdk = vi.hoisted(() => {
   const fresh = (): Feed => ({ held: [], wake: undefined });
   const state = {
     feed: fresh(),
+    /** Every prompt the current session sent the CLI, in order. */
+    sent: [] as Record<string, unknown>[],
     /** Start a new feed for the next session. */
-    reset() { state.feed = fresh(); },
+    reset() { state.feed = fresh(); state.sent = []; },
     /** Queue frames for the current session to read. */
     push(...frames: Record<string, unknown>[]) {
       const feed = state.feed;
@@ -52,9 +55,12 @@ const sdk = vi.hoisted(() => {
 
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
   createSdkMcpServer: (given: Record<string, unknown>) => ({ type: 'sdk', name: given.name, tools: given.tools }),
-  query: ({ options }: { options: Record<string, unknown> }) => {
+  query: ({ prompt, options }: { prompt: AsyncIterable<Record<string, unknown>>; options: Record<string, unknown> }) => {
     const feed = sdk.feed;
+    const sent = sdk.sent;
     void options;
+    // The input read as the CLI reads it, one prompt at a time.
+    void (async () => { for await (const one of prompt) sent.push(one); })().catch(() => {});
     return {
       async *[Symbol.asyncIterator]() {
         for (;;) yield await sdk.next(feed);
@@ -89,18 +95,12 @@ const settle = async (times = 30): Promise<void> => {
   for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 0); });
 };
 
-/**
- * The lead turn's own prompt, as the CLI echoes it back.
- *
- * A frame the captures here do not carry, because both were trimmed to the
- * delegation; the shape is the harness's own - a `user` frame with no
- * `parent_tool_use_id`, which is what tells it apart from a worker's.
- */
-const prompt = (uuid: string, text: string): Record<string, unknown> => ({
-  type: 'user', uuid, session_id: 'test-session', message: { role: 'user', content: text },
-});
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Replay through a real session, recording every id it reports a turn under. */
+/** A turn id of the shape a client like VS Code sends. */
+const TURN = 'bbbbbbbb-0000-4000-8000-000000000001';
+
+/** Run a real session, recording every id it reports a turn under. */
 async function replay() {
   sdk.reset();
   const recorded: [string, string][] = [];
@@ -126,57 +126,68 @@ async function replay() {
   return { session, recorded, main };
 }
 
-it('reports the prompt uuid once for the lead turn', async () => {
-  const lines = fixture('claude-subagent-ask.jsonl');
-  const asked = '8c6b418f-dba6-4f96-87f2-d60cd177366b';
+it('writes a turn whose id is a UUID under that id, and has nothing to report', async () => {
   const { session, recorded } = await replay();
 
-  session.begin('t1', 'Delegate this to a subagent');
+  session.begin(TURN, 'hello');
   await settle();
-  // The prompt, and then a capture that delegates to a worker.
-  sdk.push(prompt(asked, 'Delegate this to a subagent'), ...lines);
-  await settle(80);
 
-  expect(recorded).toEqual([['t1', asked]]);
-});
-
-it('does not report a subagent\'s own prompt as the turn it was written under', async () => {
-  const lines = fixture('claude-subagent-ask.jsonl');
-  const { session, recorded } = await replay();
-
-  session.begin('t1', 'Delegate this to a subagent');
-  await settle();
-  /*
-   * Through the delegation and the worker's prompt, before the lead turn's
-   * own echo arrives - the worker's frame is the first `user` frame this turn
-   * has seen, and its uuid names a prompt in the lead turn's transcript that
-   * a client can never ask for by.
-   */
-  sdk.push(...lines.slice(0, 4));
-  await settle(80);
-
+  expect(sdk.sent.map((one) => one.uuid)).toEqual([TURN]);
   expect(recorded).toEqual([]);
 });
 
-it('reports each turn of a session once, under its own prompt uuid', async () => {
+it('writes a turn whose id is not a UUID under one of its own, and reports the pair once', async () => {
+  const lines = fixture('claude-subagent-ask.jsonl');
+  const { session, recorded } = await replay();
+
+  session.begin('t1', 'Delegate this to a subagent');
+  await settle();
+  const written = String(sdk.sent[0]?.uuid);
+  expect(written).toMatch(UUID);
+  // The frames of a turn that delegated: a worker's prompt and tool results,
+  // none of which is the lead turn's prompt or says anything about it.
+  sdk.push(...lines);
+  await settle(80);
+
+  expect(recorded).toEqual([['t1', written]]);
+});
+
+it('writes each turn of a session under its own id', async () => {
   const lines = fixture('claude-subagent-ask.jsonl');
   const result = lines.at(-1) as Record<string, unknown>;
   const { session, recorded } = await replay();
 
   session.begin('t1', 'and one thing');
   await settle();
-  sdk.push(prompt('aaaaaaaa-0000-4000-8000-000000000001', 'and one thing'), result);
+  sdk.push(result);
   await settle();
-
   session.begin('t2', 'and another thing');
   await settle();
-  sdk.push(prompt('aaaaaaaa-0000-4000-8000-000000000002', 'and another thing'), result);
+  sdk.push(result);
   await settle();
 
-  expect(recorded).toEqual([
-    ['t1', 'aaaaaaaa-0000-4000-8000-000000000001'],
-    ['t2', 'aaaaaaaa-0000-4000-8000-000000000002'],
-  ]);
+  const [first, second] = sdk.sent.map((one) => String(one.uuid));
+  expect(first).not.toBe(second);
+  expect(recorded).toEqual([['t1', first], ['t2', second]]);
+});
+
+it('writes a failed turn sent again under a new id, and reports it', async () => {
+  const { session, recorded } = await replay();
+
+  session.begin(TURN, 'hello');
+  await settle();
+  // The CLI's own ending for a turn that failed, as it streams it.
+  sdk.push({ type: 'result', subtype: 'error_during_execution', is_error: true, duration_ms: 5, errors: ['failed'] });
+  await settle();
+  expect((session.chatState() as { turns?: { id?: string; state?: string }[] }).turns?.at(-1)?.state).toBe('error');
+
+  expect(session.resume?.(TURN)).toBe(true);
+  await settle();
+
+  const again = String(sdk.sent[1]?.uuid);
+  expect(again).toMatch(UUID);
+  expect(again).not.toBe(TURN);
+  expect(recorded).toEqual([[TURN, again]]);
 });
 
 /*
@@ -209,16 +220,4 @@ it('leaves the running turn alone when another is begun', async () => {
   sdk.push({ type: 'result', subtype: 'success', is_error: false, duration_ms: 5 });
   await settle();
   expect((session.chatState() as { turns?: Bag[] }).turns?.map((one) => one.id)).toEqual(['t1']);
-});
-
-it('reports nothing for a turn whose echo carried no uuid', async () => {
-  const { session, recorded } = await replay();
-
-  session.begin('t1', 'hi');
-  await settle();
-  // A frame of the shape the harness sends, with the one field left off.
-  sdk.push({ type: 'user', message: { role: 'user', content: 'hi' } });
-  await settle();
-
-  expect(recorded).toEqual([]);
 });

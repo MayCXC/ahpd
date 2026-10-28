@@ -60,6 +60,14 @@ export const sdk = {
    * with a picture reads it here.
    */
   blocks: [] as unknown[][],
+  /**
+   * The uuid each prompt carried, in order.
+   *
+   * The CLI writes a streamed prompt to its transcript under that uuid and
+   * echoes nothing back, so a case about a turn read back after a restart
+   * names the turn's prompt by it.
+   */
+  uuids: [] as (string | undefined)[],
   modelsSet: [] as (string | undefined)[],
   modesSet: [] as string[],
   effortsSet: [] as (string | null | undefined)[],
@@ -162,9 +170,11 @@ export const fake = {
     if (options.canUseTool) sdk.canUseTool = options.canUseTool as typeof sdk.canUseTool;
     void (async () => {
       for await (const frame of prompt) {
-        const content = (frame as { message?: { content?: unknown } }).message?.content;
+        const { message, uuid } = frame as { message?: { content?: unknown }; uuid?: string };
+        const content = message?.content;
         if (typeof content === 'string') sdk.said.push(content);
         else if (Array.isArray(content)) sdk.blocks.push(content);
+        sdk.uuids.push(uuid);
       }
     })();
     return {
@@ -228,6 +238,7 @@ export function resetSdk(): void {
   sdk.flags.length = 0;
   sdk.said.length = 0;
   sdk.blocks.length = 0;
+  sdk.uuids.length = 0;
   sdk.modelsSet.length = 0;
   sdk.modesSet.length = 0;
   sdk.effortsSet.length = 0;

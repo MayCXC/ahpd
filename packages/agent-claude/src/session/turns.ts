@@ -2,7 +2,7 @@ import type { ActiveTurn, ToolCallCompletedState, ToolCallRunningState, ToolResu
 import { titleFrom } from '@ahpd/sdk';
 import type { Bag, Chosen, CommandTerminal, MessageAttachment, MessageFrom, OnWire, RunCommand, TurnOptions, WireTurn } from '@ahpd/sdk';
 import { blocksFor } from './attachments.js';
-import { bag, list, str } from './common.js';
+import { bag, list, str, UUID } from './common.js';
 import { EFFORTS } from './config.js';
 import type { SessionContext } from './context.js';
 
@@ -57,14 +57,38 @@ export function createTurns(ctx: SessionContext): Turns {
    * Where a turn beginning, a message steering one, and a message taken off the
    * queue all reach the CLI: the wake and the touch happen in one place, and a
    * message's attachments become the blocks the CLI takes whichever way it
-   * arrived. A message with none is the string it always was.
+   * arrived. A message with none is the string it always was. `uuid` is the id
+   * the CLI writes the prompt under, which a turn's own prompt is given.
    */
-  const push = async (text: string, attachments?: MessageAttachment[]): Promise<void> => {
+  const push = async (text: string, attachments?: MessageAttachment[], uuid?: string): Promise<void> => {
     const content = await blocksFor(text, attachments);
-    ctx.waiting.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null });
+    ctx.waiting.push({
+      type: 'user',
+      message: { role: 'user', content },
+      parent_tool_use_id: null,
+      ...(uuid === undefined ? {} : { uuid: uuid as `${string}-${string}-${string}-${string}-${string}` }),
+    });
     ctx.wake?.();
     ctx.wake = undefined;
     ctx.touch();
+  };
+
+  /**
+   * The id a turn's prompt is written under in the CLI's transcript, which is
+   * the id a read after a restart gives the turn.
+   *
+   * The CLI writes a streamed prompt under the `uuid` it carries and echoes
+   * nothing back, so the id is chosen here rather than heard: the turn's own id
+   * where it is a UUID, as the reference writes a prompt under its turn id, and
+   * one of its own otherwise, said to the host so what it keeps against the
+   * turn is kept under that id too. A prompt sent again takes a new one, since
+   * the first may already be written under the old.
+   * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeAgentSession.ts#L1294-L1298
+   */
+  const writtenAs = (turnId: string, again: boolean): string => {
+    const uuid = !again && UUID.test(turnId) ? turnId : crypto.randomUUID();
+    if (uuid !== turnId) ctx.options.onTurnRecorded?.(turnId, uuid);
+    return uuid;
   };
 
   /**
@@ -259,7 +283,7 @@ export function createTurns(ctx: SessionContext): Turns {
      */
     const sent = carried === undefined ? text : `${carried}\n\n${text}`;
     carried = undefined;
-    await push(sent, attachments);
+    await push(sent, attachments, writtenAs(String(ctx.active.id), false));
   };
 
   /**
@@ -626,6 +650,7 @@ export function createTurns(ctx: SessionContext): Turns {
         type: 'user',
         message: { role: 'user', content: str(message.text) ?? '' },
         parent_tool_use_id: null,
+        uuid: writtenAs(turnId, true) as `${string}-${string}-${string}-${string}-${string}`,
       });
       ctx.wake?.();
       ctx.wake = undefined;

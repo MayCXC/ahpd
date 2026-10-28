@@ -1,0 +1,494 @@
+import { WAIT_MS } from '../../../tools/wait.ts';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Turn } from '@microsoft/agent-host-protocol';
+import {
+  resetSdk, actions, claude, createHost, echo, emit, hello, machine, peer, sdk, settle,
+} from './support/host.js';
+import { fileSessions } from '../src/sessions/sessions.js';
+import { uriOf } from '../src/resources/resources.js';
+import { chatUriFor } from '../src/host/channels.js';
+import type { SessionStore } from '../src/types/sessions.js';
+import type { WireTurn } from '../src/types/wire.js';
+import type { Agent, Bag, Listed, Ran, Session, Start } from '@ahpd/sdk';
+
+/*
+ * A `!` command's turn, kept for its chat.
+ *
+ * The host ran the command and no agent saw the turn, so no transcript holds
+ * it. The host keeps it as a local turn in the session's folder, anchored to
+ * the turn before it by the id that turn's transcript gives it, and every read
+ * of a transcript puts it back after that turn - as the reference host keeps
+ * and interleaves its local turns. A truncation or a fork at one goes to the
+ * backend at the turn before it.
+ */
+
+vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
+
+beforeEach(resetSdk);
+
+let made: string[] = [];
+afterEach(() => {
+  for (const dir of made) rmSync(dir, { recursive: true, force: true });
+  made = [];
+});
+
+const temp = (): string => {
+  const dir = mkdtempSync(join(tmpdir(), 'ahpd-local-turns-'));
+  made.push(dir);
+  return dir;
+};
+
+/** Where every case works: a real folder, because a shell starts in it. */
+const DIR = tmpdir();
+
+/** Every local turn a session's folder keeps, as the files hold them, in `seq` order. */
+const keptIn = (store: SessionStore, id: string): Bag[] => {
+  const folder = store.attachmentsDir?.(id);
+  const turns = folder === undefined ? undefined : join(folder, 'turns');
+  if (turns === undefined || !existsSync(turns)) return [];
+  return readdirSync(turns, { recursive: true, encoding: 'utf8' })
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => JSON.parse(readFileSync(join(turns, name), 'utf8')) as Bag)
+    .sort((a, b) => Number(a.seq) - Number(b.seq));
+};
+
+type Client = { handle(request: unknown): Promise<unknown> };
+
+/** A channel's state, as a subscribe answers it. */
+const stateOf = async (client: Client, channel: string): Promise<Bag> =>
+  (await client.handle({ method: 'subscribe', params: { channel } }) as { snapshot: { state: Bag } }).snapshot.state;
+
+/** The ids of a chat's turns, as a subscribe answers them. */
+const turnsOf = async (client: Client, chat: string): Promise<string[]> =>
+  ((await stateOf(client, chat)).turns as Bag[]).map((turn) => String(turn.id));
+
+/** Wait until a chat has sent the end of a turn. */
+const ended = async (p: ReturnType<typeof peer>, chat: string, turnId: string): Promise<void> => {
+  const ends = new Set(['chat/turnComplete', 'chat/turnCancelled', 'chat/error']);
+  for (const until = Date.now() + WAIT_MS; Date.now() < until;) {
+    if (actions(p, chat).some((e) => ends.has(String(e.action.type)) && e.action.turnId === turnId)) return;
+    await new Promise((r) => { setTimeout(r, 25); });
+  }
+};
+
+/** Send a message as a turn. */
+const say = (client: Client, chat: string, turnId: string, text: string): void => {
+  void client.handle({
+    method: 'dispatchAction',
+    params: { channel: chat, action: { type: 'chat/turnStarted', turnId, message: { text } } },
+  });
+};
+
+/** What a case sets on the backend, and reads back from it. */
+interface Knobs {
+  /** Every start the host handed it, in order. */
+  starts: Start[];
+  /** How a `!` turn ends. */
+  ending: 'complete' | 'cancelled' | 'error';
+  /** What a transcript read answers, by the conversation's id. */
+  transcript?: (id: string) => Bag[] | undefined;
+  /** What a listing answers, for a host that has not run the session. */
+  listed?: Listed[];
+}
+
+const knobs = (): Knobs => ({ starts: [], ending: 'complete' });
+
+/**
+ * The echo backend, with a `!` command of its own and the points a cut asks
+ * for: each turn ends at `end:<turn>`, as a backend names where a turn ended.
+ */
+const backend = (k: Knobs): Agent => {
+  const base = echo({ path: DIR, pace: 0 });
+  return {
+    ...base,
+    chats: { fork: true },
+    list: async () => (k.listed === undefined ? await base.list?.() ?? [] : [...k.listed]),
+    transcript: async (id, at) => {
+      const own = k.transcript?.(id);
+      return own === undefined ? await base.transcript?.(id, at) : own as WireTurn<Turn>[];
+    },
+    create: (start: Start): Session => {
+      k.starts.push(start);
+      const session = base.create(start.chatId === undefined ? start : { ...start, resume: start.chatId });
+      // The echo backend's own array, which starts as the seed and which its
+      // turns go into as they end: a command's turn goes in the same way.
+      const all = (): Bag[] => session.allTurns() as Bag[];
+      return {
+        ...session,
+        allTurns: all,
+        endPoint: (turnId) => (all().some((turn) => turn.id === turnId) ? `end:${turnId}` : undefined),
+        forkPoint: (turnId) => (all().some((turn) => turn.id === turnId) ? `end:${turnId}` : undefined),
+        ran: (turnId: string, command: string, run: (toolCallId: string) => Promise<Ran>) => {
+          const startedAt = new Date().toISOString();
+          const message = { text: `!${command}`, origin: { kind: 'user' } };
+          start.emit('chat', { type: 'chat/turnStarted', turnId, startedAt, message });
+          void run(`${turnId}:command`).then((done) => {
+            const state = k.ending === 'complete' ? 'complete' : k.ending === 'cancelled' ? 'cancelled' : 'error';
+            all().push({
+              id: turnId,
+              startedAt,
+              message,
+              state,
+              responseParts: [{
+                kind: 'toolCall',
+                toolCall: {
+                  toolCallId: `${turnId}:command`,
+                  toolName: 'terminal',
+                  displayName: 'Terminal',
+                  status: 'completed',
+                  success: done.success,
+                  pastTenseMessage: done.said,
+                  content: [{ type: 'text', text: done.output }],
+                },
+              }],
+            });
+            if (k.ending === 'complete') start.emit('chat', { type: 'chat/turnComplete', turnId, duration: 1 });
+            else if (k.ending === 'cancelled') start.emit('chat', { type: 'chat/turnCancelled', turnId, duration: 1 });
+            else start.emit('chat', { type: 'chat/error', turnId, duration: 1, part: { kind: 'error', error: { errorType: 'turnFailed', message: 'no' } } });
+          });
+        },
+      };
+    },
+  };
+};
+
+const LIVE = 'echo:/live';
+const TWO = 'echo:/two';
+const PEER = 'ahp-chat:/3f0c6a52-9a43-4d0e-a2b1-6b1f7c1d5e10';
+const TAIL = 'ahp-chat:/tail';
+
+/** One row, as a backend lists it. */
+const row = (id: string): Listed => ({
+  id,
+  title: 'Earlier',
+  createdAt: '2026-10-27T00:00:00.000Z',
+  modifiedAt: '2026-10-27T09:00:00.000Z',
+  workingDirectories: [uriOf(DIR)],
+});
+
+/** A host on a store, with a client watching the root. */
+const hostAt = async (k: Knobs, store: SessionStore) => {
+  const host = createHost({ path: DIR, agents: [backend(k)], ...machine(), sessions: store });
+  const p = peer();
+  p.request = async () => ({ trusted: true });
+  const client = host.accept(p);
+  await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+  return { host, client, p };
+};
+
+/** A session with a chat a client watches, on a host at a store. */
+const opened = async (k: Knobs, store: SessionStore) => {
+  const at = await hostAt(k, store);
+  await at.client.handle({ method: 'createSession', params: { channel: LIVE, provider: 'echo', workingDirectories: [uriOf(DIR)] } });
+  const chat = String((await stateOf(at.client, LIVE)).defaultChat);
+  await stateOf(at.client, chat);
+  return { ...at, chat };
+};
+
+/** The start the host made for one chat, the latest of them. */
+const startOf = (k: Knobs, chat: string): Start => {
+  const start = k.starts.filter((one) => one.chatUri === chat).at(-1);
+  if (start === undefined) throw new Error(`no start for ${chat}`);
+  return start;
+};
+
+/** A turn as a transcript reads it back. */
+const said = (id: string, text: string): Bag => ({
+  id,
+  message: { text, origin: { kind: 'user' } },
+  state: 'complete',
+  responseParts: [{ kind: 'markdown', id: `${id}:0`, content: text }],
+});
+
+describe('a command\'s turn', () => {
+  it('is kept when it completes, against the turn before it', async () => {
+    const k = knobs();
+    const store = fileSessions({ dir: join(temp(), 'sessions') });
+    const { client, p, chat } = await opened(k, store);
+    say(client, chat, 't1', 'hello there');
+    await ended(p, chat, 't1');
+    say(client, chat, 't2', '!echo one');
+    await ended(p, chat, 't2');
+    say(client, chat, 't3', '!echo two');
+    await ended(p, chat, 't3');
+
+    const kept = keptIn(store, 'live');
+    expect(kept.map((one) => ({ turnId: one.turnId, anchor: one.anchor, seq: one.seq }))).toEqual([
+      { turnId: 't2', anchor: 't1', seq: 1 },
+      { turnId: 't3', anchor: 't1', seq: 2 },
+    ]);
+    // The turn as the chat holds it.
+    expect((kept[0]?.turn as Bag).message).toEqual({ text: '!echo one', origin: { kind: 'user' } });
+    expect(kept[0]?.version).toBe(1);
+  });
+
+  it('is kept when a stop cancels it, and when it fails', async () => {
+    for (const ending of ['cancelled', 'error'] as const) {
+      const k = knobs();
+      k.ending = ending;
+      const store = fileSessions({ dir: join(temp(), 'sessions') });
+      const { client, p, chat } = await opened(k, store);
+      say(client, chat, 't1', '!echo ended');
+      await ended(p, chat, 't1');
+      expect(keptIn(store, 'live').map((one) => (one.turn as Bag).state), ending).toEqual([ending]);
+    }
+  });
+
+  it('has no anchor before every other turn, and a question\'s turn is not kept', async () => {
+    const k = knobs();
+    const store = fileSessions({ dir: join(temp(), 'sessions') });
+    const { client, p, chat } = await opened(k, store);
+    say(client, chat, 't1', '!echo first');
+    await ended(p, chat, 't1');
+    say(client, chat, 't2', 'a question');
+    await ended(p, chat, 't2');
+    const kept = keptIn(store, 'live');
+    expect(kept.map((one) => one.turnId)).toEqual(['t1']);
+    expect('anchor' in (kept[0] ?? {})).toBe(false);
+  });
+
+});
+
+describe('a host started again on the same store', () => {
+  /** A first host that ran some turns, closed; and a second on the same store. */
+  const restarted = async (script: (client: Client, p: ReturnType<typeof peer>, chat: string) => Promise<void>, transcript: Bag[]) => {
+    const dir = join(temp(), 'sessions');
+    const first = knobs();
+    const before = await opened(first, fileSessions({ dir }));
+    await script(before.client, before.p, before.chat);
+    await before.host.close();
+    const second = knobs();
+    second.listed = [row('live')];
+    second.transcript = (id) => (id === 'live' ? transcript : []);
+    const after = await hostAt(second, fileSessions({ dir }));
+    return { ...after, chat: before.chat, k: second };
+  };
+
+  it('puts each command\'s turn back after the turn it followed, the unanchored first, in the order kept', async () => {
+    const { client, host, chat } = await restarted(async (c, p, ch) => {
+      say(c, ch, 't0', '!echo before everything');
+      await ended(p, ch, 't0');
+      say(c, ch, 't1', 'hello there');
+      await ended(p, ch, 't1');
+      say(c, ch, 't2', '!echo one');
+      await ended(p, ch, 't2');
+      say(c, ch, 't3', '!echo two');
+      await ended(p, ch, 't3');
+      say(c, ch, 't4', 'and then');
+      await ended(p, ch, 't4');
+    }, [said('t1', 'hello there'), said('t4', 'and then')]);
+    expect(await turnsOf(client, chat)).toEqual(['t0', 't1', 't2', 't3', 't4']);
+    await host.close();
+  });
+
+  it('drops a command\'s turn whose anchor the transcript no longer holds', async () => {
+    const { client, host, chat } = await restarted(async (c, p, ch) => {
+      for (const [turnId, text] of [['t1', 'hello there'], ['t2', '!echo kept'], ['t3', 'gone since'], ['t4', '!echo orphan']] as const) {
+        say(c, ch, turnId, text);
+        await ended(p, ch, turnId);
+      }
+    }, [said('t1', 'hello there')]);
+    expect(await turnsOf(client, chat)).toEqual(['t1', 't2']);
+    await host.close();
+  });
+
+  it('keeps a command\'s turn the transcript holds where it is, once, and the next after it', async () => {
+    // An ACP record holds the seed it was resumed with, local turns and all.
+    const { client, host, chat } = await restarted(async (c, p, ch) => {
+      for (const [turnId, text] of [['t1', 'hello there'], ['t2', '!echo held'], ['t3', '!echo after']] as const) {
+        say(c, ch, turnId, text);
+        await ended(p, ch, turnId);
+      }
+    }, [said('t1', 'hello there'), said('t2', '!echo held')]);
+    expect(await turnsOf(client, chat)).toEqual(['t1', 't2', 't3']);
+    await host.close();
+  });
+
+  it('seeds a woken chat with its command\'s turn', async () => {
+    const { client, host, chat, k } = await restarted(async (c, p, ch) => {
+      say(c, ch, 't1', 'hello there');
+      await ended(p, ch, 't1');
+      say(c, ch, 't2', '!echo seeded');
+      await ended(p, ch, 't2');
+    }, [said('t1', 'hello there')]);
+    await stateOf(client, chat);
+    say(client, chat, 't3', 'wake up');
+    for (let i = 0; i < 200 && k.starts.length === 0; i += 1) await settle(1);
+    expect(((startOf(k, chat).seed ?? []) as Bag[]).map((turn) => turn.id)).toEqual(['t1', 't2']);
+    await host.close();
+  });
+
+  it('reads a peer chat\'s command\'s turns from that chat', async () => {
+    const dir = join(temp(), 'sessions');
+    const first = knobs();
+    const before = await opened(first, fileSessions({ dir }));
+    await before.client.handle({ method: 'createChat', params: { channel: LIVE, chat: PEER } });
+    await settle();
+    await stateOf(before.client, PEER);
+    say(before.client, PEER, 'p1', 'in the peer');
+    await ended(before.p, PEER, 'p1');
+    say(before.client, PEER, 'p2', '!echo peer command');
+    await ended(before.p, PEER, 'p2');
+    await before.host.close();
+
+    const second = knobs();
+    second.listed = [row('live')];
+    const peerId = PEER.slice('ahp-chat:/'.length);
+    second.transcript = (id) => (id === peerId ? [said('p1', 'in the peer')] : []);
+    const after = await hostAt(second, fileSessions({ dir }));
+    expect(await turnsOf(after.client, PEER)).toEqual(['p1', 'p2']);
+    await after.host.close();
+  });
+});
+
+describe('a cut at a command\'s turn', () => {
+  /** A chat with a question, a command after it and a question after that. */
+  const cut = async () => {
+    const k = knobs();
+    const store = fileSessions({ dir: join(temp(), 'sessions') });
+    const at = await opened(k, store);
+    for (const [turnId, text] of [['t1', 'hello there'], ['t2', '!echo between'], ['t3', 'and then']] as const) {
+      say(at.client, at.chat, turnId, text);
+      await ended(at.p, at.chat, turnId);
+    }
+    return { ...at, k, store };
+  };
+
+  it('rewinds the backend at the turn before it, and keeps the command\'s turn', async () => {
+    const { client, chat, k, store } = await cut();
+    void client.handle({ method: 'dispatchAction', params: { channel: chat, action: { type: 'chat/truncated', turnId: 't2' } } });
+    await settle(10);
+    const start = startOf(k, chat);
+    expect(start.rewindAt).toBe('end:t1');
+    expect(((start.seed ?? []) as Bag[]).map((turn) => turn.id)).toEqual(['t1', 't2']);
+    expect(keptIn(store, 'live').map((one) => one.turnId)).toEqual(['t2']);
+  });
+
+  it('drops the command\'s turn and its file with a cut before it', async () => {
+    const { client, p, chat, store } = await cut();
+    expect(keptIn(store, 'live').map((one) => one.turnId)).toEqual(['t2']);
+    void client.handle({ method: 'dispatchAction', params: { channel: chat, action: { type: 'chat/truncated', turnId: 't1' } } });
+    await settle(10);
+    expect(actions(p, chat).some((e) => e.action.type === 'chat/truncated')).toBe(true);
+    expect(keptIn(store, 'live')).toEqual([]);
+  });
+
+  it('is refused at a command\'s turn with no turn before it', async () => {
+    const k = knobs();
+    const store = fileSessions({ dir: join(temp(), 'sessions') });
+    const { client, p, chat } = await opened(k, store);
+    say(client, chat, 't1', '!echo alone');
+    await ended(p, chat, 't1');
+    const starts = k.starts.length;
+    void client.handle({ method: 'dispatchAction', params: { channel: chat, action: { type: 'chat/truncated', turnId: 't1' } } });
+    await settle(10);
+    // Refused as a clear of the whole conversation, which it would be for the
+    // backend, and nothing restarted.
+    expect(actions(p).filter((e) => e.rejectionReason !== undefined).at(-1)?.rejectionReason).toContain('not a conversation entire');
+    expect(k.starts.length).toBe(starts);
+  });
+
+  it('forks the backend at the turn before it, and the fork keeps the command\'s turn', async () => {
+    const { client, chat, k, store } = await cut();
+    await client.handle({ method: 'createChat', params: { channel: LIVE, chat: TAIL, source: { kind: 'fork', chat, turnId: 't2' } } });
+    await settle();
+    const start = startOf(k, TAIL);
+    expect(start.forkAt).toBe('end:t1');
+    expect(((start.seed ?? []) as Bag[]).map((turn) => turn.id)).toEqual(['t1', 't2']);
+    // Kept for both chats now, each under its own.
+    expect(keptIn(store, 'live').map((one) => one.turnId)).toEqual(['t2', 't2']);
+  });
+});
+
+describe('a chat\'s command\'s turns', () => {
+  it('go with the chat when a client disposes it', async () => {
+    const k = knobs();
+    const store = fileSessions({ dir: join(temp(), 'sessions') });
+    const { client, p } = await opened(k, store);
+    await client.handle({ method: 'createChat', params: { channel: LIVE, chat: PEER } });
+    await settle();
+    await stateOf(client, PEER);
+    say(client, PEER, 'p1', '!echo in the peer');
+    await ended(p, PEER, 'p1');
+    expect(keptIn(store, 'live')).toHaveLength(1);
+    await client.handle({ method: 'disposeChat', params: { channel: PEER } });
+    expect(keptIn(store, 'live')).toEqual([]);
+  });
+
+  it('move with the chat to another session', async () => {
+    const k = knobs();
+    const store = fileSessions({ dir: join(temp(), 'sessions') });
+    const { client, p } = await hostAt(k, store);
+    for (const [session, chat] of [[LIVE, PEER], [TWO, TAIL]] as const) {
+      await client.handle({ method: 'createSession', params: { channel: session, provider: 'echo', workingDirectories: [uriOf(DIR)] } });
+      await client.handle({ method: 'createChat', params: { channel: session, chat } });
+    }
+    await settle();
+    await stateOf(client, PEER);
+    say(client, PEER, 'p1', '!echo moving');
+    await ended(p, PEER, 'p1');
+    await client.handle({ method: 'moveChat', params: { channel: PEER, destination: { kind: 'session', session: TWO } } });
+    await settle(20);
+    expect(keptIn(store, 'live')).toEqual([]);
+    expect(keptIn(store, 'two').map((one) => one.turnId)).toEqual(['p1']);
+  });
+});
+
+describe('a Claude chat', () => {
+  /** A Claude session on a store that keeps a folder, with its chat watched. */
+  const shelled = async (dir: string) => {
+    const store = fileSessions({ dir });
+    const host = createHost({ path: DIR, agents: [claude({ paths: [DIR] })], ...machine(), sessions: store });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    return { host, client, p, store };
+  };
+
+  it('anchors a command\'s turn to the uuid the turn before it was written under, and has it back after a restart', async () => {
+    const dir = join(temp(), 'sessions');
+    const before = await shelled(dir);
+    const uri = 'claude:/banged';
+    await before.client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude', workingDirectories: [uriOf(DIR)] } });
+    const chat = String((await stateOf(before.client, uri)).defaultChat);
+    expect(chat).toBe(chatUriFor(uri));
+    await stateOf(before.client, chat);
+    say(before.client, chat, 't1', 'first');
+    await settle();
+    // The prompt as the CLI took it in: the uuid it carried is the one its
+    // transcript writes it under, and nothing is echoed back.
+    expect(sdk.said).toEqual(['first']);
+    const written = String(sdk.uuids[0]);
+    expect(written).not.toBe('t1');
+    await emit({ type: 'assistant', uuid: 'reply-1', message: { id: 'm1', content: [{ type: 'text', text: 'one' }] } });
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+    await ended(before.p, chat, 't1');
+    say(before.client, chat, 't2', '!echo after-the-reply');
+    await ended(before.p, chat, 't2');
+    expect(keptIn(before.store, 'banged').map((one) => ({ turnId: one.turnId, anchor: one.anchor }))).toEqual([
+      { turnId: 't2', anchor: written },
+    ]);
+    const terminal = String((((keptIn(before.store, 'banged')[0]?.turn as Bag).responseParts as Bag[])
+      .map((part) => part.toolCall as Bag)[0]?.content as Bag[]).find((one) => one.type === 'terminal')?.resource);
+    await before.host.close();
+
+    // The CLI's transcript holds the question under the uuid its prompt
+    // carried, and the answer under one of the CLI's own.
+    sdk.sessions.push({ sessionId: 'banged', summary: 'first', lastModified: 1, cwd: DIR });
+    sdk.transcript.push(
+      { type: 'user', uuid: written, message: { role: 'user', content: 'first' } },
+      { type: 'assistant', uuid: 'reply-1', message: { content: [{ type: 'text', text: 'one' }] } },
+    );
+    const after = await shelled(dir);
+    await stateOf(after.client, uri);
+    expect(await turnsOf(after.client, chat)).toEqual([written, 't2']);
+    // And the terminal the command's call names opens, exited, with its output.
+    const rebuilt = await stateOf(after.client, terminal);
+    expect(rebuilt.content).toEqual([{ type: 'unclassified', value: expect.stringContaining('after-the-reply') }]);
+    expect(rebuilt.lifecycle).toEqual({ status: 'exited', exitCode: 0 });
+    await after.host.close();
+  });
+});

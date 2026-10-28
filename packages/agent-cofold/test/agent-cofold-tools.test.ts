@@ -280,7 +280,9 @@ it('offers web_search only when a search provider is configured', async () => {
     store: dir,
     tools: { web: { search: { duckduckgo: true } } },
   });
-  searching.session.begin('t1', 'hi');
+  // The same conversation on the same store, so a turn of its own: cofold
+  // keeps each turn's prompt under the turn's id.
+  searching.session.begin('t2', 'hi');
   await when(() => ended(searching.v));
   const names = offeredNames(searching.model);
   expect(names).toContain('web_search');

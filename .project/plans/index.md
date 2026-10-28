@@ -272,8 +272,13 @@ Reference: [00-host.md](host/00-host.md)
 | [128 p4 - A cofold command shows its terminal](host/128-p4-a-cofold-command-shows-its-terminal/plan.md) | high | built 2026-10-27 ([implemented.md](host/128-p4-a-cofold-command-shows-its-terminal/implemented.md)) | 128 p1 | - |
 | [128 p5 - A pi command is a terminal call](host/128-p5-a-pi-command-is-a-terminal-call/plan.md) | high | built 2026-10-27 ([implemented.md](host/128-p5-a-pi-command-is-a-terminal-call/implemented.md)) | 128 p1 | - |
 | [129 - A terminal a tool result names lasts as long as its chat](host/129-a-tool-results-terminal-lasts-as-long-as-its-chat/plan.md) | medium | built 2026-10-27; [implemented.md](host/129-a-tool-results-terminal-lasts-as-long-as-its-chat/implemented.md) | - | claude 24 |
+| [130 - A `!` command's turn survives a restart](host/130-a-commands-turn-survives-a-restart/plan.md) | medium | built 2026-10-28; parent of p1 to p4 ([implemented.md](host/130-a-commands-turn-survives-a-restart/implemented.md)) | host 129 | - |
+| [130 p1 - The host keeps a command's turn for its chat](host/130-p1-the-host-keeps-a-commands-turn/plan.md) | medium | built 2026-10-27 ([implemented.md](host/130-p1-the-host-keeps-a-commands-turn/implemented.md)) | host 129 | - |
+| [130 p2 - A cofold turn keeps the id it was given](host/130-p2-a-cofold-turn-keeps-its-id/plan.md) | medium | built 2026-10-27 ([implemented.md](host/130-p2-a-cofold-turn-keeps-its-id/implemented.md)) | - | - |
+| [130 p3 - A pi turn names the entry that holds it](host/130-p3-a-pi-turn-names-its-entry/plan.md) | medium | built 2026-10-27 ([implemented.md](host/130-p3-a-pi-turn-names-its-entry/implemented.md)) | - | - |
+| [130 p4 - A Claude turn is written under its id](host/130-p4-a-claude-turn-is-written-under-its-id/plan.md) | medium | built 2026-10-28 ([implemented.md](host/130-p4-a-claude-turn-is-written-under-its-id/implemented.md)) | - | - |
 
-Next free number in `host`: `130`.
+Next free number in `host`: `131`.
 
 ## claude
 

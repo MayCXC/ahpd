@@ -72,6 +72,16 @@ WHEN a Claude session shows its approvals
 THEN the `permissionMode` property offers `default`, `acceptEdits`, `plan`, `auto`, `bypassPermissions` and `dontAsk`
 AND a new session starts on `default`.
 
+### A Claude turn is written under its id
+
+WHEN a Claude turn sends its prompt
+THEN the prompt carries the turn's id as its `uuid` when the id is a UUID
+AND it carries a new uuid otherwise, and the backend calls `onTurnRecorded` with the turn's id and that uuid.
+WHEN a failed turn is sent again
+THEN its prompt carries a new uuid, and the backend calls `onTurnRecorded` with the pair.
+The reason: the CLI writes a prompt under the `uuid` it carries and sends no frame for it, and a read after a restart names the turn by that uuid.
+See [`code://packages/agent-claude/src/session/turns.ts`](../../packages/agent-claude/src/session/turns.ts).
+
 ### A live tool change in a Claude session
 
 WHEN the tools a Claude session offers change while the session runs
