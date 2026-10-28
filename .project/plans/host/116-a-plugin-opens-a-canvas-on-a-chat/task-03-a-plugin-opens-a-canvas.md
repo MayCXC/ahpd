@@ -1,6 +1,6 @@
 ---
 title: A plugin opens, updates and closes a canvas
-status: todo
+status: implemented
 depends:
   - task-02-the-host-keeps-the-canvases-of-a-chat.md
 layer: "sdk"
@@ -59,3 +59,10 @@ Each call goes to the host's canvas store and refuses a bad argument by name.
 - Run `git checkout -- packages/sdk/test/fixtures/wire.jsonl` after the run.
 
 ## Resume
+
+- **Done so far:** built. `PluginHost` has `openCanvas(chat, state)`, `updateCanvas(resource, state)` and `closeCanvas(resource)`. Each one throws by name until a host is built over the plugin, and then calls the store with the plugin's name. `Contribution.canvases` carries the store's entry, and `foldHostOptions` passes every plugin's entry to the host as `pluginCanvases`; `wireCanvases` in `host/facts.ts` fills `open`, `update`, `close` and `closeAll` in when the store is made. The store refuses a call while `rootConfig.canvasesEnabled` is not `true`, a chat this host does not hold, a state with no instance, extension or canvas id, a `url` that is not absolute http(s) with a host, and a plugin that did not open the canvas; the sentence never repeats the `url`. The first open a plugin makes puts one closer on its contribution, and that closer calls `closeAll(by)`, which the key does not refuse. Twelve cases pass in `test/plugin-canvases.test.ts`.
+- **Next action:** task 04, the docs.
+- **Open questions:** none.
+- **Watch out for:** the unload road is a choice the plan does not name. The daemon unloads a plugin whenever its entry changes, so a closer that refused while the key is off would leave canvases on a chat with nothing behind them; `closeAll` is the host's own road and takes the key out of it. The closer is pushed at the first open rather than at fold time, because `HostOptions.closers` carries one entry per registration and `plugins-close.test.ts` holds that a plugin which registers nothing contributes none.
+  `Contribution.canvases` and the `pluginCanvases` fold entry are not in this task's Files: the fold has no field to carry a store to the host without them. `Contribution` gained a required member, so `plugin-host.test.ts` and `plugin-fold.test.ts` build `canvases: { by }` in their fixtures.
+  The tests turn the key on by pushing `root/configChanged` on `ahp-root://`, because `HostOptions.rootConfig` is the daemon's port and not the record a client's push fills. That push is the host's own setting, so it needs `config:write`, and the users test names the grant.
