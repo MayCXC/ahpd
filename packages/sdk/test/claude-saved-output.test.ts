@@ -27,7 +27,11 @@ vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/c
 beforeEach(resetSdk);
 
 let made: string[] = [];
-afterEach(() => {
+/** Every host a case made, closed before its folder goes: Windows will not remove a folder a host still watches. */
+let hosts: { close(): Promise<void> }[] = [];
+afterEach(async () => {
+  for (const host of hosts) await host.close();
+  hosts = [];
   for (const dir of made) rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   made = [];
 });
@@ -58,6 +62,7 @@ const savedOutput = () => {
 /** A host on a store, with a client watching the root. */
 const hostOn = async (dir: string, store: SessionStore) => {
   const host = createHost({ path: dir, agents: [claude({ paths: [dir] })], ...machine(), sessions: store });
+  hosts.push(host);
   const p = peer();
   const client = host.accept(p);
   await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
