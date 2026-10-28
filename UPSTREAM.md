@@ -51,6 +51,7 @@ Window-only (`sessions.chat.compareAgents.enabled`, `src/vs/sessions/SESSION_COM
 
 - [ ] **New `vscode/*` methods**: `moveSession` (initialize `_meta['vscode.sessionMove']`, session `_meta['vscode.movable']`, `389f0a7be92`), `readSavedChat` and `completeSavedChatContinuation`, `measureWorktreeDiskUsage` and `cancelWorktreeDiskUsage` for the worktree cleanup, and `cancelAgentHostDebugLogs`. `packages/sdk/src/host/vscodemethods.ts`.
 - [ ] **Opaque chat URIs**, offered with initialize `_meta['vscode.ahpChatUris']` (`50559e744a1`). ahpd offers only `vscode.ahpSessionUris`. `packages/sdk/src/host/handshake.ts`.
+- [x] **New sessions use the protocol's `ahp-session:` scheme** (`bd64649be19`, 2026-10-05). The provider is on `SessionSummary.provider`, not in the URI, and a session made before this keeps its `<provider>:/<id>` name. `packages/sdk/src/host/sessionmethods.ts`, `packages/sdk/src/host/catalogue.ts`, `packages/sdk/src/host/spawn.ts`, `packages/sdk/src/sessions/sessions.ts`, `packages/sdk/src/sessions/nested.ts`, `packages/sdk/src/plugins/plugins.ts`. Built in `host/126` tasks 01 to 05.
 - [ ] **Named and prompted forks** (`80aa091c84c`). `packages/sdk/src/host/chatactions.ts`.
 - [ ] **Multi-root is on by default** (`1044782bfd8`), which makes Pass 5's multi-folder `create_session` boxes matter more.
 - [ ] **Root key `sessionCatalogEnabled` is removed** (`85e195f2594`). `packages/sdk/src/vscoderootconfig.ts`.

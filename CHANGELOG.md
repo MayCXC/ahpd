@@ -6,6 +6,7 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 
 ### Upgrading
 
+- A new session is now named `ahp-session:/<uuid>`, and its provider is on `SessionSummary.provider`. A client that read the provider from a session URI's scheme reads it from the summary instead. A session that already exists keeps its `<provider>:/<id>` name.
 - A terminal's `terminal/data` no longer carries the shell's OSC 133 and OSC 7 marks, as the protocol requires of a server. A client that read command boundaries or the directory from the marks reads `terminal/commandExecuted`, `terminal/commandFinished` and `terminal/cwdChanged`.
 - `terminal/commandDetectionAvailable` goes out with the shell's first OSC 133 mark rather than when the terminal opens, and `supportsCommandDetection` is false until then. A shell that prints no marks never announces it.
 
