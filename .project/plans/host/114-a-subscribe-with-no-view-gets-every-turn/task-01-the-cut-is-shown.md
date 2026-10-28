@@ -1,6 +1,6 @@
 ---
 title: The cut is shown
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -39,4 +39,12 @@ Softov runs the check by hand in [`pending/host-114-turn-cut-checks.md`](../../.
 - The Resume holds the reply to the check by hand.
 
 ## Resume
+
+Done 2026-10-28.
+Two cases in `paging a long history` show the cut.
+A chat that is not running gives 50 of 120 turns, and a live Claude chat gives 50 of 121.
+Both are `it.fails`, and each fails on the count alone, so the suite stays green.
+`opened()` now writes the CLI's conversation, so a turn sent to the session resumes it rather than starting one under the test's id.
+The check by hand in [`pending/host-114-turn-cut-checks.md`](../../../pending/host-114-turn-cut-checks.md) was not run in this session, because no VS Code window is available here.
+Its reply is still owed, and [task 05](task-05-a-window-shows-every-turn.md) asks for it again after the fix.
 

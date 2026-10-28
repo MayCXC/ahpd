@@ -1,7 +1,7 @@
 ---
 title: A subscribe with no view gets every turn
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-22
 revalidated: 2026-10-28
@@ -112,7 +112,7 @@ subscribe {channel: ahp-chat:/..., view?} -> sessionmethods.subscribe -> snapsho
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The cut is shown](task-01-the-cut-is-shown.md) | todo | - |
+| [01 - The cut is shown](task-01-the-cut-is-shown.md) | implemented | - |
 | [02 - A snapshot follows the subscribe's view](task-02-a-snapshot-follows-the-subscribes-view.md) | todo | 01 |
 | [03 - Claude's chat state holds every turn](task-03-claudes-chat-state-holds-every-turn.md) | todo | 02 |
 | [04 - The docs say every turn without a view](task-04-the-docs-say-every-turn-without-a-view.md) | todo | 02, 03 |
@@ -128,8 +128,8 @@ subscribe {channel: ahp-chat:/..., view?} -> sessionmethods.subscribe -> snapsho
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-22 from Softov's choice of the Pass 7 finding. The refs were checked against main `343ca825` on 2026-10-28, and the gap is still there. VS Code main `2398c3f7c7c` was checked on 2026-10-28: a subscribe still reads no view, and `fetchTurns` still answers no older turns. Softov answered the three open questions on 2026-10-22. The check by hand is written in [`pending/host-114-turn-cut-checks.md`](../../../pending/host-114-turn-cut-checks.md).
-- **Next action:** [task-01-the-cut-is-shown.md](task-01-the-cut-is-shown.md).
+- **Done so far:** drafted 2026-10-22 from Softov's choice of the Pass 7 finding. The refs were checked against main `343ca825` on 2026-10-28, and the gap is still there. VS Code main `2398c3f7c7c` was checked on 2026-10-28: a subscribe still reads no view, and `fetchTurns` still answers no older turns. Softov answered the three open questions on 2026-10-22. The check by hand is written in [`pending/host-114-turn-cut-checks.md`](../../../pending/host-114-turn-cut-checks.md). Task 01 shows the cut: two `it.fails` cases read 50 turns of 120 and of 121. Its check by hand was not run yet.
+- **Next action:** [task-02-a-snapshot-follows-the-subscribes-view.md](task-02-a-snapshot-follows-the-subscribes-view.md).
 - **Open questions:** none.
 - **Watch out for:** the number 113 is taken by another host plan, so this plan is 114. The paging cases in `host-catalogue.test.ts` must still cover the cursor, so they subscribe with a view after task 02.
 

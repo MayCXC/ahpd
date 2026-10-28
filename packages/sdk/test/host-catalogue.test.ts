@@ -291,6 +291,9 @@ describe('paging a long history', () => {
   const opened = async (count = 120) => {
     sdk.sessions.push({ sessionId: 'long', summary: 'A long one', lastModified: 1, cwd: '/home/softov' });
     sdk.transcript.push(...many(count));
+    // The CLI wrote the conversation, so a turn sent to it resumes the session
+    // rather than starting one under the id this test asked for.
+    wrote('long', '/home/softov');
     const host = serving('/home/softov');
     const p = peer();
     const client = host.accept(p);
@@ -311,6 +314,32 @@ describe('paging a long history', () => {
     expect(chat.turns).toHaveLength(50);
     expect(chat.turns[49]?.message.text).toBe('said 119');
     expect(chat.turnsNextCursor).toBe('70');
+  });
+
+  it.fails('gives every turn of a chat that is not running when no view is named', async () => {
+    // The protocol: a subscribe that names no `view` is answered with every
+    // retained turn, and a cursor only where a window left older ones behind.
+    const { chat } = await opened();
+    expect(chat.turns).toHaveLength(120);
+    expect(chat.turns[0]?.message.text).toBe('said 0');
+    expect(chat.turnsNextCursor).toBeUndefined();
+  });
+
+  it.fails('gives every turn of a live chat when no view is named', async () => {
+    const { client } = await opened();
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: 'ahp-chat:/long', action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'say ok' } } },
+    });
+    await settle(6);
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+
+    // Live now, so the state is the backend's rather than the transcript's.
+    const chat = (await client.handle({ method: 'subscribe', params: { channel: 'ahp-chat:/long' } }) as {
+      snapshot: { state: { turns: { message: { text: string } }[]; turnsNextCursor?: string } };
+    }).snapshot.state;
+    expect(chat.turns).toHaveLength(121);
+    expect(chat.turnsNextCursor).toBeUndefined();
   });
 
   it('sends the page to everyone watching, not to the one who asked', async () => {
