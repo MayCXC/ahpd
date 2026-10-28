@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { agentsChannel } from '../src/agents/channel.js';
 import { createHost } from '../src/host.js';
 import { fileUsers } from '../src/access/users.js';
@@ -11,6 +11,7 @@ import { servedRecords } from '../src/resources/recordschannel.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';
 import type { Engine, AgentView, AgentTemplate, ServedEngine } from '../src/types/agents.js';
+import type { ConnectorRef } from '../src/types/connectors.js';
 import type { HostOptions, Users } from '../src/types/index.js';
 import type { RecordCollection } from '../src/types/records.js';
 import type { Vault } from '../src/types/vault.js';
@@ -48,6 +49,27 @@ const SCHEMA: Record<string, unknown> = {
   },
   required: ['target'],
 };
+
+/**
+ * An engine whose records name connectors: a list of logins and one account,
+ * each marked with the adapter it names, beside a field that is not marked.
+ */
+const LINKED: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    target: { type: 'string' },
+    logins: { type: 'array', items: { type: 'string', 'x-ahpd-connector': { adapter: 'claude-login' } } },
+    account: { type: 'string', 'x-ahpd-connector': { adapter: 'mail' } },
+  },
+};
+
+/** The connectors the host serves to the linked engine's records: whose each is, and of which adapter. */
+const CONNECTORS: ConnectorRef[] = [
+  { id: 'host-login', adapter: 'claude-login', owner: 'host' },
+  { id: 'cy-login', adapter: 'claude-login', owner: 'user:cy' },
+  { id: 'ana-login', adapter: 'claude-login', owner: 'user:ana' },
+  { id: 'host-mail', adapter: 'mail', owner: 'host' },
+];
 
 /**
  * The subset of JSON Schema this engine's form uses, as the daemon's checker
@@ -201,7 +223,7 @@ const misnamed = (opened: Opened[]): ServedEngine => {
  * `fold` is called with each agent list before the host takes it, so a case
  * can ask something of the host while a fold is in flight.
  */
-async function served(options: { register?: boolean; fold?: (agents: Agent[]) => Promise<void> } = {}) {
+async function served(options: { register?: boolean; fold?: (agents: Agent[]) => Promise<void>; connectors?: readonly ConnectorRef[] } = {}) {
   const register = options.register ?? true;
   const collection: RecordCollection = await memoryRecords().collection('agents', { format: 'json' });
   const opened: Opened[] = [];
@@ -219,6 +241,7 @@ async function served(options: { register?: boolean; fold?: (agents: Agent[]) =>
           by: 'test',
         },
         misnamed: misnamed(opened),
+        linked: { ...engineOf('linked', opened, false), schema: LINKED, by: 'test' },
       }
     : {};
   // What serves an id the records do not hold: the daemon's own backend, and
@@ -259,6 +282,7 @@ async function served(options: { register?: boolean; fold?: (agents: Agent[]) =>
       await host?.endSessionsOf(id);
     },
     holderOf: (id) => holders.get(id),
+    ...(options.connectors === undefined ? {} : { connectors: () => options.connectors as readonly ConnectorRef[] }),
     onProblem: (line) => { problems.push(line); },
   });
   wire = servedRecords('ahpd', [lists.channel], lists.methods);
@@ -567,6 +591,70 @@ it("refuses fromEnv on a person's record, and reads it for the host's", async ()
     delete process.env['AHPD_TEST_AGENT_KEY'];
   }
   await close();
+});
+
+/*
+ * A field that names a connector.
+ *
+ * The engine's schema marks it `x-ahpd-connector`, as a trigger's field is
+ * marked, and a put is checked against the connectors the host serves: the id
+ * has to be one of the adapter the mark names, and the record owner's own or
+ * the host's.
+ */
+describe('a field that names a connector', () => {
+  it('refuses a connector the host does not serve, and writes nothing', async () => {
+    const { host, users, collection, vault, close } = await served({ connectors: CONNECTORS });
+    const cy = await as(host, users, 'cy');
+    expect(await cy.call('x-ahpd/agents/put', {
+      id: 'mine', engine: 'linked', owner: 'user:cy', name: 'Mine', config: { logins: ['cy-login', 'gone'] },
+    })).toMatchObject({ code: -32602, message: 'logins names gone, and this host serves no claude-login connector with that id' });
+    expect(await collection.get('mine')).toBeUndefined();
+    expect(vault.held.size).toBe(0);
+    expect(await cy.call('x-ahpd/agents/put', {
+      id: 'mine', engine: 'linked', owner: 'user:cy', name: 'Mine', config: { account: 'gone' },
+    })).toMatchObject({ code: -32602, message: 'account names gone, and this host serves no mail connector with that id' });
+    await close();
+  });
+
+  it('refuses a connector of another adapter', async () => {
+    const { host, users, close } = await served({ connectors: CONNECTORS });
+    const fa = await as(host, users, 'fa');
+    expect(await fa.call('x-ahpd/agents/put', {
+      id: 'theirs', engine: 'linked', owner: 'host', name: 'Theirs', config: { logins: ['host-mail'] },
+    })).toMatchObject({ code: -32602, message: 'logins names host-mail, and this host serves no claude-login connector with that id' });
+    await close();
+  });
+
+  it("refuses another person's connector, and takes the owner's own and the host's", async () => {
+    const { host, users, collection, close } = await served({ connectors: CONNECTORS });
+    const cy = await as(host, users, 'cy');
+    expect(await cy.call('x-ahpd/agents/put', {
+      id: 'mine', engine: 'linked', owner: 'user:cy', name: 'Mine', config: { logins: ['ana-login'] },
+    })).toMatchObject({ code: -32602, message: 'logins names ana-login, which belongs to user:ana, so user:cy may not use it' });
+    expect(await cy.call('x-ahpd/agents/put', {
+      id: 'mine', engine: 'linked', owner: 'user:cy', name: 'Mine', config: { logins: ['cy-login', 'host-login'], account: 'host-mail' },
+    })).toMatchObject({ result: { state: 'ready' } });
+    expect((await collection.get('mine'))?.config).toEqual({ logins: ['cy-login', 'host-login'], account: 'host-mail' });
+    await close();
+  });
+
+  it("refuses a person's connector on a host record", async () => {
+    const { host, users, close } = await served({ connectors: CONNECTORS });
+    const fa = await as(host, users, 'fa');
+    expect(await fa.call('x-ahpd/agents/put', {
+      id: 'theirs', engine: 'linked', owner: 'host', name: 'Theirs', config: { logins: ['host-login', 'cy-login'] },
+    })).toMatchObject({ code: -32602, message: 'logins names cy-login, which belongs to user:cy, so host may not use it' });
+    await close();
+  });
+
+  it('checks no field the schema does not mark', async () => {
+    const { host, users, close } = await served({ connectors: CONNECTORS });
+    const cy = await as(host, users, 'cy');
+    expect(await cy.call('x-ahpd/agents/put', {
+      id: 'mine', engine: 'linked', owner: 'user:cy', name: 'Mine', config: { target: 'gone' },
+    })).toMatchObject({ result: { state: 'ready' } });
+    await close();
+  });
 });
 
 it('reads the agents each caller may use, and refuses one with no grant', async () => {

@@ -694,6 +694,14 @@ host.registerEngine({
   is each variable in `keyVariables`: the channel keeps the value in the vault
   under `agent/<id>/<field>` in the record's owner scope, and the record holds
   `{ "$secret": "<name>" }`.
+- A field the schema marks `x-ahpd-connector` with `{ "adapter": "<name>" }`, or
+  a list whose `items` it marks, names connectors of that adapter by id. A put
+  is refused when one names an id the host serves no such connector for, or a
+  connector that is neither the record owner's nor the host's, so a person's
+  agent never runs on another person's account. A record read back at a start
+  is not checked, because the agents open before the connectors; the backend
+  that uses a connector asks again. `@ahpd/agent-claude` names its logins
+  this way.
 - `templates` is what a new record starts from, each with a `name` and
   optionally a `description`, an `icon`, a `model` and a `config`. A template's
   `config` may leave a key variable empty, for the record to fill in. The host
