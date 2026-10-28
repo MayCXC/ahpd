@@ -259,7 +259,7 @@ Reference: [00-host.md](host/00-host.md)
 | [125 - A split character arrives whole](host/125-a-split-character-arrives-whole/plan.md) | medium | built 2026-10-27 ([implemented.md](host/125-a-split-character-arrives-whole/implemented.md)) | - | - |
 | [126 - A new session is an `ahp-session:` URI](host/126-a-new-session-is-an-ahp-session-uri/plan.md) | medium | active 2026-10-27; tasks 01 to 05 implemented | - | ahpc and ahpw create `ahp-session:` sessions |
 
-Next free number in `host`: `130`.
+Next free number in `host`: `127`.
 
 ## claude
 
