@@ -84,6 +84,8 @@ export interface Search {
   path: string;
   /** The system the extensions and install lines are for. Defaults to this one. */
   platform?: NodeJS.Platform;
+  /** Whether each agent command found is asked its `--version`. Defaults to true. */
+  versions?: boolean;
 }
 
 /** The first non-empty line of a program's output. */
@@ -234,7 +236,7 @@ export const findAgents = async (search: Search, configured: ReadonlyMap<string,
       missing.push(agent);
       continue;
     }
-    const version = await versionOf(path, search.run);
+    const version = search.versions === false ? undefined : await versionOf(path, search.run);
     agents.push({
       agent,
       path,
