@@ -65,9 +65,18 @@ export function createTurns(ctx: SessionContext): Turns {
    * queue all reach the CLI: the wake and the touch happen in one place, and a
    * message's attachments become the blocks the CLI takes whichever way it
    * arrived. A message with none is the string it always was. `uuid` is the id
-   * the CLI writes the prompt under, which a turn's own prompt is given.
+   * the CLI writes the prompt under and names its answer by, and `owed` is the
+   * message that answer is for, held until a result names the uuid.
    */
-  const push = async (text: string, attachments?: MessageAttachment[], uuid?: string): Promise<void> => {
+  const push = async (
+    text: string,
+    attachments?: MessageAttachment[],
+    uuid?: string,
+    owed?: { message: Bag; steering: boolean },
+  ): Promise<void> => {
+    // Held before the wait: a result read while the blocks are built is not
+    // this prompt's answer, and has to know that one is still to come.
+    if (uuid !== undefined && owed !== undefined) ctx.owed.set(uuid, owed);
     const content = await blocksFor(text, attachments);
     ctx.waiting.push({
       type: 'user',
@@ -108,9 +117,11 @@ export function createTurns(ctx: SessionContext): Turns {
   let prompted: { turn: string; text: string; attachments?: MessageAttachment[] } | undefined;
 
   const again = async (): Promise<void> => {
-    const turn = ctx.active === undefined ? undefined : String(ctx.active.id);
-    if (turn === undefined || prompted?.turn !== turn) return;
-    await push(prompted.text, prompted.attachments, writtenAs(turn, true));
+    const turn = ctx.active;
+    if (turn === undefined || prompted?.turn !== String(turn.id)) return;
+    const uuid = writtenAs(String(turn.id), true);
+    ctx.prompt = uuid;
+    await push(prompted.text, prompted.attachments, uuid, { message: bag(turn.message), steering: false });
   };
 
   /**
@@ -306,7 +317,9 @@ export function createTurns(ctx: SessionContext): Turns {
     const sent = carried === undefined ? text : `${carried}\n\n${text}`;
     carried = undefined;
     prompted = { turn: String(ctx.active.id), text: sent, ...(attachments === undefined ? {} : { attachments }) };
-    await push(sent, attachments, writtenAs(String(ctx.active.id), false));
+    const uuid = writtenAs(String(ctx.active.id), false);
+    ctx.prompt = uuid;
+    await push(sent, attachments, uuid, { message: bag(ctx.active.message), steering: false });
   };
 
   /**
@@ -319,6 +332,10 @@ export function createTurns(ctx: SessionContext): Turns {
    */
   const startNext = (): void => {
     if (busy() || ctx.closed)
+      return;
+    // Nor while the CLI owes an answer: a prompt handed to it now is read after
+    // the one it owes, and that answer would be taken for this one's.
+    if (ctx.owed.size > 0)
       return;
     const next = ctx.queued.shift();
     if (!next)
@@ -536,18 +553,19 @@ export function createTurns(ctx: SessionContext): Turns {
     /**
      * Into the turn that is already running, rather than after it.
      *
-     * The whole of it is `waiting.push` and a wake, which is the same door
-     * `begin` and the queue go through: the prompt handed to the CLI is a
-     * generator that stays open for the life of the session, so a message
-     * pushed while a turn runs is delivered to that turn. This was refused on
-     * the grounds that "the SDK has nowhere to put one", which was a claim
-     * about the harness nobody had tested and is not true of this one.
+     * The same door `begin` and the queue go through: the prompt handed to the
+     * CLI is a generator that stays open for the life of the session, so a
+     * message pushed while a turn runs reaches the CLI while that turn runs.
+     * The CLI folds it into the turn at the turn's next tool call. Once the
+     * model is writing its last answer there is no next tool call, and the CLI
+     * runs it after that answer's result, as a turn of its own. Either way the
+     * answer is this turn's, as the reference keeps it: it goes under a uuid,
+     * which the frames and the result answering it name, and the turn stays
+     * open until a result has named it.
+     * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/CONTEXT.md#L1595-L1609
      *
-     * Set and removed in the same breath, because it is consumed the instant
-     * it arrives: `steeringMessage` describes a message *waiting* to be
-     * injected, and nothing waits here. The protocol says the server emits
-     * the removal when it consumes one, so both go out and the state field
-     * stays empty - which is the honest description of what happened.
+     * The uuid is the steering message's own id when that is a UUID, as a
+     * turn's prompt goes under its turn's id, and a new one otherwise.
      */
     steer: (id, text, attachments) => {
       if (!ctx.active) return false;
@@ -562,7 +580,7 @@ export function createTurns(ctx: SessionContext): Turns {
       // happen in one tick.
       ctx.steering = { id, message };
       ctx.emit('chat', { type: 'chat/pendingMessageSet', kind: 'steering', id, message });
-      void push(text, attachments);
+      void push(text, attachments, UUID.test(id) ? id : crypto.randomUUID(), { message, steering: true });
       return true;
     },
 
@@ -669,11 +687,14 @@ export function createTurns(ctx: SessionContext): Turns {
       ctx.failed = undefined;
       ctx.doing('Thinking');
       const message = bag((ctx.active as Bag).message);
+      const uuid = writtenAs(turnId, true);
+      ctx.prompt = uuid;
+      ctx.owed.set(uuid, { message, steering: false });
       ctx.waiting.push({
         type: 'user',
         message: { role: 'user', content: str(message.text) ?? '' },
         parent_tool_use_id: null,
-        uuid: writtenAs(turnId, true) as `${string}-${string}-${string}-${string}-${string}`,
+        uuid: uuid as `${string}-${string}-${string}-${string}-${string}`,
       });
       ctx.wake?.();
       ctx.wake = undefined;

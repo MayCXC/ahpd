@@ -253,6 +253,21 @@ export interface SessionContext extends Omit<Config, 'methods'>, Omit<ClientTool
    */
   steering: Bag | undefined;
   /**
+   * Every prompt the CLI was handed that no result has named yet.
+   *
+   * Keyed by the uuid it was sent under, with the message it carried and
+   * whether it was a steering message. The CLI names the prompts an answer is
+   * for in `user_message_uuids`, on the answer's frames and on its result. A
+   * steering message it reads after the turn's last tool call is run as a turn
+   * of its own once the turn's result is out, so a turn is not over while it
+   * owes one. A CLI that is put away, or that dies, takes the rest with it.
+   */
+  owed: Map<string, { message: Bag; steering: boolean }>;
+  /** The uuid the running turn's own prompt was sent under. */
+  prompt: string | undefined;
+  /** The prompt the CLI's current answer is for, from the last frame that named it. */
+  answering: string | undefined;
+  /**
    * What the host asked said to the model, and the turn it asked it for.
    *
    * Read when the turn begins, and read back by the `UserPromptSubmit` hook

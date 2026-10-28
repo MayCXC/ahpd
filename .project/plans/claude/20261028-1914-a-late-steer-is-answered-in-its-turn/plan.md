@@ -92,8 +92,8 @@ a client steers -> steer() pushes the message to the CLI -> the CLI answers afte
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A steered turn ends when its prompts are answered](task-01-a-steered-turn-ends-when-answered.md) | doing | - |
-| [02 - A late answer opens a turn with its prompt](task-02-a-late-answer-opens-its-own-turn.md) | todo | 01 |
+| [01 - A steered turn ends when its prompts are answered](task-01-a-steered-turn-ends-when-answered.md) | done | - |
+| [02 - A late answer opens a turn with its prompt](task-02-a-late-answer-opens-its-own-turn.md) | doing | 01 |
 
 ## Risks and tradeoffs
 
@@ -103,8 +103,8 @@ a client steers -> steer() pushes the message to the CLI -> the CLI answers afte
 
 ## Resume state
 
-- **Done so far:** probes and the cases written 2026-10-28; task 01 started.
-- **Next action:** [task-01-a-steered-turn-ends-when-answered.md](task-01-a-steered-turn-ends-when-answered.md).
+- **Done so far:** task 01 done 2026-10-28.
+- **Next action:** [task-02-a-late-answer-opens-its-own-turn.md](task-02-a-late-answer-opens-its-own-turn.md).
 - **Open questions:** none.
 - **Watch out for:** a case that keeps the actions a session emits must copy them, because a part announced empty is filled in place afterwards.
 

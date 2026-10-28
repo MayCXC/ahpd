@@ -272,6 +272,9 @@ export function createQuery(ctx: SessionContext): Query {
      * session that says it is thinking for as long as anyone watches it.
      */
     ctx.gone = why;
+    // And it owes nothing: what it was handed went with it.
+    ctx.owed.clear();
+    ctx.answering = undefined;
     failTurn(why);
   };
 
@@ -566,6 +569,9 @@ export function createQuery(ctx: SessionContext): Query {
    */
   const startQuery = (agent: string | undefined, first: boolean, cut?: string): ReturnType<typeof query> => {
     ctx.startedWith = startedFrom(ctx.values, ctx.login);
+    // A new CLI owes nothing: what the last one was handed went with it.
+    ctx.owed.clear();
+    ctx.answering = undefined;
     return buildQuery(agent, first, cut);
   };
 
@@ -583,6 +589,9 @@ export function createQuery(ctx: SessionContext): Query {
    * the turns it opens with, and every turn it watches adds its own.
    */
   const ends = new Map<string, string>(ctx.options.seedEnds ?? []);
+
+  /** The turns a result left open for an answer the CLI still owed, by turn id. */
+  const spanning = new Set<string>();
 
   /**
    * Ask the CLI for a model, and say why it would not take it if it will not.
@@ -840,6 +849,32 @@ export function createQuery(ctx: SessionContext): Query {
             : str(message.subtype) !== 'success'
               ? `The turn ended ${str(message.subtype) ?? 'without succeeding'}`
               : undefined;
+          /*
+           * The prompts this result answered, which the CLI no longer owes.
+           *
+           * Named in `user_message_uuids`, or in `user_message_uuid` alone. A
+           * result that names none comes from a CLI that names nothing, and
+           * answers whatever was owed.
+           */
+          const named = list(message.user_message_uuids).map(String);
+          if (str(message.user_message_uuid) !== undefined) named.push(String(message.user_message_uuid));
+          if (named.length === 0) ctx.owed.clear();
+          for (const uuid of named) ctx.owed.delete(uuid);
+          ctx.answering = undefined;
+          /*
+           * A turn the CLI still owes an answer in.
+           *
+           * A steering message the CLI read after the turn's last tool call is
+           * run once this result is out, as a turn of the CLI's own, and its
+           * answer is this turn's: the turn stays open until a result has named
+           * every prompt handed over in it, as the reference completes a turn
+           * only when its prompts are settled. A result that failed ends it.
+           * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudeSdkPipeline.ts#L688-L705
+           */
+          if (turn && wrong === undefined && ctx.owed.size > 0) {
+            spanning.add(String(turn.id));
+            continue;
+          }
           if (turn) {
             /*
              * Every turn that ends says how it ended.
@@ -852,7 +887,12 @@ export function createQuery(ctx: SessionContext): Query {
              * reads the snapshot, and the snapshot is this.
              */
             turn.state = str(message.subtype) !== 'success' ? 'error' : 'complete';
-            turn.duration = typeof message.duration_ms === 'number' ? message.duration_ms : Date.now() - ctx.startedAt;
+            // `duration_ms` is the CLI's last turn alone, so a turn that took
+            // more than one of them is measured from its own start.
+            const spanned = spanning.delete(String(turn.id));
+            turn.duration = !spanned && typeof message.duration_ms === 'number'
+              ? message.duration_ms
+              : Date.now() - ctx.startedAt;
             // Before the turn completes, not after: the reducer hangs usage on
             // `activeTurn`, and `chat/turnComplete` is what moves that into
             // `turns` - so the other order reports it about nothing.

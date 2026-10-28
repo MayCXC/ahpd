@@ -1,6 +1,6 @@
 ---
 title: A prompt the CLI answers after its turn ended opens a turn carrying it
-status: todo
+status: doing
 depends: [task-01-a-steered-turn-ends-when-answered.md]
 layer: "agent-claude"
 refs:

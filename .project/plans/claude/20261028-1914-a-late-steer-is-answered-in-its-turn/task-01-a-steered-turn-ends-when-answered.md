@@ -1,6 +1,6 @@
 ---
 title: A steered turn ends when the CLI has answered its prompts
-status: doing
+status: done
 depends: []
 layer: "agent-claude"
 refs:
@@ -48,4 +48,7 @@ The turn ends, and the queue starts, once the CLI has answered every prompt it w
 
 ## Resume
 
-Started 2026-10-28: the cases and fixtures are written and fail on the code before this task.
+Done 2026-10-28.
+The late steer, the steering id that is no UUID and the waiting queue failed on the code before this task, and pass.
+The folded steer passed before and after.
+A turn that took more than one of the CLI's turns is measured from its start, because a result's `duration_ms` is the last one's alone.

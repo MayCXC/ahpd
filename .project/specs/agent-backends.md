@@ -117,6 +117,22 @@ The reason: the prompt cache belongs to the account.
 An attempt that has shown something already happened, so it never runs again on another account.
 See [`code://packages/agent-claude/src/session/logins.ts`](../../packages/agent-claude/src/session/logins.ts).
 
+### A Claude steering message answered after the turn's last answer
+
+WHEN a steering message reaches a running Claude turn
+THEN the backend sends it under the steering message's id when that id is a UUID
+AND under a new uuid otherwise.
+WHEN the CLI answers it after the result of the turn's last answer
+THEN the turn stays open, and that answer is part of it
+AND the turn ends at the result that names the steering message.
+WHEN a message waits in the queue meanwhile
+THEN it starts only after that result.
+WHEN a result names no prompt
+THEN it ends the turn.
+The reason: the CLI folds a steering message into a turn at its next tool call.
+One that arrives after the last tool call runs as a turn of its own.
+See [`code://packages/agent-claude/src/session/query.ts`](../../packages/agent-claude/src/session/query.ts).
+
 ### A live tool change in a Claude session
 
 WHEN the tools a Claude session offers change while the session runs

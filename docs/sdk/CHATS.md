@@ -46,6 +46,8 @@ A turn that has ended takes no more results. A client's reducer completes a call
 
 A message that arrives while a turn is running waits as a pending message, and its kind decides what happens: `queued` waits for the running turn, `steering` goes into it. The prompt handed to the backend's CLI is a generator that stays open for the life of the session, which is what makes steering possible at all.
 
+Claude's CLI takes a steering message into the turn at the turn's next tool call. One that reaches it while the model writes the turn's last answer is run after that answer, as a turn of the CLI's own. Its answer is still the steered turn's: the turn stays open until the CLI has answered every prompt it was handed in it, as VS Code's agent host keeps a steering message in the turn it steers, and a queued message waits for that.
+
 A draft is a `Message` rather than a string, and the session holds it rather than the chat's client, so two people in one chat see each other's. It is taken for a session nothing is running for too - somebody typing into a row from the catalogue is typing before there is any reason to start an agent, and refusing it is a composer that empties itself as it is typed into.
 
 `serverSeq` moves with state and never with messages. A snapshot is taken at a sequence number and every action after it carries a greater one, which is how a client knows it missed nothing.
