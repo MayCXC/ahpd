@@ -1,7 +1,7 @@
 ---
 title: A session that holds only its own commands' turns survives a restart
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -80,9 +80,9 @@ built: gone(id) false while turns are kept -> a row from what the host kept -> p
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The catalogue lists a session from its kept turns](task-01-the-catalogue-lists-it.md) | todo | - |
-| [02 - It opens with its kept turns](task-02-it-opens-with-its-kept-turns.md) | todo | 01 |
-| [03 - The spec and docs say so](task-03-the-spec-and-docs-say-so.md) | todo | 01, 02 |
+| [01 - The catalogue lists a session from its kept turns](task-01-the-catalogue-lists-it.md) | done | - |
+| [02 - It opens with its kept turns](task-02-it-opens-with-its-kept-turns.md) | done | 01 |
+| [03 - The spec and docs say so](task-03-the-spec-and-docs-say-so.md) | done | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -91,13 +91,13 @@ built: gone(id) false while turns are kept -> a row from what the host kept -> p
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-28 against main `4c9ab9a3`.
-- **Next action:** [task-01-the-catalogue-lists-it.md](task-01-the-catalogue-lists-it.md).
+- **Done so far:** drafted 2026-10-28 against main `4c9ab9a3`. Tasks 01 to 03 are done on 2026-10-28; see [implemented.md](implemented.md).
+- **Next action:** review.
 - **Open questions:** none.
 - **Watch out for:** a prune removes the session's folder, so a test lists twice to see what stays.
 
 ## Final verification checklist
 
-- [ ] After a restart, a session with only `!` turns is listed twice over, and it opens with its turns.
-- [ ] A turn sent to it after the restart runs, after its commands' turns.
-- [ ] A session with nothing behind it is still pruned.
+- [x] After a restart, a session with only `!` turns is listed twice over, and it opens with its turns.
+- [x] A turn sent to it after the restart runs, after its commands' turns.
+- [x] A session with nothing behind it is still pruned.

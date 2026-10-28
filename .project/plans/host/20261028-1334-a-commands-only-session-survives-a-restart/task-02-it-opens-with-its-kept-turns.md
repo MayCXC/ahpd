@@ -1,6 +1,6 @@
 ---
 title: It opens with its kept turns
-status: todo
+status: done
 depends: [task-01-the-catalogue-lists-it.md]
 layer: sdk
 refs:
@@ -31,3 +31,7 @@ A turn sent to it wakes its backend under its id.
 - `host-local-turns.test.ts`: a turn sent after the restart runs after them.
 
 ## Resume
+
+- **Done so far:** steps 1 to 3. The opening case failed on main with -32001.
+- **Next action:** none.
+- **Open questions:** none.

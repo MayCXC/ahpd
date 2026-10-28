@@ -1,6 +1,6 @@
 ---
 title: The catalogue lists a session from its kept turns
-status: todo
+status: done
 depends: []
 layer: sdk
 refs:
@@ -38,3 +38,7 @@ A session whose turns the host keeps is not pruned, and the catalogue lists it f
 - `host-local-turns.test.ts`: after a restart, the prune removes a session with no turns at all.
 
 ## Resume
+
+- **Done so far:** steps 1 to 8. The listing case failed on main with no row.
+- **Next action:** none.
+- **Open questions:** none.

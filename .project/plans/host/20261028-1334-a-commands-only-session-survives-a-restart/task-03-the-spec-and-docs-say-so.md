@@ -1,6 +1,6 @@
 ---
 title: The spec and docs say so
-status: todo
+status: done
 depends: [task-01-the-catalogue-lists-it.md, task-02-it-opens-with-its-kept-turns.md]
 layer: docs
 refs:
@@ -28,3 +28,7 @@ The spec and the docs say that a session whose turns the host keeps is listed af
 - `node .agents/skills/do-spec/scripts/lint-prose.mjs .project/plans/host/20261028-1334-a-commands-only-session-survives-a-restart .project/specs/sessions-and-chats.md` passes.
 
 ## Resume
+
+- **Done so far:** steps 1 to 3.
+- **Next action:** none.
+- **Open questions:** none.
