@@ -1,7 +1,7 @@
 ---
 title: A Claude turn is written under its id
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -81,7 +81,7 @@ restart -> transcript read names the Claude turn by that uuid -> the anchor is n
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A turn's prompt carries the turn's id](task-01-a-turns-prompt-carries-the-turns-id.md) | todo | - |
+| [01 - A turn's prompt carries the turn's id](task-01-a-turns-prompt-carries-the-turns-id.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -90,13 +90,13 @@ restart -> transcript read names the Claude turn by that uuid -> the anchor is n
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-28.
-- **Next action:** task 01.
+- **Done so far:** planned and built 2026-10-28; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a capture of a `claude -p` run with a string prompt is not a streamed session, and its frames are not this session's.
 
 ## Final verification checklist
 
-- [ ] The first case fails on the code before this plan.
-- [ ] The agent-claude suite and p1's cases pass.
-- [ ] `plans/index.md` updated.
+- [x] The first case fails on the code before this plan.
+- [x] The agent-claude suite and p1's cases pass.
+- [x] `plans/index.md` updated.

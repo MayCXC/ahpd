@@ -259,11 +259,11 @@ Reference: [00-host.md](host/00-host.md)
 | [125 - A split character arrives whole](host/125-a-split-character-arrives-whole/plan.md) | medium | built 2026-10-27 ([implemented.md](host/125-a-split-character-arrives-whole/implemented.md)) | - | - |
 | [126 - A new session is an `ahp-session:` URI](host/126-a-new-session-is-an-ahp-session-uri/plan.md) | medium | planned 2026-10-27; five tasks, todo | - | ahpc and ahpw create `ahp-session:` sessions |
 | [129 - A terminal a tool result names lasts as long as its chat](host/129-a-tool-results-terminal-lasts-as-long-as-its-chat/plan.md) | medium | built 2026-10-27; [implemented.md](host/129-a-tool-results-terminal-lasts-as-long-as-its-chat/implemented.md) | - | claude 24 |
-| [130 - A `!` command's turn survives a restart](host/130-a-commands-turn-survives-a-restart/plan.md) | medium | active 2026-10-28; parent of p1 to p4; p1 to p3 built 2026-10-27 ([implemented.md](host/130-a-commands-turn-survives-a-restart/implemented.md)) | host 129 | - |
+| [130 - A `!` command's turn survives a restart](host/130-a-commands-turn-survives-a-restart/plan.md) | medium | built 2026-10-28; parent of p1 to p4 ([implemented.md](host/130-a-commands-turn-survives-a-restart/implemented.md)) | host 129 | - |
 | [130 p1 - The host keeps a command's turn for its chat](host/130-p1-the-host-keeps-a-commands-turn/plan.md) | medium | built 2026-10-27 ([implemented.md](host/130-p1-the-host-keeps-a-commands-turn/implemented.md)) | host 129 | - |
 | [130 p2 - A cofold turn keeps the id it was given](host/130-p2-a-cofold-turn-keeps-its-id/plan.md) | medium | built 2026-10-27 ([implemented.md](host/130-p2-a-cofold-turn-keeps-its-id/implemented.md)) | - | - |
 | [130 p3 - A pi turn names the entry that holds it](host/130-p3-a-pi-turn-names-its-entry/plan.md) | medium | built 2026-10-27 ([implemented.md](host/130-p3-a-pi-turn-names-its-entry/implemented.md)) | - | - |
-| [130 p4 - A Claude turn is written under its id](host/130-p4-a-claude-turn-is-written-under-its-id/plan.md) | medium | planned 2026-10-28; one task, todo | - | - |
+| [130 p4 - A Claude turn is written under its id](host/130-p4-a-claude-turn-is-written-under-its-id/plan.md) | medium | built 2026-10-28 ([implemented.md](host/130-p4-a-claude-turn-is-written-under-its-id/implemented.md)) | - | - |
 
 Next free number in `host`: `131`.
 

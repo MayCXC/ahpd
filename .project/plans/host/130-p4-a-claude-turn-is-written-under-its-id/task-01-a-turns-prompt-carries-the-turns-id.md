@@ -1,6 +1,6 @@
 ---
 title: A turn's prompt carries the turn's id
-status: todo
+status: done
 depends: []
 layer: "agent-claude"
 refs:
@@ -53,3 +53,8 @@ The host learns that uuid when it differs from the turn's id.
 - p1's Claude case anchors the `!` turn to the uuid of the Claude prompt.
 - p1's Claude case has the `!` turn back after a restart.
 - `pnpm exec vitest run packages/agent-claude packages/sdk/test/host-local-turns.test.ts` passes.
+
+## Resume
+
+- **Done:** 2026-10-28.
+  The sdk suite's fake SDK records the uuid each prompt carried, which p1's Claude case reads.

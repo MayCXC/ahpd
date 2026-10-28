@@ -1,7 +1,7 @@
 ---
 title: A `!` command's turn survives a restart
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-27
 revalidated: 2026-10-28
@@ -91,7 +91,7 @@ restart -> a transcript read -> each local turn goes back after its anchor -> se
 | [p1 - The host keeps a command's turn for its chat](../130-p1-the-host-keeps-a-commands-turn/plan.md) | built 2026-10-27 | - |
 | [p2 - A cofold turn keeps the id it was given](../130-p2-a-cofold-turn-keeps-its-id/plan.md) | built 2026-10-27 | - |
 | [p3 - A pi turn names the entry that holds it](../130-p3-a-pi-turn-names-its-entry/plan.md) | built 2026-10-27 | - |
-| [p4 - A Claude turn is written under its id](../130-p4-a-claude-turn-is-written-under-its-id/plan.md) | planned 2026-10-28 | - |
+| [p4 - A Claude turn is written under its id](../130-p4-a-claude-turn-is-written-under-its-id/plan.md) | built 2026-10-28 | - |
 
 ## Risks and tradeoffs
 
@@ -99,8 +99,8 @@ restart -> a transcript read -> each local turn goes back after its anchor -> se
 
 ## Resume state
 
-- **Done so far:** p1 to p3 planned and built 2026-10-27; see [implemented.md](implemented.md). p4 planned 2026-10-28.
-- **Next action:** p4.
+- **Done so far:** p1 to p3 planned and built 2026-10-27, and p4 2026-10-28; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a backend's turn id and its transcript's id are two names for one turn, and only the transcript's survives a restart.
 
