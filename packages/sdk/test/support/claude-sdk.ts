@@ -6,7 +6,7 @@
  * its own, and imports nothing but node's, because a `vi.mock` factory loads
  * it while `@anthropic-ai/claude-agent-sdk` is still being mocked.
  */
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -65,6 +65,8 @@ export const sdk = {
   asked: 0,
   /** How many of the next reads should throw, so a retry can be seen. */
   throwOnce: 0,
+  /** Every conversation `deleteSession` was asked to delete, in order. */
+  deleted: [] as string[],
   init: {} as Record<string, unknown>,
   mcp: [] as Record<string, unknown>[],
   skills: [] as Record<string, unknown>[],
@@ -181,6 +183,24 @@ export const fake = {
     // listing would have offered - which is what the CLI's own answer is.
     return sdk.sessions.find((one) => one['sessionId'] === id);
   },
+  /*
+   * The SDK's delete, as its declaration says it works: the conversation's
+   * file goes from the projects folder, and a session it does not hold throws.
+   * The fake holds a conversation in two places, its listing and the files
+   * `wrote` made, so either one is a session it holds.
+   */
+  deleteSession: async (id: string) => {
+    sdk.deleted.push(id);
+    await new Promise((r) => { setTimeout(r, 0); });
+    const projects = join(config, 'projects');
+    const files = existsSync(projects)
+      ? readdirSync(projects).map((project) => join(projects, project, `${id}.jsonl`)).filter((file) => existsSync(file))
+      : [];
+    const listed = sdk.sessions.findIndex((one) => one['sessionId'] === id);
+    if (files.length === 0 && listed < 0) throw new Error(`Session ${id} not found`);
+    for (const file of files) rmSync(file);
+    if (listed >= 0) sdk.sessions.splice(listed, 1);
+  },
   getSessionMessages: async () => {
     sdk.reads += 1;
     // A tick, so concurrent callers actually overlap: an implementation that
@@ -260,6 +280,7 @@ export function resetSdk(): void {
   sdk.listed = 0;
   sdk.asked = 0;
   sdk.throwOnce = 0;
+  sdk.deleted.length = 0;
   sdk.mcp.length = 0;
   sdk.skills.length = 0;
   sdk.plugins.length = 0;

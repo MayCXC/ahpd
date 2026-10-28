@@ -92,6 +92,8 @@ interface Knobs {
   transcript?: (id: string) => Bag[] | undefined;
   /** What a listing answers, for a host that has not run the session. */
   listed?: Listed[];
+  /** The conversations the backend deleted, for a backend that can delete. */
+  deleted?: string[];
 }
 
 const knobs = (): Knobs => ({ starts: [], ending: 'complete' });
@@ -106,6 +108,7 @@ const backend = (k: Knobs): Agent => {
     ...base,
     chats: { fork: true },
     list: async () => (k.listed === undefined ? await base.list?.() ?? [] : [...k.listed]),
+    ...(k.deleted === undefined ? {} : { delete: async (id: string) => { k.deleted?.push(id); } }),
     transcript: async (id, at) => {
       const own = k.transcript?.(id);
       return own === undefined ? await base.transcript?.(id, at) : own as WireTurn<Turn>[];
@@ -389,6 +392,28 @@ describe('a cut at a command\'s turn', () => {
     // backend, and nothing restarted.
     expect(actions(p).filter((e) => e.rejectionReason !== undefined).at(-1)?.rejectionReason).toContain('not a conversation entire');
     expect(k.starts.length).toBe(starts);
+  });
+
+  it('starts over at a command\'s turn with no turn before it, and keeps the command\'s turn', async () => {
+    const k = { ...knobs(), deleted: [] as string[] };
+    const store = fileSessions({ dir: join(temp(), 'sessions') });
+    const { client, p, chat } = await opened(k, store);
+    say(client, chat, 't1', '!echo alone');
+    await ended(p, chat, 't1');
+    say(client, chat, 't2', '!echo after');
+    await ended(p, chat, 't2');
+    void client.handle({ method: 'dispatchAction', params: { channel: chat, action: { type: 'chat/truncated', turnId: 't1' } } });
+    await settle(30);
+    // The backend saw no turn before it, so its conversation goes whole, as the
+    // reference truncates with no turn when a local turn has no anchor; the
+    // chat keeps the command's turn, which the host holds.
+    expect(actions(p).filter((e) => e.rejectionReason !== undefined)).toEqual([]);
+    expect(k.deleted).toEqual(['live']);
+    const start = startOf(k, chat);
+    expect(start.resume).toBeUndefined();
+    expect(((start.seed ?? []) as Bag[]).map((turn) => turn.id)).toEqual(['t1']);
+    expect(await turnsOf(client, chat)).toEqual(['t1']);
+    expect(keptIn(store, 'live').map((one) => one.turnId)).toEqual(['t1']);
   });
 
   it('forks the backend at the turn before it, and the fork keeps the command\'s turn', async () => {

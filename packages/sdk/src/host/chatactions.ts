@@ -1483,20 +1483,77 @@ export function chatAction(
      */
     case 'chat/truncated': {
       const turnId = typeof action.turnId === 'string' ? action.turnId : undefined;
+      const all = session.allTurns();
       /*
-       * Every turn, which this host cannot ask for.
+       * A cut before every turn the backend saw, which starts the chat over.
        *
-       * The action's `turnId` is optional and its absence means "clear
-       * the whole conversation" - which as a rewind is a cut at a point
-       * before the first prompt, and there is no such entry to name.
-       * Refused rather than served as an emptied screen in front of an
-       * agent that remembers all of it.
+       * As a rewind it is a cut at a point before the first prompt, and there
+       * is no such entry to name; served as an emptied screen it would stand
+       * in front of an agent that remembers all of it. So the agent forgets it,
+       * as the reference's does: the backend stops, its conversation is
+       * deleted, and a new one begins for the same chat with nothing to resume,
+       * seeded with the turns the chat keeps. Only a backend that can delete
+       * forgets, so one that cannot is refused.
+       * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeAgent.ts#L1141-L1168
+       *
+       * The backend stops before the delete, because a backend that is still
+       * writing writes the conversation back behind it. The action is said
+       * once the delete has worked, so a delete that fails refuses an action
+       * no client has applied, and the chat comes back on the conversation it
+       * had. Held in `restarting` the whole time, so an action sent behind it
+       * reaches the new backend rather than the one that stopped.
        */
+      const startOver = (kept: Bag[]): void => {
+        const owner = sessions.get(session.uri);
+        const agent = owner === undefined ? undefined : chatAgent(owner, session.chatUri);
+        if (owner === undefined || agent?.delete === undefined) {
+          no('This host can drop the turns after one, but not a conversation entire');
+          return;
+        }
+        const uri = session.uri;
+        const chatUri = session.chatUri;
+        // Read before anything closes, as a closed chat's is.
+        const own = session.agentId() ?? ctx.recordedChat(idOf(uri), chatUri)?.backendId;
+        const work = (async () => {
+          await session.close('stopping');
+          const failed = own === undefined || own === '' ? undefined : await ctx.deletedChat(own, agent, ctx.dirOf(uri));
+          if (failed === undefined) {
+            dispatch(chatUri, action);
+            ctx.forgetTurnOutputs(uri, chatUri, all.slice(kept.length) as Bag[]);
+            ctx.forgetLocalTurns(uri, chatUri, all.slice(kept.length) as Bag[]);
+          }
+          ctx.described.delete(chatUri);
+          spawn(
+            agent,
+            uri,
+            chatUri,
+            chatIdFor(uri, chatUri),
+            chatConfig(owner, chatUri),
+            failed !== undefined && own !== undefined ? { resume: own, seed: all as Bag[] } : { seed: kept },
+            owner.workingDirectory,
+            undefined,
+            beside.get(chatUri) ?? owner.additional,
+            connection,
+          );
+          if (failed !== undefined) throw failed;
+          log(`started ${chatUri} over`);
+        })();
+        restarting.set(uri, work.then(() => undefined, () => undefined));
+        const held = restarting.get(uri);
+        void work.then(
+          () => { if (restarting.get(uri) === held) restarting.delete(uri); },
+          (error: unknown) => {
+            if (restarting.get(uri) === held) restarting.delete(uri);
+            no(error instanceof Error ? error.message : String(error));
+          },
+        );
+      };
+      // Every turn: the action's `turnId` is optional, and its absence means
+      // "clear the whole conversation".
       if (turnId === undefined) {
-        no('This host can drop the turns after one, but not a conversation entire');
+        startOver([]);
         break;
       }
-      const all = session.allTurns();
       const at = all.findIndex((one) => String((one as Bag).id ?? '') === turnId);
       if (at < 0) {
         no(`${turnId} is not a completed turn in ${session.chatUri}`);
@@ -1505,13 +1562,14 @@ export function chatAction(
       /*
        * The turn the backend is cut at: this one, or for a local turn, which
        * the backend never saw, the nearest earlier turn of its own - the
-       * reference's redirect. A local turn with no such turn before it would
-       * cut the whole conversation, which is refused as above.
-       * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentSideEffects.ts#L1960-L1966
+       * reference's redirect. A local turn with no such turn before it cuts
+       * the backend's whole conversation, and the reference truncates with no
+       * turn there; the chat keeps the local turns up to the one named.
+       * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentSideEffects.ts#L1960-L1969
        */
       const concrete = ctx.concreteTurnOf(session.uri, session.chatUri, all as Bag[], at);
       if (concrete === undefined) {
-        no('This host can drop the turns after one, but not a conversation entire');
+        startOver(all.slice(0, at + 1) as Bag[]);
         break;
       }
       // The backend's own name for the end of that turn. Absent for a

@@ -299,9 +299,7 @@ const NOT_REPLAYED = [
   '063-session-truncated-keeps-turns-up-to-turnid',
   '064-session-truncated-keeps-all-when-turnid-is-last',
   '065-session-truncated-keeps-only-first-when-turnid-is-first',
-  '066-session-truncated-clears-all-when-turnid-omitted',
   '067-session-truncated-drops-active-turn',
-  '068-session-truncated-drops-active-turn-even-when-clearing-all',
   '069-session-truncated-is-no-op-for-unknown-turnid',
   '070-full-turn-flow-with-tool-calls-and-re-confirmation',
   '071-root-terminalschanged',
@@ -388,7 +386,6 @@ const NOT_REPLAYED = [
   '231-session-inputneededset-preserves-orthogonal-flags',
   '232-chat-turnsloaded-prepends-older-turns',
   '233-chat-turnsloaded-dedupes-overlap-and-clears-cursor',
-  '234-chat-truncated-clears-turns-next-cursor-when-clearing-all',
   '235-session-mcpserverstartrequested-starts-top-level-server',
   '236-session-input-completion-without-active-turn-records-nothing',
   '236-session-mcpserverstoprequested-stops-auth-required-server',
@@ -507,10 +504,6 @@ const HOST_REFUSED = [
   '067-session-truncated-drops-active-turn',
   '069-session-truncated-is-no-op-for-unknown-turnid',
   '110-session-input-completion-and-truncation-filtering',
-  // `This host can drop the turns after one, but not a conversation entire`
-  '066-session-truncated-clears-all-when-turnid-omitted',
-  '068-session-truncated-drops-active-turn-even-when-clearing-all',
-  '234-chat-truncated-clears-turns-next-cursor-when-clearing-all',
   // `<turn> is not a turn that can be resumed`
   '263-chat-turn-resume-reopens-turn',
   '264-chat-turn-resume-noop-with-active-turn',
@@ -565,6 +558,9 @@ const HOST_REFUSED = [
  * and the chat's own bit is left alone, which is a decision this host took
  * deliberately. The same action on a peer chat sets that chat's bit; the case
  * cannot be reached here because the driven session has no peer chat.
+ *
+ * A chat truncated whole starts over with no turn running, and this host
+ * leaves `activeTurn` off such a chat where the two cases write `null`.
  */
 const HOST_OWNS: Record<string, string[]> = {
   '005-session-turnstarted': ['activeTurn'],
@@ -577,7 +573,9 @@ const HOST_OWNS: Record<string, string[]> = {
   '045-set-a-new-queued-message': ['status'],
   '046-append-queued-message-when-id-is-new': ['status'],
   '047-update-queued-message-in-place-when-id-already-exists': ['status'],
+  '066-session-truncated-clears-all-when-turnid-omitted': ['activeTurn'],
   '075-turnstarted-clears-isread': ['activeTurn'],
+  '234-chat-truncated-clears-turns-next-cursor-when-clearing-all': ['activeTurn'],
   // Driven on the default chat, where archiving is the session's; see above.
   '272-chat-isarchivedchanged-archives-chat': ['status'],
 };
@@ -696,17 +694,17 @@ describe('the protocol’s root, session and chat cases, through ahpd', () => {
   }
 
   it('names every case it cannot replay, and no other', () => {
-    expect(NOT_REPLAYED).toHaveLength(201);
-    expect(new Set(NOT_REPLAYED).size).toBe(201);
-    expect(HOST_REFUSED).toHaveLength(55);
+    expect(NOT_REPLAYED).toHaveLength(198);
+    expect(new Set(NOT_REPLAYED).size).toBe(198);
+    expect(HOST_REFUSED).toHaveLength(52);
     // The rest of the refused cases are the ones a client may not send, and
     // each of those is checked against the protocol's own answer per case.
     expect(NOT_REPLAYED.length - HOST_REFUSED.length).toBe(146);
-    expect(Object.keys(HOST_OWNS)).toHaveLength(12);
-    // And 35 that ran and agreed, which need no entry in either list: they are
+    expect(Object.keys(HOST_OWNS)).toHaveLength(14);
+    // And 36 that ran and agreed, which need no entry in either list: they are
     // the coverage this suite is for, and a case joining or leaving them is
     // what moves this number.
-    expect(NOT_REPLAYED.length + Object.keys(HOST_OWNS).length + 35).toBe(hostCases.length);
+    expect(NOT_REPLAYED.length + Object.keys(HOST_OWNS).length + 36).toBe(hostCases.length);
   });
 });
 
