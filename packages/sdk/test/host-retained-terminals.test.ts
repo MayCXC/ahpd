@@ -347,11 +347,13 @@ describe('a terminal a backend opens', () => {
     }
     await settle();
     // Waiting on its input, so it ends after the move rather than before it.
-    const opened = startOf(k, PEER).terminals?.open({ cwd: DIR, command: 'read line; echo "late $line"' });
+    // The shell is PowerShell on Windows, which has no `read`.
+    const command = process.platform === 'win32' ? '$line = [Console]::In.ReadLine(); echo "late $line"' : 'read line; echo "late $line"';
+    const opened = startOf(k, PEER).terminals?.open({ cwd: DIR, command });
     if (opened === undefined) throw new Error('no terminals on the start');
     await client.handle({ method: 'moveChat', params: { channel: PEER, destination: { kind: 'session', session: TWO } } });
     await settle(20);
-    opened.write('one\n');
+    opened.write(process.platform === 'win32' ? 'one\r\n' : 'one\n');
     await opened.waitForExit();
     expect(keptIn(store, 'live')).toEqual([]);
     expect(keptIn(store, 'two').map((one) => String(one.output).trim())).toEqual(['late one']);
