@@ -212,22 +212,22 @@ export const env: Declaration = {
 };
 
 /**
- * The Claude logins one agent runs on, by connector id.
+ * The Claude logins one agent runs on, by connector id, in the order a turn
+ * tries them.
  *
  * Each names a connector of `claude-login`, which holds one account's token
  * from `claude setup-token` in the host's vault. The mark is what the agents
  * channel checks at a put: an id the host serves no login for, or another
  * person's login, is refused there. Read where the CLI's environment is built,
- * as `enableTasks` is, because which login a conversation runs on is decided
- * per conversation and again after a refusal, not once for the query:
- * `logins.ts` orders them and keeps their cooldowns, and `session/logins.ts`
- * picks one.
+ * as `enableTasks` is, because the login a turn runs on is picked when the turn
+ * starts and again after a failure, not once for the query:
+ * `session/logins.ts` picks it.
  */
 export const logins: Declaration = {
   schema: {
     type: 'array',
     items: { type: 'string', minLength: 1, 'x-ahpd-connector': { adapter: LOGIN_ADAPTER } },
-    description: 'Claude logins this agent runs on, by the id of a claude-login connector. A conversation keeps one while it is not cooling down.',
+    description: 'Claude logins this agent runs on, by the id of a claude-login connector, in the order a turn tries them.',
   },
 };
 

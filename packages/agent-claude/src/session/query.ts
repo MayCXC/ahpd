@@ -5,6 +5,7 @@ import type { HookCallback, SDKUserMessage, SettingSource } from '@anthropic-ai/
 import { bag, list, str, UUID } from './common.js';
 import type { SessionContext } from './context.js';
 import { failureOf } from './failure.js';
+import { BEFORE_TOKEN } from '../logins.js';
 import { hostHoldsTasks, ownEnvOf, OWN_TASK_TOOLS, queryOptionsOf } from '../options.js';
 import { agentNameOf } from './customizations.js';
 
@@ -59,9 +60,11 @@ export interface Query {
   /** Move this session's CLI onto the agent a message picked, if it is not already there. */
   switchAgent: (uri: string | undefined) => string | undefined;
   /**
-   * Read a record's values again, and move the CLI onto them when they changed.
+   * Read a record's values again, find the turn's login, and move the CLI onto
+   * them when either changed.
    *
-   * Nothing for a preset. A refusal is a sentence for the turn that asked.
+   * A preset's values stay as they were read, and only its login can change. A
+   * refusal is a sentence for the turn that asked.
    */
   refreshPreset: () => string | undefined;
   /** Read one CLI's frames until it ends. */
@@ -145,23 +148,28 @@ export function createQuery(ctx: SessionContext): Query {
   const denied = ctx.options.deniedMcpServers ?? [];
 
   /**
-   * What the CLI signs in with beyond the record's own `env`: the login this
-   * conversation runs on, and a pushed credential over it.
+   * An environment the CLI starts with, with what it signs in with laid over:
+   * the login the turn runs on, or a credential a client pushed.
    *
-   * The login is `CLAUDE_CODE_OAUTH_TOKEN`, the variable `claude setup-token`'s
-   * token is read from. A pushed credential is laid over it rather than under,
-   * because a client that signed in chose that key for its own sessions; the
-   * CLI then signs in with the key, which it takes before the token.
+   * A login is `CLAUDE_CODE_OAUTH_TOKEN`, the variable a `claude setup-token`
+   * token is read from. The CLI takes a cloud provider's switch and both
+   * Anthropic keys before it, so a CLI on a login gets none of them, from the
+   * record's `env` or from the daemon's, and signs in with the login. A pushed
+   * credential is laid over as it came; such a session runs on no login, which
+   * `session/logins.ts` says.
    * https://code.claude.com/docs/en/authentication#authentication-precedence
    */
-  const signIn = (): Record<string, string> => ({
-    ...(ctx.login === undefined ? {} : { CLAUDE_CODE_OAUTH_TOKEN: ctx.login.token }),
-    ...ctx.options.env,
-  });
+  const signedIn = (base: Bag): Bag => {
+    const login = ctx.login;
+    if (login === undefined) return { ...base, ...ctx.options.env };
+    const out: Bag = { ...base, CLAUDE_CODE_OAUTH_TOKEN: login.token };
+    for (const name of BEFORE_TOKEN) delete out[name];
+    return out;
+  };
 
   /**
-   * What a CLI in a machine is started with: the variant's own `env`, its login
-   * and a pushed credential over it, and `CLAUDE_CONFIG_DIR` last.
+   * What a CLI in a machine is started with: the variant's own `env`, what it
+   * signs in with laid over it, and `CLAUDE_CONFIG_DIR` last.
    *
    * Nothing of the daemon's environment: its `HOME` and `PATH` are this host's,
    * and a key it holds is the one variant's that names it with `{ fromEnv }`,
@@ -171,7 +179,7 @@ export function createQuery(ctx: SessionContext): Query {
    */
   const inMachine = (): Record<string, string> => {
     const out: Record<string, string> = {};
-    for (const [name, value] of Object.entries({ ...ownEnvOf(ctx.values), ...signIn() })) {
+    for (const [name, value] of Object.entries(signedIn(ownEnvOf(ctx.values)))) {
       if (typeof value === 'string') out[name] = value;
     }
     const dir = ctx.options.spawnConfigDir;
@@ -191,7 +199,7 @@ export function createQuery(ctx: SessionContext): Query {
   const taskToolsEnv = (): Bag => {
     if (ctx.values['enableTasks'] === false || hostHoldsTasks(ctx.values, ctx.offering)) return {};
     const env = ctx.options.spawn === undefined
-      ? { ...(fromPreset().env as Bag | undefined ?? process.env), ...signIn() }
+      ? signedIn(fromPreset().env as Bag | undefined ?? process.env)
       : inMachine();
     if (env.CLAUDE_CODE_ENABLE_TASKS !== undefined) return {};
     return { env: { ...env, CLAUDE_CODE_ENABLE_TASKS: '1' } };
@@ -417,7 +425,7 @@ export function createQuery(ctx: SessionContext): Query {
        * merging with it, so handing it a lone credential is a subprocess with
        * no `PATH` and no `HOME` - which fails as something that has nothing to
        * do with authentication. Absent when the record names no variable, the
-       * agent has no login and nobody pushed a token: the subprocess then
+       * turn runs on no login and nobody pushed a token: the subprocess then
        * inherits the daemon's environment, as an automation's does.
        */
       ...fromPreset(),
@@ -438,7 +446,7 @@ export function createQuery(ctx: SessionContext): Query {
           deniedMcpServers: denied.map((serverName) => ({ serverName })),
         },
       }),
-      ...(Object.keys(signIn()).length > 0 ? { env: { ...(fromPreset().env as Bag | undefined ?? process.env), ...signIn() } } : {}),
+      ...(ctx.login !== undefined || ctx.options.env ? { env: signedIn(fromPreset().env as Bag | undefined ?? process.env) } : {}),
       // In a machine, the env above is replaced by the variant's own alone.
       ...(ctx.options.spawn === undefined ? {} : { env: inMachine() }),
       // The switch for the task tools Claude keeps to itself.
@@ -796,16 +804,14 @@ export function createQuery(ctx: SessionContext): Query {
         if (type === 'conversation_reset') { ctx.newConversation(); continue; }
 
         /*
-         * A login's quota or billing, as the SDK says it.
-         *
-         * The SDK's own structured form of the API's rate-limit headers, which
-         * names the window that refused and when it reopens, comes before the
-         * assistant frame that carries the refusal's `error`.
+         * A login's limit, as the SDK says it: the structured form of the API's
+         * unified rate-limit headers, which comes before the assistant frame
+         * that carries a failure's `error` and names when the login is back.
          */
         if (type === 'rate_limit_event') { ctx.limited(bag(message.rate_limit_info)); continue; }
         if (type === 'stream_event') { ctx.streamed(bag(message.event), str(message.parent_tool_use_id) ?? ''); continue; }
         if (type === 'assistant') {
-          // A refusal the turn moves on from, which never reached a model.
+          // A failure of the turn's login that the turn does not show.
           if (ctx.refused(message)) continue;
           ctx.assistant(bag(message.message), str(message.parent_tool_use_id) ?? '');
           continue;
@@ -828,22 +834,25 @@ export function createQuery(ctx: SessionContext): Query {
 
         if (type === 'result') {
           /*
-           * The end of an attempt a refused login made, which ends nothing:
-           * the turn goes on, on the next login.
+           * The end of an attempt on a login that failed before the turn
+           * showed anything, which ends nothing when another login is ready:
+           * the turn goes on there.
            */
-          if (ctx.moving()) { void ctx.moveOn(); continue; }
+          const next = ctx.nextLogin();
+          if (next !== undefined) { void ctx.moveOn(next); continue; }
           const turn = ctx.active;
           /*
            * Read before the turn is pushed, because the reason goes inside it.
-           * `is_error` carries the words; a subtype that is not `success` is a
-           * turn that ended badly with none, and saying which is better than
-           * an error part that says only that there was one.
+           * A failure of the turn's login that it did not show says its own
+           * words. `is_error` carries the words; a subtype that is not
+           * `success` is a turn that ended badly with none, and saying which is
+           * better than an error part that says only that there was one.
            */
-          const wrong = message.is_error === true
+          const wrong = ctx.failure() ?? (message.is_error === true
             ? (list(message.errors).map(String).join('\n') || 'The turn failed')
             : str(message.subtype) !== 'success'
               ? `The turn ended ${str(message.subtype) ?? 'without succeeding'}`
-              : undefined;
+              : undefined);
           if (turn) {
             /*
              * Every turn that ends says how it ended.
@@ -959,18 +968,22 @@ export function createQuery(ctx: SessionContext): Query {
    * turn already running finishes on the CLI it started on, and the turn that
    * begins after the edit is answered by a CLI built from what the record says
    * now. A preset, which no running daemon can edit, keeps the values it was
-   * read with, and only its login can change: a login that cools down hands the
-   * next turn to the conversation's next login.
+   * read with, and only its login can change: a login that closes or rests,
+   * or whose token a put replaced, hands the next turn to a CLI on the first
+   * ready one.
    *
    * The conversation moves as a `switchAgent` restart moves it: the new query
    * resumes the id the CLI gave this session, so the transcript, the model and
-   * everything the SDK said are still there. A CLI that will not stop is the
-   * turn's own refusal rather than a session that died, which is why it comes
-   * back as a sentence.
+   * everything the SDK said are still there. A CLI that will not stop, and a
+   * record whose logins are none of them ready, are the turn's own refusal
+   * rather than a session that died, which is why each comes back as a
+   * sentence.
    */
   const refreshPreset = (): string | undefined => {
     const live = ctx.options.presetOf;
     const now = live === undefined ? ctx.values : ctx.valuesOf(live());
+    const unready = ctx.unready(now);
+    if (unready !== undefined) return unready;
     const login = ctx.loginFor(now);
     if (startedFrom(now, login) === ctx.startedWith) return undefined;
     const was = ctx.handle;

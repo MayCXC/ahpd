@@ -1,6 +1,6 @@
 import type { query } from '@anthropic-ai/claude-agent-sdk';
 import type { Activity, BackgroundTasks, Bag, BoundTool, OutputTerminals, Session, SessionOptions, ShellEnv, Start, SubagentChat, SubagentRequest, TerminalOutputs } from '@ahpd/sdk';
-import type { AgentLogins, Cooldowns } from '../logins.js';
+import type { AgentLogins } from '../logins.js';
 import type { Asked, Spawned } from '../spawn.js';
 import type { Asking } from './asking.js';
 import type { ClientTools } from './clienttools.js';
@@ -94,14 +94,6 @@ export interface ClaudeSessionOptions extends SessionOptions {
   presetOf?: () => Bag;
   /** The list the CLI reports, as the harness offers it; absent is the CLI's. */
   offerModels?: (cli: { id: string; name: string }[]) => Promise<{ id: string; name: string }[]>;
-  /**
-   * The cooldowns of the logins this session's agent runs on.
-   *
-   * One for every session of the agent, so a login one conversation found
-   * refused is not tried by the next. Absent where a session is built by hand,
-   * and then the session keeps its own.
-   */
-  cooldowns?: Cooldowns;
   /**
    * The Claude logins the agent's record may name, and whose agent it is.
    *

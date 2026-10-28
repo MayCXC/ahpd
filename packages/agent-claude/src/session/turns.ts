@@ -698,8 +698,6 @@ export function createTurns(ctx: SessionContext): Turns {
       // And the calls a client is running for us, for the same reason: a
       // promise settled by somebody else is one a stopped turn still waits on.
       ctx.releaseCalls('The turn was stopped');
-      // And a move to another login, or the wait for one, which was this turn's.
-      ctx.stopMoving();
       void ctx.handle.interrupt().catch(() => {});
       /*
        * And the workers that turn spawned, foreground or background.
