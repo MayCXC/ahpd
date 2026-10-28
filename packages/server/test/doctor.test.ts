@@ -71,9 +71,9 @@ const run: Runner = async (program, argv) => {
   return { code: 0, stdout: version === undefined ? '' : `${version}\n`, stderr: '' } satisfies Ran;
 };
 
-/** A command on PATH. It is never run: the runner above answers its version. */
+/** A command on PATH. It is never run: the runner above answers its version. A `.cmd` on Windows, which PATHEXT finds. */
 const stub = (name: string, version?: string): void => {
-  const file = join(bin, name);
+  const file = join(bin, process.platform === 'win32' ? `${name}.cmd` : name);
   writeFileSync(file, '#!/bin/sh\n');
   chmodSync(file, 0o755);
   if (version !== undefined) versions.set(name, version);
@@ -83,7 +83,7 @@ const stub = (name: string, version?: string): void => {
 const facts = (over: Partial<DoctorFacts> = {}): DoctorFacts => ({
   run,
   path: bin,
-  platform: 'linux',
+  platform: process.platform,
   version: 'v22.19.0',
   record: () => undefined,
   open: async () => {},
@@ -200,14 +200,14 @@ describe('the Daemon check', () => {
 
 describe('the Service check', () => {
   it('says ok when the unit file is there', () => {
-    const one = serviceCheck(facts({ exists: () => true }));
+    const one = serviceCheck(facts({ platform: 'linux', exists: () => true }));
     expect(one?.result).toBe('ok');
     expect(one?.line).toContain('systemd');
     expect(one?.line).toContain('ahpd.service');
   });
 
   it('says warn when it is not', () => {
-    const one = serviceCheck(facts({ exists: () => false }));
+    const one = serviceCheck(facts({ platform: 'linux', exists: () => false }));
     expect(one?.result).toBe('warn');
     expect(one?.fix).toBe('ahpd service install');
   });
@@ -317,7 +317,7 @@ describe('the Update check', () => {
 
 describe('the report', () => {
   it('runs the checks in the plan order', async () => {
-    const said = await checks(facts());
+    const said = await checks(facts({ platform: 'linux' }));
     expect(said.map((check) => check.name)).toEqual(['Runtime', 'Config', 'Daemon', 'Service', 'Plugins', 'Agents', 'Update']);
   });
 
