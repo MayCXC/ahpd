@@ -1,7 +1,7 @@
 ---
 title: A steering message is answered in the turn it steers
 domain: claude
-status: active
+status: built
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -103,14 +103,14 @@ a client steers -> steer() pushes the message to the CLI -> the CLI answers afte
 
 ## Resume state
 
-- **Done so far:** tasks 01 and 02 done 2026-10-28.
-- **Next action:** the suites, then [implemented.md](implemented.md).
+- **Done so far:** planned and built 2026-10-28; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a case that keeps the actions a session emits must copy them, because a part announced empty is filled in place afterwards.
 
 ## Final verification checklist
 
-- [ ] Each case in `agent-claude-late-steer.test.ts` fails on the code before its task.
-- [ ] agent-claude, sdk and server suites pass at one worker.
-- [ ] Boundary, typecheck, build and schema are clean.
-- [ ] `packages/sdk/test/fixtures/wire.jsonl` is unchanged in every commit.
+- [x] Each case in `agent-claude-late-steer.test.ts` fails on the code before its task, except the folded steer, which guards.
+- [x] agent-claude, sdk and server suites pass at one worker.
+- [x] Boundary, typecheck, build and schema are clean.
+- [x] `packages/sdk/test/fixtures/wire.jsonl` is unchanged in every commit.
