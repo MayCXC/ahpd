@@ -142,4 +142,3 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - [ ] A test: two steers before a read leave no stale entry.
 - [ ] The conformance test replays the new actions through the 1.1.0 reducers.
 - [ ] The gates pass: typecheck, boundary, schema and vitest.
-- [ ] `plans/index.md` updated.

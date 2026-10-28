@@ -86,4 +86,3 @@ Task 01 moves from agent-acp to the sdk, because `pnpm boundary` does not let `@
 ## Final verification checklist
 
 - [ ] On a machine with `gemini` on PATH, configure offers Gemini and writes the preset.
-- [ ] `plans/index.md` updated.

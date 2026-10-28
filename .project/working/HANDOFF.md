@@ -5,7 +5,7 @@ title: "Handoff: where ahpd stands, and what is pending"
 # Handoff: where `ahpd` stands, and what is pending
 
 Current progress and pending items only, as of 2026-10-28.
-[plans/index.md](../plans/index.md) is the backlog and each plan's Resume state is its detail. What merged is in `git log`, and what was released is in [CHANGELOG.md](../../CHANGELOG.md).
+`node ~/.claude/skills/do-spec/scripts/plans.mjs` lists the backlog, and each plan's Resume state is its detail. What merged is in `git log`, and what was released is in [CHANGELOG.md](../../CHANGELOG.md).
 
 ## Main
 
@@ -37,8 +37,7 @@ Current progress and pending items only, as of 2026-10-28.
 - proxy/04: icon curation, and [pending/proxy-04-move-config-dev.md](../pending/proxy-04-move-config-dev.md).
 - plugin/58: task 05 waits for [pending/plugin-58-icon-curation.md](../pending/plugin-58-icon-curation.md).
 - plugin/50: [pending/plugin-50-first-pieces.md](../pending/plugin-50-first-pieces.md).
-- The idea [plan-ids-that-do-not-clash.md](../ideas/plan-ids-that-do-not-clash.md) waits for a choice of id.
-- The plans in [plans/index.md](../plans/index.md) with all tasks implemented wait for his review. Each stays `active` until he says his review is done.
+- The `active` plans with all tasks implemented wait for his review. Each stays `active` until he says his review is done.
 
 ## Next builds
 

@@ -96,4 +96,3 @@ client -> x-ahpd/connectors/signin-finish { state, code } -> adapter.signIn.exch
 - [ ] A person signs in to OpenRouter from a client, and the connector's row is `ready`.
 - [ ] The vault holds the key under `connector/<id>/key` in the owner's scope, and the record holds a `$secret` reference.
 - [ ] No log line or error carries the code, the verifier or the key.
-- [ ] `plans/index.md` updated.

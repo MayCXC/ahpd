@@ -117,4 +117,4 @@ Claude TodoWrite / TaskCreate / TaskUpdate, or ACP `plan` -> backend -> host -> 
 - [ ] A Claude session with its own tools kept writes each `TaskCreate` and `TaskUpdate` into the session's plan.
 - [ ] A `codex-acp` session writes its plan into the session's plan, and a step it removes reads `dropped`.
 - [ ] The session's plan is the same plan in the next turn.
-- [ ] `docs/plugins/TASK-LIST.md`, `docs/plugins/agent-claude.md` and `plans/index.md` updated.
+- [ ] `docs/plugins/TASK-LIST.md`, `docs/plugins/agent-claude.md` updated.

@@ -118,4 +118,4 @@ session disposed -> token dropped
 - [ ] Disposing the session makes the token refused by the proxy.
 - [ ] A remote ahpd with its own key or Claude subscription still runs a session.
 - [ ] `pnpm test`, `pnpm typecheck` green.
-- [ ] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md` updated.

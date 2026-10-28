@@ -201,4 +201,4 @@ A libvirt on this host could share the folder by virtiofs instead of a clone, wh
 - [ ] Suspend and resume from the `state` leaf work on libvirt.
 - [ ] The same on a Proxmox node.
 - [ ] `pnpm test`, `pnpm typecheck` green.
-- [ ] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md` updated.

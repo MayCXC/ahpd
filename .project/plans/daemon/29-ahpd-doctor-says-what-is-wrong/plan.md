@@ -109,4 +109,3 @@ ahpd doctor -> runtime, config, daemon, service, plugins, agents, update -> one 
 - [x] With no daemon, doctor prints `warn` for the daemon with `ahpd start`, and exits 0.
 - [x] With a daemon stopped by `kill -STOP <pid>`, doctor prints `fail` for the daemon with `ahpd restart`, and exits 1.
 - [x] `ahpd doctor --json` holds no token.
-- [ ] `plans/index.md` updated.

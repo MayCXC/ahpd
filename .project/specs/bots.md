@@ -155,5 +155,5 @@ AND the plugin sends each change to that bot to the watcher.
 
 A bot that names a computer profile does not get a machine of its own, and a bot has no agent state of its own.
 Removing a bot does not remove a machine.
-[Plan bots/01](../plans/bots/01-a-bot-runs-in-a-machine/plan.md) (draft) gives each bot its own machine and its own agent state.
+[A bot runs in a machine](../plans/bots/20261028-0545-a-bot-runs-in-a-machine/plan.md) (draft) gives each bot its own machine and its own agent state.
 It also checks a shared machine, and removes the machine of a bot that is removed.

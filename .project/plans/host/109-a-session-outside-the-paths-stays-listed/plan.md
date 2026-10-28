@@ -89,4 +89,3 @@ restart -> listing: backends list their paths -> the store's recorded sessions w
 - [ ] A test: a session in a git worktree folder is listed the same way.
 - [ ] The gates pass: build, typecheck, boundary, schema and vitest.
 - [ ] By hand: after a restart, the Ember bot's session opens from the catalogue.
-- [ ] `plans/index.md` updated.

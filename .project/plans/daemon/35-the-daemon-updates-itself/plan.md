@@ -154,4 +154,3 @@ Never write `CHANGELOG.md`, which is generated.
 - [ ] `POST /api/update` with a person's token is refused with 403, and with the deployment token it updates.
 - [ ] `x-ahpd/update` from a person is refused, and from the root connection it updates.
 - [ ] On Windows, `ahpd update` from `ahpd start` comes back on the new version.
-- [ ] `plans/index.md` updated.

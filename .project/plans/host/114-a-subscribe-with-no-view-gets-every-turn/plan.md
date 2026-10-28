@@ -140,4 +140,3 @@ subscribe {channel: ahp-chat:/..., view?} -> sessionmethods.subscribe -> snapsho
 - [ ] `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm test` pass.
 - [ ] The check by hand in a VS Code 1.143 window shows the first message of a long session.
 - [ ] The Pass 7 box in `UPSTREAM.md` is ticked.
-- [ ] `plans/index.md` updated.

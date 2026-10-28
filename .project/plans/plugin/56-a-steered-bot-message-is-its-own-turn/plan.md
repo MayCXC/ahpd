@@ -85,4 +85,3 @@ client chat/pendingMessageSet steering -> bot chat steer -> end the open turn as
 
 - [ ] A message sent in a bot chat while a turn runs shows as its own turn, live.
 - [ ] After a daemon restart, the bot chat shows the same two turns.
-- [ ] `plans/index.md` updated.

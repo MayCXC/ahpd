@@ -23,7 +23,7 @@ The sessions that it starts keep their own rules, so they can work in the projec
 
 ## Reconnaissance
 
-The files read and the patterns to reuse are the `refs` above, each with its note.
+The files read and the patterns to reuse are the `refs` in the frontmatter, each with its note.
 
 ### Gaps
 
@@ -38,7 +38,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** moved from plugin/52 p7 on 2026-10-28, when Softov made the `bots` domain. The draft was written 2026-10-16. No tasks yet. The permission mode of a Back moved to [bots/04](../04-a-bot-session-has-a-front-and-backs/plan.md) on 2026-10-22.
+- **Done so far:** moved from plugin/52 p7 on 2026-10-28, when Softov made the `bots` domain. The draft was written 2026-10-16. No tasks yet. The permission mode of a Back moved to [A bot session has a Front, Backs and wakes](../20261028-0545-a-bot-session-has-a-front-and-backs/plan.md) on 2026-10-22.
 - **Next action:** wait for host/100 p2 and host/101, then write the tasks.
 - **Open questions:**
   1. Does a refused call stop the turn or tell the agent why - proposed: tell the agent, so it delegates instead.

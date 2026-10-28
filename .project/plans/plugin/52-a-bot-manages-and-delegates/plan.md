@@ -93,14 +93,14 @@ Child plans, each for one part.
 | [p4 - A group chat has members and mentions](../52-p4-a-group-chat-has-members-and-mentions/plan.md) | bot, sdk | dropped, in p14 | p3 |
 | [p5 - A bot is made with its AGENTS.md](../52-p5-a-bot-is-made-with-its-agents-file/plan.md) | bot | dropped, in p3 | p3 |
 | [p6 - A bot wakes when a session it started finishes](../52-p6-a-bot-wakes-when-a-session-it-started-finishes/plan.md) | bot | dropped, in p14 | p3 |
-| [p7 - A manager bot edits only its own folder](../52-p7-a-manager-bot-edits-only-its-own-folder/plan.md) | bot | dropped, in bots/02 | p5, host/100 p2, host/101 |
+| [p7 - A manager bot edits only its own folder](../52-p7-a-manager-bot-edits-only-its-own-folder/plan.md) | bot | dropped, in the bots plan *A manager bot edits only its own folder* | p5, host/100 p2, host/101 |
 | [p8 - AGENTS.md is the bot's one copy](../52-p8-agents-md-is-the-bots-one-copy/plan.md) | bot | active | p3 |
 | [p9 - Front and Back are chats of one session](../52-p9-front-and-back-are-chats-of-one-session/plan.md) | bot | dropped, in p14 | p3, host/107 |
-| [p10 - A bot changes bots with a tool](../52-p10-a-bot-changes-bots-with-a-tool/plan.md) | bot | dropped, in bots/03 | p8 |
+| [p10 - A bot changes bots with a tool](../52-p10-a-bot-changes-bots-with-a-tool/plan.md) | bot | dropped, in the bots plan *A bot changes bots with a tool* | p8 |
 | [p11 - A bot has a private session](../52-p11-a-bot-has-a-private-session/plan.md) | bot | dropped, in p14 | p9 |
 | [p12 - Claude and ACP write the task list](../52-p12-claude-and-acp-write-the-task-list/plan.md) | agent-claude, agent-acp, sdk, tasks | active | p1 |
 | [p13 - A client sees the task list](../52-p13-a-client-sees-the-task-list/plan.md) | tasks, sdk | active | p1 |
-| [p14 - A bot session has a Front, Backs and wakes](../52-p14-a-bot-session-has-a-front-and-backs/plan.md) | bot | dropped, in bots/04 | p3, host/107 |
+| [p14 - A bot session has a Front, Backs and wakes](../52-p14-a-bot-session-has-a-front-and-backs/plan.md) | bot | dropped, in the bots plan *A bot session has a Front, Backs and wakes* | p3, host/107 |
 
 ## Risks and tradeoffs
 
@@ -111,7 +111,7 @@ Child plans, each for one part.
 ## Resume state
 
 - **Done so far:** parent and seven child drafts written 2026-10-16. The `session:` lines were removed from the five bot files in `~/.config/ahpd/bots` on 2026-10-16.
-- **Next action:** Softov reviews p3, p8, p12 and p13. Then the plan closes with `implemented.md` and `deferred.md`. The drafts p7, p10 and p14 moved to the `bots` domain on 2026-10-28, as bots/02, bots/03 and bots/04.
+- **Next action:** Softov reviews p3, p8, p12 and p13. Then the plan closes with `implemented.md` and `deferred.md`. The drafts p7, p10 and p14 moved to the `bots` domain on 2026-10-28. The *Tasks* table names the bots plan of each.
 - **Open questions:** each child lists its own.
 - **Watch out for:** `bot:/<slug>` is the record. A chat is a session of the chat provider, never a `bot:` URI.
 
@@ -122,4 +122,4 @@ Child plans, each for one part.
 - [ ] A chat shows its history after a daemon restart and after the bot's harness changes.
 - [ ] In a group chat, `@backer` wakes Backer, and only members see the chat.
 - [ ] VS Code opens a bot chat and sends a message in it.
-- [ ] `docs/plugins/BOTS.md` and `plans/index.md` updated.
+- [ ] `docs/plugins/BOTS.md` updated.

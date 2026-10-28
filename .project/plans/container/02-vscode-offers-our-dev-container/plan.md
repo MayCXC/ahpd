@@ -97,4 +97,3 @@ idle or removed                                 -> [new] vscode/devContainers/st
 - [ ] `docs/plugins/CONTAINERS.md` has the route.
 - [ ] VS Code stopping an idle dev container, and removing one, acts on the folder's computer on the ahpd host.
 - [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [ ] `plans/index.md` updated.

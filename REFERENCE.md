@@ -72,9 +72,9 @@ and this one is deliberately not.
 ## What this repository is building
 
 `.project/` is the record of what is planned, decided and set aside, and it
-is read before code is proposed. [`.project/plans/index.md`](.project/plans/index.md)
-is the entry: one row per plan, and a reference file per domain
-(`plans/<domain>/00-<domain>.md`) saying what exists today. A plan is a
+is read before code is proposed. The do-spec script `plans.mjs` lists the
+plans, and a reference file per domain (`plans/<domain>/00-<domain>.md`)
+says what exists today. A plan is a
 folder with a `plan.md`, one file per task, and `implemented.md` once it is
 built. Every decision is a file under `decisions/`; a plan only links them,
 and a choice with no file is not a decision. What is not planned yet is one

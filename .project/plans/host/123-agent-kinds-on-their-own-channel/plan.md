@@ -85,4 +85,3 @@ plugin registerAgentKind -> fold agentKinds -> kinds channel reads agentKinds() 
 ## Final verification checklist
 
 - [ ] A subscribe to `x-ahpd-agent-kinds://` on a daemon with agent-claude and agent-cofold lists `claude` and `cofold`.
-- [ ] `plans/index.md` updated.

@@ -139,4 +139,4 @@ Child plans, each scoped to one package or two.
 - [ ] A second disposable machine of the same profile starts without building or copying anything.
 - [ ] A session with worktree isolation commits inside its machine.
 - [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [ ] `docs/plugins/COMPUTERS.md`, `docs/plugins/PLUGINS.md` and `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md`, `docs/plugins/PLUGINS.md` updated.

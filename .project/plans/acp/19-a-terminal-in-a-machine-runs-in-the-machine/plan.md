@@ -95,4 +95,3 @@ ACP server in the machine -> terminal/create (machine cwd)
 - [ ] A `terminal/create` from a session placed in a machine is spawned through `computers.how`, on Linux and on Windows.
 - [ ] A session on the host opens its terminals as before.
 - [ ] By hand on Windows with Docker Desktop: the scripted agent's `paint` turn in a disposable machine writes `painted.txt` (`.project/pending/windows-machine-paths-checks.md`).
-- [ ] `plans/index.md` updated.

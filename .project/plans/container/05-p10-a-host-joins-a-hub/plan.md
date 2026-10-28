@@ -125,4 +125,4 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 - [ ] A connected node's up time is written as stretches charged to the host.
 - [ ] `ahpd restart` on the hub, then the node reconnects, and the session continues its conversation.
 - [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [ ] `docs/plugins/COMPUTERS.md`, `docs/server/REFERENCE.md`, `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md`, `docs/server/REFERENCE.md` updated.

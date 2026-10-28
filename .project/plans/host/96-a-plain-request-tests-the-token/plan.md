@@ -85,4 +85,3 @@ ahpw runs from ahpd as a plugin, from 127.0.0.1, from a remote server and in Tau
 - [ ] A test: both answers carry `Access-Control-Allow-Origin: *`, and `/api` does not.
 - [ ] The gates pass: build, typecheck, boundary, schema and vitest.
 - [ ] By hand: ahpw on another origin reads the 401 from a browser.
-- [ ] `plans/index.md` updated.

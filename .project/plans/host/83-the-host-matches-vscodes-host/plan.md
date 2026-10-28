@@ -89,4 +89,3 @@ VS Code window -> initialize and root state _meta -> it offers stop, delegation,
 
 - [ ] Every child plan is built.
 - [ ] UPSTREAM.md marks the items as taken.
-- [ ] `plans/index.md` updated.

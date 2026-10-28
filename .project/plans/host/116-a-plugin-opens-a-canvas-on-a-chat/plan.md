@@ -160,4 +160,3 @@ plugin: closeCanvas(resource) or the chat goes -> chat/canvasesChanged without i
 - [ ] A plugin that unloads takes its canvases with it.
 - [ ] No canvas `url` is in the host log.
 - [ ] The plugin API docs list the three calls.
-- [ ] `plans/index.md` updated.

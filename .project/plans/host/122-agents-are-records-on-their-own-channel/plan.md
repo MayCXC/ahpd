@@ -119,4 +119,3 @@ edit -> live record updated -> the session reads it at its next turn
 - [ ] On Softov's daemon, `claude-deepseek-build` and the other agents are listed after the first start, and a build session still runs.
 - [ ] A second agent-cofold record is listed and answers a turn.
 - [ ] An edit of a key applies at the next turn of a running session.
-- [ ] `plans/index.md` updated.

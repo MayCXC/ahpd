@@ -143,4 +143,3 @@ Child plans, each scoped to one package or two.
 - [ ] Each backend runs an allowed command without a question and asks for another one.
 - [ ] A deny rule and `terminalAutoApproveEnabled: false` each make the call ask.
 - [ ] A plugin's parser and a hook module each replace the splitter.
-- [ ] `plans/index.md` updated.

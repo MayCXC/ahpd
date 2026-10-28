@@ -15,7 +15,7 @@ refs:
   - "[code://packages/bot/src/wake.ts#L221-L234](../../../../packages/bot/src/wake.ts#L221-L234) - `sessionFor`, which sets no permission mode"
 ---
 
-Dropped 2026-10-28: the plan moved to [bots/02](../../bots/02-a-manager-bot-edits-only-its-own-folder/plan.md) in the `bots` domain.
+Dropped 2026-10-28: the plan moved to [A manager bot edits only its own folder](../../bots/20261028-0545-a-manager-bot-edits-only-its-own-folder/plan.md) in the `bots` domain.
 
 ## Goal
 

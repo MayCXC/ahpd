@@ -23,7 +23,7 @@ refs:
   - "git://d9d4f950^ - the deleted decisions `a-bot-owns-one-folder`, `a-bot-from-a-profile-gets-its-own-machine-and-a-named-machine-is-shared` and `a-bot-keeps-its-own-agent-state`"
 ---
 
-Dropped 2026-10-28: the plan moved to [bots/01](../../bots/01-a-bot-runs-in-a-machine/plan.md) in the `bots` domain.
+Dropped 2026-10-28: the plan moved to [A bot runs in a machine](../../bots/20261028-0545-a-bot-runs-in-a-machine/plan.md) in the `bots` domain.
 
 ## Goal
 

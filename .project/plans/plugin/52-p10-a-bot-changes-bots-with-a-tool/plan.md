@@ -16,7 +16,7 @@ refs:
   - "[code://packages/bot/src/post.ts#L44-L89](../../../../packages/bot/src/post.ts#L44-L89) - `post_message`, the opt-in host tool to copy"
 ---
 
-Dropped 2026-10-28: the plan moved to [bots/03](../../bots/03-a-bot-changes-bots-with-a-tool/plan.md) in the `bots` domain.
+Dropped 2026-10-28: the plan moved to [A bot changes bots with a tool](../../bots/20261028-0545-a-bot-changes-bots-with-a-tool/plan.md) in the `bots` domain.
 
 ## Goal
 

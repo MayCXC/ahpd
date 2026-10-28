@@ -112,4 +112,4 @@ tasks records -> tasks plugin -> Plan call in the turn / `_meta` on the session 
 - [ ] A session's `_meta` holds its open count, and the count changes when a task is `done`.
 - [ ] A client subscribed to the plan channel gets the plan, then an action for each task change.
 - [ ] Softov read the proposal text, and nothing is filed.
-- [ ] `docs/plugins/TASK-LIST.md` and `plans/index.md` updated.
+- [ ] `docs/plugins/TASK-LIST.md` updated.

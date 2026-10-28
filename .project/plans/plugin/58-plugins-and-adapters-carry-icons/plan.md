@@ -120,4 +120,3 @@ activepieces apply -> piece logoUrl -> one fetch, cached on disk -> Adapter.icon
 - [ ] A plugin with an `https:` icon shows a `data:` icon in the plugins channel row.
 - [ ] Each plugin in this repository shows its curated icon in ahpw.
 - [ ] A path outside the package and a file over 32 KB each give a problem line, and the plugin still loads.
-- [ ] `plans/index.md` updated.

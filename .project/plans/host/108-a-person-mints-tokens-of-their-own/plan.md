@@ -107,4 +107,3 @@ person signs in -> token mint (grants, label) -> secret shown once -> hash in th
 
 - [ ] Every task is `done` or `dropped`.
 - [ ] A `proxy:write` token reaches the proxy from another computer, and is refused at the HTTP API.
-- [ ] `plans/index.md` updated.

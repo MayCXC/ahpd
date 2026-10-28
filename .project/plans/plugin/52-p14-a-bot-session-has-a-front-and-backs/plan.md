@@ -29,7 +29,7 @@ refs:
   - "[code://.project/plans/plugin/52-p11-a-bot-has-a-private-session/plan.md](../../../../.project/plans/plugin/52-p11-a-bot-has-a-private-session/plan.md) - dropped draft merged here: the private session and the wake templates"
 ---
 
-Dropped 2026-10-28: the plan moved to [bots/04](../../bots/04-a-bot-session-has-a-front-and-backs/plan.md) in the `bots` domain.
+Dropped 2026-10-28: the plan moved to [A bot session has a Front, Backs and wakes](../../bots/20261028-0545-a-bot-session-has-a-front-and-backs/plan.md) in the `bots` domain.
 
 ## Goal
 

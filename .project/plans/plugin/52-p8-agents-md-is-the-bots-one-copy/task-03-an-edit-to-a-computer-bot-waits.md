@@ -8,7 +8,7 @@ refs:
   - "[code://packages/computer/src/provider.ts](../../../../packages/computer/src/provider.ts) - the computer's provider"
 ---
 
-Dropped 2026-10-28: the task moved to [bots/01 task 04](../../bots/01-a-bot-runs-in-a-machine/task-04-an-edit-to-a-bot-on-a-machine-waits.md).
+Dropped 2026-10-28: the task moved to [A bot runs in a machine, task 04](../../bots/20261028-0545-a-bot-runs-in-a-machine/task-04-an-edit-to-a-bot-on-a-machine-waits.md).
 
 ## Objective
 

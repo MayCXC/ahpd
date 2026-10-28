@@ -124,4 +124,3 @@ GET /models | /v1/models -> table names + catalog names the caller may use, with
 
 - [ ] A real OpenRouter connector lists its models at `GET /models`, and `openrouter/<id>` answers a chat call.
 - [ ] An OpenAI SDK with base URL `http://host:port` and an Anthropic SDK with the same base URL both answer.
-- [ ] `plans/index.md` updated.

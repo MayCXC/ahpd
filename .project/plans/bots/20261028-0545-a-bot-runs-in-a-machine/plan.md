@@ -34,7 +34,7 @@ Bots that name one `computer://` machine share it, and each works in its own fol
 
 ## Reconnaissance
 
-The files read and the patterns to reuse are the `refs` above, each with its note.
+The files read and the patterns to reuse are the `refs` in the frontmatter, each with its note.
 
 ### Searches performed
 
@@ -67,8 +67,9 @@ resourceWrite bot://<slug> -> botProvider.write -> check computer -> wake -> ses
 | The place of the bot's folder depends on the kind of machine | Softov, 2026-10-28, "it will depends on the kind of machine right? Docker can be mounted. while vm/microvm on the future need another approach." | 01, 04 |
 | On a machine that can mount a folder, such as Docker, the bot's folder on this host is mounted at the same path | Softov, 2026-10-13, "Mounted, same path", and Softov, 2026-10-28 | 01 |
 | On a machine that cannot mount a folder, such as a VM, the bot's folder is on the machine, and the host reads and writes `AGENTS.md` through the machine | Softov, 2026-10-28 | 04 |
+| A shared `computer://` machine that does not mount the bots' root is used as a VM is: each bot's folder is on the machine, and the bot is not refused | Softov, 2026-10-28, "treating it like a VM instead" per now | 01, 04 |
 | An edit to a bot whose folder is on a machine waits while the machine is offline, and the next back session start writes it | Softov, 2026-10-17, "Its possible to make like a pending sync? For when offline?" | 04 |
-| A profile with no `sessionFolder` is refused for a bot on a local Docker | The folder must reach the machine | 01 |
+| A local Docker profile with no `sessionFolder` is used as a VM is: the bot's folder is on the machine | Softov, 2026-10-28, "we can use it as a vm now... when validating we can maybe change" | 01, 04 |
 | A bot's machine stays as long as the bot, and goes with it | A bot from a profile gets its own machine | 02 |
 | The state volume of a bot is named for `bot:<slug>` | A bot keeps its own agent state | 03 |
 
@@ -97,13 +98,11 @@ resourceWrite bot://<slug> -> botProvider.write -> check computer -> wake -> ses
 ## Resume state
 
 - **Done so far:** moved from plugin/47 on 2026-10-28, when Softov made the `bots` domain. The plan and its answers were written 2026-10-13. The refs were checked against main `343ca825` on 2026-10-28. The decisions this plan named are now the spec `specs/bots.md`, and their text is at `git://d9d4f950^`.
-- **Next action:** answer the open question, then write the task files 01 to 03.
-- **Open questions:**
-  1. A shared `computer://` machine that does not mount the bots' root. Proposed: keep each bot's folder on the machine, as on a VM, and do not refuse the bot. The answer of 2026-10-13 refused it.
+- **Next action:** write the task files 01 to 03.
+- **Open questions:** none.
 - **Watch out for:** `sessionFor` must keep `workingDirectory` as the bot's folder, also in a machine. Task 04 came from plugin/52 p8 task 03 on 2026-10-28. The code makes no folder on this host for a bot on a computer today, so task 01 changes that for a machine that mounts.
 
 ## Final verification checklist
 
 - [ ] `pnpm vitest run packages/bot packages/computer` passes.
 - [ ] `pnpm -s typecheck` passes.
-- [ ] `plans/index.md` updated.

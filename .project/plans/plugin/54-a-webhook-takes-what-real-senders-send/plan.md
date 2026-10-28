@@ -147,4 +147,3 @@ POST /plugins/webhook/<id> -> route: find the open connector -> read the body, a
 - [ ] A connector whose `match` is `headers.x-github-event: push` skips a `pull_request` delivery.
 - [ ] An automation of `user:bob` that names a connector of `user:alice` is refused on save.
 - [ ] A bot connector with only `bot` and `secret` answers 202.
-- [ ] `plans/index.md` updated.

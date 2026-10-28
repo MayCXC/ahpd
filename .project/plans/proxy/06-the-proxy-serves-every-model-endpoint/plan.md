@@ -140,4 +140,3 @@ An OpenAI endpoint answers at the root as well. A Responses id holds its connect
 - [ ] The OpenAI SDK, with base URL `http://host:port`, answers embeddings, Responses with a follow-up, images, speech and a transcription through a real `openai` connector.
 - [ ] The Anthropic SDK counts tokens through a real `anthropic` connector.
 - [ ] A rerank call answers through a real `openrouter` connector.
-- [ ] `plans/index.md` updated.

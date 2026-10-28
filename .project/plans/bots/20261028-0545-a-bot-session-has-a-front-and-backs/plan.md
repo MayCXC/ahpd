@@ -40,7 +40,7 @@ A Back asks for no approval by default.
 
 ## Reconnaissance
 
-The files read and the patterns to reuse are the `refs` above, each with its note.
+The files read and the patterns to reuse are the `refs` in the frontmatter, each with its note.
 This plan merges the drafts p4, p6, p9, p11 and the permission mode of p7, because each one rewrites `wake.ts`, `chat.ts` and `post.ts`.
 
 ### Searches performed
@@ -118,4 +118,4 @@ Not written yet.
 - [ ] `@ello` in a group wakes Ello's private session after the delay, and Ello posts back to the group.
 - [ ] A session that Ello started wakes Ello when it finishes.
 - [ ] A Back starts with no approval waiting.
-- [ ] `specs/bots.md`, `docs/plugins/BOTS.md` and `plans/index.md` updated.
+- [ ] `specs/bots.md`, `docs/plugins/BOTS.md` updated.

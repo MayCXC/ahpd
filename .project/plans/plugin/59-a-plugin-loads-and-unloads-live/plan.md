@@ -115,4 +115,3 @@ enable, disable, options, install -> config.json written -> daemon applyPlugins
 - [ ] A change of Activepieces `pieces` applies at once, and the new adapters show.
 - [ ] Disabling an agent plugin ends its sessions.
 - [ ] Enabling a plugin with a port answers `restart: true`.
-- [ ] `plans/index.md` updated.

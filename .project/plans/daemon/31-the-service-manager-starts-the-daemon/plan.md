@@ -136,4 +136,3 @@ A unit is a file the daemon does not parse, so it names `process.execPath` and t
 - [ ] `ahpd stop` and `ahpd restart` under the service leave one daemon or none, and no second process.
 - [ ] On macOS, the same checks with the LaunchAgent.
 - [ ] `ahpd service uninstall` leaves no unit, no plist and no record.
-- [ ] `plans/index.md` updated.

@@ -193,4 +193,4 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 - [ ] No snapshot of either channel holds a secret.
 - [ ] A plugin whose `apply` throws shows `loaded: false` and its problem, and a second client gets `x-ahpd/restartNeeded` after a disable.
 - [ ] A role with `plugin:read` and no `config` grant lists the plugins.
-- [ ] `docs/plugins/PLUGINS.md`, `docs/plugins/WEBHOOKS.md`, `CHANGELOG.md` and `plans/index.md` updated.
+- [ ] `docs/plugins/PLUGINS.md`, `docs/plugins/WEBHOOKS.md`, `CHANGELOG.md` updated.

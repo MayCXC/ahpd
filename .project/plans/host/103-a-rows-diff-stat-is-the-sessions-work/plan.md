@@ -147,4 +147,3 @@ turn ends -> checkpoint -> Session Changes (or Branch Changes) -> summary.change
 - [ ] A worktree session shows its Branch Changes.
 - [ ] After a daemon restart, a row shows the counts it had.
 - [ ] VS Code's sessions view and ahpapp draw the counts without a change.
-- [ ] `plans/index.md` updated.
