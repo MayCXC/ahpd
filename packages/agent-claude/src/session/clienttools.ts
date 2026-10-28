@@ -463,6 +463,32 @@ export function createClientTools(ctx: SessionContext): ClientTools {
     return { answer: await calls.wait(joined.id), callId: joined.id };
   };
 
+  /** One change of tools, sent to the CLI: `setTools` says when, and why in two declarations. */
+  const retool = async (next: BoundTool[]): Promise<boolean> => {
+    const before = ctx.offering.map((one) => `${one.definition.name}\u0000${one.owner ?? ''}`).join('\n');
+    const after = next.map((one) => `${one.definition.name}\u0000${one.owner ?? ''}`).join('\n');
+    if (before === after) return true;
+    // Without `ahp`: the declaration the SDK disconnects the old one on.
+    const removed: Record<string, Bag> = { ...ctx.declared };
+    delete removed.ahp;
+    const declared: Record<string, Bag> = { ...removed };
+    if (next.length > 0) declared.ahp = contributed(next, ranByClient) as Bag;
+    try {
+      if (ctx.declared.ahp !== undefined) {
+        await ctx.handle.setMcpServers(removed as never);
+        // Gone from the CLI now, so what this session holds is the set
+        // without it, whatever the second declaration answers.
+        ctx.offering = [];
+        ctx.declared = removed;
+      }
+      if (next.length > 0) await ctx.handle.setMcpServers(declared as never);
+    }
+    catch { return false; }
+    ctx.offering = [...next];
+    ctx.declared = declared;
+    return true;
+  };
+
   const methods: ClientTools['methods'] = {
     /**
      * The tools on offer, replaced whole.
@@ -488,30 +514,23 @@ export function createClientTools(ctx: SessionContext): ClientTools {
      * the CLI actually has. A removal that took and an add that did not leaves
      * it holding the set without `ahp`, and the list that failed comes again as
      * a change to send rather than one already sent.
+     *
+     * One change at a time, in the order they came, and a turn's prompt after
+     * the last of them: the protocol applies a session's actions in one order,
+     * so a turn a client sends after announcing its tools is a turn of a
+     * session that has them, as the reference rebuilds its query with the new
+     * tools before it sends a turn. The host does not wait for a change to
+     * land, so the session holds the one in hand as `retooling`, a change goes
+     * out at once when none is in hand and after it otherwise, and
+     * `beginTurn` waits for it.
+     * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudeAgentSession.ts#L1089-L1105
      */
-    setTools: async (next) => {
-      const before = ctx.offering.map((one) => `${one.definition.name}\u0000${one.owner ?? ''}`).join('\n');
-      const after = next.map((one) => `${one.definition.name}\u0000${one.owner ?? ''}`).join('\n');
-      if (before === after) return true;
-      // Without `ahp`: the declaration the SDK disconnects the old one on.
-      const removed: Record<string, Bag> = { ...ctx.declared };
-      delete removed.ahp;
-      const declared: Record<string, Bag> = { ...removed };
-      if (next.length > 0) declared.ahp = contributed(next, ranByClient) as Bag;
-      try {
-        if (ctx.declared.ahp !== undefined) {
-          await ctx.handle.setMcpServers(removed as never);
-          // Gone from the CLI now, so what this session holds is the set
-          // without it, whatever the second declaration answers.
-          ctx.offering = [];
-          ctx.declared = removed;
-        }
-        if (next.length > 0) await ctx.handle.setMcpServers(declared as never);
-      }
-      catch { return false; }
-      ctx.offering = [...next];
-      ctx.declared = declared;
-      return true;
+    setTools: (next) => {
+      const took = ctx.retooling === undefined ? retool(next) : ctx.retooling.then(() => retool(next));
+      const landed = took.then(() => undefined, () => undefined);
+      ctx.retooling = landed;
+      void landed.then(() => { if (ctx.retooling === landed) ctx.retooling = undefined; });
+      return took;
     },
 
     /*

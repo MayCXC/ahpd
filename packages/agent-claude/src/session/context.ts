@@ -378,6 +378,15 @@ export interface SessionContext extends Omit<Config, 'methods'>, Omit<ClientTool
    * question of whether a turn is running is asked of one thing.
    */
   beginning: string | undefined;
+  /**
+   * The change of tools the CLI has not finished taking, while there is one.
+   *
+   * The host hands the session a client's tools when the client becomes active
+   * and does not wait for them to land, and a turn the client sends next is a
+   * turn of a session that has them. So a change waits for the one before it,
+   * and a turn waits for the last of them before its prompt goes out.
+   */
+  retooling: Promise<void> | undefined;
 }
 
 /**
