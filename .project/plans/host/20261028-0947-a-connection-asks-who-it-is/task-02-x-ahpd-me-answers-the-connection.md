@@ -1,6 +1,6 @@
 ---
 title: x-ahpd/me answers who the connection is
-status: todo
+status: implemented
 depends: [task-01-the-principal-keeps-the-sign-in-roles.md]
 layer: sdk
 refs:
@@ -58,6 +58,6 @@ The object holds the fields of the plan's *Answers* table, for a person and for 
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** steps 1 to 13. `meMethods(directory)` answers `x-ahpd/me`, and `run.ts` registers it beside the token methods.
+- **Next action:** review by Softov.
 - **Open questions:** none.

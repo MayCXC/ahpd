@@ -358,6 +358,40 @@ A directory that keeps no tokens refuses with a sentence saying this host
 keeps none. The three are listed on the handshake under
 `_meta['ahpd.methods']` with `user:write`.
 
+## Who a connection is
+
+A client asks the host who its connection is with `x-ahpd/me`. It takes no
+params and answers one `Me` object. The grant is `user:get`, and the method's
+`authorize` lets in every reader without it, a minted token too, because the
+answer is only about the caller. A host with no users file serves no
+`x-ahpd/me`.
+
+| Command | Params | Answers |
+| --- | --- | --- |
+| `x-ahpd/me` | none | The `Me` of the caller |
+
+| Field | Holds |
+| --- | --- |
+| `principal` | Whose work the connection's work is: `user:<id>`, `plugin:<name>` or `root:<host>` |
+| `kind` | `user`, `plugin` or `root` |
+| `id` | The id on the record; absent for root |
+| `roles` | The record's roles and the roles the sign-in added |
+| `rolesFromSignIn` | The roles the sign-in added alone, read from the claim `rolesFrom` names |
+| `grants` | What the connection may do now |
+| `token` | The id of the minted token the connection signed in with, when it was one |
+| `pools` | The usage pools the connection's work is charged to |
+| `memberships` | The teams and projects the person's work may be charged to |
+| `primary` | The membership that work naming no scope is charged to |
+| `issuer` | The issuer the record names, as written |
+| `rolesFrom` | The claim the record reads roles from, as written |
+
+A minted token's `grants` is narrowed to the grants the token holds, as every
+check is. Root gets `roles` and `rolesFromSignIn` empty, `grants` as
+`['*:*']`, and `pools` as its own `root:<host>`. `*:*` is the wildcard and not
+the list of every grant. A connection that names nobody is refused with
+`-32007`. The command is listed on the handshake under `_meta['ahpd.methods']`
+with `user:get`.
+
 ## Policies as resources
 
 What a scheme is, and which operation of it each resource method asks for, is [RESOURCES.md](RESOURCES.md). This is what this scheme carries.
