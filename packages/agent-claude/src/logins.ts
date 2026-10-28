@@ -138,6 +138,9 @@ export class OpenLogins {
    */
   readonly rests: Rests;
 
+  /** What a failure of a login calls, with its id and the CLI's words. */
+  onFailure: ((id: string, why: string) => void) | undefined;
+
   constructor(now: () => number = Date.now) {
     this.rests = new Rests(now);
   }
@@ -181,6 +184,11 @@ export class OpenLogins {
    */
   rest(id: string, token: string, until: number): void {
     if (this.open.get(id)?.token === token) this.rests.mark(id, until);
+  }
+
+  /** Say a failure of a login, which the plugin logs and has the host check. */
+  failed(id: string, why: string): void {
+    this.onFailure?.(id, why);
   }
 }
 

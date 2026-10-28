@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AgentView, Bag, ConnectorOwner, Engine, PluginHost, Start } from '@ahpd/sdk';
+import type { Adapter, AgentView, Bag, Connector, ConnectorOwner, Engine, PluginHost, Start } from '@ahpd/sdk';
 
 /*
  * One Claude agent on several logins, as the model proxy routes a name over
@@ -699,6 +699,99 @@ describe('a failed login', () => {
       expect(sdk.queries, error).toHaveLength(1);
       expect(ofTurn(chat, 'chat/error', 't2'), error).toHaveLength(1);
       expect(shown(chat, said), error).toBe(true);
+    }
+  });
+});
+
+/*
+ * The plugin over a host of its own: the adapter and the engine it registers
+ * share its logins, and a failure reaches the host as a check of that
+ * connector, sent on the plugin's own connection as a client sends it.
+ */
+describe('the plugin', () => {
+  /** A host that keeps what the plugin registers, the lines it logs, and every request its connections send. */
+  const fakeHost = () => {
+    const adapters: Adapter[] = [];
+    const engines: Engine[] = [];
+    const requests: { method: string; params: unknown }[] = [];
+    const logged: string[] = [];
+    let connects = 0;
+    const host = {
+      paths: [mkdtempSync(join(tmpdir(), 'ahpd-logins-plugin-'))],
+      log: (line: string) => { logged.push(line); },
+      registerAdapter: (adapter: Adapter) => { adapters.push(adapter); },
+      registerEngine: (engine: Engine) => { engines.push(engine); },
+      connect: () => {
+        connects += 1;
+        return {
+          request: async (method: string, params: unknown) => { requests.push({ method, params }); return {}; },
+          notify: () => {},
+          send: () => {},
+          onMessage: () => {},
+          close: () => {},
+        };
+      },
+    } as unknown as PluginHost;
+    return { host, adapters, engines, requests, logged, connects: () => connects };
+  };
+
+  /** One connector of `claude-login`, as the host hands it to `open` and `check`. */
+  const connectorOf = (id: string, token: string): Connector => ({ id, adapter: 'claude-login', owner: 'host', config: { token } });
+
+  it("logs a login's failure and asks the host to check that connector, on one connection", async () => {
+    const { apply } = await import('../src/plugin.js');
+    const { host, adapters, engines, requests, logged, connects } = fakeHost();
+    // Before the load, which is when the adapter takes the `fetch` it checks with.
+    const fetcher = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetcher);
+    await apply(host, {});
+    const adapter = adapters.find((one) => one.name === 'claude-login');
+    const engine = engines.find((one) => one.name === 'claude');
+    if (adapter === undefined || engine === undefined) throw new Error('the plugin registered no claude-login adapter or claude engine');
+    adapter.open(connectorOf('work', 'token-work'));
+    adapter.open(connectorOf('personal', 'token-personal'));
+
+    const view: AgentView = {
+      id: 'claude-logins', engine: 'claude', owner: 'host', name: 'Logins',
+      description: undefined, icon: undefined, model: undefined, config: { logins: ['work', 'personal'] },
+    };
+    const start: Start = {
+      uri: 'ahp-session:/claude-logins', chatUri: 'ahp-chat:/claude-logins', settings: {}, clientToolTimeoutMs: 60_000,
+      schema: () => ({ type: 'object', properties: {} }),
+      emit: () => {},
+      workingDirectory: host.paths[0] as string,
+    };
+    const session = engine.open(view).create(start);
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+    await turn(session, 't1', 'one');
+
+    try {
+      const denied = 'Failed to authenticate. API Error: 401 OAuth access token is invalid.';
+      session.begin('t2', 'two');
+      await settle();
+      sdk.push(...failure('authentication_failed', denied));
+      await until(() => requests.length >= 2);
+      expect(requests).toEqual([
+        { method: 'initialize', params: { clientId: 'agent-claude', protocolVersions: ['0.9.0'] } },
+        { method: 'x-ahpd/connectors/check', params: { id: 'work' } },
+      ]);
+      expect(logged.some((line) => line.includes('work') && line.includes('authentication_failed') && line.includes(denied))).toBe(true);
+      // The check asks the API with the login's token.
+      expect(await adapter.check?.(connectorOf('work', 'token-work'))).toEqual({ result: 'ok' });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+
+      // A failure that moves the turn is checked too, on the same connection.
+      session.begin('t3', 'three');
+      await settle();
+      sdk.push(...failure('rate_limit'));
+      await until(() => requests.length >= 3);
+      expect(requests.at(-1)).toEqual({ method: 'x-ahpd/connectors/check', params: { id: 'work' } });
+      expect(tokenOf()).toBe('token-personal');
+      expect(connects()).toBe(1);
+    }
+    finally {
+      vi.unstubAllGlobals();
     }
   });
 });

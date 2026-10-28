@@ -174,11 +174,11 @@ export function createLogins(ctx: SessionContext): Logins {
 
   /*
    * The model proxy's loop over its entries, in
-   * `packages/server/src/proxy/listener.ts`, with a login for an entry: a
-   * refused credential is told and sent to no other entry, and no connection,
-   * a 429 or a 5xx goes to the next entry while nothing has reached the
-   * caller. Once a byte has, nothing is run again, as `docs/server/PROXY.md`
-   * says under *When a provider fails*.
+   * `packages/server/src/proxy/listener.ts`, with a login for an entry: each
+   * outcome is noted for the connector, a refused credential is told and sent
+   * to no other entry, and no connection, a 429 or a 5xx goes to the next entry
+   * while nothing has reached the caller. Once a byte has, nothing is run
+   * again, as `docs/server/PROXY.md` says under *When a provider fails*.
    */
   const refused = (message: Bag): boolean => {
     const error = str(message.error);
@@ -191,7 +191,10 @@ export function createLogins(ctx: SessionContext): Logins {
     if (turn === undefined || login === undefined || agent === undefined) return false;
     if (str(message.parent_tool_use_id) !== undefined && str(message.parent_tool_use_id) !== '') return false;
     if (!FAILOVER.has(error) && !REFUSED.has(error)) return false;
+    const said = list(bag(message.message).content).map((block) => str(bag(block).text) ?? '').join('');
     if (until !== undefined) agent.open.rest(login.id, login.token, until);
+    // The proxy's log takes the provider's words with the key cut out.
+    agent.open.failed(login.id, `${error}: ${said.split(login.token).join('<token>')}`);
     if (REFUSED.has(error)) {
       move = { turn: String(turn.id), said: `Claude refused login ${login.id} (${error})`, end: true };
       return true;
@@ -199,7 +202,6 @@ export function createLogins(ctx: SessionContext): Logins {
     if (list(turn.responseParts).length > 0) return false;
     const cut = cutOf();
     if (cut === undefined) return false;
-    const said = list(bag(message.message).content).map((block) => str(bag(block).text) ?? '').join('');
     move = { turn: String(turn.id), said, ...cut };
     return true;
   };
