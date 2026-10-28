@@ -16,13 +16,13 @@ A turn sent to it wakes its backend under its id.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/host/history.ts:374-394` - `past` answers the kept turns of the default chat when the backend's read answers nothing and the session keeps turns.
+- `UPDATE: packages/sdk/src/host/localturns.ts:214-223` - `transcriptOf` answers a chat's kept turns when its backend's read answers nothing, so every read of a chat does so.
 - `UPDATE: packages/sdk/test/host-local-turns.test.ts` - the opening and a turn after it.
 
 ## Steps
 
 1. Write the tests first, and see each fail on main.
-2. In `past`, when the read answers nothing and `keptTurnsOf` holds a turn, answer `withLocalTurns` over no turns.
+2. In `transcriptOf`, when the read answers nothing and the chat keeps turns, answer `withLocalTurns` over no turns.
 3. Set this task and the plan's Tasks table to `done`.
 
 ## Validation

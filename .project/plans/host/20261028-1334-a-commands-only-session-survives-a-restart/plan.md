@@ -66,14 +66,14 @@ built: gone(id) false while turns are kept -> a row from what the host kept -> p
 | The row's title is the default chat's stored title, or else `titleFrom` of the first kept turn's text. | [code://packages/agent-claude/src/session.ts#L71](../../../../packages/agent-claude/src/session.ts#L71): a backend titles a session after its first prompt | 01 |
 | The row's dates are the first kept turn's start and the last kept turn's end. | [code://packages/agent-claude/src/transcript.ts#L522-L531](../../../../packages/agent-claude/src/transcript.ts#L522-L531); `(defaulted: the store keeps dates only for a nested session, and the kept turns are what the host has of this one)` | 01 |
 | The row's folder is the one the store recorded for the session. | [code://packages/sdk/src/sessions/sessions.ts#L154-L155](../../../../packages/sdk/src/sessions/sessions.ts#L154-L155) | 01 |
-| Opening the session answers its kept turns when no backend holds a transcript for it. | [code://packages/sdk/src/host/history.ts#L324-L342](../../../../packages/sdk/src/host/history.ts#L324-L342): a nested session opens from the host's record | 02 |
+| A read of a chat whose backend holds no transcript answers the chat's kept turns, so the session opens and wakes with them. | [code://packages/sdk/src/host/history.ts#L324-L342](../../../../packages/sdk/src/host/history.ts#L324-L342): a nested session opens from the host's record | 02 |
 | A session with no transcript and no kept turns is pruned, as the rule says. | [code://.project/specs/sessions-and-chats.md#L225-L233](../../../../.project/specs/sessions-and-chats.md#L225-L233) | 01 |
 
 ## Proposed architecture
 
 - **Data flow** - the store's record and the kept turns give the row and the turns, and no backend is read for them.
 - **State flow** - nothing new is stored; the turns the host keeps for the session are its record.
-- **Layer responsibilities** - sdk `host/localturns.ts`: a session's kept turns · sdk `host/catalogue.ts`: `gone` and the row · sdk `host/history.ts`: the opening.
+- **Layer responsibilities** - sdk `host/localturns.ts`: a session's kept turns, and the read of a chat with no transcript · sdk `host/catalogue.ts`: `gone` and the row.
 - **Source-of-truth files** - [`code://packages/sdk/src/host/localturns.ts`](../../../../packages/sdk/src/host/localturns.ts)
 
 ## Tasks

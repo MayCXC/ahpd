@@ -14,13 +14,13 @@ The spec and the docs say that a session whose turns the host keeps is listed af
 ## Files
 
 - `UPDATE: .project/specs/sessions-and-chats.md:225-233` - the pruning scenario names the sessions it keeps.
-- `UPDATE: docs/sdk/SESSIONS.md` - the catalogue lists a session whose only turns are the host's own.
+- `UPDATE: docs/sdk/TERMINALS.md:50` - the local-turn paragraph says how a session of commands alone is listed and opened.
 - `CREATE: .project/plans/host/20261028-1334-a-commands-only-session-survives-a-restart/implemented.md` - the record of what was built.
 
 ## Steps
 
 1. Add the kept-turns case to the pruning scenario, and keep its rule.
-2. Say in the sessions page where such a row comes from.
+2. Say in the terminals page where such a row comes from.
 3. Write `implemented.md`, and set the tasks and the plan to `done` and `built`.
 
 ## Validation
