@@ -6,7 +6,7 @@ import type { Turn } from '@microsoft/agent-host-protocol';
 import type { WireTurn } from '../src/types/wire.js';
 import {
   resetSdk, actions, claude, createHost, echo, emit, hello, machine, open, peer, sdk, serving,
-  sessionQueries, settle, running,
+  sessionQueries, settle, running, wrote,
 } from './support/host.js';
 import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import { idOf } from '../src/sessions/catalog.js';
@@ -67,15 +67,17 @@ describe('dropping the turns after one', () => {
       params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'first' } } },
     });
     await settle();
-    await emit({ type: 'user', session_id: 'sdk-1', uuid: 'prompt-1', message: { role: 'user', content: 'first' } });
+    await emit({ type: 'system', subtype: 'init', session_id: 'sdk-1' });
     await emit({ type: 'assistant', uuid: 'reply-1', message: { id: 'm1', content: [{ type: 'text', text: 'one' }] } });
     await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+    // Written, where the CLI runs, once the first message reached it.
+    wrote('sdk-1', String(sessionQueries().at(-1)?.options.cwd));
     client.handle({
       method: 'dispatchAction',
       params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId: 't2', message: { text: 'second' } } },
     });
     await settle();
-    await emit({ type: 'user', session_id: 'sdk-1', uuid: 'prompt-2', message: { role: 'user', content: 'second' } });
+    await emit({ type: 'system', subtype: 'init', session_id: 'sdk-1' });
     await emit({ type: 'assistant', uuid: 'reply-2', message: { id: 'm2', content: [{ type: 'text', text: 'two' }] } });
     await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
     return running_;
@@ -215,11 +217,13 @@ describe('a chat made out of another', () => {
       params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } } },
     });
     await settle();
-    // The CLI echoes the prompt back under an id of its own and then answers,
-    // and the answer's id is the one a fork cuts at.
-    await emit({ type: 'user', session_id: 'sdk-1', uuid: 'sdk-prompt-1', message: { role: 'user', content: 'hi' } });
+    // The CLI names its conversation and then answers, and the answer's id is
+    // the one a fork cuts at.
+    await emit({ type: 'system', subtype: 'init', session_id: 'sdk-1' });
     await emit({ type: 'assistant', uuid: 'sdk-reply-1', message: { id: 'm1', content: [{ type: 'text', text: 'hello' }] } });
     await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+    // Written, where the CLI runs, once the first message reached it.
+    wrote('sdk-1', String(sessionQueries().at(-1)?.options.cwd));
 
     await client.handle({
       method: 'createChat',
@@ -278,7 +282,7 @@ describe('a chat made out of another', () => {
   });
 
   /**
-   * A chat's first turn, finished, with the prompt id the CLI echoed for it.
+   * A chat's first turn, finished, with the id the CLI gave its answer.
    *
    * What a fork resumes at, so a chat made out of this one has a turn to name.
    */
@@ -288,7 +292,8 @@ describe('a chat made out of another', () => {
       params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId, message: { text: 'hi' } } },
     });
     await settle();
-    await emit({ type: 'user', session_id: 'sdk-1', uuid: `sdk-prompt-${turnId}`, message: { role: 'user', content: 'hi' } });
+    await emit({ type: 'system', subtype: 'init', session_id: 'sdk-1' });
+    await emit({ type: 'assistant', uuid: `sdk-reply-${turnId}`, message: { id: `m-${turnId}`, content: [{ type: 'text', text: 'hello' }] } });
     await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
   };
 

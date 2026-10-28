@@ -3,7 +3,7 @@ import { serversFor } from './mcp.js';
 import { createSession, EFFORT_LABELS, EFFORTS } from './session.js';
 import { restoreSavedOutputs } from './session/savedoutput.js';
 import { turnsOf, subagentsOf } from './transcript.js';
-import { catalogue, findSession, forgetSession, transcriptOf } from './catalog.js';
+import { catalogue, findSession, forgetSession, transcriptOf, written } from './catalog.js';
 import { offeredModels, ownModels, type ModelEntry, type ModelSource, type OfferedModel } from './models.js';
 import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -597,13 +597,30 @@ export function claude(options: ClaudeOptions): Agent {
        * sandbox must not be on the host instead.
        */
       const inside = insideOf(start);
+      const cwd = workingDirectory(start.workingDirectory);
+      /*
+       * The conversation the host asked to resume, where the CLI wrote one.
+       *
+       * Anything else is an id with no conversation behind it, a chat nobody
+       * spoke to or one whose CLI could not sign in, and the CLI ends at startup
+       * rather than resume it. So the id names a new conversation instead: the
+       * reference resumes only what the SDK holds and starts the rest under
+       * their own ids. A session in a machine keeps its files there, so what it
+       * asks for is resumed as it is.
+       * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeAgent.ts#L1728-L1744
+       */
+      const resumed = start.resume !== undefined && (inside !== undefined || written(start.resume, cwd))
+        ? start.resume
+        : undefined;
+      // The new conversation's name: the chat's own, or else the id it was asked to resume.
+      const chatId = start.chatId ?? (resumed === undefined ? start.resume : undefined);
       return createSession({
       ...(inside === undefined ? {} : { spawn: inside, spawnExecutable: executable, spawnConfigDir: configDir }),
       ...(options.workerStop !== undefined ? { workerStop: options.workerStop } : {}),
       uri: start.uri,
       chatUri: start.chatUri,
-      ...(start.chatId === undefined ? {} : { chatId: start.chatId }),
-      cwd: workingDirectory(start.workingDirectory),
+      ...(chatId === undefined ? {} : { chatId }),
+      cwd,
       /*
        * The MCP servers, declared by this host rather than found by the CLI.
        *
@@ -615,7 +632,7 @@ export function claude(options: ClaudeOptions): Agent {
        * A folder the host did not vouch for contributes none of its own: its
        * `.mcp.json` names servers this host would run as commands.
        */
-      mcpServers: serversFor([workingDirectory(start.workingDirectory), ...(start.additional ?? [])], start.trusted),
+      mcpServers: serversFor([cwd, ...(start.additional ?? [])], start.trusted),
       /*
        * The client plugins, as the directories the host copied them into.
        *
@@ -663,9 +680,13 @@ export function claude(options: ClaudeOptions): Agent {
       ...(options.handshakeTimeoutMs === undefined ? {} : { handshakeTimeoutMs: options.handshakeTimeoutMs }),
       ...(start.seedCustomizations ? { seedCustomizations: start.seedCustomizations } : {}),
       ...(start.seedModels ? { seedModels: start.seedModels } : {}),
-      ...(start.resume !== undefined ? { resume: start.resume } : {}),
-      ...(start.forkAt !== undefined ? { forkAt: start.forkAt } : {}),
-      ...(start.rewindAt !== undefined ? { rewindAt: start.rewindAt } : {}),
+      // A fork point and a rewind point each name an entry of a written
+      // conversation, so they go with a resume and with nothing else.
+      ...(resumed === undefined ? {} : {
+        resume: resumed,
+        ...(start.forkAt !== undefined ? { forkAt: start.forkAt } : {}),
+        ...(start.rewindAt !== undefined ? { rewindAt: start.rewindAt } : {}),
+      }),
       ...(start.context !== undefined ? { context: start.context } : {}),
       ...(start.seed ? { seed: start.seed } : {}),
       ...(start.onFileEdit ? { onFileEdit: start.onFileEdit } : {}),

@@ -1547,10 +1547,11 @@ export function createSpawn(ctx: HostContext): Spawn {
        *
        * What the host keeps against a turn is kept against the id the client
        * chose it by, and a backend whose transcript names turns its own way -
-       * Claude names every turn by the CLI's frame uuid - is read back by that
-       * other id after a restart, finding nothing. So the sender is kept under
-       * it as well, and a `!` turn after it is anchored to it by that id,
-       * rather than the host learning one backend's transcript format.
+       * Claude writes a turn whose id is not a UUID under a uuid of its own - is
+       * read back by that other id after a restart, finding nothing. So the
+       * sender is kept under it as well, and a `!` turn after it is anchored to
+       * it by that id, rather than the host learning one backend's transcript
+       * format.
        *
        * The sender's in-memory entry first, because a turn still running is
        * only in that map, and the store after it for the turn a backend names

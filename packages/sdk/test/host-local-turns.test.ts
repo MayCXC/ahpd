@@ -448,7 +448,7 @@ describe('a Claude chat', () => {
     return { host, client, p, store };
   };
 
-  it('anchors a command\'s turn to the CLI\'s own uuid of the turn before it, and has it back after a restart', async () => {
+  it('anchors a command\'s turn to the uuid the turn before it was written under, and has it back after a restart', async () => {
     const dir = join(temp(), 'sessions');
     const before = await shelled(dir);
     const uri = 'claude:/banged';
@@ -458,28 +458,33 @@ describe('a Claude chat', () => {
     await stateOf(before.client, chat);
     say(before.client, chat, 't1', 'first');
     await settle();
-    await emit({ type: 'user', session_id: 'sdk-1', uuid: 'prompt-1', message: { role: 'user', content: 'first' } });
+    // The prompt as the CLI took it in: the uuid it carried is the one its
+    // transcript writes it under, and nothing is echoed back.
+    expect(sdk.said).toEqual(['first']);
+    const written = String(sdk.uuids[0]);
+    expect(written).not.toBe('t1');
     await emit({ type: 'assistant', uuid: 'reply-1', message: { id: 'm1', content: [{ type: 'text', text: 'one' }] } });
     await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
     await ended(before.p, chat, 't1');
     say(before.client, chat, 't2', '!echo after-the-reply');
     await ended(before.p, chat, 't2');
     expect(keptIn(before.store, 'banged').map((one) => ({ turnId: one.turnId, anchor: one.anchor }))).toEqual([
-      { turnId: 't2', anchor: 'prompt-1' },
+      { turnId: 't2', anchor: written },
     ]);
     const terminal = String((((keptIn(before.store, 'banged')[0]?.turn as Bag).responseParts as Bag[])
       .map((part) => part.toolCall as Bag)[0]?.content as Bag[]).find((one) => one.type === 'terminal')?.resource);
     await before.host.close();
 
-    // The CLI's transcript holds the question and its answer, under its own uuids.
+    // The CLI's transcript holds the question under the uuid its prompt
+    // carried, and the answer under one of the CLI's own.
     sdk.sessions.push({ sessionId: 'banged', summary: 'first', lastModified: 1, cwd: DIR });
     sdk.transcript.push(
-      { type: 'user', uuid: 'prompt-1', message: { role: 'user', content: 'first' } },
+      { type: 'user', uuid: written, message: { role: 'user', content: 'first' } },
       { type: 'assistant', uuid: 'reply-1', message: { content: [{ type: 'text', text: 'one' }] } },
     );
     const after = await shelled(dir);
     await stateOf(after.client, uri);
-    expect(await turnsOf(after.client, chat)).toEqual(['prompt-1', 't2']);
+    expect(await turnsOf(after.client, chat)).toEqual([written, 't2']);
     // And the terminal the command's call names opens, exited, with its output.
     const rebuilt = await stateOf(after.client, terminal);
     expect(rebuilt.content).toEqual([{ type: 'unclassified', value: expect.stringContaining('after-the-reply') }]);

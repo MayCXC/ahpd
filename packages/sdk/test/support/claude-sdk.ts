@@ -3,9 +3,38 @@
  *
  * What the real one returns is opaque - a registered in-process server - so
  * the fake keeps the definitions where a test can call one. It is a module of
- * its own, and imports nothing, because a `vi.mock` factory loads it while
- * `@anthropic-ai/claude-agent-sdk` is still being mocked.
+ * its own, and imports nothing but node's, because a `vi.mock` factory loads
+ * it while `@anthropic-ai/claude-agent-sdk` is still being mocked.
  */
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+/**
+ * Where the CLI keeps its conversations for the cases that load the fake.
+ *
+ * A folder of their own, as `CLAUDE_CONFIG_DIR` names one to the backend, so
+ * what a case writes there is all the backend finds: it resumes only a
+ * conversation the CLI wrote, and reads the project folders to know.
+ */
+const config = mkdtempSync(join(tmpdir(), 'ahpd-claude-config-'));
+process.env.CLAUDE_CONFIG_DIR = config;
+
+/**
+ * The conversation `id` as the CLI writes it once its first message reaches
+ * it: a file in the project folder of `cwd`, spelled as the CLI spells it.
+ *
+ * A case that resumes a conversation says the CLI wrote it here, since the
+ * backend starts any other under the id it was asked to resume.
+ */
+export function wrote(id: string, cwd: string): void {
+  let real = cwd;
+  try { real = realpathSync(cwd); }
+  catch { /* a folder that is not there is spelled as given */ }
+  const project = join(config, 'projects', real.replace(/[^A-Za-z0-9]/g, '-'));
+  mkdirSync(project, { recursive: true });
+  writeFileSync(join(project, `${id}.jsonl`), '{}\n');
+}
 
 export interface Fake {
   frames: Record<string, unknown>[];
@@ -60,6 +89,14 @@ export const sdk = {
    * with a picture reads it here.
    */
   blocks: [] as unknown[][],
+  /**
+   * The uuid each prompt carried, in order.
+   *
+   * The CLI writes a streamed prompt to its transcript under that uuid and
+   * echoes nothing back, so a case about a turn read back after a restart
+   * names the turn's prompt by it.
+   */
+  uuids: [] as (string | undefined)[],
   modelsSet: [] as (string | undefined)[],
   modesSet: [] as string[],
   effortsSet: [] as (string | null | undefined)[],
@@ -162,9 +199,11 @@ export const fake = {
     if (options.canUseTool) sdk.canUseTool = options.canUseTool as typeof sdk.canUseTool;
     void (async () => {
       for await (const frame of prompt) {
-        const content = (frame as { message?: { content?: unknown } }).message?.content;
+        const { message, uuid } = frame as { message?: { content?: unknown }; uuid?: string };
+        const content = message?.content;
         if (typeof content === 'string') sdk.said.push(content);
         else if (Array.isArray(content)) sdk.blocks.push(content);
+        sdk.uuids.push(uuid);
       }
     })();
     return {
@@ -228,6 +267,7 @@ export function resetSdk(): void {
   sdk.flags.length = 0;
   sdk.said.length = 0;
   sdk.blocks.length = 0;
+  sdk.uuids.length = 0;
   sdk.modelsSet.length = 0;
   sdk.modesSet.length = 0;
   sdk.effortsSet.length = 0;
@@ -241,4 +281,5 @@ export function resetSdk(): void {
   sdk.toolUseIds.length = 0;
   sdk.sendsToolUseId = true;
   sdk.canUseTool = undefined;
+  rmSync(join(config, 'projects'), { recursive: true, force: true });
 }

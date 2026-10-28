@@ -2,14 +2,11 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import { idOf } from '@ahpd/sdk';
 import type { Bag } from '@ahpd/sdk';
 import type { HookCallback, SDKUserMessage, SettingSource } from '@anthropic-ai/claude-agent-sdk';
-import { bag, list, str } from './common.js';
+import { bag, list, str, UUID } from './common.js';
 import type { SessionContext } from './context.js';
 import { failureOf } from './failure.js';
 import { hostHoldsTasks, ownEnvOf, OWN_TASK_TOOLS, queryOptionsOf } from '../options.js';
 import { agentNameOf } from './customizations.js';
-
-/** What the SDK will accept as a session id of our choosing. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * The settings files one session loads, from the two answers it was started
@@ -536,15 +533,6 @@ export function createQuery(ctx: SessionContext): Query {
   };
 
   /**
-   * The turns whose own transcript id has been said, by this host's turn id.
-   *
-   * Once per turn, because a turn is one line in the catalogue however many
-   * `user` frames it is made of: only the first echo of a turn is its prompt,
-   * and the rest are tool results that name entries of their own.
-   */
-  const reported = new Set<string>();
-
-  /**
    * The backend's id for the *last* thing in each turn, by this host's turn id.
    *
    * What both cuts take. A rewind keeps the turn and drops what came after it,
@@ -766,25 +754,9 @@ export function createQuery(ctx: SessionContext): Query {
         if (type === 'stream_event') { ctx.streamed(bag(message.event), str(message.parent_tool_use_id) ?? ''); continue; }
         if (type === 'assistant') { ctx.assistant(bag(message.message), str(message.parent_tool_use_id) ?? ''); continue; }
         if (type === 'user') {
-          // The prompt's own id. Taken from the first echo of a turn and not
-          // after: later `user` frames in one turn are tool results, which
-          // name entries of their own and are not the turn.
-          const said = str(message.uuid);
+          // A tool's result, or a worker's prompt: the CLI sends no frame for
+          // a prompt of the lead turn, which `turns.ts` names as it sends it.
           const parent = str(message.parent_tool_use_id) ?? '';
-          if (ctx.active && said !== undefined && !reported.has(String(ctx.active.id))) {
-            reported.add(String(ctx.active.id));
-            /*
-             * The same echo, said as the id this turn is written down under.
-             *
-             * The CLI names every turn in the transcript by its own uuid, so
-             * what the host keeps against the id a client chose is not what a
-             * history read back asks about. Only
-             * the lead turn's own echo says it: a worker's echo is a uuid in
-             * the lead turn's transcript too, and a turn named after a
-             * worker's prompt is not a turn a client can find.
-             */
-            if (parent === '') ctx.options.onTurnRecorded?.(String(ctx.active.id), said);
-          }
           /*
            * The output Claude saved for a `Bash` result too large to send, read
            * before the result is mapped so its completion names the terminal,
