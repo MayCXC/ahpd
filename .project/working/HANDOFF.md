@@ -18,7 +18,7 @@ Current progress and pending items only, as of 2026-10-28.
 - Code goes through a PR on `softov/ahpd`. Plan-only commits go to main. Run `gh pr checks` with `-R softov/ahpd` outside a repo.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by every test run. Restore it with `git checkout --` and never print it.
 - On this machine, two Docker tests time out: `computer-devcontainer` and `computer-disposable`. They time out on main too, and CI passes them.
-- The worktrees in `/github/ahpd.worktrees/` are `x-ahpd-me` (merged), `build-agents-1e7e1075` (host/116, merged), `build-agents-5dac8e0d` (host/114, merged), `docs-host-story` (merged) and `build-agents-fda88f4a` (the old container/05 p8). The merged ones can go on Softov's word. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
+- The only worktree in `/github/ahpd.worktrees/` is `build-agents-fda88f4a`, the old container/05 p8. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
 - The local branch `fork/maycxc-24-25-26-127-128` is the closed PR #110. It is not on main, and #113 replaced it.
 
 ## Waiting for Softov
