@@ -117,6 +117,14 @@ The reason: the prompt cache belongs to the account.
 An attempt that has shown something already happened, so it never runs again on another account.
 See [`code://packages/agent-claude/src/session/logins.ts`](../../packages/agent-claude/src/session/logins.ts).
 
+### A prompt sent while a new Claude CLI starts
+
+WHEN a turn starts on a new CLI, for an agent the message picked, an edited record or another login
+THEN its prompt goes to the new CLI, however late the SDK starts reading that CLI's input
+AND the reader of the CLI it replaced takes nothing more and ends.
+The reason: the SDK reads a new CLI's input only after its initialize request is written, which waits on the manifests of the in-process MCP servers, and it drops what a closed CLI's reader is handed.
+See [`code://packages/agent-claude/src/session/query.ts`](../../packages/agent-claude/src/session/query.ts).
+
 ### A live tool change in a Claude session
 
 WHEN the tools a Claude session offers change while the session runs
