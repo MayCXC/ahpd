@@ -170,6 +170,8 @@ export function piSession(
   /** The running turn's mapping, so an event knows what it belongs to. */
   let mapping: PiTurn | undefined;
   let live: PiBackend | undefined;
+  /** The entry the conversation ended at when the running turn prompted, which its prompt follows. */
+  let promptedAfter: string | undefined;
   /** The one opening, shared by every caller, so one pi is built. */
   let opening: Promise<PiBackend> | undefined;
   /** Whether the tools changed since pi was built, so it is rebuilt next turn. */
@@ -770,6 +772,15 @@ export function piSession(
         if (active !== undefined && live !== undefined) {
           const at = live.leaf();
           if (at !== undefined) ends.set(String(active.id), at);
+          /*
+           * And the entry pi wrote the turn's prompt under, which is the id
+           * the turn has when it is read back from pi's file. pi writes that
+           * entry after its listeners hear the message, so it is read here,
+           * where the turn is over. The turn's first prompt names it, as
+           * agent-claude names a turn by its first echo.
+           */
+          const prompt = live.promptAfter(promptedAfter);
+          if (prompt !== undefined && prompt !== String(active.id)) start.onTurnRecorded?.(String(active.id), prompt);
         }
         // Before the ending action: a client hangs usage on the turn it is
         // ending, and the ending is what moves that turn into the history.
@@ -1069,6 +1080,7 @@ export function piSession(
           }
         }
         const asked = await promptFor(text, attachments, backend.takesImages());
+        promptedAfter = backend.leaf();
         await backend.prompt(asked.text, asked.images);
         /*
          * `prompt` settling is not the turn ending: pi raises `agent_settled`

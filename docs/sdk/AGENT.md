@@ -141,6 +141,15 @@ output is kept. Both are absent where the session store keeps no folder for the
 session, and a `!` command's terminal or one opened with `start.terminals`
 needs neither: the host keeps what those print itself.
 
+**A turn is read back under the id your transcript gives it.** A turn a client
+sends has the client's id while it runs. A `!` command's turn is the host's and
+in no transcript of yours, so the host keeps it and puts it back after the turn
+it followed, found by that turn's id in what `transcript` answers. A backend
+whose transcript names turns its own way says what it wrote a turn down as with
+`start.onTurnRecorded(turnId, transcriptId)`, as Claude names a turn by the
+CLI's uuid and pi by its prompt's entry. One that keeps the id it was given, as
+cofold stores a prompt under the turn's id, says nothing.
+
 ## `Session`
 
 One conversation, across two channels. The host owns the channels and the

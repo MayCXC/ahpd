@@ -521,7 +521,8 @@ export interface Start {
    * against that turn, such as its sender, is what a later read asks for. A backend whose own record names turns its own way, as Claude's
    * transcript names every turn by the CLI's uuid, is asked again for what it
    * wrote them down as, so the host keeps the same record under that id too
-   * rather than having to learn the backend's format.
+   * rather than having to learn the backend's format. A `!` turn after it is
+   * anchored to it by that id, which is the id a read after a restart holds.
    *
    * Optional both ways, like `onFileEdit`: a backend whose transcript keeps the
    * ids it was given never calls it, and a backend that never called it has a

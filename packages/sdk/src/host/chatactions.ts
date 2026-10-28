@@ -1502,11 +1502,23 @@ export function chatAction(
         no(`${turnId} is not a completed turn in ${session.chatUri}`);
         break;
       }
+      /*
+       * The turn the backend is cut at: this one, or for a local turn, which
+       * the backend never saw, the nearest earlier turn of its own - the
+       * reference's redirect. A local turn with no such turn before it would
+       * cut the whole conversation, which is refused as above.
+       * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentSideEffects.ts#L1960-L1966
+       */
+      const concrete = ctx.concreteTurnOf(session.uri, session.chatUri, all as Bag[], at);
+      if (concrete === undefined) {
+        no('This host can drop the turns after one, but not a conversation entire');
+        break;
+      }
       // The backend's own name for the end of that turn. Absent for a
       // turn this process did not watch run - one read back off a
       // transcript - and a rewind to a point the backend cannot be told
       // is the half of this that would silently not happen.
-      const point = session.endPoint?.(turnId);
+      const point = session.endPoint?.(concrete);
       const started = session.agentId();
       const owner = sessions.get(session.uri);
       if (point === undefined || started === undefined || owner === undefined) {
@@ -1527,6 +1539,10 @@ export function chatAction(
       // the reference's go with the rows of the turns they belong to.
       // https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/sessionDatabase.ts#L236-L243
       ctx.forgetTurnOutputs(session.uri, session.chatUri, all.slice(at + 1) as Bag[]);
+      // And the local turns among them, as the reference deletes the ones a
+      // truncation drops.
+      // https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentSideEffects.ts#L1977-L1981
+      ctx.forgetLocalTurns(session.uri, session.chatUri, all.slice(at + 1) as Bag[]);
       // A stop, not a removal: a session starts again right below on this
       // same id, and the backend it resumes is the one just stopped.
       session.close('stopping');
