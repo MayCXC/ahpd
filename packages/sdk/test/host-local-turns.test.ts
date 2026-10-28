@@ -107,8 +107,10 @@ const backend = (k: Knobs): Agent => {
     chats: { fork: true },
     list: async () => (k.listed === undefined ? await base.list?.() ?? [] : [...k.listed]),
     transcript: async (id, at) => {
-      const own = k.transcript?.(id);
-      return own === undefined ? await base.transcript?.(id, at) : own as WireTurn<Turn>[];
+      // A case's own answer is the answer, nothing included: a backend with no
+      // conversation under an id answers nothing for it.
+      if (k.transcript !== undefined) return k.transcript(id) as WireTurn<Turn>[] | undefined;
+      return await base.transcript?.(id, at);
     },
     create: (start: Start): Session => {
       k.starts.push(start);
@@ -434,6 +436,61 @@ describe('a chat\'s command\'s turns', () => {
     await settle(20);
     expect(keptIn(store, 'live')).toEqual([]);
     expect(keptIn(store, 'two').map((one) => one.turnId)).toEqual(['p1']);
+  });
+});
+
+describe('a session that ran only commands', () => {
+  /**
+   * A first host that ran `texts` as turns and closed, and a second on the same
+   * store where no backend lists the session or holds a conversation for it.
+   */
+  const reopened = async (texts: string[]) => {
+    const dir = join(temp(), 'sessions');
+    const before = await opened(knobs(), fileSessions({ dir }));
+    for (const [index, text] of texts.entries()) {
+      const turnId = `t${String(index + 1)}`;
+      say(before.client, before.chat, turnId, text);
+      await ended(before.p, before.chat, turnId);
+    }
+    await before.host.close();
+    const second = knobs();
+    second.listed = [];
+    second.transcript = () => undefined;
+    const store = fileSessions({ dir });
+    const after = await hostAt(second, store);
+    return { ...after, chat: before.chat, k: second, store };
+  };
+  /** The rows a listing answers. */
+  const listed = async (client: Client): Promise<Bag[]> =>
+    ((await client.handle({ method: 'listSessions', params: {} })) as { items: Bag[] }).items;
+
+  it('is listed after a restart from the turns the host kept, by every listing', async () => {
+    const { client, host, store } = await reopened(['!echo first', '!echo second']);
+    const row = (await listed(client)).find((one) => one.resource === LIVE);
+    const kept = keptIn(store, 'live').map((one) => one.turn as Bag);
+    expect(row).toMatchObject({ title: '!echo first', createdAt: kept[0]?.startedAt });
+    expect(Date.parse(String(row?.modifiedAt))).toBeGreaterThanOrEqual(Date.parse(String(kept[1]?.startedAt)));
+    // The prune of the first listing is what lost such a session: a second one still holds it.
+    expect((await listed(client)).map((one) => one.resource)).toContain(LIVE);
+    expect(keptIn(store, 'live').map((one) => one.turnId)).toEqual(['t1', 't2']);
+    await host.close();
+  });
+
+  it('opens with its commands\' turns, and a turn sent after the restart runs after them', async () => {
+    const { client, host, p, chat } = await reopened(['!echo first']);
+    await listed(client);
+    expect(await turnsOf(client, chat)).toEqual(['t1']);
+    say(client, chat, 't2', 'hello again');
+    await ended(p, chat, 't2');
+    expect(await turnsOf(client, chat)).toEqual(['t1', 't2']);
+    await host.close();
+  });
+
+  it('is pruned after a restart when it ran nothing at all', async () => {
+    const { client, host } = await reopened([]);
+    await listed(client);
+    expect((await listed(client)).map((one) => one.resource)).not.toContain(LIVE);
+    await host.close();
   });
 });
 

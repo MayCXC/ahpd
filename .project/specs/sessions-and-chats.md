@@ -249,7 +249,14 @@ AND the row's recorded provider answered
 AND the row's folder was among the folders read
 THEN the host removes a row that no backend listed.
 
+WHEN the host keeps local turns for such a row
+THEN it keeps the row and lists it from those turns
+AND the row's title is the default chat's stored title, or else the first turn's text
+AND the row's dates are the first turn's start and the last turn's end
+AND a read of a chat whose backend holds no transcript answers the chat's local turns.
+
 The reason: a backend that did not answer, or a folder not read, says nothing about a row.
+A row whose turns the host keeps is a row the host can open again.
 See [`code://packages/sdk/src/sessions/sessions.ts`](../../packages/sdk/src/sessions/sessions.ts).
 
 ### A closed chat is hidden or deleted
