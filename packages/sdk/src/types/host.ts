@@ -12,7 +12,7 @@ import type { Worktrees } from './worktrees.js';
 import type { PullRequests } from './github.js';
 import type { AutomationStore } from './automations.js';
 import type { EnablementStore } from '../plugins/enablement.js';
-import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
+import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedBindings, ServedCanvases, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
 import type { ConnectorRef, ServedAdapter } from './connectors.js';
 import type { AgentOwner, ServedEngine } from './agents.js';
 import type { ConnectorsChannel } from '../connectors/channel.js';
@@ -716,6 +716,15 @@ export interface HostOptions {
    */
   pluginConnects?: PluginConnects[];
   /**
+   * Every plugin that may open a canvas, one entry each.
+   *
+   * The fold fills this from every contribution, and the host sets each entry's
+   * `open`, `update` and `close`, so a plugin's call reaches the live store
+   * from wherever it is made. Kept by plugin, so a plugin's own entry is the
+   * whole of what removing it would take.
+   */
+  pluginCanvases?: ServedCanvases[];
+  /**
    * What the plugins give a chat a person or a tool opens, in plugin order.
    *
    * The fold fills this from every `registerChatPreamble`, and leaves it unset
@@ -1086,6 +1095,16 @@ export interface Connection {
   peer: Peer;
   /** The identifier the client gave at `initialize`. */
   clientId: string;
+  /**
+   * The protocol version this connection agreed on at `initialize`.
+   *
+   * Set from what the negotiation answered, so a later delivery can hold back
+   * an action the client's version does not know - the specification says a
+   * host MUST NOT behave as a newer version to an older connection. Absent on
+   * a connection no handshake has named, such as one a test built by hand, and
+   * such a connection is sent everything.
+   */
+  protocolVersion?: string;
   /**
    * Channel URIs this client subscribed to.
    *

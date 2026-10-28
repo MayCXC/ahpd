@@ -14,11 +14,13 @@ import type { ConfigPropertySchema } from '@microsoft/agent-host-protocol';
  * contributes the literal it resolves to. The two keys whose default comes
  * from `src/vs/platform/chat/common/chatSettings.ts` name that file as a URL.
  *
- * This host acts on five of them: `globalAutoApproveEnabled` and
- * `eligibleForAutoApproval`, which are one setting for every connection, and
+ * This host acts on six of them: `globalAutoApproveEnabled` and
+ * `eligibleForAutoApproval`, which are one setting for every connection,
  * `terminalAutoApproveEnabled`, `terminalAutoApproveRules` and
  * `editAutoApprovePatterns`, which are the connection's own and are read from
- * the connection that owns the session. The rest are declared so that a client
+ * the connection that owns the session, and `canvasesEnabled`, which the
+ * plugin host's `openCanvas`, `updateCanvas` and `closeCanvas` ask before they
+ * reach the store. The rest are declared so that a client
  * can draw them and so that a push of one is kept and read back rather than
  * refused; what is acted on is in `docs/sdk/AHP.md`.
  */
@@ -27,11 +29,13 @@ import type { ConfigPropertySchema } from '@microsoft/agent-host-protocol';
  * The properties VS Code's own agent host declares for the keys it pushes.
  *
  * Keyed by the config key, so `ROOT_CONFIG_SCHEMA` spreads the whole map into
- * its own `properties`. Five keys here this host reads: `globalAutoApproveEnabled`,
+ * its own `properties`. Six keys here this host reads: `globalAutoApproveEnabled`,
  * which `trust.ts` asks before a tool call runs; `eligibleForAutoApproval`,
- * which `host/spawn.ts` asks before it; and `terminalAutoApproveEnabled`,
+ * which `host/spawn.ts` asks before it; `terminalAutoApproveEnabled`,
  * `terminalAutoApproveRules` and `editAutoApprovePatterns`, which
- * `host/spawn.ts` reads from the connection that owns the session.
+ * `host/spawn.ts` reads from the connection that owns the session; and
+ * `canvasesEnabled`, which `host/canvases.ts` asks before it opens, updates or
+ * closes a canvas.
  *
  * `workspaceTrust` is not here: it is declared beside `defaultShell` in
  * `host/root.ts`, because both belong to the connection that pushed them.

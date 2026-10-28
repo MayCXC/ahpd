@@ -4,7 +4,7 @@ import type { Connection } from '../types/host.js';
 import type { Bag } from '../types/common.js';
 import {
   ROOT, MARKS, isRootChannel, isAutomations, automationsChannel, schemeOf, spaceOf, baseOf,
-  chatUriFor, subagentChatUri, toolCallOfSubagentChat, URI_KEYS,
+  chatOfCanvas, chatUriFor, subagentChatUri, toolCallOfSubagentChat, URI_KEYS,
 } from './channels.js';
 import type { ChannelKind, Space } from './channels.js';
 import type { Home } from './gate.js';
@@ -389,6 +389,14 @@ export function createRouting(ctx: HostContext): Routing {
    * channel that turns out to be nothing is refused there anyway.
    */
   const channelKind = (channel: string): ChannelKind => {
+    /*
+     * A canvas is its chat's, whether or not this host still holds the canvas.
+     * The resource carries the chat in base64url, so a client asking about one
+     * that is gone is asked the same question a client asking about the chat
+     * is - and the answer is the session that holds it, not `other`.
+     */
+    const canvasChat = chatOfCanvas(channel);
+    if (canvasChat !== undefined) return channelKind(canvasChat);
     const held = claims.get(channel) ?? claims.get(baseOf(channel));
     if (held !== undefined) return held.kind === 'terminal' ? 'terminal' : held.kind === 'watch' ? 'other' : 'session';
     const space = spaceHere(channel);

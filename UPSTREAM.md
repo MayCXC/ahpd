@@ -39,7 +39,7 @@ Upstream runs Copilot in the agent host through `@github/copilot-sdk`, pinned ex
 
 The canvas channel is the 1.0.0 one: `ChatState.canvases` holds `CanvasReference`s, `chat/canvasesChanged` changes the list, and an `ahp-canvas:/<id>` channel holds one `CanvasState` (`instanceId`, `extensionId`, `canvasId`, `title`, `status`, and a live `url`), replaced whole by `canvas/stateChanged`. Upstream fills it from the Copilot SDK's `session.canvas.*` events only (`e0f899884a3`), opens and closes canvases over a local bridge rather than AHP (`cba2384e944`), and the window draws canvases only for the local `copilotcli` provider (`agentHostChatContribution.ts` `supportsCanvasPresentation`).
 
-- [ ] **ahpd serves the canvas channel**, for ahpw and ahpapp. Softov, 2026-10-22, which reopens Pass 6's "left out, as in `host/47`". `packages/sdk/src/host/relay.ts`, `packages/sdk/src/vscoderootconfig.ts` `canvasesEnabled`.
+- [x] **ahpd serves the canvas channel**, for ahpw and ahpapp. Softov, 2026-10-22, which reopens Pass 6's "left out, as in `host/47`". `packages/sdk/src/host/canvases.ts`, `packages/sdk/src/vscoderootconfig.ts` `canvasesEnabled`. Built in `host/116` tasks 01 to 04.
 
 ### compareAgents
 

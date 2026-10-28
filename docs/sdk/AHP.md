@@ -256,7 +256,7 @@ A client older than 1.140 that still pushes one of the three has that key refuse
 | `session/configChanged` | both | ✅ | A key whose property says `scope: chat` reaches this chat only; anything else reaches every chat in the session, because a voice set on one of them is a session where two conversations answer differently. Refused in the backend's own words when it will not take the key. |
 | `session/metaChanged` | host | ✅ | Replaces `_meta` whole, which is why the git facts are rebuilt rather than patched: a host with two sources of `_meta` would have each take the other's away. |
 
-### `chat/*` — 34 of 35
+### `chat/*` — 35 of 35
 
 | action | origin | ahpd | Notes |
 | --- | :---: | :---: | --- |
@@ -295,6 +295,25 @@ A client older than 1.140 that still pushes one of the three has that key refuse
 | `chat/backgroundWorkSet` | host | ✅ | Upserts one entry by its `id`, which is `shell:<task_id>` or `subagent:<task_id>` off the harness's own task id. Only the Claude backend has anything to report: its `background_tasks_changed` is the whole live set and its `task_started` says what each one is, so one task is said once and again only when what it is changes. A `shell` carries the command of the `Bash` call that started it; a `subagent` carries the worker chat's URI, which is the same chat the spawning call links. A chat running nothing has no `backgroundWork` key rather than an empty one. |
 | `chat/backgroundWorkRemoved` | host | ✅ | One entry that stopped running, by the same `id`, and a no-op for an id this chat was never told about. A task the harness is no longer running leaves the level, and a terminal notification ends one whatever the level says; `ambient` tasks are never listed at all. |
 | `chat/movableChanged` | host | ✅ | Whether this chat may be the source of a move, which is the host's own answer and not the client's. Sent when that answer changed, and the owning session's row follows as `session/chatUpdated` so `ChatSummary.movable` keeps up. Never `true` for the chat its session hands out, because `default` is a role and not a chat. A chat running a turn is not movable, and neither is one whose backend cannot be asked for the conversation again. |
+| `chat/canvasesChanged` | host | ✅ | The whole list a chat shows, or no `canvases` when it holds none. Only a plugin's canvas calls send it - [PLUGINS.md](../plugins/PLUGINS.md#showing-a-canvas-on-a-chat) - and only to a connection at `0.10.0` or later. |
+
+### `canvas/*` — 1 of 1
+
+| action | origin | ahpd | Notes |
+| --- | :---: | :---: | --- |
+| `canvas/stateChanged` | host | ✅ | The canvas's whole `CanvasState`, replaced rather than patched, on the canvas's own `ahp-canvas:/<base64url(chat)>/<uuid>` channel. A new canvas is sent before the chat that lists it, so a client told about a resource can subscribe to a channel that already answers. In memory only: a URL is not reused after a restart. |
+
+The two canvas actions are registered at `0.10.0`, and this host sends them to
+a connection that agreed on `0.10.0` or later and to no older one. That holds
+for the live broadcast and for a replay alike, because both go through the one
+filter `seenBy` applies - [versioning](https://github.com/microsoft/agent-host-protocol/blob/main/docs/specification/versioning.md).
+The chat's list is in `ChatState.canvases` on every version, so a client at
+`0.9.0` reading the snapshot sees the key and no change about it.
+
+A canvas is opened, updated and closed by a plugin, through its own three calls
+- [PLUGINS.md](../plugins/PLUGINS.md#showing-a-canvas-on-a-chat) - and
+`canvasesEnabled`, a root key off by default, is what turns them on
+([HOST.md](HOST.md#root-config)). A client cannot open or close one.
 
 ### `terminal/*` — 11 of 11 🧩
 

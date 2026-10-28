@@ -186,6 +186,12 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
         ? false
         : await options.containers.available().catch(() => false);
       connection.clientId = typeof params.clientId === 'string' ? params.clientId : 'anonymous';
+      /*
+       * What this connection agreed to, kept for every later delivery: an
+       * action introduced after this version is not sent to it, live or in a
+       * replay. Read before the snapshots below, which are answered whole.
+       */
+      connection.protocolVersion = agreed;
       // Met, so a later `reconnect` under this id is answerable.
       known.add(connection.clientId);
       void fire({ type: 'client_connect', client: connection.clientId });

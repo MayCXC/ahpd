@@ -17,7 +17,7 @@ import type { SessionConfigAnswerer } from '../types/completions.js';
 import type { ServedAdapter } from '../types/connectors.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from '../types/events.js';
 import type { HostOptions, HostTool } from '../types/host.js';
-import type { ChannelHandle, Contribution, LoaderContext, Alert, InstallAnswer, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
+import type { ChannelHandle, Contribution, LoaderContext, Alert, InstallAnswer, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedBindings, ServedCanvases, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
 import type { CollectionOptions, RecordCollection, RecordStore } from '../types/records.js';
 import type { SessionStore } from '../types/sessions.js';
 import type { Usage } from '../types/usage.js';
@@ -792,6 +792,16 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   if (pluginConnects.length > 0) options.pluginConnects = pluginConnects;
 
   /*
+   * Every plugin's canvases, one entry each, for the reason `pluginConnects` is
+   * one entry each: a canvas is the plugin's own, and two plugins may draw
+   * different ones on the same chat. The objects are the ones `pluginHost`
+   * built and not copies, because the host sets the calls on them and each
+   * plugin's own `openCanvas` reaches the same store.
+   */
+  const pluginCanvases = contributions.map((one) => one.canvases);
+  if (pluginCanvases.length > 0) options.pluginCanvases = pluginCanvases;
+
+  /*
    * Every plugin's chat preambles, in plugin order and then registration order.
    *
    * Unnamed like `pluginConnects`: two plugins may both give a new chat text,
@@ -991,6 +1001,20 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     close: () => { for (const pair of opened.splice(0)) pair.close(); },
   };
   /*
+   * The canvases this plugin opens, and the closer that takes them away.
+   *
+   * The host fills `open`, `update`, `close` and `closeAll` in once it is built
+   * over this plugin. The closer is pushed the first time the plugin opens a
+   * canvas rather than registered by the plugin, because it is the host's own
+   * road: a canvas belongs to the plugin that opened it, and one left open when
+   * that plugin unloads names a URL nothing answers any more. A plugin that
+   * opens none contributes no closer, as a plugin with nothing to stop
+   * registers none.
+   */
+  const canvases: ServedCanvases = { by };
+  /** Whether the unload closer is already on the list, so one plugin has one. */
+  let closerPushed = false;
+  /*
    * Who this plugin is when it connects, which is what every command on that
    * connection is gated against.
    *
@@ -1037,6 +1061,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     triggers,
     starts,
     connects,
+    canvases,
     preambles: [],
   };
   const providers = new Set<string>();
@@ -1515,6 +1540,43 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
         throw new Error(miss(by, 'sessionMetaChanged', 'the change', 'announced once a host is built over this plugin'));
       }
       changed(uri);
+    },
+    /*
+     * The host's store, reached through the entry the fold carries to it.
+     *
+     * No registration and no ownership record here: the store keeps what each
+     * canvas is, which chat lists it and which plugin opened it, so a call
+     * either reaches it or is refused by it. What this side adds is the name of
+     * the plugin and the sentence a plugin reads before a host exists.
+     */
+    openCanvas(chat, state) {
+      const open = contribution.canvases.open;
+      if (open === undefined) {
+        throw new Error(miss(by, 'openCanvas', 'the canvas', 'opened once a host is built over this plugin'));
+      }
+      const resource = open(chat, state);
+      // The unload road, put on the list once there is something to take away:
+      // `HostOptions.closers` carries one entry per registration and none for a
+      // plugin that registered nothing.
+      if (!closerPushed) {
+        closerPushed = true;
+        contribution.closers.push(() => { canvases.closeAll?.(); });
+      }
+      return resource;
+    },
+    updateCanvas(resource, state) {
+      const update = contribution.canvases.update;
+      if (update === undefined) {
+        throw new Error(miss(by, 'updateCanvas', 'the canvas', 'drawn once a host is built over this plugin'));
+      }
+      update(resource, state);
+    },
+    closeCanvas(resource) {
+      const close = contribution.canvases.close;
+      if (close === undefined) {
+        throw new Error(miss(by, 'closeCanvas', resource, 'closed once a host is built over this plugin'));
+      }
+      close(resource);
     },
     /*
      * One reader per plugin, and every plugin's is kept: a binding is about a

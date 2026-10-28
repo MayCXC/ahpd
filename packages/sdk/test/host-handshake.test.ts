@@ -3,13 +3,57 @@ import { PROTOCOL_VERSION } from '@microsoft/agent-host-protocol';
 import { ROOT } from '../src/host.js';
 import { sdkVersion } from '../src/version.js';
 import {
-  resetSdk, actions, emit, hello, open, peer, sdk, serving, sessionQueries,
+  resetSdk, actions, claude, createHost, emit, hello, machine, open, peer, sdk, serving, sessionQueries,
   settle, running,
 } from './support/host.js';
+import type { Start } from '../src/types/agent.js';
+import type { Emit } from '../src/types/session.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
 
 beforeEach(resetSdk);
+
+/**
+ * A host whose session can say an action the host itself would send.
+ *
+ * A canvas action is the host's own and no client may dispatch one, so the
+ * `emit` the host hands a backend is captured here: what it says reaches the
+ * same `dispatch` a client's action would, and the version gate in `seenBy`
+ * sees it.
+ */
+const canvasHost = () => {
+  let send: Emit | undefined;
+  const base = claude({ paths: ['/home/softov'] });
+  const agent = {
+    ...base,
+    create: (start: Start) => {
+      send = start.emit;
+      return base.create(start);
+    },
+  };
+  const host = createHost({ path: '/home/softov', agents: [agent], ...machine() });
+  return {
+    host,
+    /** Say that a chat's canvas list moved, as the host's canvas store does. */
+    canvas: (chat: string, resource?: string): void => {
+      send?.('chat', {
+        type: 'chat/canvasesChanged',
+        canvases: resource === undefined ? undefined : [{ resource }],
+      });
+    },
+  };
+};
+
+/** Open a session and subscribe a client to its chat, answering the chat's URI. */
+const canvasSession = async (client: ReturnType<ReturnType<typeof createHost>['accept']>): Promise<string> => {
+  await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/live', provider: 'claude' } });
+  const opened = await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/live' } }) as {
+    snapshot: { state: { defaultChat: string } };
+  };
+  const chat = opened.snapshot.state.defaultChat;
+  await client.handle({ method: 'subscribe', params: { channel: chat } });
+  return chat;
+};
 
 describe('the handshake', () => {
   it('answers the highest version offered that it speaks, in whatever order they came', async () => {
@@ -34,32 +78,57 @@ describe('the handshake', () => {
     expect(below.protocolVersion).toBe('0.9.0');
   });
 
-  it('sends no canvas action to a client that agreed on 0.10.0', async () => {
-    // The 1.0.0 package registers the canvas actions at `0.10.0`, so the
-    // version alone would let them through. ahpd sends none, to anyone.
-    const p = peer();
-    const client = serving('/home/softov').accept(p);
-    const result = await client.handle(hello(['0.10.0', '0.9.0'], { initialSubscriptions: ['ahp-root://'] })) as { protocolVersion: string };
-    expect(result.protocolVersion).toBe('0.10.0');
-    const uri = 'ahp-session:/live';
-    await client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude' } });
-    const opened = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
-      snapshot: { state: { defaultChat: string } };
-    };
-    const chatUri = opened.snapshot.state.defaultChat;
-    await client.handle({ method: 'subscribe', params: { channel: chatUri } });
-    client.handle({
-      method: 'dispatchAction',
-      params: { channel: uri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } } },
-    });
+  it('sends a canvas action to a connection that agreed on 0.10.0 or later', async () => {
+    const { host, canvas } = canvasHost();
+    const before = peer();
+    const older = host.accept(before);
+    await older.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    const at = peer();
+    const ten = host.accept(at);
+    await ten.handle(hello(['0.10.0'], { initialSubscriptions: ['ahp-root://'] }));
+    const latest = peer();
+    const one = host.accept(latest);
+    await one.handle(hello(['1.0.0'], { initialSubscriptions: ['ahp-root://'] }));
+    // One client makes the session and reads where its chat is.
+    const chat = await canvasSession(older);
+    for (const client of [ten, one]) await client.handle({ method: 'subscribe', params: { channel: chat } });
     await settle();
-    await emit({ type: 'assistant', message: { id: 'm1', content: [{ type: 'text', text: 'Done' }] } });
-    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 42 });
-    const types = actions(p).map((e) => e.action.type);
-    expect(types).toContain('chat/turnComplete');
-    expect(types).not.toContain('chat/canvasesChanged');
-    expect(types).not.toContain('canvas/stateChanged');
-    expect(types.filter((type) => /canvas/i.test(String(type)))).toEqual([]);
+    canvas(chat, 'ahp-canvas:/x/y');
+    await settle();
+    // The 1.0.0 package registers the canvas actions at `0.10.0`, so a
+    // connection that agreed on 0.9.0 has no reducer case for either.
+    expect(actions(before, chat).map((e) => e.action.type)).not.toContain('chat/canvasesChanged');
+    expect(actions(at, chat).map((e) => e.action.type)).toContain('chat/canvasesChanged');
+    expect(actions(latest, chat).map((e) => e.action.type)).toContain('chat/canvasesChanged');
+  });
+
+  it('holds a canvas action out of the replay to a connection that agreed on 0.9.0', async () => {
+    const { host, canvas } = canvasHost();
+    const first = peer();
+    const a = host.accept(first);
+    await a.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    const chat = await canvasSession(a);
+    await settle();
+    const upTo = actions(first, chat).at(-1)?.serverSeq ?? 0;
+
+    // The socket goes, and the canvas opens while it is away.
+    a.close();
+    canvas(chat, 'ahp-canvas:/x/y');
+    await settle();
+
+    const back = host.accept(peer());
+    await back.handle(hello(['0.9.0']));
+    const result = await back.handle({
+      method: 'reconnect',
+      params: {
+        channel: 'ahp-root://',
+        clientId: 'probe',
+        lastSeenServerSeq: upTo,
+        subscriptions: ['ahp-root://', chat],
+      },
+    }) as { type: string; actions: { action: { type: string } }[] };
+    expect(result.type).toBe('replay');
+    expect(result.actions.map((held) => held.action.type)).not.toContain('chat/canvasesChanged');
   });
 
   it('refuses with the versions it can speak, so the client can say why', async () => {

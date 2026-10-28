@@ -12,6 +12,7 @@ Terms, one line each:
 | a part | One piece of an answer: markdown, reasoning, a tool call, a notice |
 | a worker chat | The chat one tool call of an agent's runs in, when it spawns one - a subagent |
 | a queued message | One waiting behind the running turn. A `steering` one goes into it instead |
+| a canvas | A page a plugin draws on a chat, on a channel of its own |
 
 ## The first chat, and the rest
 
@@ -48,6 +49,12 @@ A message that arrives while a turn is running waits as a pending message, and i
 A draft is a `Message` rather than a string, and the session holds it rather than the chat's client, so two people in one chat see each other's. It is taken for a session nothing is running for too - somebody typing into a row from the catalogue is typing before there is any reason to start an agent, and refusing it is a composer that empties itself as it is typed into.
 
 `serverSeq` moves with state and never with messages. A snapshot is taken at a sequence number and every action after it carries a greater one, which is how a client knows it missed nothing.
+
+## Canvases
+
+A chat lists what a plugin draws on it in `ChatState.canvases`: one entry per canvas, in the order they were opened. There is no key at all when the chat holds none, because absence is what none means. Each canvas is a channel of its own, `ahp-canvas:/<base64url(chat)>/<uuid>`, holding one `CanvasState` - a title, a status and a live `url`.
+
+A canvas goes with its chat. Closing the chat, removing it or moving it to another session takes its canvases with it, and a subscription to one afterwards answers `-32008`, "Canvas is no longer available". A plugin opens, draws and closes canvases, and no client action does - [PLUGINS.md](../plugins/PLUGINS.md#showing-a-canvas-on-a-chat). Only a connection at `0.10.0` or later is sent a canvas action - [AHP.md](AHP.md#canvas--1-of-1).
 
 ## Compacted context, and a rewind
 
@@ -109,6 +116,6 @@ Reading a chat is `chat:turns`; subscribing to one is the same operation. Writin
 | | |
 | --- | --- |
 | [SESSIONS.md](SESSIONS.md) | The session a chat lives in |
-| [AHP.md](AHP.md#chat--29-of-30) | The chat channel's actions, turn by turn |
+| [AHP.md](AHP.md#chat--35-of-35) | The chat channel's actions, turn by turn |
 | [HOST.md](HOST.md#root-config) | `deferredTitleGeneration` and the other root config keys |
 | [TOOLS.md](TOOLS.md) | What a tool call is |

@@ -245,6 +245,16 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       throw error;
     }
     /*
+     * The chat's canvases do not move with it.
+     *
+     * A canvas belongs to the chat as one session shows it: its resource names
+     * the chat, and the destination has no claim on the URL a source plugin's
+     * canvas points at. The chat is still here, so it is told its list is now
+     * empty - the client drawing one stops rather than keeps a canvas that a
+     * subscribe would refuse.
+     */
+    ctx.canvases.forgetChat(chatUri);
+    /*
      * A session that did not exist a moment ago, and is running now. Said
      * ready before it is announced, which is `openSession`'s order and for its
      * reason: a client told about a session it cannot subscribe to yet has been
@@ -1417,6 +1427,9 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       drafts.delete(chatUri);
       madeFrom.delete(chatUri);
       ctx.links.forgetChat(chatUri);
+      // After `byChat` has let the chat go, so the store says nothing on a
+      // channel nobody can reach any more.
+      ctx.canvases.forgetChat(chatUri);
       held?.chats.delete(chatUri);
       // And the name this chat was given. The store is what keeps a chat's
       // own title rather than the catalogue's derived one, so a chat that
