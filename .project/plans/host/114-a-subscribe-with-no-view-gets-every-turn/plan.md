@@ -1,7 +1,7 @@
 ---
 title: A subscribe with no view gets every turn
 domain: host
-status: draft
+status: planned
 priority: medium
 created: 2026-10-22
 revalidated: 2026-10-28
@@ -128,7 +128,7 @@ subscribe {channel: ahp-chat:/..., view?} -> sessionmethods.subscribe -> snapsho
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-22 from Softov's choice of the Pass 7 finding. The refs were checked against main `343ca825` on 2026-10-28, and the gap is still there. Softov answered the three open questions on 2026-10-22. The check by hand is written in [`pending/host-114-turn-cut-checks.md`](../../../pending/host-114-turn-cut-checks.md).
+- **Done so far:** drafted 2026-10-22 from Softov's choice of the Pass 7 finding. The refs were checked against main `343ca825` on 2026-10-28, and the gap is still there. VS Code main `2398c3f7c7c` was checked on 2026-10-28: a subscribe still reads no view, and `fetchTurns` still answers no older turns. Softov answered the three open questions on 2026-10-22. The check by hand is written in [`pending/host-114-turn-cut-checks.md`](../../../pending/host-114-turn-cut-checks.md).
 - **Next action:** [task-01-the-cut-is-shown.md](task-01-the-cut-is-shown.md).
 - **Open questions:** none.
 - **Watch out for:** the number 113 is taken by another host plan, so this plan is 114. The paging cases in `host-catalogue.test.ts` must still cover the cursor, so they subscribe with a view after task 02.
