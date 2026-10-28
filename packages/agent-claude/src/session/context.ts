@@ -1,9 +1,11 @@
 import type { query } from '@anthropic-ai/claude-agent-sdk';
 import type { Activity, BackgroundTasks, Bag, BoundTool, OutputTerminals, Session, SessionOptions, ShellEnv, Start, SubagentChat, SubagentRequest, TerminalOutputs } from '@ahpd/sdk';
+import type { Cooldowns } from '../logins.js';
 import type { Asked, Spawned } from '../spawn.js';
 import type { Asking } from './asking.js';
 import type { ClientTools } from './clienttools.js';
 import type { Config } from './config.js';
+import type { Logins } from './logins.js';
 import type { Parts } from './parts.js';
 import type { Query } from './query.js';
 import type { SavedOutputs } from './savedoutput.js';
@@ -93,6 +95,14 @@ export interface ClaudeSessionOptions extends SessionOptions {
   /** The list the CLI reports, as the harness offers it; absent is the CLI's. */
   offerModels?: (cli: { id: string; name: string }[]) => Promise<{ id: string; name: string }[]>;
   /**
+   * The cooldowns of the logins this session's agent runs on.
+   *
+   * One for every session of the agent, so a login one conversation found
+   * refused is not tried by the next. Absent where a session is built by hand,
+   * and then the session keeps its own.
+   */
+  cooldowns?: Cooldowns;
+  /**
    * Whether one folder is one the host vouched for, carried from `Start`.
    *
    * The query reads it for the CLI's `settingSources`, which is what decides
@@ -164,7 +174,7 @@ export interface ClaudeSessionOptions extends SessionOptions {
  * used rather than copied onto the factory's own scope at construction - so
  * the order the areas are built in never matters and nothing is frozen.
  */
-export interface SessionContext extends Omit<Config, 'methods'>, Omit<ClientTools, 'methods'>, Parts, Omit<Workers, 'methods'>, Stream, SavedOutputs, Asking, Omit<Query, 'methods'>, Omit<Servers, 'methods'>, Omit<Turns, 'methods'> {
+export interface SessionContext extends Omit<Config, 'methods'>, Omit<ClientTools, 'methods'>, Parts, Omit<Workers, 'methods'>, Stream, SavedOutputs, Asking, Logins, Omit<Query, 'methods'>, Omit<Servers, 'methods'>, Omit<Turns, 'methods'> {
   /** The options `createSession` was given. */
   options: ClaudeSessionOptions;
   /** Say one thing on one channel, to every client watching it. */

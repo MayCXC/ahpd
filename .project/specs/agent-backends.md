@@ -79,7 +79,8 @@ THEN the prompt carries the turn's id as its `uuid` when the id is a UUID
 AND it carries a new uuid otherwise, and the backend calls `onTurnRecorded` with the turn's id and that uuid.
 WHEN a failed turn is sent again
 THEN its prompt carries a new uuid, and the backend calls `onTurnRecorded` with the pair.
-The reason: the CLI writes a prompt under the `uuid` it carries and sends no frame for it, and a read after a restart names the turn by that uuid.
+The reason: the CLI writes a prompt under the `uuid` it carries and sends no frame for it.
+A read after a restart names the turn by that uuid.
 See [`code://packages/agent-claude/src/session/turns.ts`](../../packages/agent-claude/src/session/turns.ts).
 
 ### A Claude conversation the CLI never wrote
@@ -90,8 +91,31 @@ THEN the backend sends no `resume`, no fork point and no rewind point
 AND it starts a new conversation under the chat's own id, or under that id when the chat has none.
 WHEN a project folder holds the transcript, the folder's own or another one
 THEN the backend resumes it.
-The reason: the CLI writes a conversation when its first message reaches it, and it ends at startup when it is told to resume an id it has no file for.
+The reason: the CLI writes a conversation when its first message reaches it.
+It ends at startup when it is told to resume an id it has no file for.
 See [`code://packages/agent-claude/src/catalog.ts`](../../packages/agent-claude/src/catalog.ts).
+
+### A Claude agent runs on several logins
+
+WHEN a Claude record holds `logins`
+THEN each conversation orders them by a rendezvous score of its chat's URI and each login's name
+AND its CLI runs on the first login of the order that is not cooling down, with the token as `CLAUDE_CODE_OAUTH_TOKEN`
+AND the conversation keeps that login while it is not cooling down.
+WHEN the API refuses a turn with `rate_limit` or `billing_error`
+THEN the login cools down for every session of the agent, until the reset the `rate_limit_event` names, or for 10 minutes
+AND a turn that showed nothing runs again on the next login it has not tried, with its prompt sent once more
+AND a new CLI resumes the conversation at the end of the turn before it
+AND with no turn before it, the conversation starts over under its id.
+WHEN the refused turn showed something, or the turn before it has no end in `ends`
+THEN the turn fails, and the next turn starts on the next login.
+WHEN the conversation of a turn that starts over cannot be deleted
+THEN it comes back as it was on the next login, and the turn fails with the refusal.
+WHEN every login cools down or was tried
+THEN the turn waits until the earliest cooldown ends, and a stop ends the wait.
+
+The reason: the prompt cache belongs to the account.
+An attempt that has shown something already happened, so it never runs again on another account.
+See [`code://packages/agent-claude/src/session/logins.ts`](../../packages/agent-claude/src/session/logins.ts).
 
 ### A live tool change in a Claude session
 

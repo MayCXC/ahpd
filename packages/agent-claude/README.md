@@ -64,6 +64,7 @@ An agent is a record on `x-ahpd-agents`: `{ id, engine, owner, name, description
 | `thinking` | `adaptive` | Extended thinking: `adaptive` lets the agent decide when to think, `disabled` is none |
 | `outputStyle` | none | The name of a style from the CLI's own settings |
 | `env` | none | Variables for the CLI's process, laid over the daemon's own environment on this host, and the whole of it in a machine |
+| `logins` | none | Claude logins the agent runs on, each `{ "name", "token" }` with a token from `claude setup-token`. See [Several logins](#several-logins) |
 | `extraArgs` | none | Arguments the CLI is started with beyond the ones this backend builds. **Host records only** |
 | `hostTasks` | `true` | Whether Claude leaves its own task tools to the host's `task_add`. Off keeps them, and their calls write the session's plan |
 | `enableTasks` | `true` | Start the CLI with `CLAUDE_CODE_ENABLE_TASKS=1` whenever Claude keeps its own task tools |
@@ -204,6 +205,38 @@ A session is not tied to an agent: nothing is stored per session, because the ne
 ## Credentials
 
 Sessions use whatever the Claude CLI is signed in with. A client can push a token instead. Pushed tokens are held per connection and are not used for other clients' sessions.
+
+### Several logins
+
+A record's `logins` are the Claude accounts the agent runs on. Each is a name and a token from `claude setup-token`, which needs a Pro, Max, Team or Enterprise plan. A token written as text moves to the vault when the record is saved, as a model source's `key` does. A host record may name a daemon variable with `{ "fromEnv": "NAME" }` instead. The CLI gets the token as `CLAUDE_CODE_OAUTH_TOKEN`, laid over the record's `env`. An `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` that reaches the CLI comes before it, in Claude Code's own order of credentials.
+
+```json
+{
+  "id": "claude",
+  "engine": "claude",
+  "owner": "host",
+  "name": "Claude Code",
+  "config": {
+    "logins": [
+      { "name": "first", "token": { "$secret": "host:claude-first" } },
+      { "name": "second", "token": { "$secret": "host:claude-second" } }
+    ]
+  }
+}
+```
+
+The backend that starts the CLI routes the conversations over the logins:
+
+- Each conversation orders the logins by a rendezvous score of its chat's URI and each login's name. So conversations spread over the logins, and a chat keeps its order across a restart.
+- A conversation runs on the first login of its order and keeps it while it works, because the prompt cache belongs to the account.
+- A turn the API refuses with `rate_limit` or `billing_error` puts that login in a cooldown for every session of the agent. The cooldown lasts until the reset that the CLI's `rate_limit_event` names for a `five_hour` or `seven_day` window. It is capped at 6 hours and 8 days, and lasts 10 minutes otherwise.
+- A refused turn that showed nothing yet runs again on the next login it has not tried. A new CLI resumes the conversation at the end of the turn before it, as a truncation does. The prompt goes out again, and the refusal is not shown.
+- A conversation refused on its first turn has no turn to go back to. One that this process started on this host starts over under its id, as a chat truncated whole does. One resumed, or one in a machine, fails the turn. So does one whose conversation cannot be deleted, which comes back as it was on the next login.
+- A refused turn that showed something fails, and the next turn starts on the next login. So does a turn after one read back from a transcript, which has no end to cut back to.
+- When every login is cooling down or was tried, the turn waits until the earliest cooldown ends, and says until when. Then it tries them again, and a stop ends the wait.
+- An authentication failure, and any error the account does not decide, fails the turn and moves nothing.
+
+The CLI keeps its conversations in one configuration folder for every login, so a login resumes what another one wrote. Keep no sign-in of its own in that folder, so a refused token has nothing to fall back to.
 
 ### In a machine
 
