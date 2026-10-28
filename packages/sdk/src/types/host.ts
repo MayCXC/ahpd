@@ -1087,6 +1087,16 @@ export interface Connection {
   /** The identifier the client gave at `initialize`. */
   clientId: string;
   /**
+   * The protocol version this connection agreed on at `initialize`.
+   *
+   * Set from what the negotiation answered, so a later delivery can hold back
+   * an action the client's version does not know - the specification says a
+   * host MUST NOT behave as a newer version to an older connection. Absent on
+   * a connection no handshake has named, such as one a test built by hand, and
+   * such a connection is sent everything.
+   */
+  protocolVersion?: string;
+  /**
    * Channel URIs this client subscribed to.
    *
    * Per connection: two clients can watch one channel, and dropping one must

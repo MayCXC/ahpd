@@ -18,8 +18,8 @@
  */
 
 import { resolve } from 'node:path';
-import { chatReducer } from '@microsoft/agent-host-protocol';
-import type { AnnotationsState, ChatAction, SessionInputRequestKind, SubscribeView, ToolDefinition } from '@microsoft/agent-host-protocol';
+import { ACTION_INTRODUCED_IN, chatReducer, isActionKnownToVersion } from '@microsoft/agent-host-protocol';
+import type { AnnotationsState, ChatAction, SessionInputRequestKind, StateAction, SubscribeView, ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { WireTurn } from './types/wire.js';
 import { INVALID_PARAMS, RpcError, METHOD_NOT_FOUND } from './rpc.js';
 import { computerId, computersFor } from './machines/computers.js';
@@ -127,6 +127,16 @@ const CLIENT_DISCONNECT_GRACE_MS = 30_000;
  * connection's later dispatches go on without it.
  */
 const WAIT_LIMIT = 60_000;
+
+/**
+ * The action types the protocol knows, which are the ones a version decides.
+ *
+ * A plugin action type is on its plugin's own scheme and no protocol version
+ * introduced it, so it is not in this set and is never held back by a version.
+ * The registry answers only for its own keys, and asking it about a type it
+ * does not hold would throw rather than answer.
+ */
+const PROTOCOL_ACTIONS = new Set(Object.keys(ACTION_INTRODUCED_IN));
 
 /**
  * The notification that says the root state now carries `ahpd.restartNeeded`.
@@ -615,6 +625,10 @@ export function createHost(options: HostOptions): Host {
    * `a-plugin-channel-filters-each-action-per-subscriber`. The audience never
    * goes out on the wire.
    *
+   * An action introduced after the version a connection agreed on is nothing
+   * for that connection, live or replayed, as the specification requires. A
+   * connection no handshake named has no version and is sent everything.
+   *
    * This is the one place an envelope is rewritten for a connection, which is
    * why the live broadcast and both replay paths call it: a rewrite anywhere
    * else would be a second opinion about the same delivery.
@@ -639,7 +653,19 @@ export function createHost(options: HostOptions): Host {
       }
       envelope = rest as E;
     }
+    /*
+     * And held back from a connection whose agreed version does not know it.
+     *
+     * The specification's rule, and the only per-connection filter that is not
+     * about who may see a thing: a client that agreed on `0.9.0` is not sent an
+     * action the protocol registered at `0.10.0`, because its reducer has no
+     * case for it. A connection with no version - one a test built by hand -
+     * keeps everything.
+     */
     const { action } = envelope;
+    if (connection.protocolVersion !== undefined
+      && PROTOCOL_ACTIONS.has(String(action.type))
+      && !isActionKnownToVersion(action as unknown as StateAction, connection.protocolVersion)) return undefined;
     if (!isRootChannel(envelope.channel)) {
       const spelling = spellingOf(connection, envelope.channel);
       return spelling === undefined

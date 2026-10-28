@@ -1,7 +1,7 @@
 ---
 title: A plugin opens a canvas on a chat
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-22
 revalidated: 2026-10-28
@@ -129,7 +129,7 @@ plugin: closeCanvas(resource) or the chat goes -> chat/canvasesChanged without i
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An older connection gets no canvas action](task-01-an-older-connection-gets-no-canvas-action.md) | todo | - |
+| [01 - An older connection gets no canvas action](task-01-an-older-connection-gets-no-canvas-action.md) | implemented | - |
 | [02 - The host keeps the canvases of a chat](task-02-the-host-keeps-the-canvases-of-a-chat.md) | todo | 01 |
 | [03 - A plugin opens, updates and closes a canvas](task-03-a-plugin-opens-a-canvas.md) | todo | 02 |
 | [04 - The docs say how a plugin opens a canvas](task-04-the-docs-say-how-a-plugin-opens-a-canvas.md) | todo | 03 |
@@ -145,8 +145,8 @@ plugin: closeCanvas(resource) or the chat goes -> chat/canvasesChanged without i
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-22, and the open questions answered the same day. The refs were checked against main `343ca825` on 2026-10-28. Plugins now load and unload while the daemon runs, so task 03 closes a plugin's canvases at unload. VS Code main `2398c3f7c7c` was checked on 2026-10-28: the canvas URI, the state manager, the `NotFound` answer and the Copilot projection rules are the same.
-- **Next action:** [task-01-an-older-connection-gets-no-canvas-action.md](task-01-an-older-connection-gets-no-canvas-action.md).
+- **Done so far:** planned 2026-10-22, and the open questions answered the same day. The refs were checked against main `343ca825` on 2026-10-28. Plugins now load and unload while the daemon runs, so task 03 closes a plugin's canvases at unload. VS Code main `2398c3f7c7c` was checked on 2026-10-28: the canvas URI, the state manager, the `NotFound` answer and the Copilot projection rules are the same. Task 01 is implemented: each connection keeps its agreed version, and `seenBy` holds back a protocol action the version does not know.
+- **Next action:** [task-02-the-host-keeps-the-canvases-of-a-chat.md](task-02-the-host-keeps-the-canvases-of-a-chat.md).
 - **Open questions:** none. Softov answered all five on 2026-10-22.
 - **Watch out for:** `respelledIn` rewrites every `resource` and `url` value for a connection that knows a session by another name. The canvas resource holds the chat in base64url, so a prefix match must not change it. A test must prove that the `url` is not changed.
   `dispatch` on a channel that no store holds must still reach `emit`, so check this for `ahp-canvas:` first.
