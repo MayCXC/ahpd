@@ -568,7 +568,6 @@ None. `host`, `claude`, `documentation`, `plugin`, `container`, `pi`, `acp`, `us
 Ideas, one file each:
 
 - [an SSH command that attaches to the daemon](../ideas/an-ssh-command-that-attaches-to-the-daemon.md)
-- [a plugin reloads without a restart](../ideas/a-plugin-reloads-without-a-restart.md)
 - [Copilot through the CLI](../ideas/copilot-goes-through-the-cli.md)
 - [deliberate duplication](../ideas/deliberate-duplication.md)
 - [turn and model-call diagnostics](../ideas/turn-and-model-call-diagnostics.md)
@@ -578,5 +577,4 @@ Ideas, one file each:
 - [a sqlite store](../ideas/a-sqlite-store.md)
 - [a postgresql store](../ideas/a-postgresql-store.md)
 - [initiators start sessions](../ideas/initiators-start-sessions.md)
-- [agents report their plan](../ideas/agents-report-their-plan.md)
 - [cofold speaks ACP through papo](../ideas/cofold-speaks-acp-through-papo.md)

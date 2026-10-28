@@ -18,5 +18,5 @@ If papo, cofold's CLI and TUI, had an `--acp` mode that served the Agent Client 
 ## Questions it leaves
 
 - Whether this belongs in papo or in a small `cofold-acp` binary beside it; it is cofold's work, so cofold's plans decide.
-- Which ACP features it serves first: sessions, prompts, permission requests, then `plan` updates ([agents report their plan](agents-report-their-plan.md)), modes and resume.
+- Which ACP features it serves first: sessions, prompts, permission requests, then `plan` updates ([plugin 52 p12](../plans/plugin/52-p12-claude-and-acp-write-the-task-list/plan.md)), modes and resume.
 - Whether ahpd then keeps both `agent-cofold` and cofold through `agent-acp`, as it does for Claude.

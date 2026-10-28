@@ -43,4 +43,5 @@ What VS Code does, run on 2026-10-05: `code agent host` 1.132.1 (protocol 0.9.0)
 
 So the mismatch is real and it is VS Code's: its own host gives a session named as the specification shows two providers. ahpd's holding of a session as `<provider>:/<id>`, with the client's URI as an alias (decision `a-session-is-held-under-its-providers-name`), is what VS Code requires, and it still sends the right `SessionSummary.provider` for a client that follows the specification; the one way it departs from the specification is renaming a URI the client chose.
 
-Outcome, Softov, 2026-10-05: nothing is filed now. The issue is kept as the proposal [vscode-session-provider-read-from-scheme.md](../../../proposals/vscode-session-provider-read-from-scheme.md), and VS Code's next releases are watched; it is filed if the behaviour gets worse. When VS Code reads `SessionSummary.provider`, ahpd can keep the URI the client chose.
+Outcome, Softov, 2026-10-05: nothing is filed now. The issue is kept as the proposal `git://fafacd8b:.project/proposals/vscode-session-provider-read-from-scheme.md`, and VS Code's next releases are watched; it is filed if the behaviour gets worse. When VS Code reads `SessionSummary.provider`, ahpd can keep the URI the client chose.
+VS Code fixed it in `bd64649be19` (2026-10-05), so the proposal is deleted.
