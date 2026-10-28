@@ -141,8 +141,8 @@ restart -> listing -> adopt(row) -> the name from the row -> listSessions and ro
 
 ## Final verification checklist
 
-- [ ] `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
-- [ ] A session created on `ahp-session:/<uuid>` is listed under that URI before and after a restart.
-- [ ] A session in a row written before this change is listed under its old `<provider>:/<id>` name after a restart.
-- [ ] `specs/sessions-and-chats.md` says how a session is named.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm boundary`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
+- [x] A session created on `ahp-session:/<uuid>` is listed under that URI before and after a restart.
+- [x] A session in a row written before this change is listed under its old `<provider>:/<id>` name after a restart.
+- [x] `specs/sessions-and-chats.md` says how a session is named.
+- [x] `plans/index.md` updated.
