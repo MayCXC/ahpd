@@ -541,8 +541,11 @@ export function createQuery(ctx: SessionContext): Query {
    * whatever it is. Cutting at the prompt instead keeps the question and drops
    * the answer to it, which is a turn a client can still see and the agent no
    * longer remembers giving.
+   *
+   * A resumed session starts with the ends its transcript's read named for
+   * the turns it opens with, and every turn it watches adds its own.
    */
-  const ends = new Map<string, string>();
+  const ends = new Map<string, string>(ctx.options.seedEnds ?? []);
 
   /**
    * Ask the CLI for a model, and say why it would not take it if it will not.

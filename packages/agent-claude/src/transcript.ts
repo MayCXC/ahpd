@@ -44,8 +44,11 @@ function resultText(content: unknown): string | undefined {
  * failures this cannot tell from a session with nothing in it, and empty is
  * the answer a client draws nothing for - so it is worth one more attempt
  * rather than being shown as a session that has no turns.
+ *
+ * `ends`, when given, is filled with where each turn ended, by turn id: the
+ * entry a fork of that turn copies through and a rewind to it keeps.
  */
-export async function turnsOf(sessionId: string, dir: string): Promise<WireTurn<Turn>[]> {
+export async function turnsOf(sessionId: string, dir: string, ends?: Map<string, string>): Promise<WireTurn<Turn>[]> {
   let messages: unknown[];
   try {
     messages = await getSessionMessages(sessionId, { dir });
@@ -62,7 +65,7 @@ export async function turnsOf(sessionId: string, dir: string): Promise<WireTurn<
   return buildTurns(answered.size === 0 ? messages : messages.map((message) => {
     const result = answered.get(str(bag(message).uuid) ?? '');
     return result === undefined ? message : { ...bag(message), toolUseResult: result };
-  }));
+  }), ends);
 }
 
 /** The uuids of the entries that hold the result of an `AskUserQuestion` call. */
@@ -271,8 +274,8 @@ function isCliEcho(content: unknown): boolean {
   return first !== undefined && CLI_ECHO.test(str(first.text) ?? '');
 }
 
-/** One session's history, from the frames a reader already parsed. */
-function buildTurns(messages: unknown[]): WireTurn<Turn>[] {
+/** One session's history, from the frames a reader already parsed, and where each turn ended when `ends` is given. */
+function buildTurns(messages: unknown[], ends?: Map<string, string>): WireTurn<Turn>[] {
   const built: WireTurn<Turn>[] = [];
   const calls = new Map<string, Bag>();
   /*
@@ -293,6 +296,16 @@ function buildTurns(messages: unknown[]): WireTurn<Turn>[] {
    * long it took: the frames carry a time each and the turn does not.
    */
   const lastAt = new Map<WireTurn<Turn>, number>();
+  /*
+   * Where a turn ended, in the CLI's own names: the last of its prompt, its
+   * tool results and its answers, which is the rule a live session applies to
+   * the `user` and `assistant` frames its CLI sends. A CLI echo and a compact
+   * summary are not the turn's, so neither moves it.
+   */
+  const ended = (turn: WireTurn<Turn> | undefined, frame: Bag): void => {
+    const entry = str(frame.uuid);
+    if (ends !== undefined && turn !== undefined && entry !== undefined) ends.set(String(turn.id), entry);
+  };
 
   for (const entry of messages) {
     const frame = bag(entry);
@@ -381,7 +394,10 @@ function buildTurns(messages: unknown[]): WireTurn<Turn>[] {
       // A frame of tool results is part of the turn the prompt opened, so the
       // turn ends when the last of them was written.
       if (open !== undefined) lastAt.set(open, Date.parse(at));
-      if (!said) continue;
+      if (!said) {
+        ended(open, frame);
+        continue;
+      }
       // Written by the CLI rather than said by anybody: it neither shows as a
       // prompt nor ends the exchange it sits in.
       if (frame.isCompactSummary === true || isCliEcho(message.content)) continue;
@@ -402,6 +418,7 @@ function buildTurns(messages: unknown[]): WireTurn<Turn>[] {
       };
       built.push(opened);
       lastAt.set(opened, Date.parse(at));
+      ended(opened, frame);
       continue;
     }
 
@@ -510,6 +527,7 @@ function buildTurns(messages: unknown[]): WireTurn<Turn>[] {
     }
     turn.responseParts = [...(turn.responseParts as Bag[]), ...parts];
     lastAt.set(turn, Date.parse(at));
+    ended(turn, frame);
 
     if (Object.keys(spent).length > 0) {
       const byMessage = spentBy.get(turn) ?? new Map<string, Bag>();
