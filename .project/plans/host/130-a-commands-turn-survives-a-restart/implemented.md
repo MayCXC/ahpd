@@ -5,6 +5,7 @@ refs:
   - "[code://packages/sdk/src/host/localturns.ts](../../../../packages/sdk/src/host/localturns.ts)"
   - "[code://packages/agent-cofold/src/turns.ts](../../../../packages/agent-cofold/src/turns.ts)"
   - "[code://packages/agent-pi/src/session.ts](../../../../packages/agent-pi/src/session.ts)"
+  - "[code://packages/agent-claude/src/session/turns.ts](../../../../packages/agent-claude/src/session/turns.ts)"
 ---
 
 A `!` command's turn is kept as a local turn of its chat.
@@ -17,11 +18,13 @@ A truncation or a fork at one goes to the backend at the turn before it.
 - [p1](../130-p1-the-host-keeps-a-commands-turn/implemented.md) - the host keeps the local turns, puts them back at each transcript read, and carries them through a cut, a dispose and a move.
 - [p2](../130-p2-a-cofold-turn-keeps-its-id/implemented.md) - a cofold turn is stored under the id its client gave it.
 - [p3](../130-p3-a-pi-turn-names-its-entry/implemented.md) - a pi turn names its prompt's entry through `onTurnRecorded`.
+- [p4](../130-p4-a-claude-turn-is-written-under-its-id/implemented.md) - a Claude turn's prompt is written under the turn's id, or under a uuid it names through `onTurnRecorded`.
 
 ## Verified
 
 - The cases of each child plan fail on the code before this plan, and pass on it.
 - `pnpm boundary`, `pnpm typecheck` and `pnpm build` pass, and so do the sdk, agent-cofold and agent-pi suites but for `nested-start`, which times out on upstream's main here too.
+- After p4, the agent-claude suite passes, and so does the sdk suite at one worker, `nested-start` included.
 
 ## Departures from the plan
 

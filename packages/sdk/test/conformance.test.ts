@@ -465,7 +465,7 @@ it('reduces a chat reordered inside its session', async () => {
    */
   dispatch(client, other, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'over here' } });
   await settle();
-  await said({ type: 'user', session_id: 'sdk-2', uuid: 'prompt-1', message: { role: 'user', content: 'over here' } });
+  await said({ type: 'system', subtype: 'init', session_id: 'sdk-2' });
   await said({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
   /*
    * The chat the session hands out, read from the list rather than assumed:

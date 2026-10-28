@@ -77,9 +77,9 @@ describe('a chat attached to a message', () => {
   /** One turn of a chat, finished, under an id this case names. */
   const spoken = async (client: Client, chat: string, turnId: string, text: string): Promise<void> => {
     await started(client, chat, turnId, text);
-    // What the CLI echoes, and then the end of the turn: this is what leaves
-    // the chat a completed turn for an attachment to be pinned to.
-    await emit({ type: 'user', session_id: 'sdk-1', uuid: `prompt-${turnId}`, message: { role: 'user', content: text } });
+    // The CLI naming its conversation, and then the end of the turn: this is
+    // what leaves the chat a completed turn for an attachment to be pinned to.
+    await emit({ type: 'system', subtype: 'init', session_id: 'sdk-1' });
     await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
   };
 
