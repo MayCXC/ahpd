@@ -184,6 +184,10 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
      */
     const was = [...held.chats.keys()];
     kept.moveChat(idOf(found.uri), idOf(into), chatUri, turns);
+    // And the outputs its terminals kept and its local turns, which are the
+    // chat's own.
+    ctx.moveChatOutputs(found.uri, into, chatUri);
+    ctx.moveChatLocalTurns(found.uri, into, chatUri);
     // Stopped rather than disposed: the chat is started again below, in the
     // session it moved to, and it resumes the conversation it had.
     found.chat.close('stopping');
@@ -214,6 +218,8 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * for a move it refused.
        */
       kept.moveChat(idOf(into), idOf(found.uri), chatUri, turns);
+      ctx.moveChatOutputs(into, found.uri, chatUri);
+      ctx.moveChatLocalTurns(into, found.uri, chatUri);
       byChat.delete(chatUri);
       claims.set(chatUri, { kind: 'chat', of: found.uri });
       if (to === undefined) {
@@ -1144,8 +1150,12 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
           if (sourceAgent.chats?.fork !== true)
             throw new RpcError(INVALID_PARAMS, `${sourceAgent.provider} cannot fork a chat from a turn`);
           // The backend's own name for where that turn ended, which is
-          // the only one it can be asked to continue from.
-          const point = from.chat.forkPoint?.(turnId);
+          // the only one it can be asked to continue from. For a local
+          // turn, which the backend never saw, it is the nearest earlier
+          // turn's, as the reference forks at a local turn.
+          // https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentService.ts#L7183-L7195
+          const concrete = ctx.concreteTurnOf(uri, from.chat.chatUri, all as Bag[], at);
+          const point = concrete === undefined ? undefined : from.chat.forkPoint?.(concrete);
           const started = from.chat.agentId();
           if (point === undefined || started === undefined)
             throw new RpcError(INVALID_PARAMS, `${turnId} is not a turn this host can fork from`);
@@ -1226,6 +1236,12 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * it on the next write.
        */
       if (origin !== undefined) madeFrom.set(chatUri, origin);
+      /*
+       * A fork's copied local turns, kept for the new chat before it opens, as
+       * the reference records the forked ones before it creates the chat.
+       * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentService.ts#L9828-L9838
+       */
+      if (fromChat !== undefined && made?.seed !== undefined) ctx.copyLocalTurns(uri, fromChat, chatUri, made.seed);
       const agent = fromChat === undefined ? held.agent : chatAgent(held, fromChat);
       const config = fromChat === undefined ? held.config : chatConfig(held, fromChat);
       const chat = spawn(agent, uri, chatUri, chatIdFor(uri, chatUri), backendsOwn(config), made, held.workingDirectory, undefined, peers, connection);
@@ -1407,6 +1423,10 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        */
       const own = found.chat.agentId() ?? ctx.recordedChat(idOf(found.uri), chatUri)?.backendId;
       dropChat(found.uri, chatUri);
+      // And the outputs its terminals kept and its local turns: a chat that is
+      // gone names nothing.
+      ctx.forgetChatOutputs(found.uri, chatUri);
+      ctx.forgetChatLocalTurns(found.uri, chatUri);
       /*
        * And what the backend holds of it, when a closed chat is deleted rather
        * than hidden. The chat

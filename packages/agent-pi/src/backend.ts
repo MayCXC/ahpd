@@ -18,6 +18,7 @@ import type {
   AgentSession,
   AgentSessionEvent,
   ExtensionAPI,
+  SessionEntry,
   SessionManager,
   ToolCallEvent,
   ToolCallEventResult,
@@ -47,6 +48,12 @@ export interface PiBackend {
   models(): Promise<PiModel[]>;
   /** The entry the conversation currently ends at, which pi calls its leaf. */
   leaf(): string | undefined;
+  /**
+   * The first user message pi wrote after an entry, on the path to the leaf:
+   * the prompt of a turn that began there, and the entry `replay.ts` names
+   * that turn by. Nothing when the entry is not on the path.
+   */
+  promptAfter(entryId: string | undefined): string | undefined;
   /** The thinking levels a model offers, which is pi's own rule. */
   levels(model: PiModel): string[];
   /** What a new message would run on right now. */
@@ -195,6 +202,19 @@ export async function openPi(options: BackendOptions): Promise<PiBackend> {
 export const isUuid = (id: string): boolean => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 /**
+ * The first user message on a branch after an entry, from its root when there
+ * is no entry, and nothing when the entry is not on the branch.
+ *
+ * The same test `replay.ts` opens a turn on, so the id answered here is the id
+ * a turn read back from the file has.
+ */
+export function promptOf(branch: readonly SessionEntry[], after: string | undefined): string | undefined {
+  const at = after === undefined ? -1 : branch.findIndex((entry) => entry.id === after);
+  if (after !== undefined && at < 0) return undefined;
+  return branch.slice(at + 1).find((entry) => entry.type === 'message' && entry.message.role === 'user')?.id;
+}
+
+/**
  * The session manager a backend is built over.
  *
  * A fork cuts the conversation at the entry it was given and continues the
@@ -336,6 +356,7 @@ function wrap(sdk: Pi, session: AgentSession): PiBackend {
     abort: () => session.abort(),
     models,
     leaf: () => session.sessionManager.getLeafId() ?? undefined,
+    promptAfter: (entryId) => promptOf(session.sessionManager.getBranch(), entryId),
     /*
      * Per model, not per session.
      *

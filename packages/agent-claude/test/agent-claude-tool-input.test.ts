@@ -1,7 +1,7 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, it, vi } from 'vitest';
+import { afterAll, expect, it, vi } from 'vitest';
 import { chatReducer } from '@microsoft/agent-host-protocol';
 import type { Bag, Session } from '@ahpd/sdk';
 
@@ -31,7 +31,9 @@ const sdk = vi.hoisted(() => ({
 
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
   createSdkMcpServer: (given: Record<string, unknown>) => ({ type: 'sdk', name: given.name, tools: given.tools }),
-  getSessionMessages: async () => sdk.frames,
+  // A transcript as the SDK reads it back, which leaves each entry's
+  // `toolUseResult` out: its `SessionMessage` has no field for it.
+  getSessionMessages: async () => sdk.frames.map(({ toolUseResult: _left, ...kept }) => kept),
   query: ({ options }: { options: Record<string, unknown> }) => ({
     async *[Symbol.asyncIterator]() {
       sdk.canUseTool = options.canUseTool as typeof sdk.canUseTool;
@@ -59,6 +61,23 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
 const { createSession } = await import('../src/session.js');
 const { turnsOf } = await import('../src/transcript.js');
 const { questionRequest } = await import('../src/input.js');
+
+/*
+ * The CLI's own file for the session the reads below restore, one entry a
+ * line as the CLI writes it, under a config folder of the test's own.
+ */
+const CONFIG = mkdtempSync(join(tmpdir(), 'ahpd-input-config-'));
+const configBefore = process.env.CLAUDE_CONFIG_DIR;
+process.env.CLAUDE_CONFIG_DIR = CONFIG;
+afterAll(() => {
+  if (configBefore === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+  else process.env.CLAUDE_CONFIG_DIR = configBefore;
+});
+const PROJECT = join(CONFIG, 'projects', '-tmp-project');
+mkdirSync(PROJECT, { recursive: true });
+const written = (entries: Record<string, unknown>[]): void => {
+  writeFileSync(join(PROJECT, 'session.jsonl'), entries.map((one) => `${JSON.stringify(one)}\n`).join(''));
+};
 
 /** An input whose JSON is well past 400 characters, for a tool with no subject. */
 const long = { todos: [{ content: 'x'.repeat(500), status: 'pending', activeForm: 'Doing x' }], nested: { keep: true } };
@@ -155,6 +174,7 @@ async function restored(content: Bag[] = calls, after: Record<string, unknown>[]
     { type: 'assistant', uuid: 'a1', timestamp: '2020-01-01T00:00:00.000Z', message: { id: 'msg_1', role: 'assistant', content } },
     ...after,
   ];
+  written(sdk.frames);
   const turns = await turnsOf('session', '/tmp/project') as unknown as Bag[];
   const out = new Map<string, Bag>();
   for (const part of (turns[0]?.responseParts ?? []) as Bag[]) {
@@ -583,18 +603,17 @@ it('carries no answers for a live question nobody answered', async () => {
 /*
  * An answered question, read back.
  *
- * After a restart the transcript is the only record, and the SDK writes what
- * the tool ran with on the result as `toolUseResult`. A result carrying no
+ * After a restart the transcript is the only record. The CLI writes what the
+ * tool ran with as the `toolUseResult` of the entry that holds its result, and
+ * the SDK's reader leaves that field out. A result whose entry carries no
  * `toolUseResult` was never answered, and its call keeps its input as sent.
  */
 
 const ask = { type: 'tool_use', id: 'toolu_ask', name: 'AskUserQuestion', input: asked };
 const answerWith = (toolUseResult?: Bag): Record<string, unknown> => ({
   type: 'user', parent_tool_use_id: null, uuid: 'u2', timestamp: '2020-01-01T00:00:00.000Z',
-  message: {
-    role: 'user',
-    content: [{ type: 'tool_result', tool_use_id: 'toolu_ask', content: 'ok', ...(toolUseResult === undefined ? {} : { toolUseResult }) }],
-  },
+  message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_ask', content: 'ok' }] },
+  ...(toolUseResult === undefined ? {} : { toolUseResult }),
 });
 
 it('carries the questions and the answers of a replayed answered question', async () => {
@@ -633,6 +652,7 @@ const partsOf = async (after: Record<string, unknown>[]): Promise<Bag[]> => {
     { type: 'assistant', uuid: 'a1', timestamp: '2020-01-01T00:00:00.000Z', message: { id: 'msg_1', role: 'assistant', content: [ask] } },
     ...after,
   ];
+  written(sdk.frames);
   const turns = await turnsOf('session', '/tmp/project') as unknown as Bag[];
   return (turns[0]?.responseParts ?? []) as Bag[];
 };
@@ -803,6 +823,58 @@ it('removes an entry once when an answer came before the abort', async () => {
   // The abort reaches a question the answer already took away, and adding
   // nothing is the whole of what it does.
   expect(entriesOf(sent, 'session/inputNeededRemoved', 'toolu_both')).toHaveLength(1);
+});
+
+/*
+ * A tool call part, as the protocol declares one.
+ *
+ * `ToolCallResponsePart` is a call and its kind, and nothing beside them. A
+ * client that subscribes late reads the parts out of the snapshot, so a key
+ * kept on a part for this host's own lookups is a key that client is sent
+ * and no declaration names.
+ */
+
+/** The keys of each tool call part in a session's turns, the running one included. */
+const partKeys = (turns: Bag[]): string[][] => turns
+  .flatMap((turn) => (turn.responseParts ?? []) as Bag[])
+  .filter((part) => part.kind === 'toolCall')
+  .map((part) => Object.keys(part).sort());
+
+const heldTurns = (session: Session): Bag[] => {
+  const chat = session.chatState() as Bag;
+  return [...(chat.turns ?? []) as Bag[], ...(chat.activeTurn ? [chat.activeTurn as Bag] : [])];
+};
+
+it('holds each call as the protocol declares a tool call part, however the call arrived', async () => {
+  const declared = ['kind', 'toolCall'];
+
+  // Whole, in an assistant message.
+  const whole = await live();
+  expect(partKeys(heldTurns(whole.session))).toEqual(calls.map(() => declared));
+
+  // Opened by its content block, while the message streams.
+  const streamed = await live([
+    { type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_start', message: { id: 'msg_s' } } },
+    {
+      type: 'stream_event', parent_tool_use_id: null,
+      event: { type: 'content_block_start', index: 0, content_block: { type: 'tool_use', id: 'toolu_streamed', name: 'Read' } },
+    },
+  ]);
+  expect(partKeys(heldTurns(streamed.session))).toEqual([declared]);
+
+  // Asked about before the stream said anything of it.
+  const first = await live([], () => { void sdk.canUseTool?.('Bash', { command: 'ls' }, { toolUseID: 'toolu_first' }); });
+  expect(partKeys(heldTurns(first.session))).toEqual([declared]);
+
+  // A person's own shell command.
+  const shell = await live([]);
+  shell.session.ran?.('t-shell', 'ls', async () => ({ success: true, said: 'Ran ls', output: 'a b c', code: 0 }));
+  await settle();
+  expect(partKeys(heldTurns(shell.session))).toEqual([declared]);
+
+  // And read back after a restart.
+  const back = (await partsOf([])).filter((part) => part.kind === 'toolCall');
+  expect(back.map((part) => Object.keys(part).sort())).toEqual([declared]);
 });
 
 it('puts nothing on the chat for a call whose signal is already aborted', async () => {

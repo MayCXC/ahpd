@@ -777,6 +777,20 @@ it('answers a pause the resumed run raises after the restart', async () => {
   expect(runs[0]?.status).toBe('completed');
 });
 
+it('reads a turn back under the id its client gave it', async () => {
+  // The id a turn has live is the id a restart reads, so what the host keeps
+  // against the turn - a `!` turn after it, anchored to it - is found again.
+  const { root, sweep } = place();
+  const agent = backend(root, createFakeModel({ script: [{ text: 'first' }, { text: 'second' }], stream: true }), allowAll());
+  const one = open(agent, 'one', sweep);
+  one.session.begin('t1', 'say first');
+  await until(() => ended(one.view));
+  one.session.begin('client-chosen-2', 'say second');
+  await until(() => one.view.notes.filter((held) => held.action.type === 'chat/turnComplete').length === 2);
+  one.session.close();
+  expect((await agent.transcript?.('one'))?.map((turn) => turn.id)).toEqual(['t1', 'client-chosen-2']);
+});
+
 it('appends a new run under the same session id when a finished session is resumed', async () => {
   const { root, sweep } = place();
   const first = backend(root, createFakeModel({ script: [{ text: 'first' }], stream: true }), allowAll());

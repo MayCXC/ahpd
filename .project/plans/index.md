@@ -258,8 +258,26 @@ Reference: [00-host.md](host/00-host.md)
 | [124 - A shell's marks stay out of its output](host/124-a-shells-marks-stay-out-of-its-output/plan.md) | high | built 2026-10-27 ([implemented.md](host/124-a-shells-marks-stay-out-of-its-output/implemented.md)) | - | - |
 | [125 - A split character arrives whole](host/125-a-split-character-arrives-whole/plan.md) | medium | built 2026-10-27 ([implemented.md](host/125-a-split-character-arrives-whole/implemented.md)) | - | - |
 | [126 - A new session is an `ahp-session:` URI](host/126-a-new-session-is-an-ahp-session-uri/plan.md) | medium | planned 2026-10-27; five tasks, todo | - | ahpc and ahpw create `ahp-session:` sessions |
+| [127 - Every agent sends what the protocol declares, and a late client reads what a watching one built](host/127-every-agent-sends-what-the-protocol-declares/plan.md) | high | built 2026-10-27; parent of p1 to p6; [implemented.md](host/127-every-agent-sends-what-the-protocol-declares/implemented.md) | host 43 | - |
+| [127 p1 - The host describes every agent](host/127-p1-the-host-describes-every-agent/plan.md) | high | built 2026-10-27 ([implemented.md](host/127-p1-the-host-describes-every-agent/implemented.md)) | host 127 | 127 p3, 127 p4 |
+| [127 p2 - A Claude session sends what the protocol declares](host/127-p2-a-claude-session-sends-what-the-protocol-declares/plan.md) | high | built 2026-10-27 ([implemented.md](host/127-p2-a-claude-session-sends-what-the-protocol-declares/implemented.md)) | host 127, claude 07 | - |
+| [127 p3 - An ACP session sends what the protocol declares](host/127-p3-an-acp-session-sends-what-the-protocol-declares/plan.md) | high | built 2026-10-27 ([implemented.md](host/127-p3-an-acp-session-sends-what-the-protocol-declares/implemented.md)) | 127 p1 | - |
+| [127 p4 - A cofold session sends what the protocol declares](host/127-p4-a-cofold-session-sends-what-the-protocol-declares/plan.md) | high | built 2026-10-27 ([implemented.md](host/127-p4-a-cofold-session-sends-what-the-protocol-declares/implemented.md)) | 127 p1 | - |
+| [127 p5 - A pi session sends what the protocol declares](host/127-p5-a-pi-session-sends-what-the-protocol-declares/plan.md) | high | built 2026-10-27 ([implemented.md](host/127-p5-a-pi-session-sends-what-the-protocol-declares/implemented.md)) | host 127 | - |
+| [127 p6 - A bot chat sends what the protocol declares](host/127-p6-a-bot-chat-sends-what-the-protocol-declares/plan.md) | high | built 2026-10-27 ([implemented.md](host/127-p6-a-bot-chat-sends-what-the-protocol-declares/implemented.md)) | host 127 | - |
+| [128 - A shell command's call shows its terminal as it is, while it runs](host/128-a-shell-commands-call-shows-its-terminal/plan.md) | high | built 2026-10-27; parent of p1 to p5; [implemented.md](host/128-a-shell-commands-call-shows-its-terminal/implemented.md) | host 127 | - |
+| [128 p1 - The host says a command's terminal as it opens](host/128-p1-the-host-says-a-commands-terminal-as-it-opens/plan.md) | high | built 2026-10-27 ([implemented.md](host/128-p1-the-host-says-a-commands-terminal-as-it-opens/implemented.md)) | host 128 | 128 p2 to p5 |
+| [128 p2 - A Claude command shows its terminal](host/128-p2-a-claude-command-shows-its-terminal/plan.md) | high | built 2026-10-27 ([implemented.md](host/128-p2-a-claude-command-shows-its-terminal/implemented.md)) | 128 p1 | - |
+| [128 p3 - An ACP command and terminal say what they are](host/128-p3-an-acp-command-and-terminal-say-what-they-are/plan.md) | high | built 2026-10-27 ([implemented.md](host/128-p3-an-acp-command-and-terminal-say-what-they-are/implemented.md)) | 128 p1 | - |
+| [128 p4 - A cofold command shows its terminal](host/128-p4-a-cofold-command-shows-its-terminal/plan.md) | high | built 2026-10-27 ([implemented.md](host/128-p4-a-cofold-command-shows-its-terminal/implemented.md)) | 128 p1 | - |
+| [128 p5 - A pi command is a terminal call](host/128-p5-a-pi-command-is-a-terminal-call/plan.md) | high | built 2026-10-27 ([implemented.md](host/128-p5-a-pi-command-is-a-terminal-call/implemented.md)) | 128 p1 | - |
+| [129 - A terminal a tool result names lasts as long as its chat](host/129-a-tool-results-terminal-lasts-as-long-as-its-chat/plan.md) | medium | built 2026-10-27; [implemented.md](host/129-a-tool-results-terminal-lasts-as-long-as-its-chat/implemented.md) | - | claude 24 |
+| [130 - A `!` command's turn survives a restart](host/130-a-commands-turn-survives-a-restart/plan.md) | medium | built 2026-10-27; parent of p1 to p3; [implemented.md](host/130-a-commands-turn-survives-a-restart/implemented.md) | host 129 | - |
+| [130 p1 - The host keeps a command's turn for its chat](host/130-p1-the-host-keeps-a-commands-turn/plan.md) | medium | built 2026-10-27 ([implemented.md](host/130-p1-the-host-keeps-a-commands-turn/implemented.md)) | host 129 | - |
+| [130 p2 - A cofold turn keeps the id it was given](host/130-p2-a-cofold-turn-keeps-its-id/plan.md) | medium | built 2026-10-27 ([implemented.md](host/130-p2-a-cofold-turn-keeps-its-id/implemented.md)) | - | - |
+| [130 p3 - A pi turn names the entry that holds it](host/130-p3-a-pi-turn-names-its-entry/plan.md) | medium | built 2026-10-27 ([implemented.md](host/130-p3-a-pi-turn-names-its-entry/implemented.md)) | - | - |
 
-Next free number in `host`: `127`.
+Next free number in `host`: `131`.
 
 ## claude
 
@@ -292,8 +310,11 @@ Reference: [00-claude.md](claude/00-claude.md)
 | [21 - A client's tools reach the agent whole and on time](claude/21-client-tools-reach-agent-whole-and-on-time/plan.md) | high | built 2026-10-11 ([implemented.md](claude/21-client-tools-reach-agent-whole-and-on-time/implemented.md)); the VS Code check by hand remains | - | - |
 | [22 - A Claude session fails cleanly](claude/22-a-claude-session-fails-cleanly/plan.md) | medium | built 2026-10-11 ([implemented.md](claude/22-a-claude-session-fails-cleanly/implemented.md)) | - | - |
 | [23 - agent-claude is on the Claude Agent SDK 0.3.301](claude/23-agent-claude-is-on-agent-sdk-0-3-301/plan.md) | medium | built 2026-10-16 ([implemented.md](claude/23-agent-claude-is-on-agent-sdk-0-3-301/implemented.md)) | - | - |
+| [24 - A Bash result too large to send is a terminal](claude/24-a-bash-result-too-large-to-send-is-a-terminal/plan.md) | medium | built 2026-10-27; [implemented.md](claude/24-a-bash-result-too-large-to-send-is-a-terminal/implemented.md) | host 129 | - |
+| [25 - A stopped call stays stopped](claude/25-a-stopped-call-stays-stopped/plan.md) | high | built 2026-10-27 ([implemented.md](claude/25-a-stopped-call-stays-stopped/implemented.md)) | claude 07 | - |
+| [26 - A restored question keeps its answers](claude/26-a-restored-question-keeps-its-answers/plan.md) | medium | built 2026-10-27 ([implemented.md](claude/26-a-restored-question-keeps-its-answers/implemented.md)) | claude 11 | - |
 
-Next free number in `claude`: `24`.
+Next free number in `claude`: `27`.
 
 ## documentation
 
