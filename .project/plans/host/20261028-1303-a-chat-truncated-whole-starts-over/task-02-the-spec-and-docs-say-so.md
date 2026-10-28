@@ -1,6 +1,6 @@
 ---
 title: The spec and the docs say what a truncation with no turn does
-status: todo
+status: done
 depends: [task-01-the-host-starts-a-chat-over.md]
 layer: docs
 refs:
@@ -32,4 +32,6 @@ The docs say when the host starts a chat over, and when it refuses.
 - Read each changed paragraph against the code of task 01.
 
 ## Resume
+
+Done 2026-10-28.
 

@@ -1,6 +1,6 @@
 ---
 title: The host starts a chat over
-status: todo
+status: done
 depends: []
 layer: packages/sdk
 refs:
@@ -53,4 +53,8 @@ The host refuses a backend that cannot delete, as it does today.
 - Run `pnpm vitest run packages/sdk --maxWorkers=1`, and expect it to pass.
 
 ## Resume
+
+Done 2026-10-28.
+A fifth case was added: the Claude CLI starts again under the same UUID once its transcript is gone.
+The protocol cases 066 and 234 run and join `HOST_OWNS`: the host leaves `activeTurn` off where they write `null`.
 

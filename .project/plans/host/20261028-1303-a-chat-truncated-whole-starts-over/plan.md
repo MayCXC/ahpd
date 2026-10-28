@@ -1,7 +1,7 @@
 ---
 title: A chat truncated whole starts over
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -74,7 +74,7 @@ chat/truncated with no turnId -> the chat's backend has `delete`
 | The new backend starts with no resume, under the chat's own name, seeded with the kept turns, as the rewind starts its own. | [code://packages/sdk/src/host/chatactions.ts#L1552-L1563](../../../../packages/sdk/src/host/chatactions.ts#L1552-L1563); the reference's fresh session for the same chat and id | 01 |
 | The dropped turns' terminal outputs and local turns go, as a rewind drops them. | [code://packages/sdk/src/host/chatactions.ts#L1538-L1545](../../../../packages/sdk/src/host/chatactions.ts#L1538-L1545) | 01 |
 | The start-over is held in `restarting`, so an action behind it waits for the new backend. | [code://packages/sdk/src/host/chatactions.ts#L895-L958](../../../../packages/sdk/src/host/chatactions.ts#L895-L958) | 01 |
-| The protocol cases 066, 068 and 234 run through the host and leave the refusal lists. | [code://packages/sdk/test/ahp-test-cases.test.ts#L510-L513](../../../../packages/sdk/test/ahp-test-cases.test.ts#L510-L513) | 01 |
+| The protocol cases 066, 068 and 234 run through the host and leave the refusal lists; 066 and 234 join `HOST_OWNS`, because the host leaves `activeTurn` off where they write `null`. | [code://packages/sdk/test/ahp-test-cases.test.ts#L510-L513](../../../../packages/sdk/test/ahp-test-cases.test.ts#L510-L513) | 01 |
 | The fake SDK deletes a conversation as the SDK documents: the file and the session go, and a session it does not hold throws. | npm://@anthropic-ai/claude-agent-sdk@0.3.301, sdk.d.ts L670-L688 | 01 |
 
 ## Proposed architecture
@@ -89,8 +89,8 @@ chat/truncated with no turnId -> the chat's backend has `delete`
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - the-host-starts-a-chat-over](task-01-the-host-starts-a-chat-over.md) | todo | - |
-| [02 - the-spec-and-docs-say-so](task-02-the-spec-and-docs-say-so.md) | todo | 01 |
+| [01 - the-host-starts-a-chat-over](task-01-the-host-starts-a-chat-over.md) | done | - |
+| [02 - the-spec-and-docs-say-so](task-02-the-spec-and-docs-say-so.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -99,14 +99,14 @@ chat/truncated with no turnId -> the chat's backend has `delete`
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-host-starts-a-chat-over.md](task-01-the-host-starts-a-chat-over.md).
+- **Done so far:** tasks 01 and 02, 2026-10-28; [implemented.md](implemented.md) says what exists.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the delete must wait for the old backend to stop, or the CLI writes the transcript again behind it.
 
 ## Final verification checklist
 
-- [ ] Each new case fails before task 01 and passes after it.
-- [ ] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and `pnpm schema` pass.
-- [ ] The sdk and agent-claude suites pass at one worker.
-- [ ] The spec and the docs say what a truncation with no turn does.
+- [x] Each new case fails before task 01 and passes after it.
+- [x] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and `pnpm schema` pass.
+- [x] The sdk and agent-claude suites pass at one worker.
+- [x] The spec and the docs say what a truncation with no turn does.
