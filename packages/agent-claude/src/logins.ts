@@ -10,9 +10,46 @@
  */
 
 import { createHash } from 'node:crypto';
-import type { Bag } from '@ahpd/sdk';
+import type { Bag, Connector, ConnectorOwner } from '@ahpd/sdk';
 import { bag } from '@ahpd/sdk';
 import { tokenOf } from './models.js';
+
+/** The adapter whose connectors are Claude logins. */
+export const LOGIN_ADAPTER = 'claude-login';
+
+/** One open login: whose it is, and the token the CLI signs in with. */
+export interface OpenLogin {
+  owner: ConnectorOwner;
+  token: string;
+}
+
+/**
+ * The open logins of one load of this plugin, by connector id.
+ *
+ * A login is a connector of the adapter `claude-login`: one Claude account's
+ * token, kept in the host's vault and handed to the adapter's `open` with the
+ * secret read back. The adapter keeps it here until the connector closes, so a
+ * put that replaces the token, and a remove, reach a session at its next turn.
+ */
+export class OpenLogins {
+  private readonly open = new Map<string, OpenLogin>();
+
+  /**
+   * Keep one connector's token, as the adapter's `open` is handed it, and
+   * answer the connector's stop, which forgets it.
+   */
+  opened(connector: Connector): () => void {
+    const token = connector.config['token'];
+    if (typeof token !== 'string' || token === '') throw new Error(`${connector.id} holds no token`);
+    this.open.set(connector.id, { owner: connector.owner, token });
+    return () => { this.open.delete(connector.id); };
+  }
+
+  /** The login an open connector holds, or nothing for an id that is not open. */
+  held(id: string): OpenLogin | undefined {
+    return this.open.get(id);
+  }
+}
 
 /** One login: the name its record gives it, and the token the CLI signs in with. */
 export interface Login {

@@ -77,7 +77,8 @@
     "icons": [{ "src": "./icon.svg" }],
     "contracts": {
       "agents": ["*"],
-      "engines": ["claude"]
+      "engines": ["claude"],
+      "adapters": ["claude-login"]
     },
     "optionsSchema": {
       "type": "object",

@@ -18,9 +18,11 @@
 
 import type { ModelEntry, ModelSource } from './models.js';
 import type { Engine, Plugin, PluginHost } from '@ahpd/sdk';
+import { loginAdapter } from './adapter.js';
 import { claude } from './claude.js';
 import type { ClaudeOptions } from './claude.js';
 import { sharedCatalogue as oneListing } from './catalog.js';
+import { OpenLogins } from './logins.js';
 import { kindSchema } from './options.js';
 
 /** The plugin's id, unique among the plugins one daemon loads. */
@@ -132,12 +134,15 @@ const engineOf = (paths: string[], shared: Shared): Engine => ({
 });
 
 /**
- * Register the `claude` engine.
+ * Register the `claude` engine, and the `claude-login` adapter.
  *
  * The agents are records of it: one load serves every Claude Code variant, and
- * each record says which one it runs.
+ * each record says which one it runs. The logins are connectors of the
+ * adapter, kept open for the load by the one `OpenLogins` both are built over.
  */
 export const apply: Plugin['apply'] = (host, options) => {
   const { paths, shared } = defaultsOf(host, options);
+  const logins = new OpenLogins();
+  host.registerAdapter(loginAdapter(logins));
   host.registerEngine(engineOf(paths, shared));
 };
