@@ -9,15 +9,43 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 - A new session is now named `ahp-session:/<uuid>`, and its provider is on `SessionSummary.provider`. A client that read the provider from a session URI's scheme reads it from the summary instead. A session that already exists keeps its `<provider>:/<id>` name.
 - A terminal's `terminal/data` no longer carries the shell's OSC 133 and OSC 7 marks, as the protocol requires of a server. A client that read command boundaries or the directory from the marks reads `terminal/commandExecuted`, `terminal/commandFinished` and `terminal/cwdChanged`.
 - `terminal/commandDetectionAvailable` goes out with the shell's first OSC 133 mark rather than when the terminal opens, and `supportsCommandDetection` is false until then. A shell that prints no marks never announces it.
+- A tool call part is its `kind` and its `toolCall`, as the protocol declares one, from every agent. A client that found a call's part by an `id` beside them finds it by `toolCall.toolCallId`. A system notification part carries no `id` either.
+- An ACP session's commands are the children of one read-only `commands` directory customization, as the protocol holds a prompt, and no longer customizations of their own.
+- A pi `!` command's call is named `terminal` and shown as `Terminal`, with the command as its intention, its line and its input, as every other backend's is. It was named `shell`, shown as the command, with the command as JSON for its input.
+
+### Sessions and VS Code parity
+
+- A `!` command's call names its terminal as soon as the terminal opens, with `chat/toolCallContentChanged`, so a client watches the output arrive, as VS Code's does. A backend hears the terminal from the second argument of `Session.ran`'s `run` (`RunCommand`, `CommandTerminal`), and `Ran` and the handle of a terminal a backend opens say `isPty`. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#who-opens-one).
 
 ### Daemon
 
 - On Bun, a terminal is a pseudoterminal with OSC 133 command detection: Bun's own, through the `terminal` option of `Bun.spawn`, from Bun 1.3.5 on Linux and macOS and from Bun 1.3.14 on Windows, where it is ConPTY. `node-pty` is never loaded on Bun, where it loads but every shell it starts dies at once. Node and Deno keep `node-pty` where it loads. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#pipes-or-a-pseudoterminal).
+- `ahpd doctor` runs every check on this machine and prints one line for each, with the fix when something is wrong. `--json` gives the checks as an array, and the exit code is 1 when a check fails. See [docs/server/RUN.md](docs/server/RUN.md#doctor).
 
 ### Terminals
 
 - The output a shell printed before a mark goes out before the mark's action, so the output between `terminal/commandExecuted` and `terminal/commandFinished` is the command's. A mark that arrives in two reads is still read and taken out. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#command-boundaries).
 - On pipes, a character whose bytes arrive in two reads reaches the client whole rather than as two replacement characters: each pipe is decoded as one stream. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#pipes-or-a-pseudoterminal).
+
+### Agents
+
+- Claude: a call that a stopped turn was in stays cancelled when the CLI answers it after the stop. A client that subscribes later reads what a client that watched built, no `chat/toolCallComplete` without a `turnId` is sent, and the stopped session does not say it is thinking again. An edit such a call made is recorded under its own turn. See [docs/sdk/CHATS.md](docs/sdk/CHATS.md#turns).
+- Claude: an answered `AskUserQuestion` reads back with its answers after a restart, in the session and in a subagent's chat. The answers are read from the transcript entry where the CLI writes them, which the SDK's reader leaves out. See [packages/agent-claude/README.md](packages/agent-claude/README.md#what-it-does).
+- Claude, ACP, cofold, pi and the bot send only what the protocol declares: no `id` on a tool call part or a notice, live or read back from a transcript. Each is driven through a host in its suite, every frame it sends and the chat a late client reads checked with the protocol's own schema. The wire suite reads the chat again after its turn, where it read only the session.
+- ACP and pi: a client that subscribes after a call ran reads the call a client that watched built, with its line, its confirmation and its result's content, as the protocol's reducer builds it.
+- Every agent on the root channel has a `description`, which `AgentInfo` requires: the backend's own, or its display name.
+- Claude, ACP, cofold and pi: a terminal a call names says `isPty` as the terminal's state does, so a client parses the VT sequences a pseudoterminal writes; it said `isPty: false` whatever ran the command. An ACP server's own terminal says it too.
+- cofold: a `!` command's call is held as a client that watched it holds it, so a client that subscribes while the command runs reads the running call, and its ready says the command as its line.
+- pi: a `!` command's call names the terminal it ran in, which a client opens to watch it and read it after.
+
+### Sessions and VS Code parity
+
+- A terminal a tool call names opens for as long as its chat lasts. A `!` command's terminal and a terminal a backend opens are named `ahp-terminal://shell/<chat>/<key>`, and what each printed is kept in the session's folder when it exits. A subscribe that no live terminal answers gets the exited terminal back: after a client disposed it, after the backend released it, and after the daemon started again. What is kept goes with its turn on a truncation, with its chat and with its session, and moves with its chat. A backend keeps an output of its own with `Start.terminalOutputs`, and a transcript read is handed the outputs of the chat it reads. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#a-terminal-a-tool-result-names).
+- A `!` command's turn survives a restart. The host keeps it in the session's folder as a local turn of its chat, anchored to the turn before it, and every read of a transcript puts it back there, so its terminal opens again too. A truncation or a fork at one goes to the backend at the turn before it, a truncation takes the ones it drops, and they go and move with their chat. cofold stores a turn's prompt under the turn's id and pi names its prompt's entry through `onTurnRecorded`, so their turns read back under the names the anchors use. An ACP chat read back after a restart is its server's replay, which names its turns anew, so only a command before its first turn comes back. See [docs/sdk/TERMINALS.md](docs/sdk/TERMINALS.md#who-opens-one).
+
+### Claude
+
+- A `Bash` result too large to send shows the whole output Claude saved in a terminal on the call, as VS Code does. The call keeps Claude's notice as its text, and the terminal has exited, with 0 for a command that worked. The host keeps the output for as long as the chat lasts, and a call read back from the transcript names the terminal again.
 
 ## 0.14.0 - 2026-10-26
 

@@ -16,7 +16,7 @@ export type { Bag } from './common.js';
 export type { OnWire, WireTurn } from './wire.js';
 export type { Request, Wire, Peer, Handler } from './rpc.js';
 export type { Summary } from './catalog.js';
-export type { Emit, SessionOptions, Session, Ran, Chosen, MessageFrom, MessageAttachment, SubagentChat, SubagentRequest, HarnessPlanEntry, HarnessPlanChange, PlanUpdate, TurnOptions } from './session.js';
+export type { Emit, SessionOptions, Session, Ran, CommandTerminal, RunCommand, Chosen, MessageFrom, MessageAttachment, SubagentChat, SubagentRequest, HarnessPlanEntry, HarnessPlanChange, PlanUpdate, TurnOptions } from './session.js';
 export type { HostOptions, Connection, Credential, Host, Diagnostics, HostTool, ToolCall, RootConfigPort, RootConfigAnswer } from './host.js';
 export type { AnnouncedPlugin, CapturedPlugin, ClientPlugins, HeldCopies, SyncedPlugin, TemplatePlugin } from './clientplugins.js';
 export type { Alert, InstallAnswer, ChannelHandle, ChannelSubscriber, ChatPreamble, OpenedChat, Loaded, LoaderContext, Plugin, PluginChannel, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginLink, PluginManifest, PluginMethod, PluginPeer, PluginSpec, PluginStarts, Contribution, PortContribution, PortKey, PortOf, PublishOptions, Route, ServedChannel, ServedMethod, SessionRequest, TriggerTypeDefinition } from './plugin.js';
@@ -38,7 +38,7 @@ export type { Entry, Metadata, Read, ResourceChange, ResourceProvider, ResourceS
 export type { BroughtBack, ComputerPort, MachineSource, NestedSpawn, Spawn, SpawnOptions } from './computers.js';
 export type { ContainerConnect, ContainerConnectResult, ContainerPort, ContainerSink } from './containers.js';
 export type { SessionConfigAnswerer, SessionConfigAsk } from './completions.js';
-export type { Claim, Terminal, TerminalOptions, SpawnPty, TerminalStore, OpenTerminal, OpenedTerminal, StartTerminals, OutputTerminal, OutputTerminals } from './terminals.js';
+export type { Claim, Terminal, TerminalOptions, SpawnPty, TerminalStore, OpenTerminal, OpenedTerminal, StartTerminals, OutputTerminal, OutputTerminals, TerminalOutputs } from './terminals.js';
 export type { BackgroundTask, BackgroundTaskKind, BackgroundTasks } from './background.js';
 export type { GitDir, Worktree, Worktrees } from './worktrees.js';
 export type { NewPullRequest, PullRequest, PullRequests } from './github.js';

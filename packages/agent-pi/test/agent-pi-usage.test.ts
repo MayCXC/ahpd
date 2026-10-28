@@ -38,6 +38,7 @@ function fakePi() {
     abort: async () => { listener?.({ type: 'agent_settled', aborted: true }); },
     models: async () => [],
     leaf: () => 'entry-1',
+    promptAfter: () => undefined,
     levels: () => ['off'],
     chosen: () => undefined,
     takesImages: () => false,

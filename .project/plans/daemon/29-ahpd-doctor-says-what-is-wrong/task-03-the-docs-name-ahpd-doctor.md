@@ -1,6 +1,6 @@
 ---
 title: The docs name ahpd doctor
-status: todo
+status: implemented
 depends: [task-02-ahpd-doctor-prints-the-checks.md]
 layer: docs
 refs:
@@ -31,3 +31,8 @@ The Run page names `ahpd doctor`, its checks and its exit code, and the changelo
 - The section lists the same checks in the same order as `checks` in `packages/server/src/doctor.ts`.
 
 ## Resume
+
+- **Done so far:** steps 1 to 5, 2026-10-27. `docs/server/RUN.md` has the `ahpd doctor` row below `ahpd status`, and a Doctor section before Service. The section lists the seven checks in the order `checks` runs them, with the result each one gives and the fix line. It says `--json` is the output for a support ticket and holds no token. It says the exit code is 1 when a check is `fail`. `CHANGELOG.md` has the line in the 0.14.1 Daemon section. `pnpm -s docs:build` passes.
+- **Next action:** none. The three tasks are implemented, and the plan waits on its final verification checklist.
+- **Open questions:** none.
+- **Watch out for:** the Doctor section repeats the order of `ORDER` in `packages/server/src/doctor.ts`. A check that moves is a change in both places.

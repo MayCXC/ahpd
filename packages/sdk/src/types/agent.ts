@@ -9,7 +9,7 @@ import type { Emit, PlanUpdate, Session, SubagentChat, SubagentRequest } from '.
 import type { ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { Account, Offered } from './probe.js';
 import type { ResourceStore } from './resources.js';
-import type { StartTerminals, OutputTerminals } from './terminals.js';
+import type { StartTerminals, OutputTerminals, TerminalOutputs } from './terminals.js';
 import type { BackgroundTasks } from './background.js';
 import type { MayRunTool, RunClientTool, ToolsChanged, ToolsEndpoint } from '../tools/server.js';
 import type { ComputerPort } from './computers.js';
@@ -353,6 +353,15 @@ export interface Start {
    */
   outputTerminals?: OutputTerminals;
   /**
+   * The terminal outputs the host keeps for this chat, for a backend with an
+   * output no process of the host's wrote.
+   *
+   * Kept in the session's own folder, so an output outlives a sleep and a
+   * restart, and goes with its turn, its chat or its session. Left out when the
+   * session store keeps no folder for the session, and then nothing is kept.
+   */
+  terminalOutputs?: TerminalOutputs;
+  /**
    * The host's tools, as an MCP server this session's backend may point its
    * own client at.
    *
@@ -512,7 +521,8 @@ export interface Start {
    * against that turn, such as its sender, is what a later read asks for. A backend whose own record names turns its own way, as Claude's
    * transcript names every turn by the CLI's uuid, is asked again for what it
    * wrote them down as, so the host keeps the same record under that id too
-   * rather than having to learn the backend's format.
+   * rather than having to learn the backend's format. A `!` turn after it is
+   * anchored to it by that id, which is the id a read after a restart holds.
    *
    * Optional both ways, like `onFileEdit`: a backend whose transcript keeps the
    * ids it was given never calls it, and a backend that never called it has a
@@ -847,8 +857,13 @@ export interface Agent {
    * content blocks no `type`.
    *
    * `at` is the session's recorded folder, as `find` is handed it.
+   *
+   * `outputs` is what the host keeps for the chat this conversation is, where
+   * it keeps anything. A transcript holds what the model was sent and not what
+   * a client was shown, so a backend that kept an output while the call ran
+   * names it on the call read back, and the call shows its terminal again.
    */
-  transcript?(id: string, at?: SessionAt): Promise<WireTurn<Turn>[] | undefined>;
+  transcript?(id: string, at?: SessionAt, outputs?: TerminalOutputs): Promise<WireTurn<Turn>[] | undefined>;
 
   /**
    * The worker chats one past session holds, read without starting anything.

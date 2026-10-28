@@ -1022,6 +1022,7 @@ export function createSpawn(ctx: HostContext): Spawn {
       planUpdates.add(settled);
       void settled.then(() => { planUpdates.delete(settled); }, () => { planUpdates.delete(settled); });
     };
+    const terminalOutputs = ctx.outputsFor(uri, chatUri);
     const wired: Start = {
       uri,
       chatUri,
@@ -1054,6 +1055,9 @@ export function createSpawn(ctx: HostContext): Spawn {
        * is no process here to spawn, only a channel to write text into.
        */
       outputTerminals: ctx.heldOutputs(uri),
+      // The outputs this chat keeps after their terminals are gone, where the
+      // store keeps the session a folder to hold them in.
+      ...(terminalOutputs === undefined ? {} : { terminalOutputs }),
       ...(options.computers !== undefined ? { computers: computersFor(options.computers, agent.provider, uri, kept.owner(idOf(uri))) } : {}),
       /*
        * The MCP servers, when there are any.
@@ -1430,6 +1434,13 @@ export function createSpawn(ctx: HostContext): Spawn {
         }
         if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled' || action.type === 'chat/error') {
           const wasRead = ctx.commandTurns.get(turn) === true;
+          /*
+           * A `!` command's turn is the host's, so no transcript holds it: the
+           * host keeps it for its chat, as the reference keeps a local turn
+           * once the turn has completed.
+           * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/localCommands/localChatCommand.ts#L201-L224
+           */
+          if (moved !== undefined && ctx.commandTurns.has(turn)) ctx.keepLocalTurn(uri, chatUri, moved.allTurns(), turn);
           ctx.commandTurns.delete(turn);
           if (moved !== undefined && chatFlag(ctx, uri, chatUri, Status.IsRead, wasRead)) sessionFollows(ctx, uri, chatUri);
         }
@@ -1538,17 +1549,18 @@ export function createSpawn(ctx: HostContext): Spawn {
        * chose it by, and a backend whose transcript names turns its own way -
        * Claude names every turn by the CLI's frame uuid - is read back by that
        * other id after a restart, finding nothing. So the sender is kept under
-       * it as well, rather than the host learning one backend's transcript
-       * format.
+       * it as well, and a `!` turn after it is anchored to it by that id,
+       * rather than the host learning one backend's transcript format.
        *
-       * The in-memory entry first, because a turn still running is only in
-       * that map, and the store after it for the turn a backend names once
-       * the turn is over. Nothing where the two ids agree, which is every
-       * backend that keeps the ids it was given, and nothing where nobody sent
-       * the turn.
+       * The sender's in-memory entry first, because a turn still running is
+       * only in that map, and the store after it for the turn a backend names
+       * once the turn is over. Nothing where the two ids agree, which is every
+       * backend that keeps the ids it was given, and no sender where nobody
+       * sent the turn.
        */
       onTurnRecorded: (turnId, transcriptId) => {
         if (transcriptId === turnId) return;
+        ctx.turnRecordedAs(chatUri, turnId, transcriptId);
         const sender = senderOf(turnId) ?? kept.sender(idOf(uri), turnId);
         if (sender !== undefined) kept.setSender(idOf(uri), transcriptId, sender);
       },

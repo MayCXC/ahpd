@@ -8,6 +8,7 @@ covers:
   - packages/sdk/src/host/sessionmethods.ts
   - packages/sdk/src/host/lifecycle.ts
   - packages/sdk/src/host/history.ts
+  - packages/sdk/src/host/localturns.ts
   - packages/sdk/src/host/catalogue.ts
   - packages/sdk/src/host/sessionconfig.ts
   - packages/sdk/src/host/attachments.ts
@@ -111,10 +112,36 @@ See [`code://packages/agent-claude/src/transcript.ts`](../../packages/agent-clau
 ### A backend says which transcript id a turn was written as
 
 WHEN a backend calls `onTurnRecorded(turnId, transcriptId)` with two different ids
-THEN the host copies the turn's sender to the transcript id.
+THEN the host copies the turn's sender to the transcript id
+AND a local turn after that turn names it by the transcript id.
 
 The reason: a restored turn has the backend's id, and without the copy it shows no sender.
-The Claude backend calls it only for lead turns.
+The Claude backend calls it only for lead turns, and the pi backend calls it with its prompt's entry.
+
+### The host keeps a `!` command's turn as a local turn
+
+WHEN a `!` command's turn ends with `chat/turnComplete`, `chat/turnCancelled` or `chat/error`
+THEN the host writes the turn to one file in the session's folder, under its chat
+AND the file names its anchor: the nearest earlier turn that is not a local turn, by that turn's transcript id.
+
+WHEN the host reads a chat back from a transcript
+THEN it puts the chat's local turns back: the ones with no anchor first, then each after its anchor in the order kept
+AND it drops a local turn whose anchor the transcript does not hold.
+
+The reason: no agent saw the turn, so no transcript holds it, and the reference host keeps it the same way.
+A store with no session folder keeps no local turn.
+See [`code://packages/sdk/src/host/localturns.ts`](../../packages/sdk/src/host/localturns.ts).
+
+### A cut at a local turn goes to the turn before it
+
+WHEN a client truncates a chat or forks it at a local turn
+THEN the host asks the backend for the point of the nearest earlier turn that is not a local turn
+AND it refuses a truncation when there is no such turn.
+
+WHEN a truncation drops local turns
+THEN their files go with them.
+WHEN a fork copies local turns
+THEN the new chat keeps them.
 
 ### A failed transcript read is not an empty session
 

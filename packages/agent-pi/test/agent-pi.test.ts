@@ -11,7 +11,7 @@ import { idOf, modelFor, offered, THINKING_KEY } from '../src/models.js';
 import { optionsOf } from '../src/plugin.js';
 import { piSession } from '../src/session.js';
 import type { OpenPi } from '../src/session.js';
-import { driveCall, fakePi, opened, root, settled, streamed } from './fake-pi.js';
+import { callIn, driveCall, fakePi, opened, root, settled, streamed } from './fake-pi.js';
 
 /*
  * pi as a backend, without a model provider.
@@ -133,6 +133,27 @@ it('opens a turn with no part, before anything streams into it', async () => {
   expect((session.chatState().turns as Bag[])[0]?.responseParts).toEqual([]);
 });
 
+it('names a turn by the entry pi wrote its prompt under, read after the entry the turn began on', async () => {
+  // The id a turn has when it is read back from pi's file, so what the host
+  // keeps against the turn - a `!` turn after it, anchored to it - is found.
+  const recorded: [string, string][] = [];
+  const { session, pi } = opened({ onTurnRecorded: (turnId, entryId) => { recorded.push([turnId, entryId]); } });
+  pi.setLeaf('entry-before');
+  pi.setPrompted('entry-prompt');
+  session.begin('t1', 'hello');
+  await settled();
+  expect(pi.asked).toContainEqual({ kind: 'promptAfter', entryId: 'entry-before' });
+  expect(recorded).toEqual([['t1', 'entry-prompt']]);
+});
+
+it('names no turn whose prompt pi has no entry for', async () => {
+  const recorded: [string, string][] = [];
+  const { session } = opened({ onTurnRecorded: (turnId, entryId) => { recorded.push([turnId, entryId]); } });
+  session.begin('t1', 'hello');
+  await settled();
+  expect(recorded).toEqual([]);
+});
+
 it('skips a call the model was still writing when the turn stopped, in the snapshot too', async () => {
   const { session, pi } = opened();
   pi.hold();
@@ -144,7 +165,7 @@ it('skips a call the model was still writing when the turn stopped, in the snaps
   session.cancel('t1');
   await settled();
   const turns = session.chatState().turns as Bag[];
-  const row = (turns[0]?.responseParts as Bag[]).find((one) => one.id === 'c1')?.toolCall as Bag;
+  const row = callIn(turns[0]?.responseParts as Bag[], 'c1');
   expect(row).toMatchObject({ status: 'cancelled', reason: 'skipped' });
 });
 
