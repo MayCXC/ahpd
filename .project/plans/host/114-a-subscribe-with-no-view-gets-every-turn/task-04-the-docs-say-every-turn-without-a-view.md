@@ -1,6 +1,6 @@
 ---
 title: The docs say every turn without a view
-status: todo
+status: implemented
 depends:
   - task-02-a-snapshot-follows-the-subscribes-view.md
   - task-03-claudes-chat-state-holds-every-turn.md
@@ -41,3 +41,4 @@ The Pass 7 box in `UPSTREAM.md` is ticked.
 
 ## Resume
 
+Done 2026-10-28. The `subscribe` row of `AHP.md` now says that a chat snapshot with no `view` holds every turn and no cursor, and what a `view.turns` gets. The `fetchTurns` rows of `AHP.md` and `CHATS.md` say that a snapshot's cursor comes only from a view. They also say that a request with no cursor answers nothing older. The Pass 7 box in `UPSTREAM.md` is ticked with "Built in `host/114` tasks 02 and 03". It names the window check of task 05 as still owed, because that reply is not in yet. `pnpm -s docs:build` passes, and `git grep -n "Newest 50" -- docs` finds nothing.

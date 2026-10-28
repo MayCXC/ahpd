@@ -26,7 +26,7 @@ The wire is the 1.0.0 one: `ChatState.backgroundWork`, `chat/backgroundWorkSet` 
 
 The 1.143 speed-up is the window's: history is restored in 25 ms slices (`remoteChatSessionRestorer.ts`, `08b811e3ab0`, `5bed87aa911`). The window sends no `view` and no `flowControl`. Upstream's host stops loading peer chat history before a prompt (`c02f008cd15`) and skips republishing an unchanged server tool catalogue (`5ea3f3805a9`).
 
-- [ ] **A chat subscription that names no `view` gets every retained turn.** `SubscribeView` says a host MUST return all retained turns when `view` is left out. ahpd cuts a chat snapshot to the newest `PAGE` (50) turns whatever the subscribe says (`packages/sdk/src/host/snapshots.ts`, `packages/agent-claude/src/session.ts` `tail(ctx.turns)`, `packages/sdk/src/sessions/paging.ts`). Not yet seen in a window.
+- [x] **A chat subscription that names no `view` gets every retained turn.** `SubscribeView` says a host MUST return all retained turns when `view` is left out. ahpd cuts a chat snapshot to the newest `PAGE` (50) turns whatever the subscribe says (`packages/sdk/src/host/snapshots.ts`, `packages/agent-claude/src/session.ts` `tail(ctx.turns)`, `packages/sdk/src/sessions/paging.ts`). Now every chat snapshot takes its turns through `windowOf`, so no view gives them all and a `view.turns` gives a window and a cursor (`packages/sdk/src/host/snapshots.ts`, `packages/sdk/src/host/sessionmethods.ts`). Built in `host/114` tasks 02 and 03; the window check in task 05 is still owed.
 - [ ] **A `customizationsChanged` is sent only when the customizations changed**: each one cost the window 3 to 6 seconds to apply. `packages/sdk/src/host/tooling.ts`.
 
 ### Copilot SDK
