@@ -1,7 +1,7 @@
 ---
 title: ahpd doctor says what is wrong
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-15
 revalidated: 2026-10-27
@@ -87,7 +87,7 @@ ahpd doctor -> runtime, config, daemon, service, plugins, agents, update -> one 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The checks say what is wrong](task-01-the-checks-say-what-is-wrong.md) | todo | - |
+| [01 - The checks say what is wrong](task-01-the-checks-say-what-is-wrong.md) | implemented | - |
 | [02 - ahpd doctor prints the checks](task-02-ahpd-doctor-prints-the-checks.md) | todo | 01 |
 | [03 - The docs name ahpd doctor](task-03-the-docs-name-ahpd-doctor.md) | todo | 02 |
 
@@ -99,8 +99,8 @@ ahpd doctor -> runtime, config, daemon, service, plugins, agents, update -> one 
 
 ## Resume state
 
-- **Done so far:** the tasks are written, 2026-10-27.
-- **Next action:** build task 01.
+- **Done so far:** the tasks are written, 2026-10-27. Task 01 was implemented on 2026-10-27. `packages/server/src/doctor.ts` holds the seven checks and `checks`, which runs them in order under a 5 s limit. `packages/server/test/doctor.test.ts` holds a case for each result.
+- **Next action:** build task 02.
 - **Open questions:** none.
 - **Watch out for:** plan 28 owns the PATH lookup in `found.ts`; doctor calls it and does not copy it.
 

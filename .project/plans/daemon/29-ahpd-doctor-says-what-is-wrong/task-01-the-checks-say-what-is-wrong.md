@@ -1,6 +1,6 @@
 ---
 title: The checks say what is wrong
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -54,3 +54,8 @@ refs:
 - `pnpm -s typecheck` and `pnpm -s exec vitest run packages/server/test/doctor.test.ts` pass.
 
 ## Resume
+
+- **Done so far:** steps 1 to 17, 2026-10-27. `packages/server/src/doctor.ts` holds `Check`, one function for each of the seven checks, and `checks`, which runs them in order under `CHECK_TIMEOUT_MS`. The Daemon check opens the record's `connectUrl` with the global `WebSocket`. It closes the socket in every case, and gives `fail` with `ahpd restart` when it does not open. The Service check gives no line when `serviceOn` answers nothing. `packages/server/test/doctor.test.ts` holds 25 cases. It uses a fake runner, a PATH under a temporary folder and XDG temp dirs. The never-opening socket case uses fake timers and fails after 5 s. The token case runs every check and finds the token in no field. `pnpm -s typecheck` and the test pass.
+- **Next action:** build task 02.
+- **Open questions:** none.
+- **Watch out for:** `describePlugin` reads a manifest and does not import. A plugin that would throw on import is `ready` when its manifest is whole. The Plugins line is masked with `withoutUserinfoIn` from `commands/config.ts`, because a spec may carry a credential in its URL. `agentCheck` reads the agents folder only when it exists, so a check never writes to the configuration. The Daemon check enforces the 5 s wait itself, and `checks` enforces the limit again for any check that hangs.
