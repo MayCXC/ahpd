@@ -5,7 +5,7 @@ import { CLOSING, need } from './common.js';
 import { textOf } from './outputs.js';
 import type { Bag } from '../types/common.js';
 import type { Claim, OutputTerminal, OutputTerminals, StartTerminals, Terminal, TerminalStore } from '../types/terminals.js';
-import type { Ran } from '../types/session.js';
+import type { CommandTerminal, Ran } from '../types/session.js';
 import type { OnWire } from '../types/wire.js';
 import type { TerminalInfo } from '@microsoft/agent-host-protocol';
 import type { ConnectionContext, HostContext } from './context.js';
@@ -18,8 +18,8 @@ import type { ConnectionContext, HostContext } from './context.js';
  * can open one itself.
  */
 export interface Terminals {
-  /** One command, in a terminal of its own, and what it did. */
-  commanded(command: string, cwd: string, claim: Claim): Promise<Ran>;
+  /** One command, in a terminal of its own, and what it did; `opened` hears the terminal as it opens. */
+  commanded(command: string, cwd: string, claim: Claim, opened?: (terminal: CommandTerminal) => void): Promise<Ran>;
   /** Every terminal, as the root channel lists them. */
   terminalInfo(): OnWire<TerminalInfo>[];
   /** The terminal factory a backend is handed on `Start`. */
@@ -66,6 +66,15 @@ export function claimOf(value: unknown): Claim | undefined {
  */
 const KEEP = 200_000;
 
+/**
+ * Whether a pseudoterminal runs a terminal, as its state says, for a call that
+ * names it. Nothing where the state says nothing, which a call then leaves out.
+ */
+const ptyOf = (terminal: Terminal): { isPty?: boolean } => {
+  const { isPty } = terminal.state();
+  return isPty === undefined ? {} : { isPty };
+};
+
 export function createTerminals(ctx: HostContext): Terminals {
   const { options, terminals, dispatch, log, fire, dirOfFile, refreshWatched } = ctx;
 
@@ -93,8 +102,16 @@ export function createTerminals(ctx: HostContext): Terminals {
    * exits: a call whose terminal a client disposed, or one read back after a
    * restart, names a terminal the host rebuilds from it.
    * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/localCommands/bangLocalCommand.ts#L29-L39
+   *
+   * `opened` hears the terminal once it is a channel a client can subscribe
+   * to, which is when the call names it.
    */
-  const commanded = async (command: string, cwd: string, claim: Claim): Promise<Ran> => {
+  const commanded = async (
+    command: string,
+    cwd: string,
+    claim: Claim,
+    opened?: (terminal: CommandTerminal) => void,
+  ): Promise<Ran> => {
     const shells = options.terminals;
     if (!shells) return { success: false, said: 'There is no shell here to run it in', output: '' };
     if (ctx.closed) return { success: false, said: CLOSING, output: '' };
@@ -141,6 +158,7 @@ export function createTerminals(ctx: HostContext): Terminals {
             said: code === 0 ? 'Ran the command' : `The command exited with code ${String(code)}`,
             output: printed,
             terminal: uri,
+            ...ptyOf(terminal),
             code,
           });
         },
@@ -148,6 +166,7 @@ export function createTerminals(ctx: HostContext): Terminals {
       terminals.set(uri, terminal);
       log(`ran ${command} in ${uri}`);
       dispatch(ROOT, { type: 'root/terminalsChanged', terminals: ctx.terminalInfo() });
+      opened?.({ uri, ...ptyOf(terminal) });
     });
   };
 
@@ -238,6 +257,7 @@ export function createTerminals(ctx: HostContext): Terminals {
       dispatch(ROOT, { type: 'root/terminalsChanged', terminals: ctx.terminalInfo() });
       return {
         uri,
+        ...ptyOf(terminal),
         output: () => {
           const output = textOf(terminal.state().content);
           const code = terminal.exitCode();
