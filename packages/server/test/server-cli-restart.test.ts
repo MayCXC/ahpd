@@ -180,7 +180,7 @@ describe('start, stop and status', () => {
     expect(after.url).toBe(before.url);
 
     const [, listed] = await rpc(`${after.url}/`, [INITIALIZE, { method: 'listSessions', params: {} }]) as [unknown, { items: { resource: string }[] }];
-    expect(listed.items.map((row) => row.resource)).toContain('kept:/kept-1');
+    expect(listed.items.map((row) => row.resource)).toContain('ahp-session:/kept-1');
   }, 90000);
 
   it('lets a stop sent while a restart is stopping win, and leaves no daemon running', async () => {

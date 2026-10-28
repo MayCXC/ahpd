@@ -452,7 +452,7 @@ it('lists a chat that is not running as the bot it is with', async () => {
 
   const answer = await call(ana, 'listSessions', { channel: ROOT });
   if (!('result' in answer)) throw new Error(`refused: ${answer.code} ${answer.message}`);
-  const row = (answer.result.items as Bag[]).find((one) => one.resource === 'bot-chat:/one');
+  const row = (answer.result.items as Bag[]).find((one) => one.resource === 'ahp-session:/one');
 
   expect(row).toBeDefined();
   expect(row?._meta).toMatchObject({ bot: 'motion', name: 'Motion', color: 'red' });

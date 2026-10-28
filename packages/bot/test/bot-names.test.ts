@@ -294,7 +294,7 @@ it('keeps a bot\'s own read, and its record, where it was', async () => {
 
   const bot = await record(soft, 'bot://motion');
   expect(bot).toMatchObject({ id: 'motion', name: 'Motion' });
-  expect(String(bot['chat'])).toMatch(/^bot-chat:\//);
+  expect(String(bot['chat'])).toMatch(/^ahp-session:\//);
 
   // What is at each of the three places under it, which is what a client
   // checks before opening one.

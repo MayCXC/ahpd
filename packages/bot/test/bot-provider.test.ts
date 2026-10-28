@@ -1209,7 +1209,7 @@ it('answers a read with the reader\'s own chat, and the same chat again', async 
   const ana = await as(host, 'ana');
   const first = await record(ana, 'bot://motion');
   const chat = String(first['chat']);
-  expect(chat).toMatch(/^bot-chat:\//);
+  expect(chat).toMatch(/^ahp-session:\//);
   // A session of the plugin's own provider, in the bot's folder, named after
   // the bot, and hers: it is the same session she would have started herself.
   expect(await row(ana, chat)).toMatchObject({
@@ -1238,8 +1238,8 @@ it('gives two people a chat each with one bot', async () => {
   const theirs = String((await record(ana, 'bot://motion'))['chat']);
 
   // One bot, two conversations: what each of them says to it is their own.
-  expect(hers).toMatch(/^bot-chat:\//);
-  expect(theirs).toMatch(/^bot-chat:\//);
+  expect(hers).toMatch(/^ahp-session:\//);
+  expect(theirs).toMatch(/^ahp-session:\//);
   expect(theirs).not.toBe(hers);
 });
 
@@ -1257,7 +1257,7 @@ it('answers a reader who may not chat with the record alone', async () => {
   // the way to being withheld.
   const listed = got(await call(rob, 'listSessions', { channel: ROOT }));
   const items = (listed['items'] ?? []) as Bag[];
-  expect(items.map((one) => String(one['resource'])).filter((one) => one.startsWith('bot-chat:/'))).toEqual([]);
+  expect(items.map((one) => String(one['resource'])).filter((one) => one.startsWith('ahp-session:/'))).toEqual([]);
 });
 
 /*
@@ -1392,7 +1392,7 @@ it('takes a write that carries a chat back, and keeps none of it', async () => {
   // record with the chat it was answered. `chat` is the reader's own rather
   // than a bot's field, so a body carrying one is a body about the rest.
   const read = await record(soft, 'bot://motion');
-  expect(String(read['chat'])).toMatch(/^bot-chat:\//);
+  expect(String(read['chat'])).toMatch(/^ahp-session:\//);
   expect(await write(soft, 'bot://motion', read)).toEqual({ result: {} });
 
   // None of it is kept, and the chat it was given is still the one it answers

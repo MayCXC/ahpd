@@ -176,7 +176,7 @@ it('hands a plan update as the whole list, with each status and priority', async
   expect(heard).toHaveLength(2);
   expect(heard[0]).toMatchObject({
     type: 'plan_update',
-    session: 'acp:/one',
+    session: 'ahp-session:/one',
     harness: 'acp',
     tool: 'plan',
     turn: 't1',
@@ -188,7 +188,7 @@ it('hands a plan update as the whole list, with each status and priority', async
   // The second update carries the whole list again, with the statuses moved on.
   expect(heard[1]).toMatchObject({
     type: 'plan_update',
-    session: 'acp:/one',
+    session: 'ahp-session:/one',
     tool: 'plan',
     turn: 't1',
     entries: [
@@ -209,7 +209,7 @@ it('hands the next turn\'s plan for the same session', async () => {
   await until(() => finished(p, chatUri, 2));
 
   expect(heard.map((event) => event.turn)).toEqual(['t1', 't1', 't2', 't2']);
-  expect(heard.map((event) => event.session)).toEqual(['acp:/one', 'acp:/one', 'acp:/one', 'acp:/one']);
+  expect(heard.map((event) => event.session)).toEqual(['ahp-session:/one', 'ahp-session:/one', 'ahp-session:/one', 'ahp-session:/one']);
   expect(heard[2]?.entries).toEqual([
     { text: 'Read the file', status: 'in_progress', priority: 'high' },
     { text: 'Write the answer', status: 'pending', priority: 'medium' },
