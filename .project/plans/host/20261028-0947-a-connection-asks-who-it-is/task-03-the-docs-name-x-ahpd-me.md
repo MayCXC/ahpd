@@ -1,6 +1,6 @@
 ---
 title: The docs name x-ahpd/me
-status: todo
+status: implemented
 depends: [task-02-x-ahpd-me-answers-the-connection.md]
 layer: docs
 refs:
@@ -29,6 +29,6 @@ The users docs say what `x-ahpd/me` answers, for a person and for root.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** steps 1 to 4. `docs/sdk/USERS.md` has the section "Who a connection is".
+- **Next action:** review by Softov.
 - **Open questions:** none.

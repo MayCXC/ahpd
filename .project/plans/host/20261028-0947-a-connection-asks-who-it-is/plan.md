@@ -1,7 +1,7 @@
 ---
 title: A connection asks who it is
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -86,9 +86,9 @@ client -> x-ahpd/me {} -> me method handle(params, reader, client, owner)
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The principal keeps the sign-in's roles](task-01-the-principal-keeps-the-sign-in-roles.md) | todo | - |
-| [02 - x-ahpd/me answers who the connection is](task-02-x-ahpd-me-answers-the-connection.md) | todo | 01 |
-| [03 - The docs name x-ahpd/me](task-03-the-docs-name-x-ahpd-me.md) | todo | 02 |
+| [01 - The principal keeps the sign-in's roles](task-01-the-principal-keeps-the-sign-in-roles.md) | implemented | - |
+| [02 - x-ahpd/me answers who the connection is](task-02-x-ahpd-me-answers-the-connection.md) | implemented | 01 |
+| [03 - The docs name x-ahpd/me](task-03-the-docs-name-x-ahpd-me.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -97,8 +97,8 @@ client -> x-ahpd/me {} -> me method handle(params, reader, client, owner)
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-28 from ahpw organization/05 task 07, against main `dfe7d9ce`.
-- **Next action:** task 01.
+- **Done so far:** drafted 2026-10-28 from ahpw organization/05 task 07, against main `dfe7d9ce`. Tasks 01 to 03 are implemented on 2026-10-28; see [implemented.md](implemented.md).
+- **Next action:** review by Softov.
 - **Open questions:** none.
 - **Watch out for:** the principal is frozen in `principalOf`, so `rolesFromSignIn` must be frozen with the literal, as `roles` is.
 

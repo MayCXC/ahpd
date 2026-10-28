@@ -1,6 +1,6 @@
 ---
 title: The principal keeps the sign-in's roles
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -37,6 +37,6 @@ A principal says which of its roles the sign-in added.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** steps 1 to 4. `principalOf` stamps a frozen `rolesFromSignIn` when the claim added roles.
+- **Next action:** review by Softov.
 - **Open questions:** none.
