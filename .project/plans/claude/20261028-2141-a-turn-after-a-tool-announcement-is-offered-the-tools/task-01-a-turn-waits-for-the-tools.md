@@ -1,6 +1,6 @@
 ---
 title: A turn waits for the tools its session was handed
-status: planned
+status: done
 depends: []
 layer: "agent-claude"
 refs:
@@ -40,4 +40,8 @@ Two changes close together reach the CLI one after the other.
 
 ## Resume
 
-Not started.
+Done 2026-10-28.
+The two cases about a change in hand failed on the code before this task: the CLI read the prompt with none of the client's tools.
+The case with no change in hand passed before and after.
+A first cut that chained every change behind a resolved promise sent even the first one a microtask late, and the client-gone cases, which read the server right after the call, failed; a change with none in hand goes out at once.
+The agent-claude, sdk and server suites passed at one worker, once, with this change and the plan beside it that hands a prompt to the CLI that replaced another.

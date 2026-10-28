@@ -1,7 +1,7 @@
 ---
 title: A Claude turn begun after a client announced its tools is offered them
 domain: claude
-status: planned
+status: built
 priority: high
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -70,7 +70,7 @@ chat/turnStarted -> beginTurn -> push the prompt at once -> the CLI reads it bef
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - a-turn-waits-for-the-tools](task-01-a-turn-waits-for-the-tools.md) | planned | - |
+| [01 - a-turn-waits-for-the-tools](task-01-a-turn-waits-for-the-tools.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -78,14 +78,14 @@ chat/turnStarted -> beginTurn -> push the prompt at once -> the CLI reads it bef
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** task 01.
+- **Done so far:** task 01, 2026-10-28; [implemented.md](implemented.md) says what exists.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a change with none in hand must still go out at once, since cases read the server it builds right after the call.
 
 ## Final verification checklist
 
-- [ ] Each new case fails before its task and passes after it.
-- [ ] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and `pnpm schema` pass.
-- [ ] The agent-claude, sdk and server suites pass at one worker, once, after the change.
-- [ ] The spec has the scenario and the changelog the entry.
+- [x] Each new case fails before its task and passes after it.
+- [x] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and `pnpm schema` pass.
+- [x] The agent-claude, sdk and server suites pass at one worker, once, after the change.
+- [x] The spec has the scenario and the changelog the entry.
