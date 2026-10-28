@@ -135,8 +135,8 @@ subscribe {channel: ahp-chat:/..., view?} -> sessionmethods.subscribe -> snapsho
 
 ## Final verification checklist
 
-- [ ] A subscribe with no view to a chat of 120 turns gets 120 turns and no cursor. This is true for a live chat and for a chat that is not running.
-- [ ] A subscribe with a view gets a window and a cursor, and `fetchTurns` walks back to the first turn.
-- [ ] `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm test` pass.
+- [x] A subscribe with no view to a chat of 120 turns gets 120 turns and no cursor. This is true for a live chat and for a chat that is not running.
+- [x] A subscribe with a view gets a window and a cursor, and `fetchTurns` walks back to the first turn.
+- [x] `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm test` pass.
 - [ ] The check by hand in a VS Code 1.143 window shows the first message of a long session.
-- [ ] The Pass 7 box in `UPSTREAM.md` is ticked.
+- [x] The Pass 7 box in `UPSTREAM.md` is ticked.
