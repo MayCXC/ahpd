@@ -1,7 +1,7 @@
 ---
 title: The Claude cases feed what the CLI sends
 domain: claude
-status: planned
+status: built
 priority: low
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -67,7 +67,7 @@ a case begins a turn -> the fake SDK yields the frames the case pushed -> query.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Each case feeds the frames the CLI sends](task-01-each-case-feeds-the-frames-the-cli-sends.md) | todo | - |
+| [01 - Each case feeds the frames the CLI sends](task-01-each-case-feeds-the-frames-the-cli-sends.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -75,13 +75,13 @@ a case begins a turn -> the fake SDK yields the frames the case pushed -> query.
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-28.
-- **Next action:** task 01.
+- **Done so far:** planned and built 2026-10-28; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a case that fed an echo may depend on the echo's uuid, as the turn's last entry or as its transcript id.
 
 ## Final verification checklist
 
-- [ ] No case in the sdk suite feeds a `user` frame for a lead turn's prompt.
-- [ ] The sdk and agent-claude suites pass.
-- [ ] `plans/index.md` updated.
+- [x] No case in the sdk suite feeds a `user` frame for a lead turn's prompt.
+- [x] The sdk and agent-claude suites pass.
+- [x] `plans/index.md` updated.

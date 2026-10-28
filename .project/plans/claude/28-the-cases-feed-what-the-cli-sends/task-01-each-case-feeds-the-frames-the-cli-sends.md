@@ -1,6 +1,6 @@
 ---
 title: Each case feeds the frames the CLI sends
-status: todo
+status: done
 depends: []
 layer: "sdk tests"
 refs:
@@ -40,3 +40,6 @@ Each case names its conversation with the `init` frame, and its comments say wha
 - `pnpm exec vitest run --maxWorkers=1 packages/sdk packages/agent-claude` passes.
 
 ## Resume
+
+- **Done:** 2026-10-28.
+  No case depended on an echo's uuid: the turns that a case cuts at end at an answer.

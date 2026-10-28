@@ -292,7 +292,7 @@ Reference: [00-claude.md](claude/00-claude.md)
 | [21 - A client's tools reach the agent whole and on time](claude/21-client-tools-reach-agent-whole-and-on-time/plan.md) | high | built 2026-10-11 ([implemented.md](claude/21-client-tools-reach-agent-whole-and-on-time/implemented.md)); the VS Code check by hand remains | - | - |
 | [22 - A Claude session fails cleanly](claude/22-a-claude-session-fails-cleanly/plan.md) | medium | built 2026-10-11 ([implemented.md](claude/22-a-claude-session-fails-cleanly/implemented.md)) | - | - |
 | [23 - agent-claude is on the Claude Agent SDK 0.3.301](claude/23-agent-claude-is-on-agent-sdk-0-3-301/plan.md) | medium | built 2026-10-16 ([implemented.md](claude/23-agent-claude-is-on-agent-sdk-0-3-301/implemented.md)) | - | - |
-| [28 - The Claude cases feed what the CLI sends](claude/28-the-cases-feed-what-the-cli-sends/plan.md) | low | planned 2026-10-28; one task, todo | - | - |
+| [28 - The Claude cases feed what the CLI sends](claude/28-the-cases-feed-what-the-cli-sends/plan.md) | low | built 2026-10-28 ([implemented.md](claude/28-the-cases-feed-what-the-cli-sends/implemented.md)) | - | - |
 
 Next free number in `claude`: `29`.
 
