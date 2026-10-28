@@ -1,4 +1,4 @@
-# ahpd
+# <img src="docs/public/logo.svg" alt="" height="32"> ahpd - agent host platform
 
 [![CI](https://github.com/softov/ahpd/actions/workflows/ci.yml/badge.svg)](https://github.com/softov/ahpd/actions/workflows/ci.yml)
 [![@ahpd/server](https://img.shields.io/npm/v/%40ahpd%2Fserver?label=%40ahpd%2Fserver)](https://www.npmjs.com/package/@ahpd/server)
@@ -9,336 +9,306 @@
 ![Agent Host Protocol 1.0.0](https://img.shields.io/badge/AHP-1.0.0-0b7285)
 ![runs on Node, Bun, Deno](https://img.shields.io/badge/runs%20on-Node%20%7C%20Bun%20%7C%20Deno-495057)
 
+**Run your AI agents anywhere. Control them from anywhere.**
+
+ahpd is an open-source server that brings your AI agents, tools, and projects together.
+
+Run agents on your computer, a remote server, or in containers. Connect from your browser, desktop, terminal, or phone.
+
+Your work stays on the server. You can close an app, switch devices, or disconnect without losing your session.
+
+Built on the [Agent Host Protocol (AHP)](https://microsoft.github.io/agent-host-protocol/). See [AHP compatibility](https://softov.github.io/ahpd/sdk/AHP) for what it implements.
+
+[Read the documentation](https://softov.github.io/ahpd/) · [GitHub](https://github.com/softov/ahpd) · [ahpio.com](https://ahpio.com)
+
+---
+
+## Start in minutes
+
+Install with one line on Linux or macOS:
+
+```bash
+curl -fsSL https://ahpio.com/ahpd/install.sh | bash
+```
+
+On Windows, in PowerShell:
+
+```powershell
+irm https://ahpio.com/ahpd/install.ps1 | iex
+```
+
+The script checks for Node 22.18 or newer, installs `@ahpd/server` without sudo, adds `ahpd` to your PATH, and runs `ahpd configure`. [Install options](https://softov.github.io/ahpd/server/INSTALL)
+
+Or install with npm, then run the setup:
+
+```bash
+npm install -g @ahpd/server --allow-scripts=node-pty
+ahpd configure
+```
+
+Choose your agents, network settings, and project folders. To add an agent later, run `ahpd plugin install @ahpd/agent-claude`.
+
+Start the host:
+
+```bash
+ahpd start --path /work/project
+```
+
+Your host is ready for an AHP client. Connect from the terminal with ahpc:
+
+```bash
+npx @softov/ahpc --host ws://127.0.0.1:9187
+```
+
+### 🗂️ Serve multiple projects
+
+```bash
+ahpd --path /work/api --path /work/web
+```
+
+Project paths are catalogue entries, **not filesystem sandboxes**. Access to other paths depends on the configured host capabilities and permissions.
+
+### 🔐 Connect remotely
+
+By default, the host listens on loopback. To listen on another interface, configure a connection token:
+
+```bash
+ahpd --host 0.0.0.0 --connection-token-file ~/.config/ahpd/token
+```
+
+Only expose the host to networks you trust, and protect the token. See the [remote access documentation](https://softov.github.io/ahpd/server/REMOTE).
+
+---
+
+## Your agents. Your machines. Your control.
+
+AI agents can help you write code, fix problems, manage files, and automate tasks. But they often depend on the terminal or application where you started them.
+
+ahpd gives your agents a place to run and gives you a way to reach them.
+
+**⏳ Keep work running**
+
+Start a task and leave it running on your host. Your agent can continue its work when you close the client. Return later to review the results.
+
+**📱 Work from any device**
+
+Start on your desktop. Check progress from your phone. Open the same session in your browser or terminal. Your work stays in sync.
+
+**🤖 Choose your agents**
+
+Use Claude Code, Codex, Copilot, Gemini, pi, and other supported agents. Configure the agents you need and use them through one host.
+
+**🐳 Run work in isolated environments**
+
+Use Docker containers to give tasks their own environment. Keep work separate when projects need different tools or dependencies.
+
+**⏰ Automate routine tasks**
+
+Schedule agent work or start it from a webhook. Let your host run tasks even when no client is connected.
+
+**🔐 Control access**
+
+Control access to your agents and tools. Define who can interact with your host and what actions they can perform.
+
+**📊 Diagnostics**
+
+Inspect host status, logs, network information, and telemetry.
+
+**💰 Control spending**
+
+See what each person, team, and project has spent on models. Set daily, weekly, or monthly limits, and the host refuses new work when a limit is reached.
+
+**🔀 Share your models**
+
+Point your agent or a script at your host and call any model with your ahpd token. The host uses the provider's key, applies your policies, and records the cost. [Model proxy](https://softov.github.io/ahpd/server/PROXY)
+
+---
+
+## More than a chat
+
+With the right capabilities enabled, agents and clients can work with the same host resources.
+
+**📁 Resources**
+
+Read, write, create, and delete files through resource ports.
+
+**⌨️ Terminals**
+
+Open a shell on your host from any client. Watch the commands your agent runs as they run, and come back later to read their full output.
+
+**🌳 Git & GitHub**
+
+Inspect changes, branches, worktrees, and pull requests. Use separate worktrees to keep parallel sessions from sharing a working tree.
+
+---
+
+## Use the agents you prefer
+
+You do not need to commit to one agent or model provider.
+
+ahpd supports several agent integrations. Each integration runs as a plugin.
+
 [![@ahpd/agent-claude](https://img.shields.io/npm/v/%40ahpd%2Fagent-claude?label=%40ahpd%2Fagent-claude)](https://www.npmjs.com/package/@ahpd/agent-claude)
-[![@ahpd/agent-cofold](https://img.shields.io/npm/v/%40ahpd%2Fagent-cofold?label=%40ahpd%2Fagent-cofold)](https://www.npmjs.com/package/@ahpd/agent-cofold)
-[![@ahpd/agent-acp](https://img.shields.io/npm/v/%40ahpd%2Fagent-acp?label=%40ahpd%2Fagent-acp)](https://www.npmjs.com/package/@ahpd/agent-acp)
+
+**✻ [`@ahpd/agent-claude`](packages/agent-claude/)**: Run Claude through the Claude Agent SDK. [docs](https://softov.github.io/ahpd/plugins/agent-claude)
+
+```bash
+ahpd plugin install @ahpd/agent-claude
+```
+
 [![@ahpd/agent-pi](https://img.shields.io/npm/v/%40ahpd%2Fagent-pi?label=%40ahpd%2Fagent-pi)](https://www.npmjs.com/package/@ahpd/agent-pi)
+
+**π [`@ahpd/agent-pi`](packages/agent-pi/)**: Run the pi coding agent directly in the host. [docs](https://softov.github.io/ahpd/plugins/agent-pi)
+```bash
+ahpd plugin install @ahpd/agent-pi
+```
+
+[![@ahpd/agent-acp](https://img.shields.io/npm/v/%40ahpd%2Fagent-acp?label=%40ahpd%2Fagent-acp)](https://www.npmjs.com/package/@ahpd/agent-acp)
+
+**⇄ [`@ahpd/agent-acp`](packages/agent-acp/)**: Codex, Copilot, Gemini, and other supported agents through Agent Client Protocol. [docs](https://softov.github.io/ahpd/plugins/agent-acp)
+```bash
+ahpd plugin install @ahpd/agent-acp
+```
+
+[![@ahpd/agent-cofold](https://img.shields.io/npm/v/%40ahpd%2Fagent-cofold?label=%40ahpd%2Fagent-cofold)](https://www.npmjs.com/package/@ahpd/agent-cofold)
+
+**◈ [`@ahpd/agent-cofold`](packages/agent-cofold/)**: Generic harness to use supported OpenAI-compatible models. [docs](https://softov.github.io/ahpd/plugins/agent-cofold)
+```bash
+ahpd plugin install @ahpd/agent-cofold
+```
+
+---
+
+## Add more with plugins
+
+Each capability can be configured to fit your environment.
+
 [![@ahpd/computer](https://img.shields.io/npm/v/%40ahpd%2Fcomputer?label=%40ahpd%2Fcomputer)](https://www.npmjs.com/package/@ahpd/computer)
+
+**[`@ahpd/computer`](packages/computer/)**: Create isolated environments for agentic tasks. [docs](https://softov.github.io/ahpd/plugins/computer) 
+```bash
+ahpd plugin install @ahpd/computer
+```
+
 [![@ahpd/bot](https://img.shields.io/npm/v/%40ahpd%2Fbot?label=%40ahpd%2Fbot)](https://www.npmjs.com/package/@ahpd/bot)
+
+**[`@ahpd/bot`](packages/bot/)**: Give an agent its own identity, workspace, and session. [docs](https://softov.github.io/ahpd/plugins/bot)
+```bash
+ahpd plugin install @ahpd/bot
+```
+
 [![@ahpd/webhook](https://img.shields.io/npm/v/%40ahpd%2Fwebhook?label=%40ahpd%2Fwebhook)](https://www.npmjs.com/package/@ahpd/webhook)
+
+**[`@ahpd/webhook`](packages/webhook/)**: Start work from an HTTP request. [docs](https://softov.github.io/ahpd/plugins/webhook)
+```bash
+ahpd plugin install @ahpd/webhook
+```
+
 [![@ahpd/tunnel-devtunnel](https://img.shields.io/npm/v/%40ahpd%2Ftunnel-devtunnel?label=%40ahpd%2Ftunnel-devtunnel)](https://www.npmjs.com/package/@ahpd/tunnel-devtunnel)
 
-An [Agent Host Protocol](https://microsoft.github.io/agent-host-protocol/) server, SDK and Plugins.
-
-Run agents on your workstation, server, VM or container, then connect from [ahpc](https://github.com/softov/ahpc), [VS Code](https://code.visualstudio.com/), or any AHP-compliant client.
-
-Sessions run on the host, not on the client or terminal that started them.
-
-**[Read the documentation](https://softov.github.io/ahpd/)**
-
-
-```mermaid
-flowchart TD
-    classDef client fill:#1e293b,stroke:#3b82f6,stroke-width:1.5px,color:#fff
-    classDef host fill:#0f172a,stroke:#10b981,stroke-width:2px,color:#fff
-    classDef agent fill:#1e293b,stroke:#8b5cf6,stroke-width:1.5px,color:#fff
-    classDef port fill:#334155,stroke:#64748b,stroke-width:1px,color:#cbd5e1
-
-    subgraph Host ["AHP Host (ahpd)"]
-        direction TB
-        AHP["AHP WebSocket Server"]
-        SESS["Sessions & Chat Manager"]
-        
-        subgraph Ports ["Host Capabilities & Ports"]
-            RES["Resources"]
-            TERM["Terminals"]
-            CHG["Git Changes"]
-            AUTO["Automations"]
-        end
-
-        AHP --> SESS
-        AHP --- Ports
-    end
-
-    subgraph Clients ["AHP Clients"]
-        direction TB
-        VS["VS Code"]
-        AHPC["ahpc CLI"]
-        AHPX["ahpx"]
-        OTHER["Other Client"]
-    end
-
-    subgraph Agents ["Agent Backends (Plugins)"]
-        direction TB
-        CLAUDE["@ahpd/agent-claude"]
-        COFOLD["@ahpd/agent-cofold"]
-        ACP["@ahpd/agent-acp"]
-        PI["@ahpd/agent-pi"]
-        CUSTOM["Custom Agent"]
-    end
-
-    Clients -->|AHP Protocol / WS| AHP
-    SESS --> Agents
-
-    class VS,AHPC,AHPX,OTHER client
-    class AHP,SESS host
-    class CLAUDE,COFOLD,ACP,PI,CUSTOM agent
-    class RES,TERM,CHG,AUTO port
-```
-
-Close the client and the host keeps running. Reconnect from another client and the session is still there.
-
-# Quick start
-
-`ahpd` bundles no agent. A backend is a plugin, so the install is the daemon and then `ahpd configure`, which asks at the terminal for the backends, the address, the port, the token and the folders, writes `~/.config/ahpd/config.json` and installs the backends it is given:
-
-Global Installation:
+**[`@ahpd/tunnel-devtunnel`](packages/tunnel-devtunnel/)**: Reach your host from VS Code on another network, through a Microsoft Dev Tunnel. [docs](https://softov.github.io/ahpd/plugins/tunnel-devtunnel)
 ```bash
-npm i -g @ahpd/server
-ahpd configure
-ahpd --path /work/project
+ahpd plugin install @ahpd/tunnel-devtunnel
 ```
 
-Every question shows what the configuration holds now, so Enter keeps it and a second run of `ahpd configure` edits what is there. To add a backend without the questions, `ahpd plugin install @ahpd/agent-claude` installs the package into `~/.config/ahpd` and adds it to `plugins` there, so the next run loads it. A plugin installed with `npm i -g` is not seen: a bare name is resolved from the configuration directory only.
+[![@ahpd/tasks](https://img.shields.io/npm/v/%40ahpd%2Ftasks?label=%40ahpd%2Ftasks)](https://www.npmjs.com/package/@ahpd/tasks)
 
-npm 12 blocks install scripts unless told otherwise, and `node-pty` needs its script on Linux to build the terminal binding. Without it the daemon still runs, but terminals fall back to pipes (`isPty: false`). Add `--allow-scripts=node-pty` to the daemon's own global install, or run `npm config set allow-scripts=node-pty --location=user` once.
-
-Using npx on the fly
+**[`@ahpd/tasks`](packages/tasks/)**: Keep one list of tasks and plans that every agent and person reads and writes. [docs](https://softov.github.io/ahpd/plugins/tasks)
 ```bash
-npx @ahpd/server --plugin @ahpd/agent-claude --path /work/project
+ahpd plugin install @ahpd/tasks
 ```
 
-The plugin still comes from the configuration directory, so `ahpd configure` (or `ahpd plugin install @ahpd/agent-claude`) has to have run once either way.
+[![@ahpd/push](https://img.shields.io/npm/v/%40ahpd%2Fpush?label=%40ahpd%2Fpush)](https://www.npmjs.com/package/@ahpd/push)
 
-Running from Source:
+**[`@ahpd/push`](packages/push/)**: Get a phone notification when a session needs you, with the app closed. [docs](https://softov.github.io/ahpd/plugins/push)
+```bash
+ahpd plugin install @ahpd/push
+```
+
+[![@ahpd/activepieces](https://img.shields.io/npm/v/%40ahpd%2Factivepieces?label=%40ahpd%2Factivepieces)](https://www.npmjs.com/package/@ahpd/activepieces)
+
+**[`@ahpd/activepieces`](packages/activepieces/)**: Use Activepieces connectors as tools for your sessions and bots. [docs](https://softov.github.io/ahpd/plugins/activepieces)
+```bash
+ahpd plugin install @ahpd/activepieces
+```
+
+---
+
+## One host. Many clients.
+
+ahpd runs your agents and keeps their sessions. Connect with the client that suits you.
+
+### 🌐 Browser → @ahpd/web
+Manage sessions, files, terminals, and host settings from your browser.
+
+[GitHub](https://github.com/softov/ahpw) · [Releases](https://github.com/softov/ahpw/releases)
+
+### 🖥️ Desktop → ahp-desk
+Connect to multiple hosts, manage local installations, and work in dedicated windows.
+
+[GitHub](https://github.com/softov/ahp-desk) · [Download](https://github.com/softov/ahp-desk/releases)
+
+### 💻 Terminal → @softov/ahpc
+Work with agents through an interactive terminal, CLI commands, or scripts.
 
 ```bash
-git clone https://github.com/softov/ahpd && cd ahpd
-pnpm install && pnpm build
-node packages/server/dist/main.js --plugin ./packages/agent-claude --path /work/project
+# Connect to your host with the terminal client
+npx @softov/ahpc --host <host-address> --token <your-token>
 ```
 
-Then connect an AHP client.
+[GitHub](https://github.com/softov/ahpc) · [Releases](https://github.com/softov/ahpc/releases)
 
-With [`ahpc`](https://github.com/softov/ahpc):
+### 📱 Mobile → AgentHost Client
+Follow work, receive notifications, and respond when an agent needs your approval.
+
+[Android](https://play.google.com/store/apps/details?id=com.agenthostclient.app) · iOS soon · [Website](https://agenthostclient.com)
+
+### 🔌 Other AHP clients
+Connect with compatible applications, including supported VS Code integrations.
+
+[AHP Client Libraries](https://microsoft.github.io/agent-host-protocol/guide/clients.html) · [AHP Implementations](https://microsoft.github.io/agent-host-protocol/guide/implementations.html)
+
+---
+
+**One host, every screen.** Start work on one device and continue from another. Your sessions stay on the host.
+
+---
+
+## Make it your own
+
+ahpd has a small core and a plugin system. Add new agents, tools, URI schemes, environments, and services without modifying the daemon.
+
+### 🧰 Build with the SDK
+
+[`@ahpd/sdk`](https://www.npmjs.com/package/@ahpd/sdk) lets you embed an AHP host in your application. It handles protocol negotiation, subscriptions, snapshots, state updates, reconnects, sessions, chats, and transcript paging.
+
+```ts
+import { createHost, listen } from '@ahpd/sdk';
+import { claude } from '@ahpd/agent-claude';
+
+const path = process.cwd();
+const host = createHost({ path, agents: [claude({ paths: [path] })] });
+await listen({ port: 9187 }, (peer) => host.accept(peer));
+```
+
+[Build your own host](https://softov.github.io/ahpd/sdk/BUILD-A-HOST)
+
+### 🧩 Write plugins and agents
+
+You can extend your host without changing the server itself.
+
+Implement the `Agent` interface or contribute host ports, tools, and URI schemes. Load extensions from npm packages, local directories, or manifest-backed files.
 
 ```bash
-ahpc --host ws://127.0.0.1:9187
-```
-
-Via VS Code (`settings.json`):
-
-```json
-"chat.remoteAgentHostsEnabled": true,
-"chat.remoteAgentHosts": [
-  {
-    "name": "ahpd",
-    "address": "ws://127.0.0.1:9187"
-  }
-]
-```
-
-
-
-## What ahpd provides
-
-### Persistent sessions
-
-Agent state and turn executions live on the host server. Clients can disconnect mid-turn and reconnect later, or multiple clients can observe and drive the same session simultaneously.
-
-
-### Plugins
-
-Everything past the protocol is a plugin, named in the configuration and loaded at startup:
-
-* **Agent backends** - Claude, OpenAI-compatible models, any ACP server, or one you write;
-* **Computers** - Docker isolation, so a session runs inside a container instead of on the host;
-* **Tunnels** - a public address for the port this host bound;
-* **Ports, tools and URI schemes** - anything a host can be handed, a plugin can contribute.
-
-A new capability is a package and a `--plugin` line, not a change to the daemon.
-
-### Host capabilities
-
-Each capability is optional, and a host without one still works with every client:
-
-* **Resources** - read, write, create and delete filesystem paths;
-* **Terminals** - run shell sessions;
-* **Changes** - inspect and manipulate working-tree Git changes;
-* **Directories** - expose repository/branch information;
-* **Worktrees** - give each session its own git worktree, so two agents in one repository do not share a working tree;
-* **GitHub** - expose pull-request information;
-* **Automations** - schedule automated agent executions;
-* **Sessions** - where the read and archived bits and a session's settings are kept;
-* **Diagnostics** - what a window asks about the host itself: version, logs, network, shutdown;
-* **Computers** - create disposable and isolated execution environments;
-* **Containers** - run a whole host inside a dev container and carry its frames;
-* **Tools** - register host-provided tools into sessions.
-
-## CLI & Daemon Configuration
-
-### First run
-
-`ahpd configure` asks, at the terminal, for each setting a first install needs and writes the file the daemon reads:
-
-```bash
-ahpd configure
-```
-
-The backends, the host to bind, the port, the connection token and the folders to serve, in that order. Every question shows the value the configuration holds now, so Enter keeps it and running it again edits what is there instead of replacing it. A backend answered for that the file does not already name is installed into `~/.config/ahpd`, and one the file already names is switched off (`enabled: false`, its options kept) when it is answered No. The token is written to `~/.config/ahpd/connection-token`, which `config.json` names as `connectionTokenFile`, or is the token you type instead; a token already in the configuration is kept and moved into that file rather than generated over. Every key it was not asked about is left where it is.
-
-Started at a terminal with no `config.json` at all, `ahpd` and `ahpd start` offer to run it for you first. Without a terminal nothing is asked, and the daemon starts as it always has.
-
-### Background Service
-
-Detach the daemon from your terminal to run persistently:
-
-```bash
-ahpd start --path /work
-
-ahpd status
-ahpd config
-ahpd stop
-```
-
-`start` detaches the process from the shell, so the host and its sessions keep running after the terminal closes.
-
-### Serving multiple projects
-
-Host multiple repository paths simultaneously using repeated `--path` flags. Existing sessions in these paths will be catalogued automatically:
-
-```bash
-ahpd \
-  --path /work/api \
-  --path /work/web
-```
-
-Started at a terminal in a folder that is not one of those, `ahpd` asks whether to serve it, and a yes adds it to `paths` so it is asked once:
-
-```
-Serve /work/other? [y/N]:
-```
-
-`--no-cwd` is the other half: serve only what `--path` and `paths` name, and ask about no folder at all. With neither naming one it is refused.
-
-> Note: `--path` is a catalogue entry, **not a filesystem sandbox**. Clients with access to the host may request resources or terminals elsewhere on the machine if the configured ports allow it.
-
-### Remote access
-
-By default, `ahpd` listens only on loopback.
-
-To listen on another interface, configure a connection token:
-
-```bash
-ahpd \
-  --host 0.0.0.0 \
-  --connection-token-file ~/.config/ahpd/token
-```
-
-`ahpd` refuses to bind outside loopback without a connection token, unless you pass `--without-connection-token`.
-
-The token controls access to the host. Agent providers may additionally use their own authentication.
-
-See [`docs/server/REMOTE.md`](docs/server/REMOTE.md) for networking and tokens, and [`docs/server/CONFIGURE.md`](docs/server/CONFIGURE.md) for configuration.
-
-# Extension Plugins
-
-A plugin contributes to the host the daemon builds: a backend, one of its ports, a server tool, a URI scheme or a configuration default. Load several, and each contributes its own part of one host:
-
-```bash
-# A backend, plus the computer plugin that gives it containers to run in
+# Load plugins for one run, in place of the configured list
 ahpd --plugin @ahpd/agent-claude --plugin @ahpd/computer
-
-# One of your own, from a directory or a single file with a plugin.json beside it
-ahpd --plugin @ahpd/agent-claude --plugin ./my-plugin
-ahpd --plugin @ahpd/agent-claude --plugin ./scratch-plugin.mjs
-
-# Load none, whatever the configuration file says
-ahpd --no-plugins
-```
-
-The same list goes in `~/.config/ahpd/config.json`, where an entry can carry options or be turned off without being removed:
-
-```json
-{
-  "plugins": [
-    "@ahpd/agent-claude",
-    {
-      "name": "@ahpd/computer",
-      "options": { "image": "node:22", "max": 4 }
-    },
-    { "name": "./my-plugin", "enabled": false }
-  ]
-}
-```
-
-`--plugin` is repeatable and plugins apply in the order named. A command-line `--plugin` **replaces** the file's list rather than adding to it, the way `--path` replaces `paths`.
-
-A plugin runs **inside the daemon process with the daemon's permissions**, so only install one you trust. Whoever can edit the configuration file can run code as the daemon.
-
-One that does not resolve, whose manifest is wrong, or that throws on import or out of `apply` is reported and skipped: the daemon starts without it and the next one is still tried.
-
-You can inspect configured plugins without loading any of them:
-
-```bash
-ahpd plugin list
-```
-
-See [docs/plugins/PLUGINS.md](docs/plugins/PLUGINS.md) for writing one and [docs/server/PLUGINS.md](docs/server/PLUGINS.md) for running one.
-
----
-
-# Packages
-
-This repository is a pnpm workspace containing the AHP host, SDK, agent integrations and some plugins.
-
-| Package | npm | Purpose |
-| --- | --- | --- |
-| [`@ahpd/server`](packages/server/) | [npm](https://www.npmjs.com/package/@ahpd/server) | The `ahpd` daemon |
-| [`@ahpd/sdk`](packages/sdk/) | [npm](https://www.npmjs.com/package/@ahpd/sdk) | The AHP host library |
-| [`@ahpd/computer`](packages/computer/) | [npm](https://www.npmjs.com/package/@ahpd/computer) | Disposable Docker machines |
-| [`@ahpd/bot`](packages/bot/) | [npm](https://www.npmjs.com/package/@ahpd/bot) | Bots: records with a folder and a session of their own |
-| [`@ahpd/webhook`](packages/webhook/) | [npm](https://www.npmjs.com/package/@ahpd/webhook) | Webhooks: a URL that talks to a bot or fires an automation |
-| [`@ahpd/tunnel-devtunnel`](packages/tunnel-devtunnel/) | [npm](https://www.npmjs.com/package/@ahpd/tunnel-devtunnel) | A Dev Tunnel to the daemon's port |
-
----
-
-## Agents (Harnesses)
-
-A new harness is a package and a `--plugin` line.
-
-| Package | npm | Backend |
-| --- | --- | --- |
-| [`@ahpd/agent-claude`](packages/agent-claude/) | [npm](https://www.npmjs.com/package/@ahpd/agent-claude) | Claude Code through the Claude Agent SDK |
-| [`@ahpd/agent-cofold`](packages/agent-cofold/) | [npm](https://www.npmjs.com/package/@ahpd/agent-cofold) | OpenAI-compatible models through cofold |
-| [`@ahpd/agent-acp`](packages/agent-acp/) | [npm](https://www.npmjs.com/package/@ahpd/agent-acp) | Agent Client Protocol servers such as Copilot, Codex and Gemini |
-| [`@ahpd/agent-pi`](packages/agent-pi/) | [npm](https://www.npmjs.com/package/@ahpd/agent-pi) | The pi coding agent, embedded in the daemon |
-
-Name one by package, by directory, or by file:
-
-```bash
-# An installed package. `ahpd plugin install` puts it in ~/.config/ahpd
-ahpd --plugin @ahpd/agent-claude
-
-# A directory with a manifest, tried against the working directory first
-ahpd --plugin ./packages/agent-cofold
-
 # A single file, with a plugin.json beside it that names its id and main
 ahpd --plugin ./scratch-agent.mjs
-
-# Several, applied in the order named
-ahpd --plugin @ahpd/agent-claude --plugin ./my-agent
+# A directory with a manifest, tried against the working directory first
+ahpd --plugin ./my-custom-agent
 ```
 
-The same list goes in the configuration, where an entry can carry options:
-
-```json
-{
-  "plugins": [
-    "@ahpd/agent-claude",
-    {
-      "name": "@ahpd/agent-acp",
-      "options": { "toolsChanged": "list" }
-    }
-  ]
-}
-```
-
-What each one is and the options it takes live with the package. An agent is a record of a kind, made with `x-ahpd/agents/put` or moved from a file's `presets` at the first start. `@ahpd/agent-acp` registers the kind `acp`, so `copilot --acp`, `codex-acp` and `gemini --acp` are three records rather than three packages.
-
-A custom agent implements the same `Agent` interface and is named the same way as the four above. A client speaks only AHP and depends on no agent SDK.
-
-The dependencies point this way:
+A custom agent implements the same `Agent` interface and is named the same way as the agents above. A client speaks only AHP and depends on no agent SDK.
 
 ```mermaid
 flowchart LR
@@ -355,6 +325,7 @@ flowchart LR
       COFOLD["@ahpd/agent-cofold"]
       ACP["@ahpd/agent-acp"]
       PI["@ahpd/agent-pi"]
+      CUSTOM["Your agent"]
     end
 
     SERVER --> SDK
@@ -364,6 +335,7 @@ flowchart LR
     COFOLD -->|"implements"| AGENT
     ACP -->|"implements"| AGENT
     PI -->|"implements"| AGENT
+    CUSTOM -->|"implements"| AGENT
 
     SDK -->|"hosts & manages"| AGENT
 
@@ -373,70 +345,46 @@ flowchart LR
     class ACP,PI,CUSTOM plugin
 ```
 
----
+> Plugins execute inside the daemon with its permissions: install only code you trust.
+> Add the integrations you need. Remove or disable the ones you do not use.
 
-# Clients (AHP)
-
-| Example                                          | Description                            |
-| ------------------------------------------------ | ------------------ |
-| [softov/ahpc](https://github.com/softov/ahpc)    | An Agent Host Protocol chat and CLI client, depending on no agent SDK at all |
+[Write a plugin](https://softov.github.io/ahpd/plugins/PLUGINS) · [Write an agent](https://softov.github.io/ahpd/sdk/AGENT) · [Smallest agent example](examples/echo)
 
 ---
 
-# AHP compatibility
+## Documentation
 
-`ahpd` targets `@microsoft/agent-host-protocol` **1.0.0**.
+The full documentation is at [softov.github.io/ahpd](https://softov.github.io/ahpd/).
 
-Summarised by area rather than by method, one row per area:
+| Document | Purpose |
+| --- | --- |
+| [Get started](docs/server/GET-STARTED.md) | Install, configure, start, and connect VS Code |
+| [Install](docs/server/INSTALL.md) | Install, and run on Node, Bun or Deno |
+| [Upgrade](docs/server/UPGRADE.md) | Upgrade the daemon and its plugins |
+| [Reference](docs/server/REFERENCE.md) | Every command and flag |
+| [Plugins](docs/server/PLUGINS.md) | Install, update, and configure plugins |
+| [Users](docs/server/USERS.md) | Users and authorization |
+| [Policy](docs/sdk/POLICY.md) | Who may use which agent, model and computer, and how much |
+| [Usage](docs/server/USAGE.md) | What each person, team and project has spent |
+| [Model proxy](docs/server/PROXY.md) | Call a model through the host with your ahpd token |
+| [Write a plugin](docs/plugins/PLUGINS.md) | The plugin contract, manifest and events |
+| [Write an agent](docs/sdk/AGENT.md) | The `Agent` and `Session` contracts |
+| [Build your own host](docs/sdk/BUILD-A-HOST.md) | `createHost` and the ports |
+| [AHP compatibility](docs/sdk/AHP.md) | What this host implements of AHP, command by command |
 
-| AHP area | | ahpd | Notes |
-| --- | :---: | --- | --- |
-| Handshake and channels | ✅ | `initialize`, `subscribe`, `reconnect` | A dropped client replays from its last `serverSeq` |
-| Sessions | ✅ | create, resume, dispose, catalogue | Past sessions come from the backend's own transcripts, resumed on the first turn |
-| Chats and turns | ✅ | turns, streaming, cancellation, tools | Several chats per session, each its own agent process |
-| Human in the loop | ✅ | tool confirmation, agent questions | `session/inputNeeded` is a list, so two asks are answered apart |
-| Session configuration | ✅ | model, permission mode, effort, output style, sandbox, shell init | A backend advertises its own keys, including the window's two platform ones |
-| Completions | ✅ | `/` commands, `@` files, config pickers | `branch`, plus any key a plugin registered an answerer for |
-| Resources | 🧩 | `resources` port | Anywhere the store reaches, and a write needs no grant first |
-| Client resources | ✅ | the same ten `resource*`, outbound | A client publishes a scheme and this host routes to it by URI authority |
-| Resource watches | 🧩 | `resources` port | Watch lifetime follows the subscription; the protocol has no dispose |
-| Terminals | 🧩 | `terminals` port | A real PTY with OSC 133 command detection where `node-pty` loads, or Bun's own on Bun 1.3.5 or newer (1.3.14 on Windows), pipes otherwise |
-| Changesets | 🧩 | `changes` port | The git implementation serves all four scopes and the working-tree operations |
-| Automations | 🧩 | `automations` port | Plus scheduled execution: cron in a named time zone, with nobody connected |
-| Annotations | ✅ | `annotations/*` | Client-origin: this host reduces and echoes, and refuses an id it does not hold |
-| Authentication | ✅ | connection token, `authenticate`, user directory | A token is per connection; `ahpd://users` is the one this host verifies itself |
-| Telemetry | ✅ | `otlp/export{Logs,Traces,Metrics}` | The daemon's own lines, a turn as a server span, cumulative counters |
+Every document is listed in [docs/README.md](docs/README.md), one line each.
 
-**✅ as specified · 🧩 through a host port · 🚧 partial · ➖ declared and not written · 🚫 deliberately not**
+---
 
-The implementation currently covers **33 of 33 declared commands** and **102 of 103 state actions**.
+## Development
 
-An unsupported operation returns `-32601`, not an empty success, so a client is never left waiting for state that will not arrive.
+Tips, PRs, and contributions are welcome!
 
-For the command-by-command compatibility matrix, see [`docs/sdk/AHP.md`](docs/sdk/AHP.md).
+Read [DEVELOPER.md](DEVELOPER.md) for detailed development guidelines.
 
-# Documentation
+Discuss development, issues, and ideas on the [GitHub Discussions](https://github.com/softov/ahpd/discussions) page.
 
-The documentation is a site at [softov.github.io/ahpd](https://softov.github.io/ahpd/). Every document under `docs/` is listed in [`docs/README.md`](docs/README.md), one line each.
-
-| Document                                   | Purpose                                                   |
-| ------------------------------------------ | --------------------------------------------------------- |
-| [docs/server/GET-STARTED.md](docs/server/GET-STARTED.md)           | Install, configure, start, and connect VS Code            |
-| [docs/server/INSTALL.md](docs/server/INSTALL.md)                   | Install, and run on Node, Bun or Deno                     |
-| [docs/server/UPGRADE.md](docs/server/UPGRADE.md)                   | Upgrade the daemon and its plugins                        |
-| [docs/server/REFERENCE.md](docs/server/REFERENCE.md)               | Every command and flag                                    |
-| [docs/sdk/BUILD-A-HOST.md](docs/sdk/BUILD-A-HOST.md) | Build your own host with `createHost` and the ports       |
-| [docs/sdk/AGENT.md](docs/sdk/AGENT.md)             | Building an `Agent` and `Session` contracts               |
-| [docs/sdk/AHP.md](docs/sdk/AHP.md)                 | Detailed AHP compatibility                                |
-| [`docs/plugins/PLUGINS.md`](docs/plugins/PLUGINS.md)       | Plugin system and authoring                               |
-| [docs/plugins/COMPUTERS.md](docs/plugins/COMPUTERS.md)       | Disposable computers (Docker)                             |
-| [docs/plugins/CONTAINERS.md](docs/plugins/CONTAINERS.md)   | Dev containers                                            |
-| [docs/sdk/USERS.md](docs/sdk/USERS.md)             | Users and authorization                                   |
-| [docs/sdk/POLICY.md](docs/sdk/POLICY.md)           | Who may use which agent, model and computer                |
-| [REFERENCE.md](REFERENCE.md)               | Protocol/reference-host decisions                         |
-| [DEVELOPER.md](DEVELOPER.md)               | How to run and develop the project from source            |
-
-# Development
+Any development starts with cloning or forking the repository and installing dependencies.
 
 ```bash
 git clone https://github.com/softov/ahpd
@@ -455,160 +403,18 @@ Protocol captures can be checked against the strict schema:
 pnpm wire -- packages/sdk/test/fixtures/wire.jsonl
 ```
 
-
 ---
 
-## Build your own host
+## Open source. Built for choice.
 
-The daemon is built on `@ahpd/sdk`.
+ahpd is open source and released under the MIT license.
 
-You can use the same library to embed an AHP host into another application.
+Run it on your own infrastructure. Choose your agents, configure your tools, and build the environment that works for you.
 
-### Minimal host
+Use it for a personal project, a development team, or an application that needs agent capabilities.
 
-```ts
-import { createHost, listen } from '@ahpd/sdk';
-import { claude } from '@ahpd/agent-claude';
+**Your infrastructure. Your agents. Your workflow.**
 
-const path = process.cwd();
+ahpd is part of ahpio, the Agent Host Platform. Get to know the whole platform at [ahpio.com](https://ahpio.com).
 
-const host = createHost({
-  path,
-  agents: [claude({ paths: [path] })]
-});
-
-await listen({ port: 9187 }, (peer) => host.accept(peer));
-```
-
-`createHost()` handles the protocol:
-
-* negotiation;
-* channels and subscriptions;
-* snapshots;
-* sequence numbers;
-* reconnects;
-* sessions and chats;
-* actions;
-* transcript paging.
-
-You provide the agents and whichever host capabilities you want to expose.
-
-### Add host capabilities
-
-```ts
-import {
-  createHost,
-  listen,
-  fileResources,
-  shellTerminals,
-  gitBranches,
-  gitChanges,
-  githubPullRequests,
-  memoryAutomations,
-  hostTools
-} from '@ahpd/sdk';
-
-import { claude } from '@ahpd/agent-claude';
-
-const path = process.cwd();
-
-const host = createHost({
-  path,
-  agents: [claude({ paths: [path] })],
-
-  resources: fileResources(),
-  terminals: shellTerminals(),
-  changes: gitChanges(),
-  directories: gitBranches(),
-  github: githubPullRequests(),
-  automations: memoryAutomations(),
-  tools: hostTools(),
-  onEvent: (line) => {
-    process.stdout.write(`${line}\n`);
-  }
-});
-```
-
-Only `path` and `agents` are required.
-
-Leave a port out and the operations that need it answer that they are unsupported.
-
-See [Build your own host](docs/sdk/BUILD-A-HOST.md) for the full guide.
-
----
-
-## Write an agent
-
-An agent is the backend: the thing that answers when somebody says something. The host already owns AHP, and imports no backend at all.
-
-An `Agent` is five required members:
-
-```ts
-import type { Agent, Session, Start } from '@ahpd/sdk';
-
-export function shout(): Agent {
-  return {
-    provider: 'shout',                   // what a client names in `createSession`
-    displayName: 'Shout',                // what a person reads instead of the id
-    schema: () => ({ properties: {} }),  // what a session can be told to do differently
-    defaults: () => ({}),                // where each key sits when nothing is chosen
-    create: (start) => converse(start),  // start one
-  };
-}
-```
-
-`create` returns a `Session`. A whole turn is three emits:
-
-```ts
-function converse(start: Start): Session {
-  return {
-    uri: start.uri,
-    chatUri: start.chatUri,
-    begin: (turnId, text) => {
-      const startedAt = new Date().toISOString();
-      start.emit('chat', { type: 'chat/turnStarted', turnId, startedAt, message: { text } });
-      start.emit('chat', { 
-        type: 'chat/responsePart', 
-        turnId,
-        part: { id: `${turnId}:0`, kind: 'markdown', content: text.toUpperCase() } 
-      });
-      start.emit('chat', { type: 'chat/turnComplete', turnId, duration: 0 });
-    },
-
-    // …and the rest of `Session`
-  } as Session;
-}
-```
-
-Register it like any other, and the host cannot tell it from `claude()`:
-
-```ts
-const host = createHost({ path, agents: [shout()] });
-```
-
-Everything else an `Agent` can declare is optional. See [`docs/sdk/AGENT.md`](docs/sdk/AGENT.md) for the full contracts, and [`examples/echo`](examples/echo) for the smallest one that runs.
-
----
-
-## Examples
-
-| Example                                    | Demonstrates                                               |
-| ------------------------------------------ | ---------------------------------------------------------- |
-| [`examples/echo`](examples/echo)           | Minimal `Agent` and `Session`, with no model or subprocess |
-| [`examples/notes`](examples/notes)         | The same with tools, permissions and agent questions       |
-
-```bash
-pnpm echo  -- --port 9200
-pnpm notes -- --port 9201
-
-ahpc --host ws://127.0.0.1:9201
-```
-
-See [DEVELOPER.md](DEVELOPER.md) for development guidelines, instructions and release workflow.
-
-# License
-
-MIT © Softov
-
-
-
+[Documentation](https://softov.github.io/ahpd/) · [Source Code](https://github.com/softov/ahpd) · [ahpio.com](https://ahpio.com)
