@@ -91,6 +91,7 @@ export type { Charge, ChargeOptions, ChargeRefusal, LimitFigure, LimitMember, Pa
 export { fileUsers, grantProblem, signInRecord } from './access/users.js';
 export type { FileUserOptions } from './access/users.js';
 export { tokenMethods } from './access/tokens.js';
+export { meMethods } from './access/me.js';
 export { peopleChannels, peopleProviders } from './access/people.js';
 export type { PeopleChannels, PeopleProvider } from './access/people.js';
 export { policyChannels, policyProviders } from './access/policy.js';

@@ -47,6 +47,7 @@ import {
   servedRecords,
   shellTerminals,
   signInRecord,
+  meMethods,
   tokenMethods,
   toolServers,
   usageMethods,
@@ -1274,6 +1275,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     ...(users === undefined
       ? {}
       : Object.fromEntries(Object.entries(tokenMethods(users)).map(([name, method]) => [name, { by: 'ahpd', name, method }]))),
+    // Who a connection is, beside the tokens and for the same reason: a host
+    // with no users file has nobody to answer about.
+    ...(users === undefined
+      ? {}
+      : Object.fromEntries(Object.entries(meMethods(users)).map(([name, method]) => [name, { by: 'ahpd', name, method }]))),
     /*
      * The update the desk asks for over AHP: the command's own steps, served by
      * this daemon so the restart is its own and waits for the answer to go.
