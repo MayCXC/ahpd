@@ -12,6 +12,13 @@ export interface Turns {
   queued: Bag[];
   /** Start the head of the queue, once there is nothing running. */
   startNext: () => void;
+  /**
+   * The running turn's prompt sent again, as it went out the first time.
+   *
+   * Under a new uuid, which the host is told, because the first may already be
+   * written under the old one.
+   */
+  again: () => Promise<void>;
   methods: {
     begin: (turnId: string, text: string, model?: Chosen, from?: MessageFrom, attachments?: MessageAttachment[], options?: TurnOptions) => void;
     setTitle: (title: string) => void;
@@ -89,6 +96,21 @@ export function createTurns(ctx: SessionContext): Turns {
     const uuid = !again && UUID.test(turnId) ? turnId : crypto.randomUUID();
     if (uuid !== turnId) ctx.options.onTurnRecorded?.(turnId, uuid);
     return uuid;
+  };
+
+  /**
+   * The running turn's prompt as it went to the CLI, with what rode on it.
+   *
+   * The text a side chat's first prompt carries is not the message's text, and
+   * a message's attachments are blocks of their own, so a prompt sent again is
+   * this rather than the turn's message.
+   */
+  let prompted: { turn: string; text: string; attachments?: MessageAttachment[] } | undefined;
+
+  const again = async (): Promise<void> => {
+    const turn = ctx.active === undefined ? undefined : String(ctx.active.id);
+    if (turn === undefined || prompted?.turn !== turn) return;
+    await push(prompted.text, prompted.attachments, writtenAs(turn, true));
   };
 
   /**
@@ -283,6 +305,7 @@ export function createTurns(ctx: SessionContext): Turns {
      */
     const sent = carried === undefined ? text : `${carried}\n\n${text}`;
     carried = undefined;
+    prompted = { turn: String(ctx.active.id), text: sent, ...(attachments === undefined ? {} : { attachments }) };
     await push(sent, attachments, writtenAs(String(ctx.active.id), false));
   };
 
@@ -675,6 +698,8 @@ export function createTurns(ctx: SessionContext): Turns {
       // And the calls a client is running for us, for the same reason: a
       // promise settled by somebody else is one a stopped turn still waits on.
       ctx.releaseCalls('The turn was stopped');
+      // And a move to another login, or the wait for one, which was this turn's.
+      ctx.stopMoving();
       void ctx.handle.interrupt().catch(() => {});
       /*
        * And the workers that turn spawned, foreground or background.
@@ -721,5 +746,5 @@ export function createTurns(ctx: SessionContext): Turns {
     },
   };
 
-  return { queued, startNext, methods };
+  return { queued, startNext, again, methods };
 }

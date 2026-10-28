@@ -70,6 +70,60 @@ export const ordered = (key: string, logins: Login[]): Login[] => logins
   .sort((a, b) => (a.score === b.score ? 0 : a.score > b.score ? -1 : 1))
   .map((one) => one.login);
 
+/** A refusal of a login, as the SDK said it: the assistant frame's `error`, and what a `rejected` rate-limit event named. */
+export interface Refusal {
+  /** `rate_limit` or `billing_error`. */
+  error: string;
+  /** When the refused window reopens, as the SDK's `resetsAt`. */
+  resetsAt?: number;
+  /** The window that refused, as the SDK's `rateLimitType`. */
+  window?: string;
+}
+
+/**
+ * How long a refused login cools down when nothing names its reset: meridian's default.
+ * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1517
+ */
+const DEFAULT_COOLDOWN_MS = 10 * 60_000;
+
+/**
+ * The longest a named reset is believed, for each window: meridian's guard
+ * against a garbage value, per window so a weekly reset is not cut to hours.
+ * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/routing.ts#L366-L389
+ */
+const COOLDOWN_CAP_MS: Record<string, number> = {
+  five_hour: 6 * 60 * 60_000,
+  seven_day: 8 * 24 * 60 * 60_000,
+};
+
+/**
+ * The SDK's `resetsAt` in epoch milliseconds.
+ *
+ * The SDK reports seconds and types the field as a bare number, so the unit is
+ * read off the value rather than assumed, as meridian reads it.
+ * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/rateLimitStore.ts#L52-L72
+ */
+const toEpochMs = (value: number | undefined): number | undefined => {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return undefined;
+  return value < 1e11 ? Math.round(value * 1000) : value;
+};
+
+/**
+ * When a refused login's cooldown ends.
+ *
+ * meridian's rule: a spent quota whose window is `five_hour` or `seven_day`
+ * cools down until the reset the refusal names, capped for that window; any
+ * other refusal, a billing one among them, cools down for 10 minutes.
+ * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1549-L1558
+ * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1756-L1764
+ */
+export const cooldownUntil = (refusal: Refusal, now: number): number => {
+  const reset = refusal.error === 'rate_limit' ? toEpochMs(refusal.resetsAt) : undefined;
+  const cap = refusal.window === undefined ? undefined : COOLDOWN_CAP_MS[refusal.window];
+  if (reset !== undefined && cap !== undefined && reset > now) return Math.min(reset, now + cap);
+  return now + DEFAULT_COOLDOWN_MS;
+};
+
 /**
  * The logins of one agent that are cooling down, and until when.
  *
