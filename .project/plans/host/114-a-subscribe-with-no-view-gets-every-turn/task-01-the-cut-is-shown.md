@@ -4,10 +4,10 @@ status: todo
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/test/host-catalogue.test.ts#L276-L379](../../../../packages/sdk/test/host-catalogue.test.ts#L276-L379) - the paging cases and their `opened` helper, which reads 120 turns from a Claude transcript"
+  - "[code://packages/sdk/test/host-catalogue.test.ts#L277-L380](../../../../packages/sdk/test/host-catalogue.test.ts#L277-L380) - the paging cases and their `opened` helper, which reads 120 turns from a Claude transcript"
   - "[code://packages/sdk/test/support/host.ts](../../../../packages/sdk/test/support/host.ts) - `serving` and `running`, the helpers the paging cases use"
-  - "[code://packages/sdk/src/host/snapshots.ts#L450-L467](../../../../packages/sdk/src/host/snapshots.ts#L450-L467) - the snapshot of a session's chat that is not running"
-  - "[code://packages/agent-claude/src/session.ts#L253](../../../../packages/agent-claude/src/session.ts#L253) - the cut in a live Claude chat"
+  - "[code://packages/sdk/src/host/snapshots.ts#L483-L500](../../../../packages/sdk/src/host/snapshots.ts#L483-L500) - the snapshot of a session's chat that is not running"
+  - "[code://packages/agent-claude/src/session.ts#L256](../../../../packages/agent-claude/src/session.ts#L256) - the cut in a live Claude chat"
 ---
 
 ## Objective
@@ -18,7 +18,7 @@ Softov runs the check by hand in [`pending/host-114-turn-cut-checks.md`](../../.
 
 ## Files
 
-- `UPDATE: packages/sdk/test/host-catalogue.test.ts:276-379` - two `it.fails` cases in `paging a long history` that expect every turn from a subscribe with no view.
+- `UPDATE: packages/sdk/test/host-catalogue.test.ts:277-380` - two `it.fails` cases in `paging a long history` that expect every turn from a subscribe with no view.
 
 ## Steps
 

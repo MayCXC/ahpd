@@ -1,12 +1,14 @@
 ---
 title: An edit to a computer bot waits for the computer
-status: todo
+status: dropped
 depends: [task-02-the-persona-is-read-from-agents-md.md]
 layer: "packages/bot, packages/computer"
 refs:
-  - "[code://packages/bot/src/wake.ts#L168](../../../../packages/bot/src/wake.ts#L168) - a bot with `computer` starts its back session there"
+  - "[code://packages/bot/src/wake.ts#L230](../../../../packages/bot/src/wake.ts#L230) - a bot with `computer` starts its back session there"
   - "[code://packages/computer/src/provider.ts](../../../../packages/computer/src/provider.ts) - the computer's provider"
 ---
+
+Dropped 2026-10-28: the task moved to [bots/01 task 04](../../bots/01-a-bot-runs-in-a-machine/task-04-an-edit-to-a-bot-on-a-machine-waits.md).
 
 ## Objective
 

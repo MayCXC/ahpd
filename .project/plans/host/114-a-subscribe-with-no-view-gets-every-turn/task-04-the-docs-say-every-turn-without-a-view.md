@@ -8,7 +8,7 @@ layer: docs
 refs:
   - "[code://docs/sdk/AHP.md#L81](../../../../docs/sdk/AHP.md#L81) - the `subscribe` row"
   - "[code://docs/sdk/AHP.md#L94](../../../../docs/sdk/AHP.md#L94) - the `fetchTurns` row, which says \"Newest 50 in the snapshot\""
-  - "[code://docs/sdk/CHATS.md#L87](../../../../docs/sdk/CHATS.md#L87) - the `fetchTurns` row of the chat page"
+  - "[code://docs/sdk/CHATS.md#L89](../../../../docs/sdk/CHATS.md#L89) - the `fetchTurns` row of the chat page"
   - "[code://UPSTREAM.md](../../../../UPSTREAM.md) - the Pass 7 box \"A chat subscription that names no `view` gets every retained turn\""
 ---
 
@@ -21,7 +21,7 @@ The Pass 7 box in `UPSTREAM.md` is ticked.
 
 - `UPDATE: docs/sdk/AHP.md:81` - the `subscribe` row says what a chat snapshot holds with and without `view`.
 - `UPDATE: docs/sdk/AHP.md:94` - the `fetchTurns` row names the window of a view, and what no cursor answers.
-- `UPDATE: docs/sdk/CHATS.md:87` - the `fetchTurns` row says that older turns exist only after a subscribe with a view.
+- `UPDATE: docs/sdk/CHATS.md:89` - the `fetchTurns` row says that older turns exist only after a subscribe with a view.
 - `UPDATE: UPSTREAM.md` - the Pass 7 box under "Large chats" is ticked, with the merge commit.
 
 ## Steps

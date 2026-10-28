@@ -15,8 +15,8 @@ refs:
   - "[code://packages/bot/src/provider.ts#L372-L391](../../packages/bot/src/provider.ts#L372-L391) - `mayLink` and `workspaceFor`"
   - "[code://packages/bot/src/provider.ts#L471-L547](../../packages/bot/src/provider.ts#L471-L547) - `write`, make and edit of a bot"
   - "[code://packages/bot/src/provider.ts#L562-L574](../../packages/bot/src/provider.ts#L562-L574) - `remove`, which leaves a tombstone"
-  - "[code://packages/bot/src/start.ts#L27-L37](../../packages/bot/src/start.ts#L27-L37) - `sessionFor`, the session a bot starts"
-  - "[code://packages/bot/src/preamble.ts#L16-L33](../../packages/bot/src/preamble.ts#L16-L33) - `botPreamble`, the filled template for each new chat"
+  - "[code://packages/bot/src/wake.ts#L221-L234](../../packages/bot/src/wake.ts#L221-L234) - `sessionFor`, the session a bot starts"
+  - "[code://packages/bot/src/template.ts#L59-L67](../../packages/bot/src/template.ts#L59-L67) - `firstTurn`, the filled template for each new chat"
   - "[code://packages/bot/src/catalogue.ts#L68-L193](../../packages/bot/src/catalogue.ts#L68-L193) - `botCatalogue`, the `x-ahpd-bots://` channel"
   - "[code://packages/bot/src/store.ts#L97-L244](../../packages/bot/src/store.ts#L97-L244) - `botStore`, the cache over the host record store"
   - git://d9d4f950^ - the deleted decisions this spec was written from: a-bot-colour-is-a-name-or-a-hex, a-bot-from-a-profile-gets-its-own-machine-and-a-named-machine-is-shared, a-bot-gets-its-session-by-a-link-or-at-make, a-bot-keeps-its-own-agent-state, a-bot-owns-one-folder, bot-records-live-in-the-bot-plugin, bots-are-watched-and-catalogued, the-bot-manifest-names-the-host-owner
@@ -155,5 +155,5 @@ AND the plugin sends each change to that bot to the watcher.
 
 A bot that names a computer profile does not get a machine of its own, and a bot has no agent state of its own.
 Removing a bot does not remove a machine.
-[Plan 47](../plans/plugin/47-a-bot-runs-in-a-machine/plan.md) (draft) gives each bot its own machine and its own agent state.
+[Plan bots/01](../plans/bots/01-a-bot-runs-in-a-machine/plan.md) (draft) gives each bot its own machine and its own agent state.
 It also checks a shared machine, and removes the machine of a bot that is removed.

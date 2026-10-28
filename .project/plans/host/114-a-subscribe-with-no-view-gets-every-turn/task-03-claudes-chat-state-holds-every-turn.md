@@ -5,11 +5,11 @@ depends:
   - task-02-a-snapshot-follows-the-subscribes-view.md
 layer: agent-claude
 refs:
-  - "[code://packages/agent-claude/src/session.ts#L242-L262](../../../../packages/agent-claude/src/session.ts#L242-L262) - `chatState()`, which cuts with `...tail(ctx.turns)`"
-  - "[code://packages/agent-acp/src/session.ts#L251](../../../../packages/agent-acp/src/session.ts#L251) - the sibling that gives every turn"
-  - "[code://packages/sdk/src/host/tooling.ts#L1427-L1437](../../../../packages/sdk/src/host/tooling.ts#L1427-L1437) - `get_session_context`, which reads `chatState()`"
+  - "[code://packages/agent-claude/src/session.ts#L245-L266](../../../../packages/agent-claude/src/session.ts#L245-L266) - `chatState()`, which cuts with `...tail(ctx.turns)`"
+  - "[code://packages/agent-acp/src/session.ts#L247](../../../../packages/agent-acp/src/session.ts#L247) - the sibling that gives every turn"
+  - "[code://packages/sdk/src/host/tooling.ts#L1637-L1652](../../../../packages/sdk/src/host/tooling.ts#L1637-L1652) - `get_session_context`, which reads `chatState()`"
   - "[code://packages/sdk/src/tools/session.ts#L630](../../../../packages/sdk/src/tools/session.ts#L630) - `transcriptLimit`, the cut that tool keeps"
-  - "[code://packages/sdk/test/host-catalogue.test.ts#L276-L379](../../../../packages/sdk/test/host-catalogue.test.ts#L276-L379) - the live case from task 01"
+  - "[code://packages/sdk/test/host-catalogue.test.ts#L277-L380](../../../../packages/sdk/test/host-catalogue.test.ts#L277-L380) - the live case from task 01"
 ---
 
 ## Objective
@@ -19,8 +19,8 @@ A subscribe with no view to a live Claude chat then gets every turn, and the hos
 
 ## Files
 
-- `UPDATE: packages/agent-claude/src/session.ts:242-262` - `chatState()` gives `turns: ctx.turns`, and the comment above it says the host cuts for a view.
-- `UPDATE: packages/sdk/test/host-catalogue.test.ts:276-379` - the live case from task 01 becomes `it`, and one case subscribes to a live chat with a view.
+- `UPDATE: packages/agent-claude/src/session.ts:245-266` - `chatState()` gives `turns: ctx.turns`, and the comment above it says the host cuts for a view.
+- `UPDATE: packages/sdk/test/host-catalogue.test.ts:277-380` - the live case from task 01 becomes `it`, and one case subscribes to a live chat with a view.
 
 ## Steps
 

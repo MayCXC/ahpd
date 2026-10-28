@@ -5,10 +5,10 @@ depends:
   - task-03-a-plugin-opens-a-canvas.md
 layer: "docs"
 refs:
-  - "[code://docs/plugins/PLUGINS.md#L160-L188](../../../../docs/plugins/PLUGINS.md#L160-L188) - the `PluginHost` method table"
+  - "[code://docs/plugins/PLUGINS.md#L189-L220](../../../../docs/plugins/PLUGINS.md#L189-L220) - the `PluginHost` method table"
   - "[code://docs/sdk/AHP.md](../../../../docs/sdk/AHP.md) - what this host serves of the protocol, and which root keys it reads"
   - "[code://docs/sdk/CHATS.md](../../../../docs/sdk/CHATS.md) - what a chat holds"
-  - "[code://UPSTREAM.md#L42](../../../../UPSTREAM.md#L42) - the Pass 7 canvas box"
+  - "[code://UPSTREAM.md#L40](../../../../UPSTREAM.md#L40) - the Pass 7 canvas box"
 ---
 
 ## Objective
@@ -18,10 +18,10 @@ The AHP docs say that this host serves the canvas channel to a connection at `0.
 
 ## Files
 
-- `UPDATE: docs/plugins/PLUGINS.md:160-188` - add `openCanvas`, `updateCanvas` and `closeCanvas`, and a short section after the table.
+- `UPDATE: docs/plugins/PLUGINS.md:189-220` - add `openCanvas`, `updateCanvas` and `closeCanvas`, and a short section after the table.
 - `UPDATE: docs/sdk/AHP.md` - add the canvas channel, the version gate and `canvasesEnabled`.
 - `UPDATE: docs/sdk/CHATS.md` - say that a chat lists its canvases and that a canvas goes with its chat.
-- `UPDATE: UPSTREAM.md:42` - tick the canvas box and name this plan.
+- `UPDATE: UPSTREAM.md:40` - tick the canvas box and name this plan.
 
 ## Steps
 

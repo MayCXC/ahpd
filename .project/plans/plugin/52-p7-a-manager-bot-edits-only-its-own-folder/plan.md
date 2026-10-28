@@ -1,7 +1,7 @@
 ---
 title: A manager bot edits only its own folder
 domain: plugin
-status: draft
+status: dropped
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-18
@@ -12,8 +12,10 @@ requires:
 changes: []
 creates: []
 refs:
-  - "[code://packages/bot/src/wake.ts#L202-L215](../../../../packages/bot/src/wake.ts#L202-L215) - `sessionFor`, which sets no permission mode"
+  - "[code://packages/bot/src/wake.ts#L221-L234](../../../../packages/bot/src/wake.ts#L221-L234) - `sessionFor`, which sets no permission mode"
 ---
+
+Dropped 2026-10-28: the plan moved to [bots/02](../../bots/02-a-manager-bot-edits-only-its-own-folder/plan.md) in the `bots` domain.
 
 ## Goal
 

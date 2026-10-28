@@ -4,7 +4,7 @@ domain: host
 status: draft
 priority: medium
 created: 2026-10-22
-revalidated: 2026-10-22
+revalidated: 2026-10-28
 problems:
   - problems/a-nested-chat-hands-on-an-older-inner-cut.md
 refs:
@@ -14,25 +14,25 @@ refs:
   - https://github.com/microsoft/agent-host-protocol/blob/main/types/channels-session/commands.ts - `FetchTurnsParams.cursor`: omit it "only when asking the host to opportunistically load its next older page for the chat, if any"
   - npm://@microsoft/agent-host-protocol@1.0.0 - the published `SubscribeView` has the same MUST, so the rule is in the version ahpd speaks
   - "[code://packages/sdk/src/sessions/paging.ts#L22-L56](../../../../packages/sdk/src/sessions/paging.ts#L22-L56) - `PAGE` is 50, `tail` gives the newest page and a cursor, `older` gives the page before a cursor"
-  - "[code://packages/sdk/src/host/sessionmethods.ts#L361-L378](../../../../packages/sdk/src/host/sessionmethods.ts#L361-L378) - `subscribe`, which never reads `params.view` and calls `snapshotOf` without it"
+  - "[code://packages/sdk/src/host/sessionmethods.ts#L380-L434](../../../../packages/sdk/src/host/sessionmethods.ts#L380-L434) - `subscribe`, which never reads `params.view` and calls `snapshotOf` without it"
   - "[code://packages/sdk/src/host/snapshots.ts#L73](../../../../packages/sdk/src/host/snapshots.ts#L73) - `snapshotOf(channel, mine, connection)`, which has no place for a view"
-  - "[code://packages/sdk/src/host/snapshots.ts#L310-L346](../../../../packages/sdk/src/host/snapshots.ts#L310-L346) - a live chat's snapshot, which takes the turns the backend's `chatState()` gives"
-  - "[code://packages/sdk/src/host/snapshots.ts#L399-L467](../../../../packages/sdk/src/host/snapshots.ts#L399-L467) - a chat that is not running: a peer chat, a worker chat and the session's chat, each cut with `tail`"
-  - "[code://packages/agent-claude/src/session.ts#L242-L262](../../../../packages/agent-claude/src/session.ts#L242-L262) - Claude's `chatState()`, which cuts its turns with `...tail(ctx.turns)` at line 253"
-  - "[code://packages/agent-acp/src/session.ts#L251](../../../../packages/agent-acp/src/session.ts#L251) - the ACP backend's `chatState()` gives every turn"
-  - "[code://packages/agent-pi/src/session.ts#L1162](../../../../packages/agent-pi/src/session.ts#L1162) - the pi backend's `chatState()` gives every turn"
-  - "[code://packages/agent-cofold/src/session.ts#L276](../../../../packages/agent-cofold/src/session.ts#L276) - the cofold backend's `chatState()` gives every turn"
-  - "[code://packages/bot/src/chat.ts#L896](../../../../packages/bot/src/chat.ts#L896) - a bot chat's `chatState()` gives every turn"
-  - "[code://packages/sdk/src/host/sessionmethods.ts#L425-L480](../../../../packages/sdk/src/host/sessionmethods.ts#L425-L480) - `fetchTurns`, which reads every turn from `allTurns()` or the transcript, and pages from the cursor"
-  - "[code://packages/sdk/src/host/sessionmethods.ts#L455](../../../../packages/sdk/src/host/sessionmethods.ts#L455) - with no cursor, `fetchTurns` starts at `tail(all).turnsNextCursor`, which assumes the snapshot was the newest `PAGE`"
+  - "[code://packages/sdk/src/host/snapshots.ts#L322-L351](../../../../packages/sdk/src/host/snapshots.ts#L322-L351) - a live chat's snapshot, which takes the turns the backend's `chatState()` gives"
+  - "[code://packages/sdk/src/host/snapshots.ts#L411-L500](../../../../packages/sdk/src/host/snapshots.ts#L411-L500) - a chat that is not running: a peer chat, a worker chat and the session's chat, each cut with `tail`"
+  - "[code://packages/agent-claude/src/session.ts#L245-L266](../../../../packages/agent-claude/src/session.ts#L245-L266) - Claude's `chatState()`, which cuts its turns with `...tail(ctx.turns)` at line 256"
+  - "[code://packages/agent-acp/src/session.ts#L247](../../../../packages/agent-acp/src/session.ts#L247) - the ACP backend's `chatState()` gives every turn"
+  - "[code://packages/agent-pi/src/session.ts#L1264](../../../../packages/agent-pi/src/session.ts#L1264) - the pi backend's `chatState()` gives every turn"
+  - "[code://packages/agent-cofold/src/session.ts#L316](../../../../packages/agent-cofold/src/session.ts#L316) - the cofold backend's `chatState()` gives every turn"
+  - "[code://packages/bot/src/chat.ts#L894](../../../../packages/bot/src/chat.ts#L894) - a bot chat's `chatState()` gives every turn"
+  - "[code://packages/sdk/src/host/sessionmethods.ts#L444-L500](../../../../packages/sdk/src/host/sessionmethods.ts#L444-L500) - `fetchTurns`, which reads every turn from `allTurns()` or the transcript, and pages from the cursor"
+  - "[code://packages/sdk/src/host/sessionmethods.ts#L474](../../../../packages/sdk/src/host/sessionmethods.ts#L474) - with no cursor, `fetchTurns` starts at `tail(all).turnsNextCursor`, which assumes the snapshot was the newest `PAGE`"
   - "[code://packages/sdk/src/host/handshake.ts#L217](../../../../packages/sdk/src/host/handshake.ts#L217) - the snapshots of `initialSubscriptions`, which name only URIs"
   - "[code://packages/sdk/src/host/handshake.ts#L444-L490](../../../../packages/sdk/src/host/handshake.ts#L444-L490) - the snapshots of a `reconnect`, which names only URIs"
-  - "[code://packages/sdk/src/host/tooling.ts#L1427-L1437](../../../../packages/sdk/src/host/tooling.ts#L1427-L1437) - `get_session_context` reads `chatState()`, and says `hasMoreHistory` when a cursor is there"
+  - "[code://packages/sdk/src/host/tooling.ts#L1637-L1652](../../../../packages/sdk/src/host/tooling.ts#L1637-L1652) - `get_session_context` reads `chatState()`, and says `hasMoreHistory` when a cursor is there"
   - "[code://packages/sdk/src/tools/session.ts#L630](../../../../packages/sdk/src/tools/session.ts#L630) - `transcriptLimit`, which already cuts that tool's transcript to at most 50 turns"
-  - "[code://packages/sdk/src/sessions/nested.ts#L951-L981](../../../../packages/sdk/src/sessions/nested.ts#L951-L981) - a nested chat gives the inner host's turns and cursor as they came"
+  - "[code://packages/sdk/src/sessions/nested.ts#L1063](../../../../packages/sdk/src/sessions/nested.ts#L1063) - a nested chat gives the inner host's turns and cursor as they came"
   - "[code://packages/sdk/src/rpc.ts#L166](../../../../packages/sdk/src/rpc.ts#L166) - a client whose queue is past `clientQueueBytes` is closed at the next send"
-  - "[code://packages/sdk/test/host-catalogue.test.ts#L276-L379](../../../../packages/sdk/test/host-catalogue.test.ts#L276-L379) - the paging cases, which expect 50 turns and cursor `70` from a subscribe with no view"
-  - "[code://packages/sdk/test/sessions.test.ts#L1110-L1131](../../../../packages/sdk/test/sessions.test.ts#L1110-L1131) - the oldest-page case, which sends `fetchTurns` with no cursor to a chat whose snapshot was whole"
+  - "[code://packages/sdk/test/host-catalogue.test.ts#L277-L380](../../../../packages/sdk/test/host-catalogue.test.ts#L277-L380) - the paging cases, which expect 50 turns and cursor `70` from a subscribe with no view"
+  - "[code://packages/sdk/test/sessions.test.ts#L1182-L1203](../../../../packages/sdk/test/sessions.test.ts#L1182-L1203) - the oldest-page case, which sends `fetchTurns` with no cursor to a chat whose snapshot was whole"
   - "[code://docs/sdk/AHP.md#L94](../../../../docs/sdk/AHP.md#L94) - the `fetchTurns` row says \"Newest 50 in the snapshot and a cursor for the rest\""
   - "[code://UPSTREAM.md](../../../../UPSTREAM.md) - Pass 7, \"Large chats\", holds the box this plan closes"
   - https://github.com/microsoft/vscode/blob/1.143.1/src/vs/platform/agentHost/node/protocolServerHandler.ts - VS Code's host reads no `view` at subscribe, and answers `fetchTurns` with an empty `chat/turnsLoaded`
@@ -57,7 +57,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `git grep -n "tail(\|older(\|PAGE\b\|turnsNextCursor\|fetchTurns\|params.view" -- packages` - `tail` is called at `snapshots.ts` lines 411, 440 and 459 and at `agent-claude/src/session.ts` line 253. `fetchTurns` calls `tail` and `older`. No file reads `view`.
+- `git grep -n "tail(\|older(\|PAGE\b\|turnsNextCursor\|fetchTurns\|params.view" -- packages` - `tail` is called at `snapshots.ts` lines 444, 473 and 492 and at `agent-claude/src/session.ts` line 256. `fetchTurns` calls `tail` and `older`. No file reads `view`.
 - `git grep -n "chatState: () =>" -- packages` - only `agent-claude` cuts its turns. `agent-acp`, `agent-pi`, `agent-cofold`, `bot` and the nested chat give every turn they hold.
 - `git grep -n "snapshotOf(" -- packages/sdk/src` - four callers: `subscribe`, the `initialSubscriptions` of `initialize`, and two in `reconnect`. Only `subscribe` has a `view` to give.
 - `git grep -n "fetchTurns\|turnsNextCursor\|view" ` in ahpc and ahpw - neither client sends `view`. Both send `fetchTurns` only while the state carries a cursor, and ahpc also when a snapshot has no turns.
@@ -92,7 +92,7 @@ subscribe {channel: ahp-chat:/..., view?} -> sessionmethods.subscribe -> snapsho
 | With no `view`, a chat snapshot has every turn and no `turnsNextCursor` | https://github.com/microsoft/agent-host-protocol/blob/main/types/common/commands.ts `SubscribeView.turns` | 02, 03 |
 | The turns a host keeps are the ones `fetchTurns` can page: the backend's `allTurns()` for a live chat, the transcript for a chat that is not running | [code://packages/sdk/src/host/sessionmethods.ts#L449](../../../../packages/sdk/src/host/sessionmethods.ts#L449) | 02 |
 | `initialSubscriptions` and `reconnect` give no view, so their chat snapshots have every turn | https://github.com/microsoft/agent-host-protocol/blob/main/types/common/commands.ts `InitializeParams.initialSubscriptions` and `ReconnectParams.subscriptions` are URIs only | 02 |
-| The host applies the view, and Claude's `chatState()` gives every turn, as the other backends do | [code://packages/agent-acp/src/session.ts#L251](../../../../packages/agent-acp/src/session.ts#L251), [code://packages/agent-pi/src/session.ts#L1162](../../../../packages/agent-pi/src/session.ts#L1162), [code://packages/bot/src/chat.ts#L896](../../../../packages/bot/src/chat.ts#L896) | 02, 03 |
+| The host applies the view, and Claude's `chatState()` gives every turn, as the other backends do | [code://packages/agent-acp/src/session.ts#L247](../../../../packages/agent-acp/src/session.ts#L247), [code://packages/agent-pi/src/session.ts#L1264](../../../../packages/agent-pi/src/session.ts#L1264), [code://packages/bot/src/chat.ts#L894](../../../../packages/bot/src/chat.ts#L894) | 02, 03 |
 | `get_session_context` keeps its own cut, `transcriptLimit`, and gets no change | [code://packages/sdk/src/tools/session.ts#L630](../../../../packages/sdk/src/tools/session.ts#L630), and VS Code's `sessionServerTools.ts` does the same | 03 |
 | A subscribe that names `view.turns` gets the newest `view.turns` turns, and a cursor when older turns are left. A value that is not a positive integer gets the newest `PAGE` | Softov, 2026-10-22: "Newest N plus a cursor" | 02, 03 |
 | `fetchTurns` with no cursor answers with nothing older and sends no action | Softov, 2026-10-22: "Nothing older" | 02 |
@@ -128,10 +128,10 @@ subscribe {channel: ahp-chat:/..., view?} -> sessionmethods.subscribe -> snapsho
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-22 from Softov's choice of the Pass 7 finding. Softov answered the three open questions on 2026-10-22. The check by hand is written in [`pending/host-114-turn-cut-checks.md`](../../../pending/host-114-turn-cut-checks.md).
+- **Done so far:** drafted 2026-10-22 from Softov's choice of the Pass 7 finding. The refs were checked against main `343ca825` on 2026-10-28, and the gap is still there. Softov answered the three open questions on 2026-10-22. The check by hand is written in [`pending/host-114-turn-cut-checks.md`](../../../pending/host-114-turn-cut-checks.md).
 - **Next action:** [task-01-the-cut-is-shown.md](task-01-the-cut-is-shown.md).
 - **Open questions:** none.
-- **Watch out for:** the number 113 is taken by another host plan, so this plan is 114. The `index.md` row is not written yet. The paging cases in `host-catalogue.test.ts` must still cover the cursor, so they subscribe with a view after task 02.
+- **Watch out for:** the number 113 is taken by another host plan, so this plan is 114. The paging cases in `host-catalogue.test.ts` must still cover the cursor, so they subscribe with a view after task 02.
 
 ## Final verification checklist
 

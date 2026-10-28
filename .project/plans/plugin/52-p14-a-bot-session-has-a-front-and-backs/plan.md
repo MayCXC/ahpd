@@ -1,7 +1,7 @@
 ---
 title: A bot session has a Front, Backs and wakes
 domain: plugin
-status: draft
+status: dropped
 priority: medium
 created: 2026-10-22
 revalidated: 2026-10-22
@@ -12,15 +12,15 @@ changes:
   - specs/bots.md
 creates: []
 refs:
-  - "[code://packages/bot/src/wake.ts#L202-L215](../../../../packages/bot/src/wake.ts#L202-L215) - `sessionFor`, the request a Back session is started from today; it sets no permission mode"
-  - "[code://packages/bot/src/wake.ts#L272-L310](../../../../packages/bot/src/wake.ts#L272-L310) - `sessionNamed`, one Back session for each bot, person and name"
-  - "[code://packages/bot/src/chat.ts#L436](../../../../packages/bot/src/chat.ts#L436) - `botChatAgent`, the provider of the Front"
-  - "[code://packages/bot/src/post.ts#L44-L80](../../../../packages/bot/src/post.ts#L44-L80) - `post_message`, which posts only to the Front that woke the Back"
+  - "[code://packages/bot/src/wake.ts#L221-L234](../../../../packages/bot/src/wake.ts#L221-L234) - `sessionFor`, the request a Back session is started from today; it sets no permission mode"
+  - "[code://packages/bot/src/wake.ts#L323-L392](../../../../packages/bot/src/wake.ts#L323-L392) - `sessionNamed`, one Back session for each bot, person and name"
+  - "[code://packages/bot/src/chat.ts#L450](../../../../packages/bot/src/chat.ts#L450) - `botChatAgent`, the provider of the Front"
+  - "[code://packages/bot/src/post.ts#L44-L89](../../../../packages/bot/src/post.ts#L44-L89) - `post_message`, which posts only to the Front that woke the Back"
   - "[code://packages/bot/src/context.ts](../../../../packages/bot/src/context.ts) - `contextBlock`, the shape the wake templates keep"
-  - "[code://packages/bot/src/template.ts#L91-L115](../../../../packages/bot/src/template.ts#L91-L115) - the shipped `AGENTS.md` template, the pattern the wake templates copy"
+  - "[code://packages/bot/src/template.ts#L85-L106](../../../../packages/bot/src/template.ts#L85-L106) - the shipped `AGENTS.md` template, the pattern the wake templates copy"
   - "[code://packages/sdk/src/types/triggers.ts#L24](../../../../packages/sdk/src/types/triggers.ts#L24) - the `childFinished` event kind"
   - "[code://packages/sdk/src/host/sessionevents.ts#L160-L171](../../../../packages/sdk/src/host/sessionevents.ts#L160-L171) - the host emits `childFinished` on the parent session"
-  - "[code://packages/sdk/src/tools/session.ts#L447](../../../../packages/sdk/src/tools/session.ts#L447) - `create_session`, whose relationship decides the parent"
+  - "[code://packages/sdk/src/tools/session.ts#L446](../../../../packages/sdk/src/tools/session.ts#L446) - `create_session`, whose relationship decides the parent"
   - "[code://packages/sdk/src/host/routing.ts#L46](../../../../packages/sdk/src/host/routing.ts#L46) - a chat session is routed like any session, so VS Code lists it"
   - "[code://docs/sdk/SESSIONS.md](../../../../docs/sdk/SESSIONS.md) - session grants are by role, and a session has no member list"
   - "[code://.project/plans/plugin/52-p4-a-group-chat-has-members-and-mentions/plan.md](../../../../.project/plans/plugin/52-p4-a-group-chat-has-members-and-mentions/plan.md) - dropped draft merged here: group chats"
@@ -28,6 +28,8 @@ refs:
   - "[code://.project/plans/plugin/52-p9-front-and-back-are-chats-of-one-session/plan.md](../../../../.project/plans/plugin/52-p9-front-and-back-are-chats-of-one-session/plan.md) - dropped draft merged here: Front and Back"
   - "[code://.project/plans/plugin/52-p11-a-bot-has-a-private-session/plan.md](../../../../.project/plans/plugin/52-p11-a-bot-has-a-private-session/plan.md) - dropped draft merged here: the private session and the wake templates"
 ---
+
+Dropped 2026-10-28: the plan moved to [bots/04](../../bots/04-a-bot-session-has-a-front-and-backs/plan.md) in the `bots` domain.
 
 ## Goal
 

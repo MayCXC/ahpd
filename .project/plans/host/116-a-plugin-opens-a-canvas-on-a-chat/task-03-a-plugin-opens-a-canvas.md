@@ -5,12 +5,14 @@ depends:
   - task-02-the-host-keeps-the-canvases-of-a-chat.md
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/types/plugin.ts#L740-L746](../../../../packages/sdk/src/types/plugin.ts#L740-L746) - `sessionOwner`, a late-bound call with its comment"
-  - "[code://packages/sdk/src/types/plugin.ts#L855-L891](../../../../packages/sdk/src/types/plugin.ts#L855-L891) - `planChanged` and `sessionMetaChanged`, the calls to put the new ones beside"
-  - "[code://packages/sdk/src/plugins/plugins.ts#L1276-L1287](../../../../packages/sdk/src/plugins/plugins.ts#L1276-L1287) - `planChanged`, which throws by name until a host fills it in"
-  - "[code://packages/sdk/src/host/facts.ts#L598-L601](../../../../packages/sdk/src/host/facts.ts#L598-L601) - the host fills a late-bound call in after the fold"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L1570-L1579](../../../../packages/sdk/src/plugins/plugins.ts#L1570-L1579) - `registerClose`, which adds a closer that runs when the plugin unloads"
+  - "[code://packages/server/src/plugins.ts#L2011-L2030](../../../../packages/server/src/plugins.ts#L2011-L2030) - `unload`, which runs the closers of a plugin while the daemon runs"
+  - "[code://packages/sdk/src/types/plugin.ts#L943](../../../../packages/sdk/src/types/plugin.ts#L943) - `sessionOwner`, a late-bound call with its comment"
+  - "[code://packages/sdk/src/types/plugin.ts#L1081-L1096](../../../../packages/sdk/src/types/plugin.ts#L1081-L1096) - `planChanged` and `sessionMetaChanged`, the calls to put the new ones beside"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L1476-L1486](../../../../packages/sdk/src/plugins/plugins.ts#L1476-L1486) - `planChanged`, which throws by name until a host fills it in"
+  - "[code://packages/sdk/src/host/facts.ts#L610-L620](../../../../packages/sdk/src/host/facts.ts#L610-L620) - the host fills a late-bound call in after the fold"
   - "[code://packages/sdk/src/host/trust.ts#L172](../../../../packages/sdk/src/host/trust.ts#L172) - a root key read from `rootConfig`"
-  - "[code://packages/sdk/src/vscoderootconfig.ts#L205-L211](../../../../packages/sdk/src/vscoderootconfig.ts#L205-L211) - `canvasesEnabled` and its comment"
+  - "[code://packages/sdk/src/vscoderootconfig.ts#L206-L211](../../../../packages/sdk/src/vscoderootconfig.ts#L206-L211) - `canvasesEnabled` and its comment"
   - https://github.com/microsoft/vscode/blob/e646868227c/src/vs/platform/agentHost/node/agentService.ts#L6005-L6048 - `_assertCanvasesEnabled` and its message
   - https://github.com/microsoft/vscode/blob/e646868227c/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L4303-L4320 - `_canvasSource`, the http(s) check
 ---
@@ -22,11 +24,11 @@ Each call goes to the host's canvas store and refuses a bad argument by name.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/types/plugin.ts:855-891` - declare the three calls, with a comment on each.
-- `UPDATE: packages/sdk/src/plugins/plugins.ts:1276-1287` - add the three calls beside `planChanged`, and send each to the host's store with the plugin's name.
-- `UPDATE: packages/sdk/src/host/facts.ts:598-601` - fill the store in for every plugin after the fold.
+- `UPDATE: packages/sdk/src/types/plugin.ts:1081-1096` - declare the three calls, with a comment on each.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:1476-1486` - add the three calls beside `planChanged`, and send each to the host's store with the plugin's name.
+- `UPDATE: packages/sdk/src/host/facts.ts:610-620` - fill the store in for every plugin after the fold.
 - `UPDATE: packages/sdk/src/host/canvases.ts` - check the arguments, the owner and `canvasesEnabled`.
-- `UPDATE: packages/sdk/src/vscoderootconfig.ts:205-211` - say that this host reads `canvasesEnabled`.
+- `UPDATE: packages/sdk/src/vscoderootconfig.ts:206-211` - say that this host reads `canvasesEnabled`.
 - `CREATE: packages/sdk/test/plugin-canvases.test.ts` - the three calls through a plugin.
 
 ## Steps
@@ -40,7 +42,8 @@ Each call goes to the host's canvas store and refuses a bad argument by name.
 7. Refuse a state with no `instanceId`, `extensionId` or `canvasId`.
 8. Refuse a `url` that is not absolute http(s) with an authority, and do not write the `url` in the error.
 9. Refuse an update or a close from a plugin that did not open the canvas.
-10. Add the three calls to the list of calls in the `vscoderootconfig.ts` header comment.
+10. Add a closer to the plugin that closes each canvas the plugin opened.
+11. Add the three calls to the list of calls in the `vscoderootconfig.ts` header comment.
 
 ## Validation
 
@@ -51,6 +54,7 @@ Each call goes to the host's canvas store and refuses a bad argument by name.
 - `plugin-canvases.test.ts`: a `file:` url, a relative url and a chat that is not live are each refused.
 - `plugin-canvases.test.ts`: a second plugin cannot update or close the first plugin's canvas.
 - `plugin-canvases.test.ts`: `closeCanvas` twice does nothing the second time.
+- `plugin-canvases.test.ts`: an unload of the plugin closes its canvases, and the chat lists none.
 - Run `pnpm --filter @ahpd/sdk test` and expect every case to pass.
 - Run `git checkout -- packages/sdk/test/fixtures/wire.jsonl` after the run.
 

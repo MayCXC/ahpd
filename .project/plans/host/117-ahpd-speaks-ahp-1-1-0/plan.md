@@ -128,8 +128,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-22.
-- **Next action:** [task-01-the-1-1-0-package-is-installed.md](task-01-the-1-1-0-package-is-installed.md), when `npm view @microsoft/agent-host-protocol@1.1.0` answers.
+- **Done so far:** the plan, 2026-10-22. Softov deferred the plan on 2026-10-28. AHP 1.1.0 is not on npm on that date, and the newest version is 1.0.0.
+- **Next action:** none until Softov takes the plan back up. Then [task-01-the-1-1-0-package-is-installed.md](task-01-the-1-1-0-package-is-installed.md), when `npm view @microsoft/agent-host-protocol@1.1.0` answers.
 - **Open questions:** none.
 - **Watch out for:** `isActionKnownToVersion` says `chat/configChanged` is 1.1.0. Do not use it to hold the action back, since the window sends it on 1.0.0.
 

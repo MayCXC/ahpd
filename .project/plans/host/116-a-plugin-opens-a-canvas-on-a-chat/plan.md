@@ -4,35 +4,35 @@ domain: host
 status: draft
 priority: medium
 created: 2026-10-22
-revalidated: 2026-10-22
+revalidated: 2026-10-28
 requires: []
 changes: []
 creates: []
 decisions: []
 refs:
-  - "[code://packages/sdk/src/host.ts#L582-L610](../../../../packages/sdk/src/host.ts#L582-L610) - `seenBy`, the one per-connection filter for the live broadcast and both replay paths"
-  - "[code://packages/sdk/src/host.ts#L677-L715](../../../../packages/sdk/src/host.ts#L677-L715) - `emit`, which keeps the replay buffer and broadcasts through `seenBy`"
-  - "[code://packages/sdk/src/host.ts#L733-L760](../../../../packages/sdk/src/host.ts#L733-L760) - `dispatch`, the call a host-owned chat action goes through"
+  - "[code://packages/sdk/src/host.ts#L622-L686](../../../../packages/sdk/src/host.ts#L622-L686) - `seenBy`, the one per-connection filter for the live broadcast and both replay paths"
+  - "[code://packages/sdk/src/host.ts#L717-L755](../../../../packages/sdk/src/host.ts#L717-L755) - `emit`, which keeps the replay buffer and broadcasts through `seenBy`"
+  - "[code://packages/sdk/src/host.ts#L773-L823](../../../../packages/sdk/src/host.ts#L773-L823) - `dispatch`, the call a host-owned chat action goes through"
   - "[code://packages/sdk/src/host/handshake.ts#L149-L227](../../../../packages/sdk/src/host/handshake.ts#L149-L227) - the negotiation; `agreed` is logged and answered, and the connection does not keep it"
-  - "[code://packages/sdk/src/types/host.ts#L998-L1030](../../../../packages/sdk/src/types/host.ts#L998-L1030) - `Connection`, which has no protocol version field"
+  - "[code://packages/sdk/src/types/host.ts#L1084-L1175](../../../../packages/sdk/src/types/host.ts#L1084-L1175) - `Connection`, which has no protocol version field"
   - "[code://packages/sdk/src/host/snapshots.ts#L73-L90](../../../../packages/sdk/src/host/snapshots.ts#L73-L90) - `snapshotOf`, which answers a plugin channel by its scheme: the place for the `ahp-canvas:` branch"
-  - "[code://packages/sdk/src/host/snapshots.ts#L310-L335](../../../../packages/sdk/src/host/snapshots.ts#L310-L335) - the chat snapshot, with `movable` laid over the backend's state: the pattern for `canvases`"
-  - "[code://packages/sdk/src/host/catalogue.ts#L224-L243](../../../../packages/sdk/src/host/catalogue.ts#L224-L243) - `movableMoved` dispatches `chat/movableChanged`: the host-owned chat action to mirror"
-  - "[code://packages/sdk/src/host/routing.ts#L392-L397](../../../../packages/sdk/src/host/routing.ts#L392-L397) - `channelKind` reads an unclaimed `ahp-` channel as `other`"
+  - "[code://packages/sdk/src/host/snapshots.ts#L322-L351](../../../../packages/sdk/src/host/snapshots.ts#L322-L351) - the chat snapshot, with `movable` laid over the backend's state: the pattern for `canvases`"
+  - "[code://packages/sdk/src/host/catalogue.ts#L218-L252](../../../../packages/sdk/src/host/catalogue.ts#L218-L252) - `movableMoved` dispatches `chat/movableChanged`: the host-owned chat action to mirror"
+  - "[code://packages/sdk/src/host/routing.ts#L391-L396](../../../../packages/sdk/src/host/routing.ts#L391-L396) - `channelKind` reads an unclaimed `ahp-` channel as `other`"
   - "[code://packages/sdk/src/host/channels.ts#L37-L44](../../../../packages/sdk/src/host/channels.ts#L37-L44) - `spaceOf` puts `ahp-canvas` in the host's own space"
   - "[code://packages/sdk/src/host/channels.ts#L77-L81](../../../../packages/sdk/src/host/channels.ts#L77-L81) - `URI_KEYS` holds `resource` and `url`, which `respelledIn` rewrites"
-  - "[code://packages/sdk/src/host/sessionmethods.ts#L198-L206](../../../../packages/sdk/src/host/sessionmethods.ts#L198-L206) - a chat moved to another session leaves `byChat`"
-  - "[code://packages/sdk/src/host/sessionmethods.ts#L1336-L1341](../../../../packages/sdk/src/host/sessionmethods.ts#L1336-L1341) - a removed session disposes its chats"
-  - "[code://packages/sdk/src/host/lifecycle.ts#L228-L238](../../../../packages/sdk/src/host/lifecycle.ts#L228-L238) - a closed session lets its chats go"
+  - "[code://packages/sdk/src/host/sessionmethods.ts#L214-L223](../../../../packages/sdk/src/host/sessionmethods.ts#L214-L223) - a chat moved to another session leaves `byChat`"
+  - "[code://packages/sdk/src/host/sessionmethods.ts#L1468-L1474](../../../../packages/sdk/src/host/sessionmethods.ts#L1468-L1474) - a removed session disposes its chats"
+  - "[code://packages/sdk/src/host/lifecycle.ts#L241-L262](../../../../packages/sdk/src/host/lifecycle.ts#L241-L262) - a closed session lets its chats go"
   - "[code://packages/sdk/src/host/trust.ts#L172](../../../../packages/sdk/src/host/trust.ts#L172) - a root key read from `rootConfig`: the pattern for `canvasesEnabled`"
-  - "[code://packages/sdk/src/vscoderootconfig.ts#L205-L211](../../../../packages/sdk/src/vscoderootconfig.ts#L205-L211) - `canvasesEnabled`, declared with default `false` and read by nothing"
-  - "[code://packages/sdk/src/types/plugin.ts#L740-L746](../../../../packages/sdk/src/types/plugin.ts#L740-L746) - `sessionOwner`, a late-bound call on `PluginHost`"
-  - "[code://packages/sdk/src/types/plugin.ts#L855-L891](../../../../packages/sdk/src/types/plugin.ts#L855-L891) - `planChanged` and `sessionMetaChanged`, the calls that throw until a host is built"
-  - "[code://packages/sdk/src/plugins/plugins.ts#L1276-L1287](../../../../packages/sdk/src/plugins/plugins.ts#L1276-L1287) - `planChanged`, which throws by name when no host filled `changed` in"
-  - "[code://packages/sdk/src/host/facts.ts#L598-L601](../../../../packages/sdk/src/host/facts.ts#L598-L601) - the host fills a plugin's late-bound call in after the fold"
+  - "[code://packages/sdk/src/vscoderootconfig.ts#L206-L211](../../../../packages/sdk/src/vscoderootconfig.ts#L206-L211) - `canvasesEnabled`, declared with default `false` and read by nothing"
+  - "[code://packages/sdk/src/types/plugin.ts#L943](../../../../packages/sdk/src/types/plugin.ts#L943) - `sessionOwner`, a late-bound call on `PluginHost`"
+  - "[code://packages/sdk/src/types/plugin.ts#L1081-L1096](../../../../packages/sdk/src/types/plugin.ts#L1081-L1096) - `planChanged` and `sessionMetaChanged`, the calls that throw until a host is built"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L1476-L1486](../../../../packages/sdk/src/plugins/plugins.ts#L1476-L1486) - `planChanged`, which throws by name when no host filled `changed` in"
+  - "[code://packages/sdk/src/host/facts.ts#L610-L620](../../../../packages/sdk/src/host/facts.ts#L610-L620) - the host fills a plugin's late-bound call in after the fold"
   - "[code://packages/sdk/test/host-handshake.test.ts#L37-L62](../../../../packages/sdk/test/host-handshake.test.ts#L37-L62) - the test that proves ahpd sends no canvas action, which this plan replaces"
-  - "[code://packages/server/src/pluginschannel.ts#L13](../../../../packages/server/src/pluginschannel.ts#L13) - a plugin turned off takes effect at the next start, so no plugin unloads while canvases are open"
-  - "[code://docs/plugins/PLUGINS.md#L160-L188](../../../../docs/plugins/PLUGINS.md#L160-L188) - the `PluginHost` method table"
+  - "[code://packages/server/src/pluginschannel.ts#L11-L13](../../../../packages/server/src/pluginschannel.ts#L11-L13) - a change to the plugins applies at once, so a plugin can unload while its canvases are open"
+  - "[code://docs/plugins/PLUGINS.md#L189-L220](../../../../docs/plugins/PLUGINS.md#L189-L220) - the `PluginHost` method table"
   - npm://@microsoft/agent-host-protocol@1.0.0 - `CanvasReference`, `CanvasState`, `chat/canvasesChanged`, `canvas/stateChanged`, both server-only, both registered at `0.10.0`, and `isActionKnownToVersion` (`src/types/version/registry.ts:158-159`, `216`)
   - https://github.com/microsoft/agent-host-protocol/blob/main/types/channels-canvas/state.ts - `instanceId` is caller-supplied; `url` is absolute HTTP(S), cleared when the provider is unavailable, redacted from logs and never reused after a restart
   - https://github.com/microsoft/agent-host-protocol/blob/main/docs/specification/versioning.md - the Canvas channel is "1 - Experimental" (L42); a host MUST NOT send newer-version-only behaviour to an older connection (L120); an older peer ignores an added field (L85)
@@ -61,7 +61,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - `rg -i canvas packages/sdk/test` - the handshake test of the silence, the two `chat/canvasesChanged` reducer fixtures, and `canvasesEnabled` in the root config test.
 - `rg -i canvas .project/plans` - `host/47` left canvas out on 2026-10-03, and `host/88` says a later plan must decide the version gate for real.
 - `rg -i canvas /github/ahpw/src /github/ahpapp/src` - both clients offer `0.10.0`, and their reducers fold the canvas actions. Neither draws a canvas. ahpw draws `canvasesEnabled` in its features section.
-- `rg "disable|unload" packages/server/src/plugins*.ts` - a plugin is turned off only at the next start.
+- `rg "disable|unload" packages/server/src/plugins*.ts` - a plugin is loaded and unloaded while the daemon runs, and an unload runs the plugin's closers.
 - VS Code `1.143.1` (`e646868227c`): canvases come only from the Copilot SDK, and open and close go over a local bridge.
   The window draws a canvas only for the local `copilotcli` provider.
 
@@ -103,11 +103,11 @@ plugin: closeCanvas(resource) or the chat goes -> chat/canvasesChanged without i
 | A canvas closes when its chat closes, is removed or moves to another session | https://github.com/microsoft/vscode/blob/e646868227c/src/vs/platform/agentHost/node/agentHostStateManager.ts#L1094-L1100 | 02 |
 | Canvases live in memory only and are gone after a restart | https://github.com/microsoft/agent-host-protocol/blob/main/types/channels-canvas/state.ts | 02 |
 | The host never writes a canvas `url` to its log | https://github.com/microsoft/agent-host-protocol/blob/main/types/channels-canvas/state.ts | 02, 03 |
-| A plugin clears `url` itself when its source stops; the host never unloads a plugin while it runs | [code://packages/server/src/pluginschannel.ts#L13](../../../../packages/server/src/pluginschannel.ts#L13) | 03 |
+| A plugin clears `url` itself when its source stops, and the host closes a plugin's canvases when it unloads the plugin | [code://packages/server/src/pluginschannel.ts#L11-L13](../../../../packages/server/src/pluginschannel.ts#L11-L13) | 03 |
 | The host has no cap on canvases for each chat | `(defaulted: upstream caps at 8 in the Copilot provider, so a plugin decides its own cap)` | 02 |
 | A subscribe to a canvas is read as a subscribe to its chat's session | `(defaulted: an annotations channel is read as its session's through baseOf, and the canvas URI names its chat)` | 02 |
 | The chat snapshot carries `canvases` on every version | https://github.com/microsoft/agent-host-protocol/blob/main/docs/specification/versioning.md | 02 |
-| A call before a host is built throws by name | [code://packages/sdk/src/plugins/plugins.ts#L1276-L1287](../../../../packages/sdk/src/plugins/plugins.ts#L1276-L1287) | 03 |
+| A call before a host is built throws by name | [code://packages/sdk/src/plugins/plugins.ts#L1476-L1486](../../../../packages/sdk/src/plugins/plugins.ts#L1476-L1486) | 03 |
 | Canvas actions go to every connection at `0.10.0` or later, and an older connection gets none, as the version registry says | Softov, 2026-10-22, this replaces the `host/88` rule | 01 |
 | Any plugin can open a canvas on any live chat | Softov, 2026-10-22 | 03 |
 | `canvasesEnabled` gates the calls, as upstream: it is off by default, and `openCanvas` throws until it is on | Softov, 2026-10-22 | 03 |
@@ -123,7 +123,7 @@ plugin: closeCanvas(resource) or the chat goes -> chat/canvasesChanged without i
 - **Event flow** - `seenBy` holds back an action that `isActionKnownToVersion` says the connection's agreed version does not know.
 - **State flow** - the store maps each resource to its chat, its plugin and its `CanvasState`. The chat snapshot lays the chat's list over the backend's state, as `movable` is laid.
 - **Layer responsibilities** - sdk `host/canvases.ts`: the store and the pruning · sdk `host.ts`: the version gate · sdk `plugins/plugins.ts`: the three calls · docs: the plugin API.
-- **Source-of-truth files** - [`code://packages/sdk/src/host/canvases.ts`](../../../../packages/sdk/src/host/canvases.ts), created by task 02.
+- **Source-of-truth files** - `packages/sdk/src/host/canvases.ts`, created by task 02.
 
 ## Tasks
 
@@ -145,7 +145,7 @@ plugin: closeCanvas(resource) or the chat goes -> chat/canvasesChanged without i
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-22, and the open questions answered the same day.
+- **Done so far:** planned 2026-10-22, and the open questions answered the same day. The refs were checked against main `343ca825` on 2026-10-28. Plugins now load and unload while the daemon runs, so task 03 closes a plugin's canvases at unload.
 - **Next action:** Softov reviews the plan, then the plan goes `active` and task 01 starts.
 - **Open questions:** none. Softov answered all five on 2026-10-22.
 - **Watch out for:** `respelledIn` rewrites every `resource` and `url` value for a connection that knows a session by another name. The canvas resource holds the chat in base64url, so a prefix match must not change it. A test must prove that the `url` is not changed.
@@ -157,6 +157,7 @@ plugin: closeCanvas(resource) or the chat goes -> chat/canvasesChanged without i
 - [ ] A `0.9.0` client on the same chat gets neither action, and a replay to it holds neither.
 - [ ] A subscribe to the canvas answers its `CanvasState`; after `closeCanvas` it answers `-32008`.
 - [ ] A chat that closes, is removed or moves takes its canvases with it.
+- [ ] A plugin that unloads takes its canvases with it.
 - [ ] No canvas `url` is in the host log.
 - [ ] The plugin API docs list the three calls.
 - [ ] `plans/index.md` updated.

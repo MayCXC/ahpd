@@ -245,10 +245,10 @@ Reference: [00-host.md](host/00-host.md)
 | [111 - The sdk files sit in domain folders](host/111-the-sdk-files-sit-in-domain-folders/plan.md) | medium | built 2026-10-21 (implemented.md); merged in #54 | - | - |
 | [112 - A listing answers the caller's own records](host/112-a-listing-answers-the-callers-own-records/plan.md) | medium | built 2026-10-21 (implemented.md); merged in #56 | - | plugin 52 |
 | [113 - A person's own token names them at the door](host/113-a-persons-token-names-them-at-the-door/plan.md) | high | built 2026-10-21 (implemented.md); merged in #60 | - | - |
-| [114 - A subscribe with no view gets every turn](host/114-a-subscribe-with-no-view-gets-every-turn/plan.md) | medium | draft 2026-10-22 | - | - |
+| [114 - A subscribe with no view gets every turn](host/114-a-subscribe-with-no-view-gets-every-turn/plan.md) | medium | draft 2026-10-22; refs checked 2026-10-28 | - | - |
 | [115 - A background task has one shape](host/115-a-background-task-has-one-shape/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #72 | host 47 p2 | - |
-| [116 - A plugin opens a canvas on a chat](host/116-a-plugin-opens-a-canvas-on-a-chat/plan.md) | medium | draft 2026-10-22 | - | - |
-| [117 - ahpd speaks AHP 1.1.0](host/117-ahpd-speaks-ahp-1-1-0/plan.md) | medium | draft 2026-10-22; not built until AHP 1.1.0 is released | AHP 1.1.0 | - |
+| [116 - A plugin opens a canvas on a chat](host/116-a-plugin-opens-a-canvas-on-a-chat/plan.md) | medium | draft 2026-10-22; refs checked 2026-10-28, and an unload closes a plugin's canvases | - | - |
+| [117 - ahpd speaks AHP 1.1.0](host/117-ahpd-speaks-ahp-1-1-0/plan.md) | medium | draft 2026-10-22; deferred 2026-10-28 by Softov until AHP 1.1.0 is on npm | AHP 1.1.0 | - |
 | [118 - A connector action runs as a tool](host/118-a-connector-action-runs-as-a-tool/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #73 | plugin 53 | plugin 50 |
 | [119 - A row counts the work while a turn runs](host/119-a-row-counts-the-work-while-a-turn-runs/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #74 | - | - |
 | [120 - A bot session starts with its actions](host/120-a-bot-session-starts-with-its-actions/plan.md) | medium | built 2026-10-23 (implemented.md); merged in #78 | host 118 | - |
@@ -399,26 +399,26 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [45 p1 - The host gives each plugin a record store](plugin/45-p1-the-host-gives-a-record-store/plan.md) | medium | built 2026-10-11 ([implemented.md](plugin/45-p1-the-host-gives-a-record-store/implemented.md)) | cofold commands/05 | 45 p2, host 80 |
 | [45 p2 - The bot keeps its records in the record store](plugin/45-p2-the-bot-keeps-its-records-there/plan.md) | medium | built 2026-10-11 ([implemented.md](plugin/45-p2-the-bot-keeps-its-records-there/implemented.md)); released in 0.11.0; awaiting review | 45 p1 | - |
 | [46 - An admin makes a bot for any owner, and the manifest names the host owner](plugin/46-an-admin-makes-a-bot-for-any-owner/plan.md) | high | built 2026-10-11 ([implemented.md](plugin/46-an-admin-makes-a-bot-for-any-owner/implemented.md)) | plugin 37 | ahpapp bot owner picker |
-| [47 - A bot runs in a machine](plugin/47-a-bot-runs-in-a-machine/plan.md) | high | draft 2026-10-13; tasks not written | plugin 37 | container/05 p8 question |
+| [47 - A bot runs in a machine](plugin/47-a-bot-runs-in-a-machine/plan.md) | high | dropped 2026-10-28; moved to [bots/01](bots/01-a-bot-runs-in-a-machine/plan.md) | plugin 37 | container/05 p8 question |
 | [48 - A webhook talks to a bot or fires an automation](plugin/48-a-webhook-starts-a-bot-or-an-automation/plan.md) | medium | built 2026-10-15 | plugin 21, 37, 45 p1 | issue and chat initiators |
 | [49 - A bot's first turn is a template](plugin/49-a-bots-first-turn-is-a-template/plan.md) | medium | built 2026-10-15 ([implemented.md](plugin/49-a-bots-first-turn-is-a-template/implemented.md)) | plugin 45 p2 | - |
 | [50 - A connector plugin runs Activepieces pieces as tools](plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md) | medium | active 2026-10-23; tasks 01 to 05 implemented, with the checks by hand in [pending](pending/plugin-50-first-pieces.md) | host 118, plugin 53 | OAuth and Instagram connectors |
 | [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | built 2026-10-16 ([implemented.md](plugin/51-a-plugin-id-is-a-slug/implemented.md)) | daemon 19 | ahpw `/plugins/web/` |
-| [52 - A person talks with a bot in a chat of their own](plugin/52-a-bot-manages-and-delegates/plan.md) | medium | draft 2026-10-16; parent of p1 to p14 | plugin 49 | - |
+| [52 - A person talks with a bot in a chat of their own](plugin/52-a-bot-manages-and-delegates/plan.md) | medium | draft 2026-10-16; parent of p1 to p14; p7, p10 and p14 moved to bots on 2026-10-28 | plugin 49 | - |
 | [52 p1 - The host keeps one task list](plugin/52-p1-the-host-keeps-one-task-list/plan.md) | medium | built 2026-10-19; [implemented.md](plugin/52-p1-the-host-keeps-one-task-list/implemented.md) | 52 | 52 p12, 52 p13 |
 | [52 p2 - A bot chat is a session with no harness](plugin/52-p2-a-bot-chat-is-a-session-with-no-harness/plan.md) | medium | built 2026-10-16 | 52 | 52 p3 |
 | [52 p3 - A message wakes the bot and it replies](plugin/52-p3-a-message-wakes-the-bot-and-it-replies/plan.md) | medium | active 2026-10-17; 16 tasks, all implemented | 52 p2 | 52 p7, 52 p8, 52 p14 |
 | [52 p4 - A group chat has members and mentions](plugin/52-p4-a-group-chat-has-members-and-mentions/plan.md) | medium | dropped 2026-10-22; merged into 52 p14 | 52 p3, 52 p11 | - |
 | [52 p5 - A bot is made with its AGENTS.md](plugin/52-p5-a-bot-is-made-with-its-agents-file/plan.md) | medium | dropped 2026-10-17; moved into 52 p3 tasks 10 and 11 | 52 p3 | - |
 | [52 p6 - A bot wakes when a session it started finishes](plugin/52-p6-a-bot-wakes-when-a-session-it-started-finishes/plan.md) | medium | dropped 2026-10-22; merged into 52 p14 | 52 p3 | - |
-| [52 p7 - A manager bot edits only its own folder](plugin/52-p7-a-manager-bot-edits-only-its-own-folder/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3, host 100 p2, host 101 | - |
-| [52 p8 - AGENTS.md is the bot's one copy](plugin/52-p8-agents-md-is-the-bots-one-copy/plan.md) | medium | active 2026-10-17; 6 tasks, 01, 02, 05 and 06 implemented | 52 p3 | - |
+| [52 p7 - A manager bot edits only its own folder](plugin/52-p7-a-manager-bot-edits-only-its-own-folder/plan.md) | medium | dropped 2026-10-28; moved to [bots/02](bots/02-a-manager-bot-edits-only-its-own-folder/plan.md) | 52 p3, host 100 p2, host 101 | - |
+| [52 p8 - AGENTS.md is the bot's one copy](plugin/52-p8-agents-md-is-the-bots-one-copy/plan.md) | medium | active 2026-10-17; 6 tasks, 01, 02, 05 and 06 implemented; task 03 dropped, moved to bots/01 task 04 ([deferred.md](plugin/52-p8-agents-md-is-the-bots-one-copy/deferred.md)) | 52 p3 | - |
 | [52 p9 - Front and Back are chats of one session](plugin/52-p9-front-and-back-are-chats-of-one-session/plan.md) | medium | dropped 2026-10-22; merged into 52 p14 | 52 p3, host 107 | - |
-| [52 p10 - A bot changes bots with a tool](plugin/52-p10-a-bot-changes-bots-with-a-tool/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p8 | - |
+| [52 p10 - A bot changes bots with a tool](plugin/52-p10-a-bot-changes-bots-with-a-tool/plan.md) | medium | dropped 2026-10-28; moved to [bots/03](bots/03-a-bot-changes-bots-with-a-tool/plan.md) | 52 p8 | - |
 | [52 p11 - A bot has a private session](plugin/52-p11-a-bot-has-a-private-session/plan.md) | medium | dropped 2026-10-22; merged into 52 p14 | 52 p9 | - |
 | [52 p12 - Claude and ACP write the task list](plugin/52-p12-claude-and-acp-write-the-task-list/plan.md) | medium | active 2026-10-18; tasks 01 to 07 implemented; title answer recorded | 52 p1 | - |
 | [52 p13 - A client sees the task list](plugin/52-p13-a-client-sees-the-task-list/plan.md) | medium | active 2026-10-18; 5 tasks, 01, 02, 03 and 05 implemented; 04 done 2026-10-19 | 52 p1 | - |
-| [52 p14 - A bot session has a Front, Backs and wakes](plugin/52-p14-a-bot-session-has-a-front-and-backs/plan.md) | medium | draft 2026-10-22; merged from 52 p4, p6, p9, p11 and p7's permission mode; tasks not written | 52 p3, host 107 | - |
+| [52 p14 - A bot session has a Front, Backs and wakes](plugin/52-p14-a-bot-session-has-a-front-and-backs/plan.md) | medium | dropped 2026-10-28; moved to [bots/04](bots/04-a-bot-session-has-a-front-and-backs/plan.md) | 52 p3, host 107 | - |
 | [52 - The computer and bot listings answer the caller's own](plugin/52-the-computer-and-bot-listings-answer-the-callers-own/plan.md) | medium | built 2026-10-21 (implemented.md); merged in #59 | host 112 | - |
 | [53 - A client sees the plugins and the connectors](plugin/53-a-client-sees-plugins-and-connectors/plan.md) | medium | active 2026-10-22; sixteen tasks, all implemented, awaiting review | plugin 44, plugin 48 | ahpw connectors and plugins pages, the UI component tree, connector actions as tools |
 | [54 - A webhook takes what real senders send](plugin/54-a-webhook-takes-what-real-senders-send/plan.md) | high | planned 2026-10-22; seven tasks implemented, merged in #67, awaiting the close | plugin 48, plugin 53 | - |
@@ -442,6 +442,19 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 
 
 Next free number in `plugin`: `72`.
+
+## bots
+
+Reference: [00-bots.md](bots/00-bots.md)
+
+| Plan | Priority | Status | Requires | Blocks |
+| --- | --- | --- | --- | --- |
+| [01 - A bot runs in a machine](bots/01-a-bot-runs-in-a-machine/plan.md) | high | draft 2026-10-28; moved from plugin 47; one open question on a shared machine; task 04 written, 01-03 not written | plugin 37, 52 p8 | - |
+| [02 - A manager bot edits only its own folder](bots/02-a-manager-bot-edits-only-its-own-folder/plan.md) | medium | draft 2026-10-28; moved from 52 p7; tasks not written | 52 p3, host 100 p2, host 101 | - |
+| [03 - A bot changes bots with a tool](bots/03-a-bot-changes-bots-with-a-tool/plan.md) | medium | draft 2026-10-28; moved from 52 p10; tasks not written | 52 p8 | - |
+| [04 - A bot session has a Front, Backs and wakes](bots/04-a-bot-session-has-a-front-and-backs/plan.md) | medium | draft 2026-10-28; moved from 52 p14; tasks not written | 52 p3, host 107 | - |
+
+Next free number in `bots`: `05`.
 
 ## container
 
@@ -585,7 +598,7 @@ Next free number in `vault`: `02`.
 
 ## Domains without a plan
 
-None. `host`, `claude`, `documentation`, `plugin`, `container`, `pi`, `acp`, `usage`, `policy`, `proxy` and `vault` each have a plan above.
+None. `host`, `claude`, `documentation`, `plugin`, `bots`, `container`, `pi`, `acp`, `usage`, `policy`, `proxy` and `vault` each have a plan above.
 Ideas, one file each:
 
 - [an SSH command that attaches to the daemon](../ideas/an-ssh-command-that-attaches-to-the-daemon.md)

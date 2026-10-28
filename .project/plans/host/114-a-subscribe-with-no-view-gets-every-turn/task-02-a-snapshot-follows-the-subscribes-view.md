@@ -7,14 +7,14 @@ layer: sdk
 refs:
   - https://github.com/microsoft/agent-host-protocol/blob/main/types/common/commands.ts - `SubscribeParams.view` and `SubscribeView.turns`
   - "[code://packages/sdk/src/sessions/paging.ts#L22-L56](../../../../packages/sdk/src/sessions/paging.ts#L22-L56) - `PAGE`, `tail` and `older`"
-  - "[code://packages/sdk/src/host/sessionmethods.ts#L361-L378](../../../../packages/sdk/src/host/sessionmethods.ts#L361-L378) - `subscribe`, which drops `params.view`"
-  - "[code://packages/sdk/src/host/sessionmethods.ts#L449-L462](../../../../packages/sdk/src/host/sessionmethods.ts#L449-L462) - `fetchTurns` with no cursor"
+  - "[code://packages/sdk/src/host/sessionmethods.ts#L380-L434](../../../../packages/sdk/src/host/sessionmethods.ts#L380-L434) - `subscribe`, which drops `params.view`"
+  - "[code://packages/sdk/src/host/sessionmethods.ts#L466-L476](../../../../packages/sdk/src/host/sessionmethods.ts#L466-L476) - `fetchTurns` with no cursor"
   - "[code://packages/sdk/src/host/snapshots.ts#L19](../../../../packages/sdk/src/host/snapshots.ts#L19) - the `snapshotOf` type"
   - "[code://packages/sdk/src/host/snapshots.ts#L73](../../../../packages/sdk/src/host/snapshots.ts#L73) - `snapshotOf`"
-  - "[code://packages/sdk/src/host/snapshots.ts#L310-L346](../../../../packages/sdk/src/host/snapshots.ts#L310-L346) - a live chat's snapshot"
-  - "[code://packages/sdk/src/host/snapshots.ts#L399-L467](../../../../packages/sdk/src/host/snapshots.ts#L399-L467) - the three `tail` calls for a chat that is not running"
-  - "[code://packages/sdk/test/host-catalogue.test.ts#L276-L379](../../../../packages/sdk/test/host-catalogue.test.ts#L276-L379) - the paging cases"
-  - "[code://packages/sdk/test/sessions.test.ts#L1110-L1131](../../../../packages/sdk/test/sessions.test.ts#L1110-L1131) - the oldest-page case"
+  - "[code://packages/sdk/src/host/snapshots.ts#L322-L351](../../../../packages/sdk/src/host/snapshots.ts#L322-L351) - a live chat's snapshot"
+  - "[code://packages/sdk/src/host/snapshots.ts#L411-L500](../../../../packages/sdk/src/host/snapshots.ts#L411-L500) - the three `tail` calls for a chat that is not running"
+  - "[code://packages/sdk/test/host-catalogue.test.ts#L277-L380](../../../../packages/sdk/test/host-catalogue.test.ts#L277-L380) - the paging cases"
+  - "[code://packages/sdk/test/sessions.test.ts#L1182-L1203](../../../../packages/sdk/test/sessions.test.ts#L1182-L1203) - the oldest-page case"
 ---
 
 ## Objective
@@ -27,12 +27,12 @@ With `view.turns`, it gets the newest `view.turns` turns, and a cursor when olde
 
 - `UPDATE: packages/sdk/src/sessions/paging.ts:14-37` - `windowOf(turns, view)`, beside `tail`, and the `PAGE` comment says it is the size of a page and of a window.
 - `UPDATE: packages/sdk/src/host/snapshots.ts:19` - `snapshotOf` takes an optional view.
-- `UPDATE: packages/sdk/src/host/snapshots.ts:310-346` - a live chat's turns go through `windowOf`, after `linkedTurns`.
-- `UPDATE: packages/sdk/src/host/snapshots.ts:399-467` - the three `tail` calls become `windowOf`.
-- `UPDATE: packages/sdk/src/host/sessionmethods.ts:361-378` - `subscribe` reads `params.view` and gives it to `snapshotOf`.
-- `UPDATE: packages/sdk/src/host/sessionmethods.ts:449-462` - `fetchTurns` with no cursor answers with nothing older and sends no action.
-- `UPDATE: packages/sdk/test/host-catalogue.test.ts:276-379` - the restored case of task 01 becomes `it`, and the paging cases subscribe with a view.
-- `UPDATE: packages/sdk/test/sessions.test.ts:1110-1131` - the oldest-page case subscribes with a view and sends the cursor it got.
+- `UPDATE: packages/sdk/src/host/snapshots.ts:322-351` - a live chat's turns go through `windowOf`, after `linkedTurns`.
+- `UPDATE: packages/sdk/src/host/snapshots.ts:411-500` - the three `tail` calls become `windowOf`.
+- `UPDATE: packages/sdk/src/host/sessionmethods.ts:380-434` - `subscribe` reads `params.view` and gives it to `snapshotOf`.
+- `UPDATE: packages/sdk/src/host/sessionmethods.ts:466-476` - `fetchTurns` with no cursor answers with nothing older and sends no action.
+- `UPDATE: packages/sdk/test/host-catalogue.test.ts:277-380` - the restored case of task 01 becomes `it`, and the paging cases subscribe with a view.
+- `UPDATE: packages/sdk/test/sessions.test.ts:1182-1203` - the oldest-page case subscribes with a view and sends the cursor it got.
 
 ## Steps
 

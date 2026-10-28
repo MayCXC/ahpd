@@ -1,7 +1,7 @@
 ---
 title: A bot changes bots with a tool
 domain: plugin
-status: draft
+status: dropped
 priority: medium
 created: 2026-10-18
 revalidated: 2026-10-18
@@ -11,10 +11,12 @@ changes:
   - specs/bots.md
 creates: []
 refs:
-  - "[code://packages/bot/src/provider.ts#L700-L740](../../../../packages/bot/src/provider.ts#L700-L740) - the `bot://<slug>` write, with the checks a tool reuses"
-  - "[code://packages/bot/src/wake.ts#L202-L215](../../../../packages/bot/src/wake.ts#L202-L215) - `sessionFor`: a Back runs as the bot's owner and names its tools"
-  - "[code://packages/bot/src/post.ts#L44-L80](../../../../packages/bot/src/post.ts#L44-L80) - `post_message`, the opt-in host tool to copy"
+  - "[code://packages/bot/src/provider.ts#L760-L800](../../../../packages/bot/src/provider.ts#L760-L800) - the `bot://<slug>` write, with the checks a tool reuses"
+  - "[code://packages/bot/src/wake.ts#L221-L234](../../../../packages/bot/src/wake.ts#L221-L234) - `sessionFor`: a Back runs as the bot's owner and names its tools"
+  - "[code://packages/bot/src/post.ts#L44-L89](../../../../packages/bot/src/post.ts#L44-L89) - `post_message`, the opt-in host tool to copy"
 ---
+
+Dropped 2026-10-28: the plan moved to [bots/03](../../bots/03-a-bot-changes-bots-with-a-tool/plan.md) in the `bots` domain.
 
 ## Goal
 

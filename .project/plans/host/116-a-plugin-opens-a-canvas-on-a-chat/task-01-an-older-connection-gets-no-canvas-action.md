@@ -5,8 +5,8 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host/handshake.ts#L149-L227](../../../../packages/sdk/src/host/handshake.ts#L149-L227) - the negotiation, where `agreed` is known"
-  - "[code://packages/sdk/src/types/host.ts#L998-L1030](../../../../packages/sdk/src/types/host.ts#L998-L1030) - `Connection`, which gets the agreed version"
-  - "[code://packages/sdk/src/host.ts#L582-L610](../../../../packages/sdk/src/host.ts#L582-L610) - `seenBy`, the one per-connection filter"
+  - "[code://packages/sdk/src/types/host.ts#L1084-L1175](../../../../packages/sdk/src/types/host.ts#L1084-L1175) - `Connection`, which gets the agreed version"
+  - "[code://packages/sdk/src/host.ts#L622-L686](../../../../packages/sdk/src/host.ts#L622-L686) - `seenBy`, the one per-connection filter"
   - "[code://packages/sdk/test/host-handshake.test.ts#L37-L62](../../../../packages/sdk/test/host-handshake.test.ts#L37-L62) - the silence test, which this task replaces"
   - npm://@microsoft/agent-host-protocol@1.0.0 - `isActionKnownToVersion(action, clientVersion)` (`src/types/version/registry.ts:216`)
   - https://github.com/microsoft/agent-host-protocol/blob/main/docs/specification/versioning.md - L120, no newer-version-only behaviour on an older connection
@@ -19,9 +19,9 @@ Each connection keeps the protocol version it agreed on.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/types/host.ts:998-1030` - add `protocolVersion?: string` to `Connection`, with a comment that says what it holds.
+- `UPDATE: packages/sdk/src/types/host.ts:1084-1175` - add `protocolVersion?: string` to `Connection`, with a comment that says what it holds.
 - `UPDATE: packages/sdk/src/host/handshake.ts:149-227` - set `connection.protocolVersion` to `agreed` before the snapshots are read.
-- `UPDATE: packages/sdk/src/host.ts:582-610` - return `undefined` when `isActionKnownToVersion` is false for the connection's version.
+- `UPDATE: packages/sdk/src/host.ts:622-686` - return `undefined` when `isActionKnownToVersion` is false for the connection's version.
 - `UPDATE: packages/sdk/test/host-handshake.test.ts:37-62` - replace the silence test with the version gate tests.
 
 ## Steps
