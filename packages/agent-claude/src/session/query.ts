@@ -794,7 +794,6 @@ export function createQuery(ctx: SessionContext): Query {
          * The SDK's own structured form of the API's rate-limit headers, which
          * names the window that refused and when it reopens, comes before the
          * assistant frame that carries the refusal's `error`.
-         * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/limitDetection.ts#L15-L36
          */
         if (type === 'rate_limit_event') { ctx.limited(bag(message.rate_limit_info)); continue; }
         if (type === 'stream_event') { ctx.streamed(bag(message.event), str(message.parent_tool_use_id) ?? ''); continue; }

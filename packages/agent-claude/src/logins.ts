@@ -3,11 +3,9 @@
  * and the cooldown a refused one waits out.
  *
  * A login is a token from `claude setup-token`, which signs the CLI in to one
- * Claude account as `CLAUDE_CODE_OAUTH_TOKEN`. This is meridian's account
- * routing, carried to the backend that starts the CLI: a conversation keeps
- * one account while it works, because the prompt cache is the account's, and a
+ * Claude account as `CLAUDE_CODE_OAUTH_TOKEN`. A conversation keeps one
+ * account while it works, because the prompt cache is the account's, and a
  * refused account rests until its reset while the next one serves.
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/profiles-routing.spec.md
  * https://code.claude.com/docs/en/authentication#generate-a-long-lived-token
  */
 
@@ -49,8 +47,7 @@ export const loginsOf = (values: Bag): Login[] => {
 
 /**
  * One conversation's score for one login: the first 8 bytes of
- * sha256("<conversation>\0<login>"), as meridian scores a session and a profile.
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/routing.ts#L127-L131
+ * sha256("<conversation>\0<login>"), read as a big-endian unsigned integer.
  */
 const scoreOf = (key: string, name: string): bigint =>
   createHash('sha256').update(`${key}\0${name}`).digest().readBigUInt64BE(0);
@@ -58,12 +55,10 @@ const scoreOf = (key: string, name: string): bigint =>
 /**
  * The logins in the order one conversation tries them, highest score first.
  *
- * meridian gives a session the profile with the highest score, so its first is
- * meridian's pick; the rest of the order, which is where a refused turn goes
- * next, is ours. It is the same for a conversation every time it is asked and
- * different from one conversation to the next, and adding a login moves only
- * the conversations that score it highest.
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/routing.ts#L133-L150
+ * A conversation runs on the login with the highest score, and a refused turn
+ * goes to the next one in the order. The order is the same for a conversation
+ * every time it is asked and different from one conversation to the next, and
+ * adding a login moves only the conversations that score it highest.
  */
 export const ordered = (key: string, logins: Login[]): Login[] => logins
   .map((login) => ({ login, score: scoreOf(key, login.name) }))
@@ -81,15 +76,13 @@ export interface Refusal {
 }
 
 /**
- * How long a refused login cools down when nothing names its reset: meridian's default.
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1517
+ * How long a refused login cools down when nothing names its reset.
  */
 const DEFAULT_COOLDOWN_MS = 10 * 60_000;
 
 /**
- * The longest a named reset is believed, for each window: meridian's guard
- * against a garbage value, per window so a weekly reset is not cut to hours.
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/routing.ts#L366-L389
+ * The longest a named reset is believed, for each window: a guard against a
+ * garbage value, per window so a weekly reset is not cut to hours.
  */
 const COOLDOWN_CAP_MS: Record<string, number> = {
   five_hour: 6 * 60 * 60_000,
@@ -100,8 +93,7 @@ const COOLDOWN_CAP_MS: Record<string, number> = {
  * The SDK's `resetsAt` in epoch milliseconds.
  *
  * The SDK reports seconds and types the field as a bare number, so the unit is
- * read off the value rather than assumed, as meridian reads it.
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/rateLimitStore.ts#L52-L72
+ * read off the value rather than assumed: below 1e11 it is seconds.
  */
 const toEpochMs = (value: number | undefined): number | undefined => {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return undefined;
@@ -111,11 +103,9 @@ const toEpochMs = (value: number | undefined): number | undefined => {
 /**
  * When a refused login's cooldown ends.
  *
- * meridian's rule: a spent quota whose window is `five_hour` or `seven_day`
- * cools down until the reset the refusal names, capped for that window; any
- * other refusal, a billing one among them, cools down for 10 minutes.
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1549-L1558
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1756-L1764
+ * A spent quota whose window is `five_hour` or `seven_day` cools down until
+ * the reset the refusal names, capped for that window; any other refusal, a
+ * billing one among them, cools down for 10 minutes.
  */
 export const cooldownUntil = (refusal: Refusal, now: number): number => {
   const reset = refusal.error === 'rate_limit' ? toEpochMs(refusal.resetsAt) : undefined;
@@ -127,11 +117,10 @@ export const cooldownUntil = (refusal: Refusal, now: number): number => {
 /**
  * The logins of one agent that are cooling down, and until when.
  *
- * meridian's `ProfileExhaustion`: in memory, because a restart that forgets a
- * cooldown costs one refusal, which marks the login again. A later mark may
- * make a cooldown longer and never shorter, so two refusals that arrive
- * together keep the later reset. The clock is a parameter, so a test can move it.
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/routing.ts#L258-L307
+ * The record is in memory, because a restart that forgets a cooldown costs
+ * one refusal, which marks the login again. A later mark may make a cooldown
+ * longer and never shorter, so two refusals that arrive together keep the
+ * later reset. The clock is a parameter, so a test can move it.
  */
 export class Cooldowns {
   private readonly marks = new Map<string, number>();

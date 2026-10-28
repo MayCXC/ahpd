@@ -6,12 +6,11 @@ import { bag } from '@ahpd/sdk';
 import type { Bag } from '@ahpd/sdk';
 
 /*
- * One Claude agent on several logins, as meridian routes one proxy's accounts.
+ * One Claude agent on several logins.
  *
  * A record's `logins` are tokens from `claude setup-token`. Each conversation
- * orders them by meridian's rendezvous score and runs on the first one that is
- * not cooling down; the CLI reads the token as `CLAUDE_CODE_OAUTH_TOKEN`.
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/profiles-routing.spec.md
+ * orders them by a rendezvous score and runs on the first one that is not
+ * cooling down; the CLI reads the token as `CLAUDE_CODE_OAUTH_TOKEN`.
  */
 
 /** Every CLI a session started, with the options it was given and a queue of the frames it sends. */
@@ -142,9 +141,9 @@ const answered = (id: string) => [
   { type: 'result', subtype: 'success', is_error: false, session_id: 'cli-1', duration_ms: 5 },
 ];
 
-it("picks meridian's account for meridian's pinned sessions", async () => {
-  // Pinned in meridian's routing.ts as RENDEZVOUS_STABLE_GUARD: a change of the
-  // score would move every conversation to another account.
+it('picks the pinned login for fixed rendezvous vectors', async () => {
+  // Fixed vectors of the rendezvous score: a change of the score would move
+  // every conversation to another account.
   for (const [key, names, expected] of [
     ['sess-a', ['personal', 'work'], 'work'],
     ['sess-b', ['personal', 'work'], 'personal'],
@@ -297,7 +296,7 @@ describe('a refused login', () => {
     // The same prompt, under a new uuid, to the new CLI.
     expect(sdk.said.at(-1)).toMatchObject({ content: 'two', query: 1 });
     expect(sdk.said.at(-1)?.uuid).not.toBe(first?.uuid);
-    // Until the reset the event named, as meridian marks an account.
+    // Until the reset the event named.
     expect(cooldowns.until('work')).toBe((Math.floor(now / 1000) + 3600) * 1000);
     expect(ofTurn(chat, 'chat/error', 't2')).toEqual([]);
     expect(shownSpent(chat)).toBe(false);

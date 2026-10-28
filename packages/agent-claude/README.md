@@ -225,9 +225,9 @@ A record's `logins` are the Claude accounts the agent runs on. Each is a name an
 }
 ```
 
-This is [meridian](https://github.com/rynfar/meridian)'s account routing, in the backend that starts the CLI:
+The backend that starts the CLI routes the conversations over the logins:
 
-- Each conversation orders the logins by meridian's rendezvous score of its chat's URI and each login's name. So conversations spread over the logins, and a chat keeps its order across a restart.
+- Each conversation orders the logins by a rendezvous score of its chat's URI and each login's name. So conversations spread over the logins, and a chat keeps its order across a restart.
 - A conversation runs on the first login of its order and keeps it while it works, because the prompt cache belongs to the account.
 - A turn the API refuses with `rate_limit` or `billing_error` puts that login in a cooldown for every session of the agent. The cooldown lasts until the reset that the CLI's `rate_limit_event` names for a `five_hour` or `seven_day` window. It is capped at 6 hours and 8 days, and lasts 10 minutes otherwise.
 - A refused turn that showed nothing yet runs again on the next login it has not tried. A new CLI resumes the conversation at the end of the turn before it, as a truncation does. The prompt goes out again, and the refusal is not shown.

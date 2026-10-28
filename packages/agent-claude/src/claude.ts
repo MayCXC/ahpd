@@ -198,8 +198,7 @@ export function claude(options: ClaudeOptions): Agent {
    * The cooldowns of this agent's logins, one for all of its sessions.
    *
    * A login is one account, and a refusal one conversation met is one the next
-   * would meet too, so every session of the agent reads the same marks, as every
-   * request through one meridian proxy does.
+   * would meet too, so every session of the agent reads the same marks.
    */
   const cooldowns = new Cooldowns();
   /** A list the CLI reported, as this harness offers it. */

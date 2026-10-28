@@ -98,7 +98,7 @@ See [`code://packages/agent-claude/src/catalog.ts`](../../packages/agent-claude/
 ### A Claude agent runs on several logins
 
 WHEN a Claude record holds `logins`
-THEN each conversation orders them by meridian's rendezvous score of its chat's URI and each login's name
+THEN each conversation orders them by a rendezvous score of its chat's URI and each login's name
 AND its CLI runs on the first login of the order that is not cooling down, with the token as `CLAUDE_CODE_OAUTH_TOKEN`
 AND the conversation keeps that login while it is not cooling down.
 WHEN the API refuses a turn with `rate_limit` or `billing_error`
@@ -113,8 +113,9 @@ THEN it comes back as it was on the next login, and the turn fails with the refu
 WHEN every login cools down or was tried
 THEN the turn waits until the earliest cooldown ends, and a stop ends the wait.
 
-The reason: the prompt cache belongs to the account, and meridian never runs an attempt again on another account once it has shown something.
-See [`code://packages/agent-claude/src/session/logins.ts`](../../packages/agent-claude/src/session/logins.ts) and https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/profiles-routing.spec.md.
+The reason: the prompt cache belongs to the account.
+An attempt that has shown something already happened, so it never runs again on another account.
+See [`code://packages/agent-claude/src/session/logins.ts`](../../packages/agent-claude/src/session/logins.ts).
 
 ### A live tool change in a Claude session
 

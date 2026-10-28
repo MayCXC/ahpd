@@ -31,7 +31,7 @@ When every login cools down, the turn waits for the earliest one.
 
 ## Steps
 
-1. Write `cooldownUntil(refusal, now)` in `logins.ts` from meridian's caps, its 10-minute default and its `toEpochMs`, and cite them.
+1. Write `cooldownUntil(refusal, now)` in `logins.ts` with a cap for each window, a 10-minute default and `toEpochMs`.
 2. Keep a `rejected` event's reset and window in the area until the turn's `assistant` frame arrives.
 3. Mark the session's login on an `assistant` frame of the lead conversation whose `error` is `rate_limit` or `billing_error`.
 4. Move a refused turn only when it has no response part yet.

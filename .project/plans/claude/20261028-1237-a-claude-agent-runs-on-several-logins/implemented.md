@@ -8,7 +8,7 @@ refs:
 ---
 
 A Claude record holds `logins`, each a token from `claude setup-token`.
-Each conversation runs on its own login, ordered by meridian's rendezvous score, and keeps it while the login works.
+Each conversation runs on its own login, ordered by a rendezvous score, and keeps it while the login works.
 A login the API refuses for its quota or its billing cools down for every session of the agent.
 A refused turn that showed nothing runs again on the next login.
 It is cut back to the turn before it, or started over when it was the first.
@@ -16,7 +16,7 @@ When every login cools down, the turn waits for the earliest one.
 
 ## What was built
 
-- [`code://packages/agent-claude/src/logins.ts`](../../../../packages/agent-claude/src/logins.ts) - a record's logins, a conversation's order, `cooldownUntil` and `Cooldowns`, each from meridian and citing it.
+- [`code://packages/agent-claude/src/logins.ts`](../../../../packages/agent-claude/src/logins.ts) - a record's logins, a conversation's order, `cooldownUntil` and `Cooldowns`.
 - [`code://packages/agent-claude/src/session/logins.ts`](../../../../packages/agent-claude/src/session/logins.ts) - the session's login, the refusal, the cut point, the move, the wait and its stop.
   `replacing` names the CLI that a move closed, until the next CLI is in its place.
 - [`code://packages/agent-claude/src/options.ts`](../../../../packages/agent-claude/src/options.ts) - the declared `logins` field, its token write-only as a model source's `key`.

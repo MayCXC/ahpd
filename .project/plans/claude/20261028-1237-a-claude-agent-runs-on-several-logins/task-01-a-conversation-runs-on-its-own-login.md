@@ -37,8 +37,8 @@ The CLI gets the login's token as `CLAUDE_CODE_OAUTH_TOKEN`.
 1. Add `LOGIN` and the `logins` field to `OF_A_VARIANT` in `options.ts`, with `token` written as `MODEL_SOURCE.key` is.
 2. Export `tokenOf` from `models.ts`.
 3. Write `loginsOf(values)` in `logins.ts`: each entry with a name and a token's text, the first of a name kept.
-4. Write `ordered(key, logins)` with meridian's rendezvous score, and cite `routing.ts` L127-L150.
-5. Write `Cooldowns` from meridian's `ProfileExhaustion`, with `mark`, `cooling`, `until` and an injectable clock, and cite it.
+4. Write `ordered(key, logins)` with a rendezvous score: the first 8 bytes of a sha256 of the key and the login's name.
+5. Write `Cooldowns` with `mark`, `cooling`, `until` and an injectable clock.
 6. Write `createLogins(ctx)` in `session/logins.ts`: `loginFor(values)` keeps the session's login while it is not cooling down.
 7. In `loginFor`, take the first login in the order that is not cooling down.
 8. When every login cools down, take the first login in the order.
@@ -53,7 +53,7 @@ The CLI gets the login's token as `CLAUDE_CODE_OAUTH_TOKEN`.
   - A conversation's CLI starts on the first login of its order.
   - Two sessions on one chat URI start on one login.
   - Sessions on many chat URIs start on more than one login.
-  - meridian's pinned vectors give meridian's account.
+  - Fixed vectors of the rendezvous score give the pinned login.
   - A pushed credential stays over the login.
   - A login that cools down moves the next turn to a new CLI on the next login.
   - That new CLI resumes the conversation.

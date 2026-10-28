@@ -24,18 +24,6 @@ refs:
   - "[code://packages/agent-claude/src/session/turns.ts#L633-L659](../../../../packages/agent-claude/src/session/turns.ts#L633-L659) - `resume`, the protocol's failed turn run again"
   - "[code://packages/agent-claude/src/session/turns.ts#L661-L721](../../../../packages/agent-claude/src/session/turns.ts#L661-L721) - `cancel`, which ends the running turn"
   - npm://@anthropic-ai/claude-agent-sdk@0.3.301 - `SDKAssistantMessage.error` (sdk.d.ts L3669, L3751), `SDKRateLimitEvent` and `SDKRateLimitInfo` (L5756-L5781), `resumeSessionAt` (L2125-L2132)
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/profiles-routing.spec.md - the reference's account routing, read whole
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/routing.ts#L127-L150 - the rendezvous score of a conversation and an account
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/routing.ts#L199-L210 - with every account spent, the preferred one is tried
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/routing.ts#L265-L307 - `ProfileExhaustion`, the cooldowns with an injectable clock
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/routing.ts#L382-L389 - the cap on a reset, for each window
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/errors.ts#L658-L681 - the refusals that move to another account, and the quota one
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1517 - the 10-minute default cooldown
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1549-L1558 - the cooldown of a quota refusal
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1756-L1764 - a refused account is marked, quota or not
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1845-L1860 - an attempt that showed something is never run again on another account
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L2114-L2122 - a spent pool waits for its earliest reset
-  - https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/rateLimitStore.ts#L55-L72 - the SDK's `resetsAt` is in seconds
   - https://code.claude.com/docs/en/authentication - `claude setup-token` makes a one-year token for a Pro, Max, Team or Enterprise plan, used as `CLAUDE_CODE_OAUTH_TOKEN`; the order the CLI picks a credential in
 ---
 
@@ -46,7 +34,6 @@ Each conversation runs on one login and keeps it while the login works.
 When the API refuses a login for its quota or its billing, that login cools down until its reset.
 The turn then moves to the next login.
 When every login cools down, the turn waits for the first one to come back.
-This is meridian's account routing, carried into the backend that starts the CLI.
 
 A login is one Claude account's token.
 A cooldown is the time a refused login is not offered.
@@ -91,23 +78,23 @@ turn begins -> refreshPreset finds the conversation's login -> query env CLAUDE_
 
 | What | Source | Task |
 | --- | --- | --- |
-| A record holds `logins`, a list of `{ name, token }`, and `token` is write-only: the vault keeps it as it keeps a model source's `key`, and a host record may write `{ fromEnv }`. | Aaron, 2026-10-28: "for choice among logins i would just randomize the order and retry all the accounts with backoff or something. if you can find patterns that cover teh whole implementation using meridian as a reference then sgtm"; [code://packages/agent-claude/src/options.ts#L250-L262](../../../../packages/agent-claude/src/options.ts#L250-L262) | 01 |
+| A record holds `logins`, a list of `{ name, token }`, and `token` is write-only: the vault keeps it as it keeps a model source's `key`, and a host record may write `{ fromEnv }`. | Aaron, 2026-10-28: "for choice among logins i would just randomize the order and retry all the accounts with backoff or something"; [code://packages/agent-claude/src/options.ts#L250-L262](../../../../packages/agent-claude/src/options.ts#L250-L262) | 01 |
 | A login's token reaches the CLI as `CLAUDE_CODE_OAUTH_TOKEN`, over the record's `env`, and a pushed credential stays over the login. | [code://packages/agent-claude/src/claude.ts#L717-L727](../../../../packages/agent-claude/src/claude.ts#L717-L727); the Claude Code authentication page, which puts an API key before this token | 01 |
-| A conversation orders the logins by meridian's rendezvous score of its chat's URI and each login's name, so the order differs between conversations and stays the same after a restart. | Aaron, 2026-10-28: "randomize the order"; meridian `routing.ts` L127-L150 | 01 |
-| A conversation keeps its login while the login is not cooling down; otherwise it takes the first login in its order that is not, and with all of them cooling down it takes the first. | meridian's spec, "Priority keeps cache affinity"; meridian `routing.ts` L199-L210 | 01 |
+| A conversation orders the logins by a rendezvous score of its chat's URI and each login's name, so the order differs between conversations and stays the same after a restart. | Aaron, 2026-10-28: "randomize the order" | 01 |
+| A conversation keeps its login while the login is not cooling down; otherwise it takes the first login in its order that is not, and with all of them cooling down it takes the first. | `(defaulted: the prompt cache belongs to the account, and a cooldown can end early)` | 01 |
 | A change of login takes effect when a turn starts, through the restart `refreshPreset` makes for an edited record. | [code://packages/agent-claude/src/session/query.ts#L907-L923](../../../../packages/agent-claude/src/session/query.ts#L907-L923) | 01 |
-| A refusal is an `assistant` frame of the lead conversation whose `error` is `rate_limit` or `billing_error`, and a `rate_limit_event` with status `rejected` names its reset. | meridian `errors.ts` L658-L681, and its `limitDetection.ts`, which reads the SDK's event as the structured form of the headers | 02 |
-| A refused login cools down until the reset the event names for `five_hour` or `seven_day`, capped at 6 hours and 8 days, and for 10 minutes otherwise. | meridian `server.ts` L1517, L1549-L1558 and L1756-L1764; `routing.ts` L382-L389; `rateLimitStore.ts` L55-L72 | 02 |
-| One record of cooldowns serves every session of an agent, in memory, and a later mark never shortens an earlier one. | meridian `routing.ts` L265-L307 | 02 |
-| A turn that showed nothing before its refusal runs again on the next login it has not tried: a new CLI resumes at the last entry of the turn before it, and the prompt goes out again under a new uuid. | meridian `server.ts` L1845-L1860; [code://packages/agent-claude/src/session/query.ts#L507](../../../../packages/agent-claude/src/session/query.ts#L507); [code://packages/agent-claude/src/session/turns.ts#L88-L92](../../../../packages/agent-claude/src/session/turns.ts#L88-L92) | 02 |
+| A refusal is an `assistant` frame of the lead conversation whose `error` is `rate_limit` or `billing_error`, and a `rate_limit_event` with status `rejected` names its reset. | npm://@anthropic-ai/claude-agent-sdk@0.3.301 - `SDKAssistantMessage.error` and `SDKRateLimitEvent` | 02 |
+| A refused login cools down until the reset the event names for `five_hour` or `seven_day`, capped at 6 hours and 8 days, and for 10 minutes otherwise. | `(defaulted: the SDK's reset is in seconds, and a cap per window guards against a bad value)` | 02 |
+| One record of cooldowns serves every session of an agent, in memory, and a later mark never shortens an earlier one. | `(defaulted: a restart that forgets a cooldown costs one refusal)` | 02 |
+| A turn that showed nothing before its refusal runs again on the next login it has not tried: a new CLI resumes at the last entry of the turn before it, and the prompt goes out again under a new uuid. | [code://packages/agent-claude/src/session/query.ts#L507](../../../../packages/agent-claude/src/session/query.ts#L507); [code://packages/agent-claude/src/session/turns.ts#L88-L92](../../../../packages/agent-claude/src/session/turns.ts#L88-L92) | 02 |
 | The cut point is the entry `ends` holds for the last turn before the refused one that ran on the CLI, which a `!` command's turn does not. | [code://packages/agent-claude/src/session/query.ts#L545](../../../../packages/agent-claude/src/session/query.ts#L545) | 02 |
-| A turn that showed something before its refusal fails as it does today, and the next turn starts on the next login. | meridian's spec, "No failover after content streams" | 02 |
+| A turn that showed something before its refusal fails as it does today, and the next turn starts on the next login. | `(defaulted: content that was shown or a tool that ran already happened)` | 02 |
 | A turn whose turn before it on the CLI has no entry in `ends`, one read back after a restart, fails the same way, and never starts the conversation over. | `(defaulted: the conversation holds the turns before the refused one, and only a cut keeps them)`; the measurement in *Searches performed* | 02 |
 | A conversation refused on its first turn starts over under its id: the CLI stops, the SDK's `deleteSession` removes the conversation, and a new CLI starts with no resume. Only a conversation this process started on this host does, since a resumed one holds more and a machine's files are not this host's. | Aaron, 2026-10-28: "seems like conversations should just have a zero point before any turns to fall back to in that case?"; the reference's `_removeAllTurns`; the plan it requires | 02 |
 | A conversation whose delete fails comes back as it is, on the new login, and the turn fails with the refusal and the reason. | The plan it requires, whose failed delete brings the chat back resumed and refuses with the reason | 02 |
 | The CLI that a start-over stops ends before the next CLI exists, and that end does not stop the session. | SDK 0.3.301 `sdk.mjs`: `Query.close` ends the frames at once, and `performCleanup` waits up to 2 seconds for the CLI to exit | 02 |
-| When every login cools down or was tried, the turn waits until the earliest cooldown ends, says until when, and then tries again; a cancel ends the wait. The login it waited for is tried when no other is back, since a timer can fire before the clock passes its deadline. | Aaron, 2026-10-28: "retry all the accounts with backoff"; meridian `server.ts` L2114-L2122 | 02 |
-| `authentication_failed` and every other error fail the turn as they do today, and move nothing. | meridian `errors.ts` L658-L669 | 02 |
+| When every login cools down or was tried, the turn waits until the earliest cooldown ends, says until when, and then tries again; a cancel ends the wait. The login it waited for is tried when no other is back, since a timer can fire before the clock passes its deadline. | Aaron, 2026-10-28: "retry all the accounts with backoff" | 02 |
+| `authentication_failed` and every other error fail the turn as they do today, and move nothing. | `(defaulted: another account cannot fix a bad token or a failure the account does not decide)` | 02 |
 
 ## Proposed architecture
 
@@ -127,7 +114,7 @@ turn begins -> refreshPreset finds the conversation's login -> query env CLAUDE_
 ## Risks and tradeoffs
 
 - A wait for a weekly reset can hold a turn for days - the activity says until when, and a cancel ends it.
-- Two agents that hold one account's token cool it down separately, as meridian treats every profile as its own account.
+- Two agents that hold one account's token cool it down separately, since each agent keeps its own record of cooldowns.
 - A move to another login loses the prompt cache, which belongs to the account - a conversation moves only when its login cools down.
 
 ## Resume state

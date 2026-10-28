@@ -47,13 +47,12 @@ export interface Logins {
 }
 
 /**
- * The refusals that move a turn to another login: meridian's two.
+ * The refusals that move a turn to another login.
  *
  * A spent quota and a billing refusal are the account's own; another account
  * may well be able to serve. An authentication failure is not one of them,
  * and neither is anything an account does not decide, which the CLI retries
  * by itself.
- * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/errors.ts#L658-L669
  */
 const MOVES = new Set(['rate_limit', 'billing_error']);
 
@@ -69,11 +68,10 @@ export function createLogins(ctx: SessionContext): Logins {
    * first in this conversation's order that is not.
    *
    * A conversation stays on its login because the prompt cache is the
-   * account's: meridian keeps an existing session on a healthy account and
-   * lets only a new one start elsewhere. With every login cooling down, the
-   * first in the order is tried anyway, as meridian tries its preferred
-   * account, since a cooldown is a guess about an account that may have reset.
-   * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/routing.ts#L193-L210
+   * account's: an existing session stays on a healthy account and only a new
+   * one starts elsewhere. With every login cooling down, the first in the
+   * order is tried anyway, since a cooldown is a guess about an account that
+   * may have reset.
    *
    * The order is the chat's, by its URI: the conversation this CLI carries is
    * that chat, and the URI is what names it again after a restart.
@@ -153,10 +151,9 @@ export function createLogins(ctx: SessionContext): Logins {
     /*
      * Run again only a turn that showed nothing yet.
      *
-     * meridian never replays an attempt on another account once it has shown
-     * content or run a tool, because those happened; a turn that has a part
-     * fails here as it always did, and the next turn starts on the next login.
-     * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L1845-L1860
+     * An attempt that has shown content or run a tool never runs again on
+     * another account, because those happened; a turn that has a part fails
+     * here as it always did, and the next turn starts on the next login.
      */
     if (list(turn.responseParts).length > 0) return false;
     const cut = cutOf();
@@ -229,12 +226,10 @@ export function createLogins(ctx: SessionContext): Logins {
   /**
    * The next login the refused turn runs on, or a wait for the first one back.
    *
-   * Each login is tried once by a turn, as meridian tries each account once per
-   * request; when every one is cooling down or tried, the turn waits until the
-   * earliest cooldown ends and tries them all again, which is the backoff Aaron
-   * asked for. meridian leaves that wait to its client with a `Retry-After`; the
-   * turn is this host's own client, so it waits itself, and says until when.
-   * https://github.com/rynfar/meridian/blob/95b3af5a2441731285c6c0dbfb29fc0b72411bf8/src/proxy/server.ts#L2114-L2122
+   * Each login is tried once by a turn; when every one is cooling down or
+   * tried, the turn waits until the earliest cooldown ends and tries them all
+   * again, which is the backoff Aaron asked for. The turn waits itself, and
+   * says until when.
    */
   const moveOn = async (): Promise<void> => {
     if (!moving() || ctx.login === undefined) return;
