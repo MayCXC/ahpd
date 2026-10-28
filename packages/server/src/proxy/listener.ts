@@ -19,7 +19,7 @@
 
 import type { RequestHandler } from '@cofold/remote';
 import {
-  chargeFor, decide, type Cost, type ModelPricing, type ModelUse, type Owner, type PayOrder, type Policies, type ProviderConnector,
+  chargeFor, decide, type ConnectorModel, type ConnectorModels, type Cost, type ModelPricing, type ModelUse, type Owner, type PayOrder, type Policies, type ProviderConnector,
   type ProviderModel, type Scope, type Usage, type Users,
 } from '@ahpd/sdk';
 import { foreign, guarded, isUnder, json, originRefusal, PROXY_PREFIX, type ApiOrigins } from '../http.js';
@@ -557,6 +557,56 @@ type Attempt =
  * `/v1/messages`, the list at `/v1/models`, and a 404 in OpenAI's body for any
  * other. Everything else is `otherwise`'s.
  */
+/** The first candidate of a name for one caller, in either dialect, or nothing when it is refused or serves nobody. */
+const firstCandidate = async (
+  options: ProxyOptions,
+  proxy: ProxyConfiguration,
+  caller: ProxyCaller,
+  charged: Charged,
+  open: readonly ProviderConnector[],
+  catalog: ModelCatalog | undefined,
+  name: string,
+): Promise<Candidate | undefined> => {
+  const check = policyFor(options, charged, name, undefined);
+  for (const one of DIALECTS) {
+    const routed = await route(proxy, name, one, {
+      providers: open,
+      caller,
+      ...(catalog === undefined ? {} : { catalog }),
+      ...(check === undefined ? {} : { allowed: check.allowed }),
+    });
+    if ('candidates' in routed) return routed.candidates[0];
+  }
+  return undefined;
+};
+
+/**
+ * The models one provider connector serves, as the catalog last read them, for
+ * one caller: the name each is called by, and whether that caller may call it
+ * now. A connector the catalog has not read is read first.
+ *
+ * `callable` is asked the way `GET /v1/models` asks it, through the routes and
+ * the policies, so the two never disagree.
+ */
+export const connectorModels = async (options: ProxyOptions, connector: ProviderConnector, caller: ProxyCaller): Promise<ConnectorModels> => {
+  const catalog = options.catalog?.();
+  if (catalog === undefined) return { models: [] };
+  await catalog.refresh();
+  const kept = catalog.listOf(connector);
+  if (kept === undefined) return { models: [] };
+  const proxy = options.proxy();
+  const charged = chargedAs(caller, options, proxy);
+  const open = options.providers();
+  const prefix = prefixOf(connector);
+  const models: ConnectorModel[] = [];
+  for (const one of kept.models) {
+    const model = `${prefix}/${one.id}`;
+    const callable = await firstCandidate(options, proxy, caller, charged, open, catalog, model) !== undefined;
+    models.push({ ...one, model, callable });
+  }
+  return { models, at: new Date(kept.at).toISOString() };
+};
+
 export function proxyHandler(options: ProxyOptions): RequestHandler {
   const say = (line: string): void => { options.onProblem?.(line); };
   // One zone for every check, read once because it does not move while the
@@ -962,20 +1012,8 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
     // listed are never an hour behind the connectors that serve them.
     await catalog?.refresh();
 
-    /** The first candidate of a name, in either dialect, or nothing when it is refused or serves nobody. */
-    const first = async (name: string): Promise<Candidate | undefined> => {
-      const check = policyFor(options, charged, name, undefined);
-      for (const one of DIALECTS) {
-        const routed = await route(proxy, name, one, {
-          providers: open,
-          caller: called.caller,
-          ...(catalog === undefined ? {} : { catalog }),
-          ...(check === undefined ? {} : { allowed: check.allowed }),
-        });
-        if ('candidates' in routed) return routed.candidates[0];
-      }
-      return undefined;
-    };
+    const first = (name: string): Promise<Candidate | undefined> =>
+      firstCandidate(options, proxy, called.caller, charged, open, catalog, name);
     /**
      * One entry of the list: the name a caller calls, and the fields the first
      * connector it routes to knows. A price in the file is written here as

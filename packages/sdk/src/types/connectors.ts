@@ -166,6 +166,28 @@ export interface ProviderConnector {
 }
 
 /**
+ * One model a provider connector serves, as `x-ahpd/connectors/models` answers
+ * it to one reader.
+ */
+export interface ConnectorModel extends ProviderModel {
+  /** The name a caller sends as `model` to the proxy: `<prefix>/<id>`. */
+  model: string;
+  /**
+   * Whether this reader may call it through the proxy now, after its routes
+   * and policies. Absent on a host that serves no proxy.
+   */
+  callable?: boolean;
+}
+
+/** One provider connector's models, as the proxy's catalog last read them. */
+export interface ConnectorModels {
+  /** The models, in the order the provider sent them. */
+  models: ConnectorModel[];
+  /** When the list was last read from the provider, or tried, as an ISO time. Absent before the first read. */
+  at?: string;
+}
+
+/**
  * One stored connector as a save that may name it reads it.
  *
  * Id, adapter and owner and nothing else, because that is the whole of what a

@@ -62,7 +62,7 @@ import { agentPluginsDir, automationsDir, automationsPath, automationStatePath, 
 import { API_PREFIX, apiHandler, json, listenApi, plainRequests, pluginRoutes, withoutApi, type ApiListener, type ApiOrigins } from '../http.js';
 import { servedRegistry, type ServedFacts } from './served.js';
 import { updateMethod } from './update.js';
-import { proxyHandler } from '../proxy/listener.js';
+import { connectorModels, proxyHandler, type ProxyOptions } from '../proxy/listener.js';
 import { modelCatalog } from '../proxy/catalog.js';
 import { hostAdapters } from '../proxy/adapters.js';
 import { loadPlugins, pluginSet, type LoadOptions } from '../plugins.js';
@@ -563,9 +563,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * carries it, and only while `httpApi` is on. Its model names are the
    * configuration read at startup; the open provider connectors, the users
    * file and the usage store are read per call. The connectors channel is
-   * built below, so its list is read through the closure each time.
+   * built below, so its list is read through the closure each time. The same
+   * options answer the channel's `x-ahpd/connectors/models`, whether or not
+   * the proxy is served.
    */
-  const served = api === undefined ? undefined : proxyHandler({
+  const proxied: ProxyOptions = {
     proxy: () => options.modelProxy,
     providers: () => connectorLists.providers(),
     // The provider lists are kept below, once the channel they read exists.
@@ -580,9 +582,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     usage: () => metered,
     hostName: hostname(),
     origins: () => apiOrigins(apiHost, options.resource, apiBoundPort, options.origins),
-    otherwise: api,
+    // Asked only by the handler, which is built only when the API is.
+    otherwise: api ?? (async () => new Response(null, { status: 404 })),
     onProblem: stamp,
-  });
+  };
+  const served = api === undefined ? undefined : proxyHandler(proxied);
   /*
    * Who may open a connection on the daemon's own port: the deployment's own
    * token, which is the host, and a person's token that the directory knows.
@@ -784,6 +788,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       const entry = automationsStore?.get(id.startsWith('ahp-automation:/') ? id : `ahp-automation:/${id}`);
       if (entry === undefined) return undefined;
       return { owner: ownerOf(entry._meta?.['ahpd.owner']) };
+    },
+    // A connector's models as the proxy's catalog keeps them, asked of the
+    // proxy for this reader. A host serving no proxy calls none of them, so it
+    // says nothing of whether one is callable.
+    models: async (connector, reader) => {
+      const listed = await connectorModels(proxied, connector, reader === undefined ? { kind: 'root' } : { kind: 'person', principal: reader });
+      if (served !== undefined) return listed;
+      return { ...listed, models: listed.models.map(({ callable: _callable, ...rest }) => rest) };
     },
     onProblem: listProblem,
   });

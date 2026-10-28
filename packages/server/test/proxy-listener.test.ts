@@ -15,6 +15,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { memoryPolicies, type Grant, type ModelDialect, type ModelUse, type ProviderConnector, type ProviderModel, type Users } from '@ahpd/sdk';
 import { modelCatalog, type ModelCatalog } from '../src/proxy/catalog.js';
+import { connectorModels, type ProxyOptions } from '../src/proxy/listener.js';
+import { proxyConfiguration } from '../src/proxy/providers.js';
 import {
   answerJson, fakeProvider, isAnthropicError, isOpenAiError, MARKER, memoryUsage, pause, people, providerConnector, ROOT_TOKEN, send,
   serveProxy, type People, type ProviderFixture, type Served, type ServeOptions,
@@ -475,6 +477,51 @@ describe('the list carries the fields a provider sent', () => {
     expect((ana.json as { data: { id: string }[] }).data.map((one) => one.id)).toEqual(['local/keep']);
     const root = await send(served.port, '/v1/models', { headers: asRoot });
     expect((root.json as { data: { id: string }[] }).data.map((one) => one.id)).toEqual(['local/drop', 'local/keep']);
+  });
+
+  it('lists one connector\'s models with the name each is called by, and which a caller may call', async () => {
+    const row = local([{ id: 'keep', name: 'Keep' }, { id: 'drop' }]);
+    const catalogue = await catalogueOver([row]);
+    const policies = memoryPolicies();
+    await policies.put({ id: 'everyone', scope: 'all', kind: 'model', effect: 'allow', match: { model: ['*'] } });
+    await policies.put({ id: 'no-drop', scope: 'all', kind: 'model', effect: 'deny', match: { model: ['local/drop'] } });
+    const options: ProxyOptions = {
+      proxy: () => proxyConfiguration({ models: {} }),
+      providers: () => [row],
+      catalog: () => catalogue,
+      users: who.users,
+      policies,
+      policiesCheck: true,
+      hostName: 'testbox',
+      origins: () => ({ authorities: [], origins: [] }),
+      otherwise: async () => new Response(null, { status: 404 }),
+    };
+    const ana = await who.users.verify(who.ana);
+
+    const forAna = await connectorModels(options, row, { kind: 'person', principal: ana! });
+    expect(forAna.models).toEqual([
+      { id: 'keep', name: 'Keep', model: 'local/keep', callable: true },
+      { id: 'drop', model: 'local/drop', callable: false },
+    ]);
+    expect(Date.parse(forAna.at!)).not.toBeNaN();
+    const forRoot = await connectorModels(options, row, { kind: 'root' });
+    expect(forRoot.models.map((one) => one.callable)).toEqual([true, true]);
+  });
+
+  it('reads a connector the catalog has not seen before it answers', async () => {
+    const row = local();
+    const catalogue = modelCatalog({ providers: () => [row] });
+    fakes.push({ close: async () => { catalogue.stop(); } });
+    const options: ProxyOptions = {
+      proxy: () => proxyConfiguration({ models: {} }),
+      providers: () => [row],
+      catalog: () => catalogue,
+      hostName: 'testbox',
+      origins: () => ({ authorities: [], origins: [] }),
+      otherwise: async () => new Response(null, { status: 404 }),
+    };
+    const listed = await connectorModels(options, row, { kind: 'root' });
+    expect(listed.models.map((one) => one.model)).toEqual(['local/local-model']);
   });
 
   it('answers in Anthropic\'s shape with the same fields', async () => {
