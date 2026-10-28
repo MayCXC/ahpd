@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   resetSdk, actions, claude, createHost, hello, machine, open,
-  peer, sdk, serving, sessionQueries, settle, running,
+  peer, sdk, serving, sessionQueries, settle, running, wrote,
 } from './support/host.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
@@ -205,6 +205,7 @@ describe('a session asked for by the name a client computed', () => {
   const browsing = async () => {
     sdk.sessions.push(listed);
     sdk.transcript.push({ type: 'user', uuid: 'u1', message: { role: 'user', content: 'earlier' } });
+    wrote(listed.sessionId, listed.cwd);
     const client = open();
     await client.handle(hello(['0.9.0']));
     // Listed first: that is when this host learns whose the row is, and it is

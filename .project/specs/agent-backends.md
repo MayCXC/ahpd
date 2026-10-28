@@ -82,6 +82,17 @@ THEN its prompt carries a new uuid, and the backend calls `onTurnRecorded` with 
 The reason: the CLI writes a prompt under the `uuid` it carries and sends no frame for it, and a read after a restart names the turn by that uuid.
 See [`code://packages/agent-claude/src/session/turns.ts`](../../packages/agent-claude/src/session/turns.ts).
 
+### A Claude conversation the CLI never wrote
+
+WHEN the host starts a Claude session with `resume`
+AND no project folder holds a transcript for that id
+THEN the backend sends no `resume`, no fork point and no rewind point
+AND it starts a new conversation under the chat's own id, or under that id when the chat has none.
+WHEN a project folder holds the transcript, the folder's own or another one
+THEN the backend resumes it.
+The reason: the CLI writes a conversation when its first message reaches it, and it ends at startup when it is told to resume an id it has no file for.
+See [`code://packages/agent-claude/src/catalog.ts`](../../packages/agent-claude/src/catalog.ts).
+
 ### A live tool change in a Claude session
 
 WHEN the tools a Claude session offers change while the session runs
