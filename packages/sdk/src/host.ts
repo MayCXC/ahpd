@@ -19,7 +19,7 @@
 
 import { resolve } from 'node:path';
 import { chatReducer } from '@microsoft/agent-host-protocol';
-import type { AnnotationsState, ChatAction, SessionInputRequestKind, ToolDefinition } from '@microsoft/agent-host-protocol';
+import type { AnnotationsState, ChatAction, SessionInputRequestKind, SubscribeView, ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { WireTurn } from './types/wire.js';
 import { INVALID_PARAMS, RpcError, METHOD_NOT_FOUND } from './rpc.js';
 import { computerId, computersFor } from './machines/computers.js';
@@ -1129,6 +1129,7 @@ export function createHost(options: HostOptions): Host {
     channel: string,
     mine?: Record<string, unknown>,
     connection?: Connection,
+    view?: SubscribeView,
   ): Promise<Record<string, unknown>> => {
     /*
      * Every subscription passes here - the command, and the two handshakes
@@ -1137,7 +1138,7 @@ export function createHost(options: HostOptions): Host {
      * over: the client never left, and nothing is on its way to saying it did.
      */
     if (connection !== undefined) waitingOver(channel, connection.clientId || 'anonymous');
-    const answer = await backendSnapshot(channel, mine, connection);
+    const answer = await backendSnapshot(channel, mine, connection, view);
     const state = answer.state as Bag;
     const reported = Array.isArray(state.customizations) ? state.customizations : [];
     const customizations = [

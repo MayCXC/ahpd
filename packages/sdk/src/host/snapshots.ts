@@ -1,5 +1,5 @@
 import { Status, idOf } from '../sessions/catalog.js';
-import { tail } from '../sessions/paging.js';
+import { windowOf } from '../sessions/paging.js';
 import { RpcError } from '../rpc.js';
 import { uriOf } from '../resources/fileuri.js';
 import { runState } from './automations.js';
@@ -11,12 +11,12 @@ import type { Connection } from '../types/host.js';
 import type { WireTurn } from '../types/wire.js';
 import type { StoredChat } from '../types/sessions.js';
 import type { HostContext } from './context.js';
-import type { Turn } from '@microsoft/agent-host-protocol';
+import type { SubscribeView, Turn } from '@microsoft/agent-host-protocol';
 
 /** What a subscribe is answered with. */
 export interface Snapshots {
   value(snapshot: Record<string, unknown>): Record<string, unknown>;
-  snapshotOf(channel: string, mine?: Record<string, unknown>, connection?: Connection): Promise<Record<string, unknown>>;
+  snapshotOf(channel: string, mine?: Record<string, unknown>, connection?: Connection, view?: SubscribeView): Promise<Record<string, unknown>>;
 }
 
 export function createSnapshots(ctx: HostContext): Snapshots {
@@ -70,7 +70,7 @@ export function createSnapshots(ctx: HostContext): Snapshots {
       : snapshot);
   };
 
-  const snapshotOf = async (channel: string, mine: Record<string, unknown> = {}, connection?: Connection): Promise<Record<string, unknown>> => {
+  const snapshotOf = async (channel: string, mine: Record<string, unknown> = {}, connection?: Connection, view?: SubscribeView): Promise<Record<string, unknown>> => {
     if (isRootChannel(channel)) {
       return value({ resource: ROOT, state: await rootState(mine, connection), fromSeq: ctx.serverSeq });
     }
@@ -367,7 +367,15 @@ export function createSnapshots(ctx: HostContext): Snapshots {
       }
       if (Array.isArray(state.turns)) {
         const turns = linkedTurns(talking.uri, state.turns as Bag[], restored);
-        state.turns = ctx.withSender(talking.uri, ctx.stampedCalls(talking.uri, turns));
+        // The window the subscribe asked for, over every turn the backend
+        // holds: the backend gives all of them, and the cut is the host's to
+        // make. A snapshot with no view carries all of them and no cursor, so
+        // the backend's own cursor goes rather than pointing at turns that are
+        // already in the state.
+        const window = windowOf(ctx.withSender(talking.uri, ctx.stampedCalls(talking.uri, turns)), view);
+        state.turns = window.turns;
+        if (window.turnsNextCursor === undefined) delete state.turnsNextCursor;
+        else state.turnsNextCursor = window.turnsNextCursor;
       }
       if (typeof state.activeTurn === 'object' && state.activeTurn !== null) {
         state.activeTurn = ctx.withSender(talking.uri, ctx.stampedCalls(talking.uri, [state.activeTurn as Bag]))[0];
@@ -441,7 +449,7 @@ export function createSnapshots(ctx: HostContext): Snapshots {
             title: opened.title ?? title,
             status: Status.Idle | kept.chatFlags(id, channel),
             modifiedAt: moves.get(owning) ?? new Date().toISOString(),
-            ...tail(ctx.withSender(owning, ctx.stampedCalls(owning, (own ?? []) as unknown as Bag[]))),
+            ...windowOf(ctx.withSender(owning, ctx.stampedCalls(owning, (own ?? []) as unknown as Bag[])), view),
             queuedMessages: [],
             ...(drafts.get(channel) !== undefined ? { draft: drafts.get(channel) } : {}),
           },
@@ -470,11 +478,11 @@ export function createSnapshots(ctx: HostContext): Snapshots {
             origin: { kind: 'tool', chat: parentChat, toolCallId: wanted },
             interactivity: 'read-only',
             // With each worker it spawned linked from the call that ran it.
-            ...tail(ctx.withSender(owning, ctx.stampedCalls(owning, linkedTurns(
+            ...windowOf(ctx.withSender(owning, ctx.stampedCalls(owning, linkedTurns(
               owning,
               (one.turns ?? []) as Bag[],
               workers.filter((held) => String(held.parentToolCallId ?? '') === wanted),
-            )))),
+            ))), view),
             queuedMessages: [],
           },
           fromSeq: ctx.serverSeq,
@@ -489,7 +497,7 @@ export function createSnapshots(ctx: HostContext): Snapshots {
             status: Status.Idle | kept.chatFlags(id, channel),
             modifiedAt: moves.get(owning) ?? new Date().toISOString(),
             ...startedBy(nameOf(id)),
-            ...tail(ctx.withSender(owning, ctx.stampedCalls(owning, linkedTurns(owning, turns, workers)))),
+            ...windowOf(ctx.withSender(owning, ctx.stampedCalls(owning, linkedTurns(owning, turns, workers))), view),
             queuedMessages: [],
             // Held here rather than by a chat, because there is no chat. A
             // client that typed into this row and came back finds what it

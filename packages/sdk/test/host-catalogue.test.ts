@@ -288,14 +288,26 @@ describe('paging a long history', () => {
 
   interface Loaded { turns: { message: { text: string } }[]; turnsNextCursor?: string }
 
-  const opened = async (count = 120) => {
+  /**
+   * The session opened, with the window the paging cases page from.
+   *
+   * A view of 50 keeps the cursor these cases were written around; a case
+   * about a subscribe that names no view passes `null` instead.
+   */
+  const opened = async (count = 120, view: { turns?: number } | null = { turns: 50 }) => {
     sdk.sessions.push({ sessionId: 'long', summary: 'A long one', lastModified: 1, cwd: '/home/softov' });
     sdk.transcript.push(...many(count));
+    // The CLI wrote the conversation, so a turn sent to it resumes the session
+    // rather than starting one under the id this test asked for.
+    wrote('long', '/home/softov');
     const host = serving('/home/softov');
     const p = peer();
     const client = host.accept(p);
     await client.handle(hello(['0.9.0']));
-    const chat = (await client.handle({ method: 'subscribe', params: { channel: 'ahp-chat:/long' } }) as {
+    const chat = (await client.handle({
+      method: 'subscribe',
+      params: { channel: 'ahp-chat:/long', ...(view === null ? {} : { view }) },
+    }) as {
       snapshot: { state: { turns: { message: { text: string } }[]; turnsNextCursor?: string } };
     }).snapshot.state;
     const pages = () => actions(p, 'ahp-chat:/long')
@@ -311,6 +323,68 @@ describe('paging a long history', () => {
     expect(chat.turns).toHaveLength(50);
     expect(chat.turns[49]?.message.text).toBe('said 119');
     expect(chat.turnsNextCursor).toBe('70');
+  });
+
+  it('gives every turn of a chat that is not running when no view is named', async () => {
+    // The protocol: a subscribe that names no `view` is answered with every
+    // retained turn, and a cursor only where a window left older ones behind.
+    const { chat } = await opened(120, null);
+    expect(chat.turns).toHaveLength(120);
+    expect(chat.turns[0]?.message.text).toBe('said 0');
+    expect(chat.turnsNextCursor).toBeUndefined();
+  });
+
+  it('gives the window a view names, and a cursor for the rest', async () => {
+    const { chat } = await opened(120, { turns: 20 });
+    expect(chat.turns).toHaveLength(20);
+    expect(chat.turns[19]?.message.text).toBe('said 119');
+    expect(chat.turnsNextCursor).toBe('100');
+  });
+
+  it('gives the newest page for a view that names no positive count', async () => {
+    // Zero, a negative number or a fraction names no window of its own, so
+    // the page is what an unreadable count falls back to.
+    const { chat } = await opened(120, { turns: 0 });
+    expect(chat.turns).toHaveLength(50);
+    expect(chat.turnsNextCursor).toBe('70');
+  });
+
+  it('gives every turn of a live chat when no view is named', async () => {
+    const { client } = await opened();
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: 'ahp-chat:/long', action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'say ok' } } },
+    });
+    await settle(6);
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+
+    // Live now, so the state is the backend's rather than the transcript's.
+    const chat = (await client.handle({ method: 'subscribe', params: { channel: 'ahp-chat:/long' } }) as {
+      snapshot: { state: { turns: { message: { text: string } }[]; turnsNextCursor?: string } };
+    }).snapshot.state;
+    expect(chat.turns).toHaveLength(121);
+    expect(chat.turnsNextCursor).toBeUndefined();
+  });
+
+  it('gives a live chat the window its view names', async () => {
+    const { client } = await opened();
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: 'ahp-chat:/long', action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'say ok' } } },
+    });
+    await settle(6);
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+
+    // The backend gives every turn, so the host is the one that cuts.
+    const chat = (await client.handle({
+      method: 'subscribe',
+      params: { channel: 'ahp-chat:/long', view: { turns: 20 } },
+    }) as {
+      snapshot: { state: { turns: { message: { text: string } }[]; turnsNextCursor?: string } };
+    }).snapshot.state;
+    expect(chat.turns).toHaveLength(20);
+    expect(chat.turns[19]?.message.text).toBe('say ok');
+    expect(chat.turnsNextCursor).toBe('101');
   });
 
   it('sends the page to everyone watching, not to the one who asked', async () => {
@@ -349,11 +423,14 @@ describe('paging a long history', () => {
     expect(new Set(all).size).toBe(120);
   });
 
-  it('loads the next page when no cursor is given', async () => {
+  it('answers nothing older when no cursor is given', async () => {
     const { client, pages } = await opened();
-    // "Load whatever is next" - the page before the one the snapshot carried.
-    await client.handle({ method: 'fetchTurns', params: { channel: 'ahp-chat:/long' } });
-    expect(pages()[0]?.turns[49]?.message.text).toBe('said 69');
+    // No cursor asks for whatever is next, and a snapshot that named a view
+    // carries the cursor that names the page before it. The host keeps no
+    // record of which window a client got, so there is nothing to guess at.
+    await expect(client.handle({ method: 'fetchTurns', params: { channel: 'ahp-chat:/long' } }))
+      .resolves.toEqual({});
+    expect(pages()).toHaveLength(0);
   });
 
   it('answers nothing older, without refusing, when the history fits', async () => {

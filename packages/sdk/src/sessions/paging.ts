@@ -1,3 +1,4 @@
+import type { SubscribeView } from '@microsoft/agent-host-protocol';
 import type { Bag } from '../types/common.js';
 import type { Page } from '../types/paging.js';
 
@@ -12,12 +13,16 @@ import type { Page } from '../types/paging.js';
  */
 
 /**
- * How many turns a snapshot carries.
+ * The size of one page, and of a window that names no count.
  *
- * A session in this directory has eight hundred and fifty turns. Sending them
- * all works and will not keep working: a snapshot is what a client waits for
- * before it can draw anything, and the oldest turns are the ones nobody is
- * looking at.
+ * A subscribe that names no `view` is answered with every turn the chat keeps,
+ * so this is not a snapshot's size. It is how many turns `older` walks back at
+ * a time, and what a `view.turns` that is not a positive integer gets: the
+ * newest this many, with a cursor for the rest.
+ *
+ * A session in this directory has eight hundred and fifty turns. A client that
+ * asks for a window gets one because a snapshot is what it waits for before it
+ * can draw anything, and the oldest turns are the ones nobody is looking at.
  */
 export const PAGE = 50;
 
@@ -34,6 +39,21 @@ export function tail(turns: Bag[], size = PAGE): Page {
     turns: turns.slice(start),
     ...(start > 0 ? { turnsNextCursor: String(start) } : {}),
   };
+}
+
+/**
+ * The turns a snapshot carries, as the subscribe's view asks for them.
+ *
+ * The protocol makes the view advisory and its absence binding: a client that
+ * names no `view` is answered with every turn the chat retains, and one that
+ * names `turns` is answered with the newest that many, carrying
+ * `turnsNextCursor` while older turns are left. A count that is not a positive
+ * integer names no window of its own, so the newest `PAGE` is the answer.
+ */
+export function windowOf(turns: Bag[], view?: SubscribeView): Page {
+  if (view === undefined) return { turns };
+  const asked = view.turns;
+  return tail(turns, typeof asked === 'number' && Number.isInteger(asked) && asked > 0 ? asked : PAGE);
 }
 
 /**

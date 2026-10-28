@@ -1,7 +1,7 @@
 import { rmSync } from 'node:fs';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { optionDefaults, storedSandbox } from './options.js';
-import { activityOf, tail, titleFrom, uriOf } from '@ahpd/sdk';
+import { activityOf, titleFrom, uriOf } from '@ahpd/sdk';
 import type { Bag, BoundTool, Session } from '@ahpd/sdk';
 import { bag, list, str } from './session/common.js';
 import { createAsking } from './session/asking.js';
@@ -251,9 +251,9 @@ export function createSession(options: ClaudeSessionOptions): Session {
       // process is rooted at the same place, and which peers it was given is
       // this chat's to say.
       workingDirectories: [uriOf(cwd), ...ctx.peers.map((one) => uriOf(one))],
-      // The newest page. A resumed session can be seeded with hundreds of
-      // turns, and the snapshot is what a client waits on before it draws.
-      ...tail(ctx.turns),
+      // Every turn this chat holds. A resumed session can be seeded with
+      // hundreds of them, and the host cuts the window a subscribe asks for.
+      turns: ctx.turns,
       ...(ctx.active ? { activeTurn: ctx.active } : {}),
       ...(ctx.activity.current() !== undefined ? { activity: ctx.activity.current() } : {}),
       ...(ctx.draft !== undefined ? { draft: ctx.draft } : {}),

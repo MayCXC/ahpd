@@ -1188,9 +1188,20 @@ it('says who sent a turn on the oldest page too, not only on the tail window', a
   const said = PAGE + 10;
   for (let at = 0; at < said; at++) await ask(client, chat, `turn-${at}`);
   await new Promise((tick) => { setTimeout(tick, 200); });
-  expect(await turnsOn(client, chat)).toHaveLength(said);
 
-  await client.handle({ method: 'fetchTurns', params: { channel: chat } });
+  // A window, because a subscribe that names no view is handed every turn and
+  // has nothing older to page to. The cursor it carries is the page before it.
+  const first = await client.handle({
+    method: 'subscribe',
+    params: { channel: chat, view: { turns: PAGE } },
+  }) as { snapshot: { state: { turns?: Bag[]; turnsNextCursor?: string } } };
+  expect(first.snapshot.state.turns).toHaveLength(PAGE);
+  expect(first.snapshot.state.turnsNextCursor).toBe('10');
+
+  await client.handle({
+    method: 'fetchTurns',
+    params: { channel: chat, cursor: first.snapshot.state.turnsNextCursor },
+  });
   await new Promise((tick) => { setTimeout(tick, 20); });
   const page = on.notes
     .filter((note) => note.method === 'action')

@@ -1,6 +1,6 @@
 ---
 title: A snapshot follows the subscribe's view
-status: todo
+status: implemented
 depends:
   - task-01-the-cut-is-shown.md
 layer: sdk
@@ -30,6 +30,7 @@ With `view.turns`, it gets the newest `view.turns` turns, and a cursor when olde
 - `UPDATE: packages/sdk/src/host/snapshots.ts:322-351` - a live chat's turns go through `windowOf`, after `linkedTurns`.
 - `UPDATE: packages/sdk/src/host/snapshots.ts:411-500` - the three `tail` calls become `windowOf`.
 - `UPDATE: packages/sdk/src/host/sessionmethods.ts:380-434` - `subscribe` reads `params.view` and gives it to `snapshotOf`.
+- `UPDATE: packages/sdk/src/host.ts:1127-1142` - the wrapper on `snapshotOf` takes the view and passes it on.
 - `UPDATE: packages/sdk/src/host/sessionmethods.ts:466-476` - `fetchTurns` with no cursor answers with nothing older and sends no action.
 - `UPDATE: packages/sdk/test/host-catalogue.test.ts:277-380` - the restored case of task 01 becomes `it`, and the paging cases subscribe with a view.
 - `UPDATE: packages/sdk/test/sessions.test.ts:1182-1203` - the oldest-page case subscribes with a view and sends the cursor it got.
@@ -41,17 +42,18 @@ With `view.turns`, it gets the newest `view.turns` turns, and a cursor when olde
 3. For any other `view.turns`, make `windowOf` return `tail(turns)`, the newest `PAGE`.
 4. Add an optional `view` argument to `snapshotOf` in its type and in its body.
 5. In `subscribe`, read `params.view` as a view only when it is an object, and give it to `snapshotOf`.
-6. Leave the `snapshotOf` calls in `handshake.ts` without a view.
-7. Replace the three `tail` calls in `snapshots.ts` with `windowOf` and the view.
-8. In the live chat path, give `state.turns` to `windowOf` after `linkedTurns`, and set or delete `state.turnsNextCursor` from its answer.
-9. Make the no-cursor branch of `fetchTurns` return `{}` and dispatch no action.
-10. Change the restored case from task 01 from `it.fails` to `it`.
-11. Make `opened()` in `host-catalogue.test.ts` subscribe with `view: { turns: 50 }`, so the paging cases keep cursor `70`.
-12. Make the oldest-page case in `sessions.test.ts` subscribe with a view and send the cursor from its snapshot.
-13. Add a case that sends `fetchTurns` with no cursor to a 120-turn chat, and expects `{}` and no `chat/turnsLoaded`.
-14. Add a case that subscribes with `view: { turns: 20 }`, and expects 20 turns and cursor `100`.
-15. Add a case that subscribes with `view: { turns: 0 }`, and expects 50 turns and cursor `70`.
-16. Run the sdk tests, and set this task and its plan row to `implemented`.
+6. Give the wrapper on `snapshotOf` in `host.ts` the view, and pass it on to the snapshot's own function.
+7. Leave the `snapshotOf` calls in `handshake.ts` without a view.
+8. Replace the three `tail` calls in `snapshots.ts` with `windowOf` and the view.
+9. In the live chat path, give `state.turns` to `windowOf` after `linkedTurns`, and set or delete `state.turnsNextCursor` from its answer.
+10. Make the no-cursor branch of `fetchTurns` return `{}` and dispatch no action.
+11. Change the restored case from task 01 from `it.fails` to `it`.
+12. Make `opened()` in `host-catalogue.test.ts` subscribe with `view: { turns: 50 }`, so the paging cases keep cursor `70`.
+13. Make the oldest-page case in `sessions.test.ts` subscribe with a view and send the cursor from its snapshot.
+14. Add a case that sends `fetchTurns` with no cursor to a 120-turn chat, and expects `{}` and no `chat/turnsLoaded`.
+15. Add a case that subscribes with `view: { turns: 20 }`, and expects 20 turns and cursor `100`.
+16. Add a case that subscribes with `view: { turns: 0 }`, and expects 50 turns and cursor `70`.
+17. Run the sdk tests, and set this task and its plan row to `implemented`.
 
 ## Validation
 
@@ -62,3 +64,4 @@ With `view.turns`, it gets the newest `view.turns` turns, and a cursor when olde
 
 ## Resume
 
+Done 2026-10-28. `windowOf` is in `paging.ts`, beside `tail`, and `snapshotOf` takes an optional view. The three `tail` calls for a chat that is not running and the live chat path now go through `windowOf`. `subscribe` reads `params.view` when it is an object, and `fetchTurns` with no cursor answers `{}` and sends nothing. Step 6 and a Files line were added for `host.ts`: the wrapper on `snapshotOf` took three arguments, so it dropped the view. `opened()` in `host-catalogue.test.ts` takes `null` for a subscribe with no view, because its default of `{ turns: 50 }` applies when `undefined` is passed. The two sdk test files pass, 128 tests, and the live Claude case is still `it.fails`. `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass. `pnpm test` failed four cases in `packages/computer/test/computer-plugin.test.ts` under load, and `pnpm exec vitest run --maxWorkers=2 --testTimeout=20000` passed the full suite, 448 files and 7444 tests.

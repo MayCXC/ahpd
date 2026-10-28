@@ -1,6 +1,6 @@
 ---
 title: Claude's chat state holds every turn
-status: todo
+status: implemented
 depends:
   - task-02-a-snapshot-follows-the-subscribes-view.md
 layer: agent-claude
@@ -39,3 +39,4 @@ A subscribe with no view to a live Claude chat then gets every turn, and the hos
 
 ## Resume
 
+Done 2026-10-28. Claude's `chatState()` gives `turns: ctx.turns`, and the comment above it says the host cuts the window a subscribe asks for. `tail` left the import in `session.ts`, because nothing else in the file used it. The live case from task 01 is now `it` and reads 121 turns with no cursor. A second live case subscribes with `view: { turns: 20 }` and reads the newest 20, ending at "say ok", with cursor `101`. The host cases, the `get_session_context` cases and all of agent-claude pass, 499 tests in 46 files. `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass. The full suite passes, 448 files and 7445 tests.
