@@ -5,6 +5,7 @@
 | `ahpd` | Run in this terminal. Ctrl+C stops it |
 | `ahpd start` | Run in the background |
 | `ahpd status` | Say if it runs, and where |
+| `ahpd doctor` | Say what is wrong, and how to fix it |
 | `ahpd stop` | Stop it, and wait up to 30 s |
 | `ahpd restart` | Stop and start again with the same flags |
 | `ahpd restart --force` | Restart even while a turn runs |
@@ -45,6 +46,45 @@ The new daemon keeps the old one's environment variables and working folder. To 
 :::
 
 From another machine: `ahpd --remote <url> restart`. See [Remote access](REMOTE.md#run-commands-from-another-machine).
+
+## Doctor
+
+`ahpd doctor` runs every check on this machine and prints one line for each, with the fix when something is wrong. It reads the configuration, the daemon's record, the service file and the plugins, and it starts nothing.
+
+The checks, in this order:
+
+| Check | Says |
+| --- | --- |
+| Runtime | The Node version that runs ahpd, and the other runtimes on `PATH` |
+| Config | Each configuration file that is read, and whether it parses |
+| Daemon | The record, then whether the daemon answers on its address within 5 s |
+| Service | The service file, on a system with a service manager |
+| Plugins | Whether each plugin in the configuration resolves, and has a whole manifest |
+| Agents | The agent commands in the configuration, against the ones on `PATH` |
+| Update | Whether a newer ahpd is on record |
+
+`ok` is a state that needs nothing, `warn` is a state a person may want to change, and `fail` is a fault. Every `warn` and `fail` names its fix on the next line.
+
+```bash
+ahpd doctor
+```
+
+```
+ok Runtime: Node v22.19.0 runs ahpd
+ok Config: read /home/you/.config/ahpd/config.json
+warn Daemon: no daemon is running
+  fix: ahpd start
+warn Service: no systemd file is at /home/you/.config/systemd/user/ahpd.service
+  fix: ahpd service install
+ok Plugins: 2 plugins load
+ok Agents: every agent command on PATH is configured
+ok Update: no newer @ahpd/server is on record
+5 ok, 2 warn, 0 fail
+```
+
+`ahpd doctor --json` gives the same checks as an array, and is the output for a support ticket. It holds no token.
+
+The exit code is 1 when a check is `fail`, and 0 otherwise, so a script can ask doctor whether the machine is well. With `--json`, the array stays on stdout and the failure is one JSON line on stderr, as with every command.
 
 ## Service
 
