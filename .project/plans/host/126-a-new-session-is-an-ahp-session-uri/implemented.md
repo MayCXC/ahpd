@@ -36,7 +36,6 @@ The host reads a provider from the session's row, never from its URI.
 
 - The plan's risk named only `packages/sdk/test`. Tests in five other packages had the same old expectation, and none of those packages needed a source change.
 - One `uri` line in the memory store's row had the wrong indent. It now aligns with the lines around it.
-- `UPSTREAM.md` said `host/126`, which was the plan's number before the renumber. It now says `host/129`.
 
 ## Left for later
 
