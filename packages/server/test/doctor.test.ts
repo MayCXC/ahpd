@@ -281,6 +281,13 @@ describe('the Agents check', () => {
     expect(one.fix).toContain('@google/gemini-cli');
   });
 
+  it('runs no agent command, since the line names no version', async () => {
+    stub('gemini', '1.0.0');
+    const ran: string[] = [];
+    await agentCheck(facts({ run: async (program, argv) => { ran.push(program); return run(program, argv); } }));
+    expect(ran).toEqual([]);
+  });
+
   it('does not make the agents folder when it is absent', async () => {
     const folder = join(configFolder, 'agents');
     expect(existsSync(folder)).toBe(false);

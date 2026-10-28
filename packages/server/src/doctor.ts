@@ -315,7 +315,9 @@ export const agentCheck = async (facts: DoctorFacts): Promise<Check> => {
       fix: 'fix the configuration, then run ahpd doctor again',
     };
   }
-  const found = await findAgents({ run: facts.run, path: facts.path, platform }, configured);
+  // No version is asked: the line names none, and one probe per agent on PATH
+  // takes longer than the check's limit.
+  const found = await findAgents({ run: facts.run, path: facts.path, platform, versions: false }, configured);
   const missing = found.missing.filter((agent) => configured.has(agent.id));
   if (missing.length > 0) {
     return {
