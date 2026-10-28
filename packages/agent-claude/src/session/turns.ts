@@ -510,6 +510,8 @@ export function createTurns(ctx: SessionContext): Turns {
    * which is where the CLI writes it, and names it in `queuedMessageId`, as
    * AHP 1.1.0 shows a steering message taken in by a turn of its own. A
    * message the CLI took in inside the turn that ended stays with that turn.
+   * The message is the new turn's prompt from then on, and ends with it: a
+   * stop of that turn stops it, and the CLI's answer to it goes nowhere after.
    * https://github.com/microsoft/agent-host-protocol/blob/main/docs/specification/chat-channel.md#steering-messages
    */
   const present = (uuid: string): void => {
@@ -520,6 +522,7 @@ export function createTurns(ctx: SessionContext): Turns {
       if (one.steering && one.turn === ended && one.cli !== 'started') one.turn = uuid;
     }
     owed.turn = uuid;
+    owed.steering = false;
     ctx.openTurn(ctx.mainScope, { id: uuid, message: owed.message, ...(owed.id === undefined ? {} : { queuedMessageId: owed.id }) });
     ctx.doing('Thinking');
     ctx.touch();

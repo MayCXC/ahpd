@@ -445,6 +445,38 @@ it('opens the turn of a steering message the CLI holds as its turn is stopped, s
   ]);
 });
 
+it('ends a steering message\'s own turn for good when it is stopped before the CLI took the message in', async () => {
+  const { session, chat, before } = await opened();
+  const [first, rest] = splitAfter(fixture('claude-cancelled-steer.jsonl'), isDelta);
+  const [queued, afterStop] = splitAfter(rest, (frame) => frame.type === 'command_lifecycle' && frame.command_uuid === SURVIVOR);
+  const [answered] = splitAfter(afterStop, (frame) => frame.type === 'result'
+    && (frame.user_message_uuids as string[]).includes(SURVIVOR));
+  session.begin(STOPPED, COUNT_TEXT);
+  await settle();
+  sdk.push(...first);
+  await settle();
+  expect(session.steer?.('s-stop', BETA_TEXT)).toBe(true);
+  await settle();
+  const steered = lastSent();
+  sdk.push(...renamed(queued, SURVIVOR, steered));
+  await settle();
+  session.cancel(STOPPED);
+  await settle();
+  // The message's own turn, stopped while the CLI still holds the message.
+  session.cancel(steered);
+  await settle();
+  sdk.push(...renamed(answered, SURVIVOR, steered));
+  await settle();
+
+  // The message was that turn's prompt, so no turn opens for it again, and its answer goes nowhere.
+  expect(chat.filter((one) => one.type === 'chat/turnStarted').map((one) => one.turnId)).toEqual([STOPPED, steered]);
+  expect(history(replayed(before, chat).turns as Bag[])).toEqual([
+    [STOPPED, 'cancelled', COUNT_TEXT, 'user', [STOPPED_PROSE]],
+    [steered, 'cancelled', BETA_TEXT, 'user', []],
+  ]);
+  expect(hostSends(session, GAMMA, GAMMA_TEXT)).toBe(true);
+});
+
 it('ends no turn sent after a stop at the stopped turn\'s result', async () => {
   const { session, chat, before } = await opened();
   const [first, rest] = splitAfter(fixture('claude-stopped-turn.jsonl'), isDelta);
