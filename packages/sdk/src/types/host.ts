@@ -12,7 +12,7 @@ import type { Worktrees } from './worktrees.js';
 import type { PullRequests } from './github.js';
 import type { AutomationStore } from './automations.js';
 import type { EnablementStore } from '../plugins/enablement.js';
-import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
+import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedBindings, ServedCanvases, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
 import type { ConnectorRef, ServedAdapter } from './connectors.js';
 import type { AgentOwner, ServedEngine } from './agents.js';
 import type { ConnectorsChannel } from '../connectors/channel.js';
@@ -715,6 +715,15 @@ export interface HostOptions {
    * plugin's own entry is the whole of what removing it would take.
    */
   pluginConnects?: PluginConnects[];
+  /**
+   * Every plugin that may open a canvas, one entry each.
+   *
+   * The fold fills this from every contribution, and the host sets each entry's
+   * `open`, `update` and `close`, so a plugin's call reaches the live store
+   * from wherever it is made. Kept by plugin, so a plugin's own entry is the
+   * whole of what removing it would take.
+   */
+  pluginCanvases?: ServedCanvases[];
   /**
    * What the plugins give a chat a person or a tool opens, in plugin order.
    *

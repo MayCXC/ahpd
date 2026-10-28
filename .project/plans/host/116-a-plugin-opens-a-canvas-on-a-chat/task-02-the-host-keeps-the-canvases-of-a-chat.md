@@ -1,6 +1,6 @@
 ---
 title: The host keeps the canvases of a chat
-status: todo
+status: implemented
 depends:
   - task-01-an-older-connection-gets-no-canvas-action.md
 layer: "sdk"
@@ -64,3 +64,10 @@ A canvas goes when its chat goes.
 - Run `git checkout -- packages/sdk/test/fixtures/wire.jsonl` after the run.
 
 ## Resume
+
+- **Done so far:** built. `host/canvases.ts` holds the store: `open` reuses the resource of an open `instanceId`, dispatches `canvas/stateChanged` first and `chat/canvasesChanged` after a new one, and `update` and `close` refuse a plugin that did not open the canvas. `forgetChat` says the empty list only to a chat the host still holds. `canvasResource` and `chatOfCanvas` sit in `host/channels.ts`, beside the other channel names. `snapshots.ts` answers an `ahp-canvas:` channel from the store, or `-32008` "Canvas is no longer available", and lays `canvases` over the chat state only when the list is not empty. `channelKind` reads a canvas as its chat, so the users gate asks the chat's session. `moveChat`, `disposeChat` and `teardown` call `forgetChat`. Thirteen cases pass in `test/host-canvases.test.ts`.
+- **Next action:** none. Every task is implemented, and `implemented.md` is written.
+- **Open questions:** none.
+- **Watch out for:** task 02 has no plugin calls, so the store is reached through `HostOptions.pluginCanvases`, a `ServedCanvases[]` that `wireCanvases` in `facts.ts` fills in at start and from `replace`. That follows `PluginStarts` from `host/37`. Task 03 folds the entry and calls the store from `plugins/plugins.ts`.
+  The store takes a small `CanvasHost` rather than the host context, so a test drives it with lambdas: `dispatch` and `holds` here, and `enabled` once task 03 reads `canvasesEnabled`. It is assigned as `ctx.canvases` by name, not spread, because `open`, `close` and `update` are words other areas use.
+  The plan's "a removed session, a closed session and a moved chat" names two session roads that both reach `teardown`; one test covers that road, and the chat's own removal is the second. `disposeChat` and `moveChat` are the other two.

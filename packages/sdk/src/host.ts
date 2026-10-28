@@ -69,6 +69,7 @@ import { accountKey, createRoot } from './host/root.js';
 import { createCatalogue } from './host/catalogue.js';
 import { createSpawn } from './host/spawn.js';
 import { createBackground } from './host/background.js';
+import { createCanvases } from './host/canvases.js';
 import { createLifecycle } from './host/lifecycle.js';
 import { createTooling } from './host/tooling.js';
 import { createTerminalMethods, createTerminals } from './host/terminals.js';
@@ -1112,6 +1113,15 @@ export function createHost(options: HostOptions): Host {
   // goes out through `emit`, which folds into this stream on the way.
   ctx.sessionEvents = createSessionEvents(ctx);
   Object.assign(ctx, createTelemetry(ctx));
+  // Under its own name rather than spread flat, because `open`, `close` and
+  // `update` are words other areas could reach for.
+  ctx.canvases = createCanvases({
+    dispatch: (channel, action) => dispatch(channel, action),
+    holds: (chat) => byChat.has(chat),
+    // Read at each call, because a window may push the key while the daemon
+    // runs, and a canvas that is already open stays open when it turns off.
+    enabled: () => ctx.rootConfig.canvasesEnabled === true,
+  });
   Object.assign(ctx, createAuth(ctx));
   // Before the routing, because which session a chat URI names is read there.
   Object.assign(ctx, createChatRecord(ctx));
@@ -1311,7 +1321,8 @@ export function createHost(options: HostOptions): Host {
   /*
    * Every other function this host sets on a plugin's own entry: a trigger's
    * `deliver` and `run`, a start's `start`, `startChat` and `opens`, a session
-   * key's `changed`, and a plan's `changed`.
+   * key's `changed`, a plan's `changed`, and the `open`, `update` and `close`
+   * a plugin's canvases are reached through.
    *
    * Each of those was set once, as the entry was built, which is enough for a
    * host that never changed. A live fold brings entries nobody has set them on,
@@ -1324,6 +1335,7 @@ export function createHost(options: HostOptions): Host {
     ctx.wirePluginStarts();
     ctx.wireSessionMeta();
     ctx.wirePlan();
+    ctx.wireCanvases();
   };
   wirePlugins();
 

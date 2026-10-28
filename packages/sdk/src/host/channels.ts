@@ -170,6 +170,43 @@ export const toolCallOfSubagentChat = (uri: string): string | undefined => {
   catch { return undefined; }
 };
 
+/** What every canvas channel starts with. */
+const CANVAS = 'ahp-canvas:/';
+
+/**
+ * How this host names one canvas of a chat.
+ *
+ * The reference host's shape, `ahp-canvas:/<base64url(chat)>/<id>`. The chat is
+ * base64url for two reasons: the reference host builds and reads the name that
+ * way, and a name that carried the session URI plainly would be rewritten by
+ * `respelledIn` for a client that knows the session by another name.
+ *
+ * `id` names one lifetime of a canvas. A canvas drawn again under the
+ * `instanceId` it was opened with keeps its name, and a canvas that closes and
+ * opens again gets a new one.
+ * https://github.com/microsoft/vscode/blob/e646868227c/src/vs/platform/agentHost/common/canvasUri.ts
+ */
+export const canvasResource = (chat: string, id: string): string =>
+  `${CANVAS}${Buffer.from(chat, 'utf8').toString('base64url')}/${id}`;
+
+/**
+ * The chat a canvas channel names, or nothing when it names none.
+ *
+ * Read from the name and not from what this host holds, because a canvas that
+ * is gone is still its chat's: what a client may read is the chat's question
+ * whether or not there is a canvas left to answer it.
+ */
+export const chatOfCanvas = (resource: string): string | undefined => {
+  if (!resource.startsWith(CANVAS)) return undefined;
+  const [encoded = '', id = '', ...rest] = resource.slice(CANVAS.length).split('/');
+  if (encoded === '' || id === '' || rest.length > 0) return undefined;
+  try {
+    const chat = Buffer.from(encoded, 'base64url').toString('utf8');
+    return chat.startsWith('ahp-chat:') ? chat : undefined;
+  }
+  catch { return undefined; }
+};
+
 /** The authority a terminal this host keeps after its process is gone is named under. */
 const RETAINED = 'ahp-terminal://shell/';
 

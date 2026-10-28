@@ -3,7 +3,7 @@ import { windowOf } from '../sessions/paging.js';
 import { RpcError } from '../rpc.js';
 import { uriOf } from '../resources/fileuri.js';
 import { runState } from './automations.js';
-import { ROOT, isRootChannel, isAutomations, automationOwner, queryOf, MARKS, chatUriFor, servedIn, spaceOf, subagentChatUri, toolCallOfSubagentChat } from './channels.js';
+import { ROOT, isRootChannel, isAutomations, automationOwner, queryOf, MARKS, chatUriFor, servedIn, schemeOf, spaceOf, subagentChatUri, toolCallOfSubagentChat } from './channels.js';
 import { ownerFilter } from '../utils/values.js';
 import { need } from './common.js';
 import type { Bag } from '../types/common.js';
@@ -89,6 +89,19 @@ export function createSnapshots(ctx: HostContext): Snapshots {
       const fromSeq = ctx.serverSeq;
       const state = await served.channel.snapshot(channel, connection?.principal, connection?.clientId ?? '');
       return structuredClone({ resource: channel, state, fromSeq });
+    }
+    /*
+     * A canvas, answered from the store the chat's list came from.
+     *
+     * A channel this host does not hold is refused here rather than read for a
+     * session: the canvas is gone, and a client that subscribed to one the
+     * chat no longer lists is told so rather than handed an empty state.
+     * https://github.com/microsoft/vscode/blob/e646868227c/src/vs/platform/agentHost/node/agentService.ts#L9191-L9206
+     */
+    if (schemeOf(channel) === 'ahp-canvas') {
+      const state = ctx.canvases.snapshot(channel);
+      if (state === undefined) throw new RpcError(-32008, 'Canvas is no longer available');
+      return value({ resource: channel, state, fromSeq: ctx.serverSeq });
     }
     const terminal = terminals.get(channel);
     if (terminal)
@@ -333,6 +346,9 @@ export function createSnapshots(ctx: HostContext): Snapshots {
           .filter((one) => one.parentToolCallId === undefined || String(one.parentToolCallId) === '')
         : [];
       const background = ctx.background.rows(channel);
+      // Read before the state, so no action dispatched while it is built
+      // falls between the list and `fromSeq`.
+      const canvases = ctx.canvases.listOf(channel);
       const state: Bag = {
         ...talking.chat.chatState(),
         ...startedBy(talking.uri, channel),
@@ -348,6 +364,10 @@ export function createSnapshots(ctx: HostContext): Snapshots {
         // session's answer and not the backend's - so it is read here and left
         // off when it cannot move, as the protocol's absence-means-false has it.
         ...(movable(channel) ? { movable: true } : {}),
+        // The canvases this chat shows, which are this host's and no
+        // backend's, laid over its state the way `movable` is - and absent
+        // rather than empty when there are none.
+        ...(canvases === undefined ? {} : { canvases }),
       };
       /*
        * The backend that serves this chat, where it is not the session's own.

@@ -69,6 +69,7 @@ const contribution = (
   triggers: { by, types: {} },
   starts: { by },
   connects: { by, close: () => {} },
+  canvases: { by },
   closers: parts.closers ?? [],
   preambles: parts.preambles ?? [],
   ...(parts.routes === undefined ? {} : { routes: parts.routes }),

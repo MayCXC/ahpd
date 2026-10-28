@@ -12,7 +12,7 @@
  * composes several contributions into one option object.
  */
 
-import type { AutomationTriggerDefinition, ChatOrigin, ChatSummary, Icon } from '@microsoft/agent-host-protocol';
+import type { AutomationTriggerDefinition, CanvasState, ChatOrigin, ChatSummary, Icon } from '@microsoft/agent-host-protocol';
 
 import type { Agent } from './agent.js';
 import type { Engine, AgentOwner, ServedEngine } from './agents.js';
@@ -452,6 +452,37 @@ export interface ServedSessionMeta {
   keys: SessionMetaKey[];
   /** Where a change is announced, set by the host once it exists. */
   changed?: (uri: string) => void;
+}
+
+/**
+ * One plugin's canvases, and where its calls reach the host.
+ *
+ * Built by the plugin host and carried through the fold rather than copied, for
+ * the same reason `ServedChannel` is: the plugin holds this object, and the
+ * host sets `open`, `update` and `close` on it once it exists. All three are
+ * absent until then, so a call made while `apply` runs is told rather than
+ * dropped.
+ *
+ * `by` is the plugin the canvases are opened as, which is the one that may
+ * change or close each of them.
+ */
+export interface ServedCanvases {
+  /** The plugin that opened them. */
+  by: string;
+  /** Where an open goes, set by the host once it exists. */
+  open?: (chat: string, state: CanvasState) => string;
+  /** Where an update goes, set by the host once it exists. */
+  update?: (resource: string, state: CanvasState) => void;
+  /** Where a close goes, set by the host once it exists. */
+  close?: (resource: string) => void;
+  /**
+   * Where the unload of the plugin closes what it still has open.
+   *
+   * Not the plugin's call: the host's own road, taken when the daemon unloads
+   * a plugin while it runs, so a canvas does not outlive the process that drew
+   * it. Absent until a host is built, and then a closer nothing refuses.
+   */
+  closeAll?: () => void;
 }
 
 /**
@@ -1122,6 +1153,34 @@ export interface PluginHost extends PluginContext {
    * the plugin, because there is nothing to send before then.
    */
   sessionMetaChanged(uri: string): void;
+  /**
+   * Show a canvas on a live chat, and answer the channel it is served on.
+   *
+   * `state` is the whole `CanvasState`, with this plugin's own `instanceId` and
+   * `extensionId`. Its `url` is an absolute http(s) URL that the plugin itself
+   * answers, and the host never writes it to a log. A canvas already open on
+   * the chat under the same `instanceId` is drawn again and keeps its channel,
+   * and one this plugin opened is its own to change or close.
+   *
+   * Refused until a host is built over the plugin, and while this host has
+   * canvases turned off, which is `canvasesEnabled`'s default.
+   */
+  openCanvas(chat: string, state: CanvasState): string;
+  /**
+   * Replace the state of a canvas this plugin opened, whole.
+   *
+   * A canvas another plugin opened is refused, and a resource that is gone
+   * does nothing: a call that raced a close has nothing left to draw.
+   */
+  updateCanvas(resource: string, state: CanvasState): void;
+  /**
+   * Take a canvas off its chat.
+   *
+   * Only the plugin that opened it may close it, and a resource that is
+   * already gone does nothing, so two closes may meet without either failing.
+   * The host closes what a plugin still has open when it unloads that plugin.
+   */
+  closeCanvas(resource: string): void;
   /** Set `HostOptions.terminals`, or take the daemon's over with `'replace'`. */
   registerTerminals(store: PortOf<'terminals'>, when?: 'replace'): void;
   /** Set `HostOptions.changes`, or take the daemon's over with `'replace'`. */
@@ -1536,6 +1595,14 @@ export interface Contribution {
    * not the plugin ever connects, so the fold can read it without a case.
    */
   connects: PluginConnects;
+  /**
+   * Where this plugin's canvases go.
+   *
+   * Carried through rather than copied, exactly as `starts` is, so the object
+   * `pluginHost` built is the one the host fills in. Always here, whether or
+   * not the plugin ever opens a canvas, so the fold can read it without a case.
+   */
+  canvases: ServedCanvases;
   /**
    * The one route this plugin registered, when it registered one.
    *

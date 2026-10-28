@@ -30,6 +30,14 @@ export interface Facts {
    * has no way to say that its key moved until this runs.
    */
   wireSessionMeta(): void;
+  /**
+   * Set every plugin's `open`, `update` and `close` on the entry it closes
+   * over.
+   *
+   * Run at start and again from `replace`, because a plugin a live fold brings
+   * has no way to open a canvas until this runs.
+   */
+  wireCanvases(): void;
 }
 
 export function createFacts(ctx: HostContext): Facts {
@@ -618,9 +626,29 @@ export function createFacts(ctx: HostContext): Facts {
   };
   wireSessionMeta();
 
+  /**
+   * A plugin's canvases reach the store through the host it was applied to.
+   *
+   * The store is read from `ctx` here and not closed over, because the host
+   * sets this on each entry at start and again from `replace`, and one entry a
+   * live fold brings has to reach the same store as the rest.
+   */
+  const wireCanvases = (): void => {
+    for (const served of options.pluginCanvases ?? []) {
+      served.open = (chat, state) => ctx.canvases.open(chat, state, served.by);
+      served.update = (resource, state) => ctx.canvases.update(resource, state, served.by);
+      served.close = (resource) => ctx.canvases.close(resource, served.by);
+      // The unload road, which is the host's and not the plugin's: it is not
+      // refused while the key is off, so an unloaded plugin takes its canvases
+      // with it either way.
+      served.closeAll = () => ctx.canvases.closeAll(served.by);
+    }
+  };
+  wireCanvases();
+
   return {
     describes, setArtifacts, captureBaseline, recordPullRequest, metaMoved, dirOfFile, wroteThrough,
     refreshWatched, startWatchingDir, stopUnwatched, refreshPullRequests, readFacts, refreshFacts,
-    sessionMetaChanged, wireSessionMeta,
+    sessionMetaChanged, wireSessionMeta, wireCanvases,
   };
 }

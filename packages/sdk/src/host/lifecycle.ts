@@ -258,6 +258,9 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
       drafts.delete(chatUri);
       madeFrom.delete(chatUri);
       ctx.links.forgetChat(chatUri);
+      // The chat is gone with the session, so its canvases are too. Said
+      // nothing, because nothing can reach the channel any more.
+      ctx.canvases.forgetChat(chatUri);
       // And what the session stream was holding for it: a turn nothing will
       // end and calls nothing will finish are not measurements of anything.
       ctx.sessionEvents.forget(chatUri);
