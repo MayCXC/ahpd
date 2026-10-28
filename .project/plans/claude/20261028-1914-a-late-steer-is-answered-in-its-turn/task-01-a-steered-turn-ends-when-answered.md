@@ -41,7 +41,7 @@ The turn ends, and the queue starts, once the CLI has answered every prompt it w
 
 ## Validation
 
-- `agent-claude-late-steer.test.ts` holds four cases: a late steer, a steering id that is no UUID, a folded steer, and a waiting queue.
+- `agent-claude-late-steer.test.ts` holds four cases: a late steer, a non-UUID steering id, a folded steer and a waiting queue.
 - Each case except the folded one fails before this task.
 - The folded case guards that one result still ends the turn.
 - `pnpm vitest run packages/agent-claude --maxWorkers=1`, then the sdk and server suites, one at a time.

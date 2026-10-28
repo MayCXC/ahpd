@@ -35,8 +35,8 @@ export interface Parts {
   inputNeededSet: (entry: Bag) => void;
   /** Say the session is no longer waiting on one request. */
   inputNeededRemoved: (id: string) => void;
-  /** The turn a conversation is on, opened if it has none. */
-  openTurn: (scope?: Scope) => Bag;
+  /** The turn a conversation is on, opened if it has none, with the id and the message given. */
+  openTurn: (scope?: Scope, opening?: { id: string; message: Bag }) => Bag;
   /** Announce a prose part. */
   addPart: (scope: Scope, part: Bag) => void;
   /** Hold a tool call for the snapshot, without announcing it. */
@@ -224,19 +224,24 @@ export function createParts(ctx: SessionContext): Parts {
 
   // ------------------------------------------------------------- translation
 
-  const openTurn = (scope: Scope = ctx.mainScope): Bag => {
+  const openTurn = (scope: Scope = ctx.mainScope, opening?: { id: string; message: Bag }): Bag => {
     if (scope.turn) return scope.turn;
     // A turn the client did not begin: the agent spoke first, which happens on
-    // a resumed session. Better an id of our own than a turn with none.
+    // a resumed session. Better an id of our own than a turn with none. Or the
+    // CLI is answering a steering message after the turn it steered ended,
+    // and the turn opens with that message, under the uuid it went to the CLI
+    // with, which is where the CLI writes it.
     // `usage` is required on an `ActiveTurn` and means "not measured yet".
     // Leaving the key off put a turn on the wire that did not satisfy its own
     // type, which nothing here would have noticed.
     const opened = {
-      id: `turn-${Date.now()}`,
+      id: opening?.id ?? `turn-${Date.now()}`,
       startedAt: new Date().toISOString(),
       // The agent spoke first, so the message in front of this turn is its
       // own. `Message.origin` is required and used to be left off entirely.
-      message: { text: '', origin: { kind: 'agent' } },
+      message: opening === undefined
+        ? { text: '', origin: { kind: 'agent' } }
+        : opening.message as WireTurn<ActiveTurn>['message'],
       responseParts: [],
       usage: undefined,
     } satisfies WireTurn<ActiveTurn> as Bag;

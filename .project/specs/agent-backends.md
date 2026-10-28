@@ -129,6 +129,9 @@ WHEN a message waits in the queue meanwhile
 THEN it starts only after that result.
 WHEN a result names no prompt
 THEN it ends the turn.
+WHEN the turn is stopped before the CLI takes the steering message in
+THEN the CLI's answer to it is a turn of its own, under the uuid the message was sent with, carrying the message
+AND the rest of the stopped turn's answer opens no turn and joins none.
 The reason: the CLI folds a steering message into a turn at its next tool call.
 One that arrives after the last tool call runs as a turn of its own.
 See [`code://packages/agent-claude/src/session/query.ts`](../../packages/agent-claude/src/session/query.ts).

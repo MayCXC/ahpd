@@ -19,10 +19,14 @@ import type { Bag } from '@ahpd/sdk';
  * The fixtures are trimmed from a real capture of the SDK this package depends
  * on (0.3.301, its bundled CLI): model `haiku`, `includePartialMessages`, a
  * second message pushed at the first text delta of a turn with no tool call
- * (`claude-late-steer.jsonl`), and at the tool call of a turn running
- * `sleep 4` (`claude-folded-steer.jsonl`). Trimmed: the `system/init` frames
- * to the fields this host reads, a thinking signature shortened, the partial
- * input and text deltas of one block joined, and the rate limit event left out.
+ * (`claude-late-steer.jsonl`), at the tool call of a turn running `sleep 4`
+ * (`claude-folded-steer.jsonl`), and at the first text delta of a turn that
+ * was then interrupted once the CLI had queued the second message
+ * (`claude-cancelled-steer.jsonl`): the interrupt's receipt listed it in
+ * `still_queued`, and the CLI ran it after the interrupted turn's result.
+ * Trimmed: the `system/init` frames to the fields this host reads, a thinking
+ * signature shortened, the partial input and text deltas of one block joined,
+ * and the rate limit events left out.
  */
 
 const sdk = vi.hoisted(() => {
@@ -87,6 +91,8 @@ const FIRST = '5778dc9a-eea4-4d3c-9ff2-6b8c9475f3a0';
 const LATE = '07d2a923-3755-4cc5-b5da-15244048317d';
 const TOOL = '6c5642a3-e2c5-4c93-85c2-35c1c5734e9b';
 const FOLDED = 'ca47bbbc-3cf0-43f4-be43-3c1aee5134ed';
+const STOPPED = '8a2702e5-4fac-4d9b-83a4-b35919b2b7e7';
+const SURVIVOR = '5ed48b7f-e1c6-4091-aa84-6d44e37ae7f8';
 
 /** Where a capture's frames stop for the second message to be sent: just after the frame `at` finds. */
 const splitAfter = (frames: Record<string, unknown>[], at: (frame: Bag) => boolean): [Record<string, unknown>[], Record<string, unknown>[]] => {
@@ -209,6 +215,40 @@ it('ends the turn at its one result when the CLI folds the steering message into
   const turns = state.turns as Bag[];
   expect(turns).toHaveLength(1);
   expect(prose(turns[0] as Bag)).toEqual(['DONE\n\nBETA2']);
+});
+
+it('answers a steering message the CLI runs after a stop in a turn that carries it', async () => {
+  const { session, chat, before } = await opened();
+  const [first, rest] = splitAfter(
+    fixture('claude-cancelled-steer.jsonl'),
+    (frame) => frame.type === 'stream_event' && (frame.event as Bag).type === 'content_block_delta',
+  );
+  const [queued, after] = splitAfter(rest, (frame) => frame.type === 'command_lifecycle');
+  session.begin(STOPPED, 'Count from 1 to 60, one number per line, and nothing else.');
+  await settle();
+  sdk.push(...first);
+  await settle();
+  expect(session.steer?.(SURVIVOR, 'Reply with exactly the word BETA and nothing else.')).toBe(true);
+  await settle();
+  // The CLI queued the steering message, and the turn is stopped before it takes it in.
+  sdk.push(...queued);
+  await settle();
+  session.cancel(STOPPED);
+  await settle();
+  sdk.push(...after);
+  await settle();
+
+  expect(chat.filter((one) => one.type === 'chat/turnCancelled')).toEqual([expect.objectContaining({ turnId: STOPPED })]);
+  const state = replayed(before, chat);
+  expect(state.activeTurn).toBeUndefined();
+  const turns = state.turns as Bag[];
+  expect(turns.map((turn) => [turn.id, turn.state, (turn.message as Bag).text, (turn.message as Bag).origin])).toEqual([
+    [STOPPED, 'cancelled', 'Count from 1 to 60, one number per line, and nothing else.', { kind: 'user' }],
+    [SURVIVOR, 'complete', 'Reply with exactly the word BETA and nothing else.', { kind: 'user' }],
+  ]);
+  // What the stopped answer said after the stop is not added to it, nor opened as a turn.
+  expect(prose(turns[0] as Bag)).toEqual(['1\n2\n3\n4']);
+  expect(prose(turns[1] as Bag)).toEqual(['BETA']);
 });
 
 it('begins a queued message only once the steering message the CLI still owed has its answer', async () => {

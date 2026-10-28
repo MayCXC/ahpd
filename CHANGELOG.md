@@ -47,6 +47,7 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 ### Claude
 
 - A steering message the CLI answers after the turn's last answer is answered in that turn, as VS Code's agent host keeps it. The turn stays open until the CLI has answered every prompt it was handed in it, and a queued message waits for that. The answer opened a turn of its own with an empty message, and a queued message that started in between took the answer for its own. See [docs/sdk/CHATS.md](docs/sdk/CHATS.md#turns).
+- A steering message the CLI still holds when its turn is stopped is answered after the stop in a turn of its own, which carries the message. What the stopped answer said after the stop opened a turn with an empty message, which its interrupted result then ended as a failure.
 - A `Bash` result too large to send shows the whole output Claude saved in a terminal on the call, as VS Code does. The call keeps Claude's notice as its text, and the terminal has exited, with 0 for a command that worked. The host keeps the output for as long as the chat lasts, and a call read back from the transcript names the terminal again.
 
 ## 0.14.0 - 2026-10-26

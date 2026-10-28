@@ -697,6 +697,28 @@ export function createQuery(ctx: SessionContext): Query {
         }
 
         /*
+         * Which prompt the CLI is answering, and whether a turn is there for it.
+         *
+         * The first frame of each kind in an answer names the prompt in
+         * `user_message_uuid`, and the frames after it are the same answer's.
+         * A steering message whose turn ended before the CLI took it in, the
+         * turn stopped or failed, is answered after: that answer is a turn of
+         * its own, which carries the steering message. The rest of the answer
+         * to a stopped turn's own prompt belongs to that turn, which takes no
+         * more of it.
+         */
+        if (str(message.parent_tool_use_id) === undefined
+          && (type === 'stream_event' || type === 'assistant' || type === 'user')) {
+          const named = str(message.user_message_uuid);
+          if (named !== undefined) ctx.answering = named;
+          const owed = ctx.answering === undefined ? undefined : ctx.owed.get(ctx.answering);
+          if (owed?.steering === true && ctx.active === undefined) {
+            ctx.openTurn(ctx.mainScope, { id: String(ctx.answering), message: owed.message });
+          }
+          else if (owed?.steering === false && (ctx.active === undefined || ctx.answering !== ctx.prompt)) continue;
+        }
+
+        /*
          * How far this turn has got, in the backend's own names for things.
          *
          * `user` and `assistant` are the frames that become entries in the

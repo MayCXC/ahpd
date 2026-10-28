@@ -78,7 +78,7 @@ a client steers -> steer() pushes the message to the CLI -> the CLI answers afte
 | A CLI that is put away or that dies takes the prompts it owed with it. | [code://packages/agent-claude/src/session/query.ts#L530-L533](../../../../packages/agent-claude/src/session/query.ts#L530-L533) | 01 |
 | The CLI keeps the priority it gives a prompt by default, and folds a steering message in at the next tool call; the reference's `priority: 'now'`, which stops the answer being written, is not taken. | AHP 1.0.0, `ChatState.steeringMessage`: "Message to inject into the current turn at a convenient point"; [code://packages/agent-claude/src/session/context.ts#L228-L236](../../../../packages/agent-claude/src/session/context.ts#L228-L236) | - |
 | An answer to a prompt that arrives when no turn is open opens a turn carrying that prompt's message, under the uuid it was sent with. | AHP 1.1.0, *Steering Messages*: consumption "represented as a new presentation turn"; measured, the CLI runs a queued prompt after an interrupt | 02 |
-| A stop takes the stopped turn's own prompt out of what the CLI owes, and leaves its steering messages. | Measured: the interrupted turn's result names its prompt, and a queued steering message runs after it | 02 |
+| The rest of a stopped turn's answer, the frames that name its own prompt, joins no turn and opens none; the interrupted result takes the prompt out of the map. | Measured: the CLI sends the stopped answer's last frames and its interrupted result after the stop; [docs/sdk/CHATS.md](../../../../docs/sdk/CHATS.md#turns), "A turn that has ended takes no more results" | 02 |
 
 ## Proposed architecture
 
@@ -93,7 +93,7 @@ a client steers -> steer() pushes the message to the CLI -> the CLI answers afte
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A steered turn ends when its prompts are answered](task-01-a-steered-turn-ends-when-answered.md) | done | - |
-| [02 - A late answer opens a turn with its prompt](task-02-a-late-answer-opens-its-own-turn.md) | doing | 01 |
+| [02 - A late answer opens a turn with its prompt](task-02-a-late-answer-opens-its-own-turn.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -103,8 +103,8 @@ a client steers -> steer() pushes the message to the CLI -> the CLI answers afte
 
 ## Resume state
 
-- **Done so far:** task 01 done 2026-10-28.
-- **Next action:** [task-02-a-late-answer-opens-its-own-turn.md](task-02-a-late-answer-opens-its-own-turn.md).
+- **Done so far:** tasks 01 and 02 done 2026-10-28.
+- **Next action:** the suites, then [implemented.md](implemented.md).
 - **Open questions:** none.
 - **Watch out for:** a case that keeps the actions a session emits must copy them, because a part announced empty is filled in place afterwards.
 
