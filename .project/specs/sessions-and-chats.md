@@ -136,7 +136,8 @@ See [`code://packages/sdk/src/host/localturns.ts`](../../packages/sdk/src/host/l
 
 WHEN a client truncates a chat or forks it at a local turn
 THEN the host asks the backend for the point of the nearest earlier turn that is not a local turn
-AND it refuses a truncation when there is no such turn.
+AND with no such turn, a truncation starts the chat over and keeps the turns up to the local turn.
+*A chat truncated whole starts over* says how.
 
 WHEN a truncation drops local turns
 THEN their files go with them.
@@ -162,6 +163,27 @@ THEN the host wakes the session and holds it until the chat is made
 AND it makes the chat in the live session.
 
 See [`code://packages/sdk/src/host/sessionmethods.ts`](../../packages/sdk/src/host/sessionmethods.ts).
+
+### A chat truncated whole starts over
+
+WHEN a client sends `chat/truncated` with no `turnId`
+AND the chat's backend has `delete`
+THEN the host stops the chat's backend and waits for it to stop
+AND it deletes the backend's conversation for the chat
+AND it says the action to every client of the chat
+AND it forgets the dropped turns' terminal outputs and local turns
+AND it starts the chat's backend with no resume and no turns.
+WHEN the chat's backend has no `delete`
+THEN the host refuses the action, and the chat stays as it was.
+WHEN the delete fails
+THEN the host refuses the action with the reason, and the chat starts again resumed on the conversation it had.
+WHEN an action reaches the chat while it starts over
+THEN the action waits, and goes to the new backend.
+
+The reason: as a rewind, a truncation with no turn is a cut before the first prompt.
+A screen emptied in front of that agent would leave it remembering what the clients dropped.
+The reference deletes the conversation and starts a fresh one for the same chat and id.
+See [`code://packages/sdk/src/host/chatactions.ts`](../../packages/sdk/src/host/chatactions.ts) and https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeAgent.ts#L1141-L1168.
 
 ### A failed transcript read is not an empty session
 
