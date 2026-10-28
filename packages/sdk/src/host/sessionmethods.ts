@@ -1,7 +1,7 @@
 import { INTERNAL_ERROR, INVALID_PARAMS, RpcError } from '../rpc.js';
 import { idOf, uriFor } from '../sessions/catalog.js';
 import { computerId } from '../machines/computers.js';
-import { tail, older } from '../sessions/paging.js';
+import { older } from '../sessions/paging.js';
 import { namesOf } from '../usage/scopes.js';
 import { localPath, uriOf } from '../resources/fileuri.js';
 import { bag, ownerFilter } from '../utils/values.js';
@@ -13,7 +13,7 @@ import { preambleOf, withPreamble } from './preamble.js';
 import { startsRead } from './chatactions.js';
 import { SEEDS } from './sessionconfig.js';
 import { gapLine, schemaGaps } from '../plugins/schemagaps.js';
-import type { ChatOrigin, ChatSummary } from '@microsoft/agent-host-protocol';
+import type { ChatOrigin, ChatSummary, SubscribeView } from '@microsoft/agent-host-protocol';
 import type { Bag } from '../types/common.js';
 import type { Agent } from '../types/agent.js';
 import type { Session } from '../types/session.js';
@@ -394,7 +394,17 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       // taken of the channel and returned under the name the client used -
       // a client that asked about one URI and was answered about another
       // has been answered about something it is not watching.
-      const snapshot = await snapshotOf(meantBy(channel), connection.config ?? {}, connection);
+      /*
+       * The view, read here because the snapshot is what it shapes.
+       *
+       * A subscribe that names none is owed every turn a chat retains, so the
+       * difference between no view and a view has to survive this call. Read
+       * as a view only when it is an object: any other value names no window
+       * rather than a window of nothing.
+       */
+      const asked = params.view;
+      const view = typeof asked === 'object' && asked !== null ? asked as SubscribeView : undefined;
+      const snapshot = await snapshotOf(meantBy(channel), connection.config ?? {}, connection, view);
       /*
        * Resolved again, after the snapshot rather than before it.
        *
@@ -469,20 +479,15 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       if (!all)
         throw new RpcError(-32001, `No agent for session ${channel}`);
       const asked = typeof params.cursor === 'string' ? params.cursor : undefined;
-      // No cursor means "load whatever is next", which is the page before
-      // the one the snapshot carried.
-      const from = asked ?? tail(all).turnsNextCursor;
-      if (from === undefined) {
-        // A session whose state holds every retained turn has no older
-        // page and no cursor to carry. The protocol asks for that page
-        // "if any", so there being none is an answer and not a refusal.
-        return {};
-      }
-      const page = older(all, from);
+      /*
+       * No cursor asks for whatever is next, and the host keeps no record of
+       * which window a connection was given. A snapshot that named no view
+       * holds every retained turn, so nothing is older than it; the protocol
+       * asks for that page "if any", so none is an answer.
+       */
+      if (asked === undefined) return {};
+      const page = older(all, asked);
       if (!page) {
-        // An omitted cursor can only fail here on a transcript that moved
-        // under the read, which is still an answer of "nothing older".
-        if (asked === undefined) return {};
         // Guessing at a cursor this host did not issue would answer a
         // question about old turns with new ones, and the client would
         // page for ever without noticing.
