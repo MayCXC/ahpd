@@ -40,6 +40,20 @@ Below, `ahpd` means `node packages/server/dist/main.js`.
 3. Open the session again, and scroll to the top of the chat.
 4. Do steps 3 to 8 of the section above again.
 
+## After the fix
+
+This check runs on the branch that holds host/114 tasks 02 and 03. Use the same window and the same long session as above.
+
+1. Check out the branch that holds tasks 02 and 03.
+2. Run `pnpm install` and `pnpm build`.
+3. Stop and start `ahpd` as in *Set up*.
+4. Run *A session that is not running* again.
+5. Run *The same session after a turn* again.
+6. In each section, expect the first message the window shows to be the first message of the session.
+7. Write down the turns, cursor and bytes of each snapshot, as the sections above say.
+
+Both snapshots should now carry every turn, and no `turnsNextCursor`, because a window that names no `view` asks for all of them. Compare the numbers with the ones from before the fix.
+
 ## Reply
 
 For each of the two sections, write the first message shown, and the turns, cursor and bytes of the snapshot. Write "no cut" if the window shows the first message of the session both times. The reply goes into the Resume of task 01 in the plan.

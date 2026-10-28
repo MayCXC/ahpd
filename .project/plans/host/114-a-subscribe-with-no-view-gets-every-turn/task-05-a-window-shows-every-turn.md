@@ -1,6 +1,6 @@
 ---
 title: A window shows every turn
-status: todo
+status: implemented
 depends:
   - task-03-claudes-chat-state-holds-every-turn.md
 layer: docs
@@ -34,3 +34,4 @@ Softov's reply says that a VS Code 1.143 window shows the first message of a lon
 
 ## Resume
 
+Done 2026-10-28, except for the reply. `pending/host-114-turn-cut-checks.md` has an "After the fix" section. It says to check out this branch, install, build and restart the daemon, and then repeat both sections of the check. It asks for the first message the window shows, and for the turns, cursor and bytes of each snapshot. Softov's reply is not in yet: this session has no VS Code window, and the question could not be put to him here. The line in the plan's final checklist that names the window stays unticked until the reply says which message it shows.
