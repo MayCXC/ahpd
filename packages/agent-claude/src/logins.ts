@@ -2,17 +2,17 @@
  * The Claude logins one agent runs on, the order a conversation takes them in,
  * and the cooldown a refused one waits out.
  *
- * A login is a token from `claude setup-token`, which signs the CLI in to one
- * Claude account as `CLAUDE_CODE_OAUTH_TOKEN`. A conversation keeps one
- * account while it works, because the prompt cache is the account's, and a
- * refused account rests until its reset while the next one serves.
+ * A login is a connector of the adapter `claude-login`, holding a token from
+ * `claude setup-token`, which signs the CLI in to one Claude account as
+ * `CLAUDE_CODE_OAUTH_TOKEN`. A conversation keeps one account while it works,
+ * because the prompt cache is the account's, and a refused account rests until
+ * its reset while the next one serves.
  * https://code.claude.com/docs/en/authentication#generate-a-long-lived-token
  */
 
 import { createHash } from 'node:crypto';
 import type { Bag, Connector, ConnectorOwner } from '@ahpd/sdk';
-import { bag } from '@ahpd/sdk';
-import { tokenOf } from './models.js';
+import { sameOwnerOrHost } from '@ahpd/sdk';
 
 /** The adapter whose connectors are Claude logins. */
 export const LOGIN_ADAPTER = 'claude-login';
@@ -49,35 +49,52 @@ export class OpenLogins {
   held(id: string): OpenLogin | undefined {
     return this.open.get(id);
   }
+
+  /**
+   * The token of an open login an agent of this owner may run on: the owner's
+   * own, or the host's.
+   *
+   * The agents channel asks the same of a record when it is put, and a turn
+   * asks again: a record read back at a start was never checked, and the rule
+   * is the one a session's bindings and an automation's trigger are held to.
+   */
+  usable(id: string, owner: ConnectorOwner): string | undefined {
+    const held = this.open.get(id);
+    if (held === undefined) return undefined;
+    return sameOwnerOrHost(held.owner, owner === 'host' ? undefined : owner) ? held.token : undefined;
+  }
 }
 
-/** One login: the name its record gives it, and the token the CLI signs in with. */
+/** The logins of one agent, as each of its sessions reads them. */
+export interface AgentLogins {
+  /** The logins this plugin keeps open, by connector id. */
+  open: OpenLogins;
+  /** Whose agent it is, read at each turn: a login is one this owner may use. */
+  owner: () => ConnectorOwner;
+}
+
+/** One login: its connector's id, and the token the CLI signs in with. */
 export interface Login {
-  name: string;
+  id: string;
   token: string;
 }
 
-/** Whether a value is a token's text or the daemon variable it is read from. */
-const isKey = (value: unknown): value is string | { fromEnv: string } =>
-  typeof value === 'string'
-  || (typeof value === 'object' && value !== null && typeof (value as { fromEnv?: unknown }).fromEnv === 'string');
-
 /**
- * A record's logins, each with its token's text.
+ * A record's logins, each with its connector's token.
  *
- * The channel opens a record with its secrets read, so a token is text here; a
- * preset may still name a daemon variable, which is read as a model source's
- * key is. An entry with no name or no token is left out, and an entry whose
- * name came earlier is the earlier one's, so no login is tried twice.
+ * The record names each by the id of a `claude-login` connector, and the token
+ * is the one that connector holds open. A login whose connector is not open,
+ * or is neither the agent owner's nor the host's, is left out, and an id named
+ * twice is the first one, so no login is tried twice.
  */
-export const loginsOf = (values: Bag): Login[] => {
+export const loginsOf = (values: Bag, logins: AgentLogins | undefined): Login[] => {
   const out: Login[] = [];
+  if (logins === undefined) return out;
   for (const one of Array.isArray(values['logins']) ? values['logins'] : []) {
-    const held = bag(one);
-    const name = typeof held.name === 'string' ? held.name : '';
-    const token = isKey(held.token) ? tokenOf(held.token) ?? '' : '';
-    if (name === '' || token === '' || out.some((login) => login.name === name)) continue;
-    out.push({ name, token });
+    const id = typeof one === 'string' ? one : '';
+    const token = id === '' ? undefined : logins.open.usable(id, logins.owner());
+    if (token === undefined || out.some((login) => login.id === id)) continue;
+    out.push({ id, token });
   }
   return out;
 };
@@ -98,7 +115,7 @@ const scoreOf = (key: string, name: string): bigint =>
  * adding a login moves only the conversations that score it highest.
  */
 export const ordered = (key: string, logins: Login[]): Login[] => logins
-  .map((login) => ({ login, score: scoreOf(key, login.name) }))
+  .map((login) => ({ login, score: scoreOf(key, login.id) }))
   .sort((a, b) => (a.score === b.score ? 0 : a.score > b.score ? -1 : 1))
   .map((one) => one.login);
 

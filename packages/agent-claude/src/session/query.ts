@@ -552,9 +552,13 @@ export function createQuery(ctx: SessionContext): Query {
     },
   } as Parameters<typeof query>[0]));
 
-  /** What a CLI is started from, as the string `startedWith` holds: the record's values and the login. */
+  /**
+   * What a CLI is started from, as the string `startedWith` holds: the record's
+   * values and the login, with its token, since a put that replaces a login's
+   * token leaves the values as they were.
+   */
   const startedFrom = (values: Bag, login: SessionContext['login']): string =>
-    JSON.stringify({ values, login: login?.name ?? null });
+    JSON.stringify({ values, login: login?.id ?? null, token: login?.token ?? null });
 
   /**
    * A query for this session, and what it was built from.

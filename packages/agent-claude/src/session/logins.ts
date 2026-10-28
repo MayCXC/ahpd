@@ -77,13 +77,13 @@ export function createLogins(ctx: SessionContext): Logins {
    * that chat, and the URI is what names it again after a restart.
    */
   const loginFor = (values: Bag): Login | undefined => {
-    const all = loginsOf(values);
+    const all = loginsOf(values, ctx.options.logins);
     if (all.length === 0) return undefined;
     const held = ctx.login;
-    const kept = held === undefined ? undefined : all.find((one) => one.name === held.name && one.token === held.token);
-    if (kept !== undefined && !cooldowns.cooling(kept.name)) return kept;
+    const kept = held === undefined ? undefined : all.find((one) => one.id === held.id && one.token === held.token);
+    if (kept !== undefined && !cooldowns.cooling(kept.id)) return kept;
     const order = ordered(ctx.options.chatUri, all);
-    return order.find((one) => !cooldowns.cooling(one.name)) ?? order[0];
+    return order.find((one) => !cooldowns.cooling(one.id)) ?? order[0];
   };
 
   /** What the CLI's last `rate_limit_event` said, while it said `rejected`. */
@@ -147,7 +147,7 @@ export function createLogins(ctx: SessionContext): Logins {
       ...(rejected !== undefined && str(rejected.rateLimitType) !== undefined ? { window: str(rejected.rateLimitType) as string } : {}),
     };
     rejected = undefined;
-    cooldowns.mark(ctx.login.name, cooldownUntil(refusal, cooldowns.now()));
+    cooldowns.mark(ctx.login.id, cooldownUntil(refusal, cooldowns.now()));
     /*
      * Run again only a turn that showed nothing yet.
      *
@@ -235,20 +235,20 @@ export function createLogins(ctx: SessionContext): Logins {
     if (!moving() || ctx.login === undefined) return;
     const turn = String(ctx.active?.id);
     if (tried?.turn !== turn) tried = { turn, names: new Set() };
-    tried.names.add(ctx.login.name);
-    const order = ordered(ctx.options.chatUri, loginsOf(ctx.values));
+    tried.names.add(ctx.login.id);
+    const order = ordered(ctx.options.chatUri, loginsOf(ctx.values, ctx.options.logins));
     // A record edited to hold no logins runs on the CLI's own sign-in, as one
     // that never held any does.
     if (order.length === 0) {
       await runOn(undefined);
       return;
     }
-    const next = order.find((one) => !tried?.names.has(one.name) && !cooldowns.cooling(one.name));
+    const next = order.find((one) => !tried?.names.has(one.id) && !cooldowns.cooling(one.id));
     if (next !== undefined) {
       await runOn(next);
       return;
     }
-    const due = order.map((one) => ({ one, at: cooldowns.until(one.name) ?? cooldowns.now() }));
+    const due = order.map((one) => ({ one, at: cooldowns.until(one.id) ?? cooldowns.now() }));
     const soonest = due.reduce((a, b) => (b.at < a.at ? b : a));
     ctx.doing(`Waiting for a login, until ${new Date(soonest.at).toISOString()}`);
     waiting = setTimeout(() => {
@@ -257,7 +257,7 @@ export function createLogins(ctx: SessionContext): Logins {
       tried = { turn, names: new Set() };
       // The login waited for, should the timer come a moment before the clock
       // passes its cooldown.
-      const back = order.find((one) => !cooldowns.cooling(one.name)) ?? soonest.one;
+      const back = order.find((one) => !cooldowns.cooling(one.id)) ?? soonest.one;
       ctx.doing('Thinking');
       void runOn(back);
     }, Math.max(0, soonest.at - cooldowns.now()));

@@ -15,6 +15,7 @@
 
 import type { Bag, BoundTool } from '@ahpd/sdk';
 import { bag, fromEnvRef } from '@ahpd/sdk';
+import { LOGIN_ADAPTER } from './logins.js';
 
 /**
  * One Claude option.
@@ -211,40 +212,22 @@ export const env: Declaration = {
 };
 
 /**
- * One Claude login a record runs on.
+ * The Claude logins one agent runs on, by connector id.
  *
- * `token` is what `claude setup-token` prints, which the CLI reads as
- * `CLAUDE_CODE_OAUTH_TOKEN`. It is a credential, so a form does not draw its
- * value back: the vault keeps it, as it keeps a model source's `key`, and a
- * host record may name a daemon variable with `{ fromEnv }` instead.
- * https://code.claude.com/docs/en/authentication#generate-a-long-lived-token
- */
-const LOGIN: Bag = {
-  type: 'object',
-  properties: {
-    name: { type: 'string' },
-    token: {
-      writeOnly: true,
-      secretAtUse: true,
-      oneOf: [REFERENCE('fromEnv'), { type: 'string' }],
-    },
-  },
-  required: ['name', 'token'],
-};
-
-/**
- * The Claude logins one agent runs on.
- *
- * Read where the CLI's environment is built, as `enableTasks` is, because
- * which login a conversation runs on is decided per conversation and again
- * after a refusal, not once for the query: `logins.ts` orders them and keeps
- * their cooldowns, and `session/logins.ts` picks one.
+ * Each names a connector of `claude-login`, which holds one account's token
+ * from `claude setup-token` in the host's vault. The mark is what the agents
+ * channel checks at a put: an id the host serves no login for, or another
+ * person's login, is refused there. Read where the CLI's environment is built,
+ * as `enableTasks` is, because which login a conversation runs on is decided
+ * per conversation and again after a refusal, not once for the query:
+ * `logins.ts` orders them and keeps their cooldowns, and `session/logins.ts`
+ * picks one.
  */
 export const logins: Declaration = {
   schema: {
     type: 'array',
-    items: LOGIN,
-    description: 'Claude logins this agent runs on, each a name and a token from claude setup-token. A conversation keeps one while it is not cooling down.',
+    items: { type: 'string', minLength: 1, 'x-ahpd-connector': { adapter: LOGIN_ADAPTER } },
+    description: 'Claude logins this agent runs on, by the id of a claude-login connector. A conversation keeps one while it is not cooling down.',
   },
 };
 

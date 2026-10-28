@@ -3,14 +3,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { bag } from '@ahpd/sdk';
-import type { Bag } from '@ahpd/sdk';
+import type { AgentView, Bag, ConnectorOwner, Engine, PluginHost, Start } from '@ahpd/sdk';
 
 /*
  * One Claude agent on several logins.
  *
- * A record's `logins` are tokens from `claude setup-token`. Each conversation
- * orders them by a rendezvous score and runs on the first one that is not
- * cooling down; the CLI reads the token as `CLAUDE_CODE_OAUTH_TOKEN`.
+ * A record's `logins` names connectors of `claude-login`, each holding a token
+ * from `claude setup-token`. Each conversation orders them by a rendezvous
+ * score and runs on the first one that is not cooling down; the CLI reads the
+ * token as `CLAUDE_CODE_OAUTH_TOKEN`.
  */
 
 /** Every CLI a session started, with the options it was given and a queue of the frames it sends. */
@@ -96,7 +97,8 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
 }));
 
 const { createSession } = await import('../src/session.js');
-const { Cooldowns } = await import('../src/logins.js');
+const { Cooldowns, OpenLogins } = await import('../src/logins.js');
+type Logins = InstanceType<typeof OpenLogins>;
 
 const settle = async (times = 30): Promise<void> => {
   for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 0); });
@@ -113,13 +115,21 @@ beforeEach(() => {
   delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
 });
 
-const LOGINS = [
-  { name: 'personal', token: 'token-personal' },
-  { name: 'work', token: 'token-work' },
-];
+const LOGINS = ['personal', 'work'];
 
-/** A session of a record with these values, on one chat. */
-const open = (chatUri: string, preset: Bag, extra: Record<string, unknown> = {}) => {
+/** One open login of `claude-login`, as the adapter's `open` keeps it; the answer closes it. */
+const opened = (logins: Logins, id: string, token: string, owner: ConnectorOwner = 'host'): (() => void) =>
+  logins.opened({ id, adapter: 'claude-login', owner, config: { token } });
+
+/** The host's logins of these ids, open, each with the token `token-<id>`. */
+const openLogins = (ids: string[] = LOGINS): Logins => {
+  const logins = new OpenLogins();
+  for (const id of ids) opened(logins, id, `token-${id}`);
+  return logins;
+};
+
+/** A session of a record with these values, on one chat, of an agent the owner holds. */
+const open = (chatUri: string, preset: Bag, extra: Record<string, unknown> = {}, logins: Logins = openLogins(), owner: ConnectorOwner = 'host') => {
   const chat: Bag[] = [];
   const session = createSession({
     uri: `ahp-session:/${chatUri}`,
@@ -127,6 +137,7 @@ const open = (chatUri: string, preset: Bag, extra: Record<string, unknown> = {})
     cwd: mkdtempSync(join(tmpdir(), 'ahpd-logins-')),
     emit: (channel, action) => { if (channel === 'chat') chat.push(action as Bag); },
     preset,
+    logins: { open: logins, owner: () => owner },
     ...extra,
   });
   return { session, chat };
@@ -150,7 +161,7 @@ it('picks the pinned login for fixed rendezvous vectors', async () => {
     ['opencode-3f2a', ['a', 'b', 'c'], 'b'],
   ] as const) {
     sdk.reset();
-    open(key, { logins: names.map((name) => ({ name, token: `token-${name}` })) });
+    open(key, { logins: [...names] }, {}, openLogins([...names]));
     await settle();
     expect(tokenOf(), key).toBe(`token-${expected}`);
   }
@@ -167,10 +178,11 @@ it('starts one chat on the same login every time it opens', async () => {
 });
 
 it('spreads conversations over the logins', async () => {
-  const three = [...LOGINS, { name: 'spare', token: 'token-spare' }];
+  const three = [...LOGINS, 'spare'];
+  const logins = openLogins(three);
   const seen = new Set<unknown>();
   for (let i = 0; i < 30; i++) {
-    open(`ahp-chat:/spread-${String(i)}`, { logins: three });
+    open(`ahp-chat:/spread-${String(i)}`, { logins: three }, {}, logins);
     await settle(2);
     seen.add(tokenOf());
   }
@@ -237,6 +249,103 @@ it('keeps its login while the login works, and moves when it cools down', async 
   session.begin('t4', 'four');
   await settle();
   expect(sdk.queries).toHaveLength(2);
+});
+
+describe('a login read from its connector', () => {
+  it('leaves out a named login whose connector is not open', async () => {
+    open('sess-a', { logins: ['gone', ...LOGINS] });
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+    open('ahp-chat:/only-gone', { logins: ['gone'] });
+    await settle();
+    expect(tokenOf()).toBeUndefined();
+  });
+
+  it("skips another person's login and takes the host's", async () => {
+    const logins = new OpenLogins();
+    opened(logins, 'ana-login', 'token-ana', 'user:ana');
+    opened(logins, 'cy-login', 'token-cy', 'user:cy');
+    opened(logins, 'host-login', 'token-host');
+    open('ahp-chat:/cy', { logins: ['ana-login', 'host-login'] }, {}, logins, 'user:cy');
+    await settle();
+    expect(tokenOf()).toBe('token-host');
+    open('ahp-chat:/cy-own', { logins: ['ana-login', 'cy-login'] }, {}, logins, 'user:cy');
+    await settle();
+    expect(tokenOf()).toBe('token-cy');
+    open('ahp-chat:/cy-none', { logins: ['ana-login'] }, {}, logins, 'user:cy');
+    await settle();
+    expect(tokenOf()).toBeUndefined();
+  });
+
+  it("moves the next turn to a new CLI when a put replaces its login's token", async () => {
+    const logins = openLogins();
+    const { session } = open('sess-a', { logins: LOGINS }, {}, logins);
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+    session.begin('t1', 'one');
+    await settle();
+    sdk.push(...answered('t1'));
+    await settle();
+
+    // A put closes the connector and opens it again with the new token.
+    opened(logins, 'work', 'token-work-again');
+    session.begin('t2', 'two');
+    await settle();
+    expect(sdk.queries).toHaveLength(2);
+    expect(tokenOf()).toBe('token-work-again');
+    expect(sdk.said.at(-1)).toMatchObject({ content: 'two', query: 1 });
+  });
+
+  it('moves the next turn to the next login when its connector closes', async () => {
+    const logins = new OpenLogins();
+    opened(logins, 'personal', 'token-personal');
+    const close = opened(logins, 'work', 'token-work');
+    const { session } = open('sess-a', { logins: LOGINS }, {}, logins);
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+    session.begin('t1', 'one');
+    await settle();
+    sdk.push(...answered('t1'));
+    await settle();
+
+    close();
+    session.begin('t2', 'two');
+    await settle();
+    expect(sdk.queries).toHaveLength(2);
+    expect(tokenOf()).toBe('token-personal');
+    expect(sdk.queries.at(-1)?.options.resume).toBe('cli-1');
+  });
+
+  it("runs a record's logins from the load's open connectors, through the plugin's engine", async () => {
+    const { apply } = await import('../src/plugin.js');
+    const engines: Engine[] = [];
+    const adapters: { name: string; open: (connector: unknown) => unknown }[] = [];
+    const host = {
+      paths: [mkdtempSync(join(tmpdir(), 'ahpd-logins-plugin-'))],
+      log: () => {},
+      registerAdapter: (adapter: { name: string; open: (connector: unknown) => unknown }) => { adapters.push(adapter); },
+      registerEngine: (engine: Engine) => { engines.push(engine); },
+    } as unknown as PluginHost;
+    await apply(host, {});
+    const adapter = adapters.find((one) => one.name === 'claude-login');
+    const engine = engines.find((one) => one.name === 'claude');
+    if (adapter === undefined || engine === undefined) throw new Error('the plugin registered no claude-login adapter or claude engine');
+    adapter.open({ id: 'work', adapter: 'claude-login', owner: 'host', config: { token: 'token-work' } });
+
+    const view: AgentView = {
+      id: 'claude-logins', engine: 'claude', owner: 'host', name: 'Logins',
+      description: undefined, icon: undefined, model: undefined, config: { logins: ['work'] },
+    };
+    const start: Start = {
+      uri: 'ahp-session:/claude-logins', chatUri: 'ahp-chat:/claude-logins', settings: {}, clientToolTimeoutMs: 60_000,
+      schema: () => ({ type: 'object', properties: {} }),
+      emit: () => {},
+      workingDirectory: (host as unknown as { paths: string[] }).paths[0] as string,
+    };
+    engine.open(view).create(start);
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+  });
 });
 
 /*

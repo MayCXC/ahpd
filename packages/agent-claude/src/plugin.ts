@@ -109,7 +109,7 @@ const sourcesOf = (value: unknown): ModelSource[] => (Array.isArray(value) ? val
 /** The plugin's own options, as every agent of one load is built with them. */
 type Shared = ReturnType<typeof defaultsOf>['shared'];
 
-const engineOf = (paths: string[], shared: Shared): Engine => ({
+const engineOf = (paths: string[], shared: Shared, logins: OpenLogins): Engine => ({
   name: 'claude',
   title: 'Claude Code',
   description: 'Claude Code, with one record per agent: its own directories, models and options.',
@@ -130,6 +130,7 @@ const engineOf = (paths: string[], shared: Shared): Engine => ({
     ...(Array.isArray(record.config['modelSources']) ? { modelSources: sourcesOf(record.config['modelSources']) } : {}),
     ...(typeof record.config['keepCliModels'] === 'boolean' ? { keepCliModels: record.config['keepCliModels'] } : {}),
     presetOf: () => ({ ...record.config }),
+    logins: { open: logins, owner: () => record.owner },
   }),
 });
 
@@ -144,5 +145,5 @@ export const apply: Plugin['apply'] = (host, options) => {
   const { paths, shared } = defaultsOf(host, options);
   const logins = new OpenLogins();
   host.registerAdapter(loginAdapter(logins));
-  host.registerEngine(engineOf(paths, shared));
+  host.registerEngine(engineOf(paths, shared, logins));
 };
