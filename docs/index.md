@@ -3,7 +3,10 @@ layout: home
 
 hero:
   name: ahpd
-  tagline: An Agent Host Protocol server for Claude, pi, ACP agents such as Codex, and any agent a plugin adds, on Node, Bun or Deno - and the parts to build your own
+  tagline: An open-source, plugin-driven AHP server with native Claude and pi agents, ACP agents (Codex, Copilot, Gemini), model proxying, tools and MCP servers, sandboxed computers and terminals, automations, conversational bots, and a web UI (ahpw). Users, permissions and usage tracking are built in. Build your own host and plugins with @ahpd/sdk.
+  image:
+    src: /logo.svg
+    alt: ahpd
   actions:
     - theme: brand
       text: Get started

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.21.0",
-  "description": "An Agent Host Protocol server for Claude, pi, ACP agents such as Codex, and any agent a plugin adds, on Node, Bun or Deno - and the parts to build your own",
+  "description": "An open-source, plugin-driven AHP server with native Claude and pi agents, ACP agents (Codex, Copilot, Gemini), model proxying, tools and MCP servers, sandboxed computers and terminals, automations, conversational bots, and a web UI (ahpw). Users, permissions and usage tracking are built in. Build your own host and plugins with @ahpd/sdk.",
   "author": "Luiz Fernando Softov <lfs@softov.dev>",
   "license": "MIT",
   "repository": {
