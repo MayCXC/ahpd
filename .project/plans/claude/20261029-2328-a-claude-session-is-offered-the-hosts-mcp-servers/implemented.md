@@ -17,12 +17,15 @@ The servers of the CLI's own files win a name both use.
 - [`code://packages/agent-claude/src/claude.ts`](../../../../packages/agent-claude/src/claude.ts) - `create` declares the host's servers, with `serversFor`'s servers over them.
 - [`code://docs/sdk/TOOLS.md`](../../../../docs/sdk/TOOLS.md) and `Start.mcpServers` - what the Claude backend does with the map.
 - [`code://packages/agent-claude/test/agent-claude-host-servers.test.ts`](../../../../packages/agent-claude/test/agent-claude-host-servers.test.ts) - three cases.
+- [`code://packages/sdk/test/toolauth.test.ts`](../../../../packages/sdk/test/toolauth.test.ts) - its mock of `mcp.js` answers `offeredServers` too, with no server of the host's.
 
 ## Verified
 
 - On the code before the change, the first and the third case fail with the host's servers missing.
   The second case passes, since the project's file won before as well.
 - After the change, the three cases pass.
+- The sdk suite's `toolauth.test.ts` failed in the full run, 4 cases, on a mock without `offeredServers`.
+  It passes with the mock's new member.
 - The type check passes.
 
 ## Departures from the plan
