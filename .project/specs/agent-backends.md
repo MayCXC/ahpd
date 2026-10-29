@@ -136,8 +136,17 @@ AND the CLI's answer to the message is that turn's
 AND the rest of the stopped turn's answer opens no turn and joins none.
 WHEN a client sends a turn while that turn runs
 THEN the host refuses it, as it refuses any turn sent while one runs.
+WHEN that turn is stopped
+THEN the message stops with it, and the CLI's answer to the message opens no turn and joins none.
 WHEN a stopped turn's result comes while another turn runs
 THEN it ends no turn.
+WHEN the steered turn moves to another login
+THEN the new CLI gets the turn's prompt again under a new uuid that `onTurnRecorded` tells the host
+AND the turn's steering messages behind it, each under a new uuid that began no turn, so the host reads them back inside the turn
+AND a turn opened for a steering message sends the message again as its prompt, under a new uuid that `onTurnRecorded` tells the host.
+WHEN the turn ends with the refusal because its conversation could not start over
+THEN the new CLI gets the steering messages the old one never took in
+AND each is answered in a turn of its own.
 WHEN the transcript is read back
 THEN a message the SDK's reader marks `isQueuedCommand` joins the open turn
 AND the CLI's stop text opens no turn and ends the open turn as cancelled

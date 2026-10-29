@@ -17,6 +17,7 @@ refs:
   - "[code://packages/agent-claude/src/session/query.ts#L820-L970](../../../../packages/agent-claude/src/session/query.ts#L820-L970) - the result branch, which ends a turn and starts the queue"
   - "[code://packages/agent-claude/src/session/query.ts#L533-L539](../../../../packages/agent-claude/src/session/query.ts#L533-L539) - `startQuery`, every new CLI for the conversation"
   - "[code://packages/agent-claude/src/session/parts.ts#L227-L265](../../../../packages/agent-claude/src/session/parts.ts#L227-L265) - `openTurn`, a turn the backend opens itself"
+  - "[code://packages/agent-claude/src/session/logins.ts#L185-L231](../../../../packages/agent-claude/src/session/logins.ts#L185-L231) - `runOn`, which puts a new CLI on a turn that moves logins"
   - "[code://packages/agent-claude/src/session/stream.ts#L108-L116](../../../../packages/agent-claude/src/session/stream.ts#L108-L116) - `message_start` opens a turn when none is active"
   - "[code://packages/agent-claude/src/transcript.ts#L284-L573](../../../../packages/agent-claude/src/transcript.ts#L284-L573) - `buildTurns`, which builds the turns of a transcript"
   - "[code://packages/sdk/src/host/lifecycle.ts#L1352-L1353](../../../../packages/sdk/src/host/lifecycle.ts#L1352-L1353) - the host refuses a turn while the chat has an active one"
@@ -126,6 +127,11 @@ a client stops a turn -> cancel() ends it -> a new turn begins -> the CLI answer
 | A turn that ends by a stop or a failure while the CLI holds its steering messages opens the turn that answers them at once. It carries the first message, with its id as `queuedMessageId`, and the others join it. | AHP 1.1.0, *Steering Messages*: consumption "represented as a new presentation turn"; [code://packages/sdk/src/host/lifecycle.ts#L1352-L1353](../../../../packages/sdk/src/host/lifecycle.ts#L1352-L1353); measured, the CLI merges a prompt it gets while such a message waits into one turn with it | 04 |
 | The CLI holds a prompt from its `queued` lifecycle until its `started` one; one with neither is still on its way and opens its turn when its answer comes. | npm://@anthropic-ai/claude-agent-sdk@0.3.301, the `command_lifecycle` frame its interrupt documents; measured | 04 |
 | A result that names a stopped turn's prompt is the stop's: a turn it also ends is cancelled, and nothing reads it as a failure. | [code://packages/agent-claude/src/session/context.ts#L203-L210](../../../../packages/agent-claude/src/session/context.ts#L203-L210), `interrupted`: a stop is not a failure | 04 |
+| A turn opened for a steering message has the message as its prompt: a stop of that turn stops it, and the CLI's answer to it afterwards goes nowhere. | [code://packages/agent-claude/src/session/query.ts#L737-L760](../../../../packages/agent-claude/src/session/query.ts#L737-L760): an answer belongs to the turn its prompt belongs to, and a turn that has ended takes no more of it | 05 |
+| A turn that moves to another login sends the new CLI the steering messages the old one owed it, behind its prompt, each under a new uuid; a turn opened for a steering message sends that message again as its prompt. | [code://packages/agent-claude/src/session/logins.ts#L185-L231](../../../../packages/agent-claude/src/session/logins.ts#L185-L231): the move sends the turn's prompt again to the new CLI; the turn owes its steering messages (task 01) | 06 |
+| A moved turn's prompt is recorded under its new uuid, and its steering messages under none, so a read puts them inside the turn. | [code://packages/agent-claude/src/session/turns.ts#L119-L123](../../../../packages/agent-claude/src/session/turns.ts#L119-L123) `writtenAs`, which says a prompt sent again to `onTurnRecorded`; the record (task 03) | 06 |
+| Where the conversation could not start over, the steering messages the old CLI never took in go to the new one after the turn fails, each answered in a turn of its own. | The conversation comes back as it was, holding what the CLI took in; a failed turn's steering messages are answered in a turn of their own (task 04) | 06 |
+| A message whose blocks were still being built when its CLI was put away is not handed to the next CLI. | `(defaulted: ours. The move sends what the turn owes, and the new CLI would otherwise get the message twice, measured in the case.)` | 06 |
 
 ## Proposed architecture
 
@@ -149,6 +155,8 @@ a client stops a turn -> cancel() ends it -> a new turn begins -> the CLI answer
 | [02 - A late answer opens a turn with its prompt](task-02-a-late-answer-opens-its-own-turn.md) | done | 01 |
 | [03 - The read-back folds a steering message](task-03-the-read-back-folds-a-steer.md) | done | 02 |
 | [04 - A stop opens the turn of its steering messages](task-04-a-stop-opens-the-steers-turn.md) | done | 03 |
+| [05 - A steering message's own turn ends with the message](task-05-a-steers-own-turn-ends-with-it.md) | done | 04 |
+| [06 - A turn that moves logins sends its steering messages again](task-06-a-moved-turn-sends-its-steers-again.md) | done | 05 |
 
 ## Risks and tradeoffs
 
@@ -158,13 +166,16 @@ a client stops a turn -> cancel() ends it -> a new turn begins -> the CLI answer
   There, a client's turn id that is no UUID goes to the CLI under a uuid of the backend's own.
   Where this host reads that session's files back, such a turn reads back inside the turn before it.
 - A steering message the CLI takes in at the moment of a stop opens its turn, which the stop's result then ends as cancelled.
-- The union merges this branch with the logins branch, which starts a new CLI for a turn. `startQuery` clears the map, so that path needs no change.
+- A steering message the old CLI took in before a move whose conversation could not start over stays in the conversation the new CLI resumes.
+  No turn shows what the refused login answered it.
 
 ## Resume state
 
 - **Done so far:** tasks 01 and 02 built 2026-10-28; see [implemented.md](implemented.md).
   Task 03 built 2026-10-28: a transcript read back shows the turns a client saw live.
   Task 04 built 2026-10-28: a stop or a failure opens the turn that answers the steering messages the CLI holds.
+  Task 05 built 2026-10-28: a stop of a steering message's own turn stops the message.
+  Task 06 built 2026-10-28: a turn that moves logins sends its steering messages again.
 - **Next action:** the agent-claude, sdk and server suites once, at one worker, then the implemented record.
 - **Open questions:** none.
 - **Watch out for:** a case that keeps the actions a session emits must copy them, because a part announced empty is filled in place afterwards.
@@ -172,6 +183,7 @@ a client stops a turn -> cancel() ends it -> a new turn begins -> the CLI answer
 ## Final verification checklist
 
 - [ ] Each case in `agent-claude-late-steer.test.ts` fails on the code before its task, except the folded steer, which guards.
+- [ ] Each case task 06 adds to `agent-claude-logins.test.ts` fails on the code before it.
 - [ ] agent-claude, sdk and server suites pass at one worker.
 - [ ] Boundary, typecheck, build and schema are clean.
 - [ ] `packages/sdk/test/fixtures/wire.jsonl` is unchanged in every commit.
