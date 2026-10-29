@@ -19,6 +19,19 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 const REPO = join(import.meta.dirname, '../../..');
 
+/*
+ * How long a run waits for its daemon to end on its own, and how long a case
+ * that runs one may take.
+ *
+ * A daemon here loads its source through the loader, reads its plugins and
+ * ends once its peer has left: a second or two on an idle machine, and more
+ * than fifteen on a busy one. The wait is for a daemon that never ends, so it
+ * outlasts a slow start by a wide margin, and a case outlasts the wait, so a
+ * run that sat on the pipe fails on an assertion rather than on its timeout.
+ */
+const ENDS_WITHIN_MS = 40_000;
+const CASE_MS = 60_000;
+
 let home: string;
 beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'ahpd-backend-')); });
 afterEach(() => { rmSync(home, { recursive: true, force: true }); });
@@ -54,7 +67,7 @@ const run = async (config: Record<string, unknown>, named = true, written = true
   return await new Promise((done) => {
     // A daemon that does start is one this test has to stop, so a run that
     // somehow sat on the pipe fails on an assertion rather than a timeout.
-    const timer = setTimeout(() => { child.kill(); }, 4000);
+    const timer = setTimeout(() => { child.kill(); }, ENDS_WITHIN_MS);
     child.on('exit', (code) => { clearTimeout(timer); done({ code, said, path }); });
   });
 };
@@ -75,7 +88,7 @@ it('starts when nothing contributed a backend, and names the fix', async () => {
   expect(said).toContain('"plugins"');
   expect(said).toContain(path);
   expect(said).toContain('@ahpd/agent-claude');
-});
+}, CASE_MS);
 
 it('names the command that installs Claude Code, and npm i as the other way', async () => {
   const { code, said, path } = await run({}, false);
@@ -86,7 +99,7 @@ it('names the command that installs Claude Code, and npm i as the other way', as
   expect(said).toContain('"plugins"');
   expect(said).toContain(path);
   expect(said).toContain(`npm i in ${join(home, 'ahpd')}`);
-});
+}, CASE_MS);
 
 it('names the command with the file the daemon was started with', async () => {
   const { code, said, path } = await run({});
@@ -95,7 +108,7 @@ it('names the command with the file the daemon was started with', async () => {
   // does not read.
   expect(said).toContain(`ahpd plugin install @ahpd/agent-claude --config-file ${path}`);
   expect(said).toContain('npm i in');
-});
+}, CASE_MS);
 
 it('asks nothing when there is no configuration file and no terminal, and starts', async () => {
   const { code, said } = await run({}, false, false);
@@ -105,7 +118,7 @@ it('asks nothing when there is no configuration file and no terminal, and starts
   expect(said).not.toContain('Run ahpd configure now?');
   expect(said).toContain('No backend is loaded');
   expect(said).toContain('ahpd plugin install @ahpd/agent-claude ');
-});
+}, CASE_MS);
 
 it('names the update when the plugins it was given loaded no backend', async () => {
   // A plugin of the release before 0.14, which wrote its options in
@@ -122,7 +135,7 @@ it('names the update when the plugins it was given loaded no backend', async () 
   expect(said).toContain('ahpd plugin update all');
   // The plugin is installed, so installing it is not the fix.
   expect(said).not.toContain('ahpd plugin install');
-});
+}, CASE_MS);
 
 it('starts when a plugin brought one', async () => {
   const { code, said } = await run({ plugins: [join(REPO, 'packages/server/test/fixtures/plugin-echo')] });
@@ -132,7 +145,7 @@ it('starts when a plugin brought one', async () => {
   expect(said).toContain('plugins echo-plugin');
   expect(said).not.toContain('No backend is loaded');
   expect(code).toBe(0);
-}, 10000);
+}, CASE_MS);
 
 it('hands a plugin every path the daemon serves', async () => {
   const first = join(home, 'first');
@@ -142,4 +155,4 @@ it('hands a plugin every path the daemon serves', async () => {
   const { code, said } = await run({ paths: [first, second], plugins: [join(REPO, 'packages/server/test/fixtures/plugin-paths')] });
   expect(said).toContain(`plugin paths ${JSON.stringify([first, second])}`);
   expect(code).toBe(0);
-}, 10000);
+}, CASE_MS);
