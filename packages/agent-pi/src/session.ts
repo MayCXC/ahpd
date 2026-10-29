@@ -632,6 +632,22 @@ export function piSession(
   };
 
   /**
+   * The entry pi wrote the running turn's prompt under, which is the id the
+   * turn has when it is read back from pi's file, said to the host.
+   *
+   * pi writes that entry after its listeners hear the message, so it is read
+   * once the turn is over: as the turn ends, however it ends, and as the
+   * session closes under a turn still running, which is what a host that stops
+   * does. The turn's first prompt names it, as agent-claude names a turn by its
+   * first echo.
+   */
+  const namePrompt = (): void => {
+    if (active === undefined || live === undefined) return;
+    const prompt = live.promptAfter(promptedAfter);
+    if (prompt !== undefined && prompt !== String(active.id)) start.onTurnRecorded?.(String(active.id), prompt);
+  };
+
+  /**
    * End the running turn, whoever ended it.
    *
    * pi says a run is over twice - `agent_end` and then `agent_settled` - and
@@ -642,6 +658,7 @@ export function piSession(
     const turn = active;
     if (turn === undefined) return;
     const turnId = String(turn.id);
+    namePrompt();
     // A call cut off before its end still owes the `after` it was announced with.
     for (const callId of [...editing.keys()]) settleEdit(callId);
     activity.say(undefined);
@@ -772,15 +789,6 @@ export function piSession(
         if (active !== undefined && live !== undefined) {
           const at = live.leaf();
           if (at !== undefined) ends.set(String(active.id), at);
-          /*
-           * And the entry pi wrote the turn's prompt under, which is the id
-           * the turn has when it is read back from pi's file. pi writes that
-           * entry after its listeners hear the message, so it is read here,
-           * where the turn is over. The turn's first prompt names it, as
-           * agent-claude names a turn by its first echo.
-           */
-          const prompt = live.promptAfter(promptedAfter);
-          if (prompt !== undefined && prompt !== String(active.id)) start.onTurnRecorded?.(String(active.id), prompt);
         }
         // Before the ending action: a client hangs usage on the turn it is
         // ending, and the ending is what moves that turn into the history.
@@ -1508,6 +1516,7 @@ export function piSession(
       releasePending('The turn was stopped');
       unsubscribe?.();
       unsubscribe = undefined;
+      namePrompt();
       live?.close();
       live = undefined;
       opening = undefined;

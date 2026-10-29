@@ -239,7 +239,8 @@ export function createLogins(ctx: SessionContext): Logins {
 
   /**
    * Put a new CLI on the turn's conversation, on `login`, and send the turn's
-   * prompt to it again.
+   * prompt to it again, with the steering messages the turn sent the CLI it
+   * replaces behind it.
    *
    * Cut back to the end of the turn before it, as a rewind cuts, so the failed
    * prompt is not in the conversation the new CLI resumes; or, for a
@@ -250,11 +251,16 @@ export function createLogins(ctx: SessionContext): Logins {
    * A conversation whose delete fails still holds the failed prompt and its
    * reply. It comes back as it is, on the new login, and the turn ends with the
    * failure, as a turn with no cut point does; the reply stays its last entry.
+   * A steering message the CLI took in is in it too; the others go to the new
+   * CLI, and are answered in a turn of their own, as a failed turn's are.
    */
   const moveOn = async (login: Login): Promise<void> => {
     const held = move;
     const turn = ctx.active;
     if (held === undefined || turn === undefined || held.turn !== String(turn.id)) return;
+    // The steering messages the CLI owes the turn an answer to, which it takes
+    // with it when it is put away.
+    const steers = [...ctx.owed.values()].filter((owed) => owed.steering && owed.turn === held.turn);
     const was = ctx.handle;
     let failed: string | undefined;
     closing = was;
@@ -287,11 +293,12 @@ export function createLogins(ctx: SessionContext): Logins {
     move = undefined;
     if (!still) return;
     if (failed === undefined) {
-      await ctx.again();
+      await ctx.again(steers);
       return;
     }
     const why = `The conversation could not start over on another login: ${failed}`;
     ctx.failTurn(held.said === '' ? why : `${held.said}\n${why}`);
+    await ctx.again(steers.filter((owed) => owed.cli !== 'started'));
     ctx.startNext();
   };
 

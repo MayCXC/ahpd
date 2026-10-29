@@ -122,6 +122,43 @@ it('ends a turn that stopped after a tool result at that result, as a live turn 
   expect(session.endPoint?.('u2')).toBeUndefined();
 });
 
+/** A turn whose steering message the CLI ran after its last answer, as a prompt of its own, and a turn after it. */
+const STEERED = [
+  prompt('u1', 'look around'),
+  said('a1', 'm1', [{ type: 'text', text: 'Three files.' }]),
+  prompt('s1', 'and count them'),
+  said('a2', 'm2', [{ type: 'text', text: 'Three.' }]),
+  prompt('u3', 'and now'),
+  said('a3', 'm3', [{ type: 'text', text: 'Done.' }]),
+];
+
+/** The turns a host reads that conversation back as, its record putting the steering message inside the turn it steered. */
+const JOINED = [{ id: 'u1', message: { text: 'look around' } }, { id: 'u3', message: { text: 'and now' } }];
+
+it('ends a turn the host read back with another inside it where that other one ended', async () => {
+  const agent = claude({ paths: [FOLDER] });
+  const id = '0a0a0a0a-2222-4222-8222-000000000006';
+  sdk.messages = STEERED;
+  written(id);
+  await agent.transcript?.(id, { workingDirectory: FOLDER });
+  const session = agent.create({ ...START, resume: id, seed: JOINED });
+  expect(session.endPoint?.('u1')).toBe('a2');
+  expect(session.forkPoint?.('u1')).toBe('a2');
+  expect(session.endPoint?.('u3')).toBe('a3');
+});
+
+it('keeps a turn the host read back with another inside it to the rewind point, past which nothing is kept', async () => {
+  const agent = claude({ paths: [FOLDER] });
+  const id = '0a0a0a0a-2222-4222-8222-000000000007';
+  sdk.messages = STEERED;
+  written(id);
+  await agent.transcript?.(id, { workingDirectory: FOLDER });
+  // Cut back to the end of the first turn, which is the end of the message inside it.
+  const session = agent.create({ ...START, resume: id, seed: JOINED.slice(0, 1), rewindAt: 'a2' });
+  expect(session.endPoint?.('u1')).toBe('a2');
+  expect(session.endPoint?.('u3')).toBeUndefined();
+});
+
 it('answers no point read back for a session that forks the conversation', async () => {
   const session = await readThenStart('0a0a0a0a-2222-4222-8222-000000000003', {
     chatUri: 'ahp-chat:/read-ends-fork',

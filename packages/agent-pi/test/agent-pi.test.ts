@@ -146,6 +146,21 @@ it('names a turn by the entry pi wrote its prompt under, read after the entry th
   expect(recorded).toEqual([['t1', 'entry-prompt']]);
 });
 
+it('names a turn by its prompt\'s entry when the session closes while the turn runs', async () => {
+  // A host that stops closes its sessions under their turns, and the turn is
+  // read back from pi's file after the restart, under its prompt's entry.
+  const recorded: [string, string][] = [];
+  const { session, pi } = opened({ onTurnRecorded: (turnId, entryId) => { recorded.push([turnId, entryId]); } });
+  pi.hold();
+  pi.setLeaf('entry-before');
+  pi.setPrompted('entry-prompt');
+  session.begin('t1', 'hello');
+  await settled();
+  expect(recorded).toEqual([]);
+  session.close();
+  expect(recorded).toEqual([['t1', 'entry-prompt']]);
+});
+
 it('names no turn whose prompt pi has no entry for', async () => {
   const recorded: [string, string][] = [];
   const { session } = opened({ onTurnRecorded: (turnId, entryId) => { recorded.push([turnId, entryId]); } });

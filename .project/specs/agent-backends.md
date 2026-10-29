@@ -137,6 +137,50 @@ AND the reader of the CLI it replaced takes nothing more and ends.
 The reason: the SDK reads a new CLI's input only after its initialize request is written, which waits on the manifests of the in-process MCP servers, and it drops what a closed CLI's reader is handed.
 See [`code://packages/agent-claude/src/session/query.ts`](../../packages/agent-claude/src/session/query.ts).
 
+### A Claude steering message answered after the turn's last answer
+
+WHEN a steering message reaches a running Claude turn
+THEN the backend sends it under the steering message's id when that id is a UUID
+AND under a new uuid otherwise.
+WHEN the CLI answers it after the result of the turn's last answer
+THEN the turn stays open, and that answer is part of it
+AND the turn ends at the result that names the steering message.
+WHEN a message waits in the queue meanwhile
+THEN it starts only after that result.
+WHEN a result names no prompt
+THEN it ends the turn.
+WHEN the turn is stopped or fails while the CLI holds the steering message
+THEN a turn of its own opens at once, under the uuid the message was sent with, carrying the message
+AND it names the message in `queuedMessageId`
+AND the CLI's answer to the message is that turn's
+AND the rest of the stopped turn's answer opens no turn and joins none.
+WHEN a client sends a turn while that turn runs
+THEN the host refuses it, as it refuses any turn sent while one runs.
+WHEN that turn is stopped
+THEN the message stops with it, and the CLI's answer to the message opens no turn and joins none.
+WHEN a stopped turn's result comes while another turn runs
+THEN it ends no turn.
+WHEN the steered turn moves to another login
+THEN the new CLI gets the turn's prompt again under a new uuid that `onTurnRecorded` tells the host
+AND the turn's steering messages behind it, each under a new uuid that began no turn, so the host reads them back inside the turn
+AND a turn opened for a steering message sends the message again as its prompt, under a new uuid that `onTurnRecorded` tells the host.
+WHEN the turn ends with the refusal because its conversation could not start over
+THEN the new CLI gets the steering messages the old one never took in
+AND each is answered in a turn of its own.
+WHEN the transcript is read back
+THEN a message the SDK's reader marks `isQueuedCommand` joins the open turn
+AND the CLI's stop text opens no turn and ends the open turn as cancelled
+AND the host reads a steering message the CLI ran late back inside the turn it steered, because the message began no turn
+AND a steering message answered in a turn of its own reads back as that turn, which began.
+WHEN a session resumes a conversation the host read back so
+THEN a turn ends where the last prompt read back inside it ends, up to a rewind's point.
+The reason: the CLI folds a steering message into a turn at its next tool call.
+One that arrives after the last tool call runs as a turn of its own.
+The CLI writes nothing else that ties that message to the turn it steered.
+A prompt that reaches the CLI while such a message waits there runs with it, as one turn with one answer.
+*A turn is read back as it began* in the sessions spec says how the host reads such a turn back.
+See [`code://packages/agent-claude/src/session/query.ts`](../../packages/agent-claude/src/session/query.ts) and [`code://packages/agent-claude/src/transcript.ts`](../../packages/agent-claude/src/transcript.ts).
+
 ### A live tool change in a Claude session
 
 WHEN the tools a Claude session offers change while the session runs

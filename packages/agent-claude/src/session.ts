@@ -7,7 +7,7 @@ import { bag, list, str } from './session/common.js';
 import { createAsking } from './session/asking.js';
 import { contributed, createClientTools } from './session/clienttools.js';
 import { createConfig, listsOf } from './session/config.js';
-import type { ClaudeSessionOptions, SessionContext } from './session/context.js';
+import type { ClaudeSessionOptions, Owed, SessionContext } from './session/context.js';
 import { createLogins } from './session/logins.js';
 import { createParts } from './session/parts.js';
 import { createQuery } from './session/query.js';
@@ -81,6 +81,8 @@ export function createSession(options: ClaudeSessionOptions): Session {
     closed: false,
     peers: [...(options.additional ?? [])] as string[],
     steering: undefined as Bag | undefined,
+    owed: new Map<string, Owed>(),
+    answering: undefined as string | undefined,
     hostInstructions: undefined as { turn: Bag; said: string[] } | undefined,
     running: undefined as string | undefined,
     agentId: options.resume as string | undefined,

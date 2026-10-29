@@ -113,10 +113,32 @@ See [`code://packages/agent-claude/src/transcript.ts`](../../packages/agent-clau
 
 WHEN a backend calls `onTurnRecorded(turnId, transcriptId)` with two different ids
 THEN the host copies the turn's sender to the transcript id
-AND a local turn after that turn names it by the transcript id.
+AND a local turn after that turn names it by the transcript id
+AND the host records the transcript id for the turn, as it records a turn's own id when the turn starts.
 
 The reason: a restored turn has the backend's id, and without the copy it shows no sender.
 The Claude backend calls it only for lead turns, and the pi backend calls it with its prompt's entry.
+
+### A turn is read back as it began
+
+WHEN a turn starts
+THEN the host records its id as the transcript id it began under, in one file in the session's folder, under its chat.
+WHEN the host reads a chat back from a transcript
+THEN from the first turn the record holds on, a turn the record does not hold joins the turn before it
+AND so does a turn recorded as the same turn as the one before it
+AND a local turn stays a turn of its own
+AND a joined turn keeps the first turn's id, start and message, takes both turns' parts and ends as the later one ended
+AND its usage adds up what both spent.
+WHEN a local turn's anchor is a turn that joined another
+THEN the local turn goes after the turn it joined.
+WHEN a truncation drops turns, a fork copies them, or a chat is removed or moves to another session
+THEN the record follows, as the chat's local turns do.
+
+The reason: a backend may write one turn as several of its own.
+Claude's CLI writes a steering message it runs after the turn's last answer as a prompt.
+The reference keeps that message's answer in the turn it steered.
+A chat with no record, from before it or on a store with no session folder, reads as its transcript gives it.
+See [`code://packages/sdk/src/host/localturns.ts`](../../packages/sdk/src/host/localturns.ts).
 
 ### The host keeps a `!` command's turn as a local turn
 
