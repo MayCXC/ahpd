@@ -230,11 +230,24 @@ export const daemonCheck = async (facts: DoctorFacts): Promise<Check> => {
   return { name: 'Daemon', result: 'ok', line: `a daemon answers at ${record.url}` };
 };
 
-/** The service file for this system's manager, or nothing when it has none. */
+/**
+ * The service file for this system's manager, or nothing when it has none.
+ *
+ * The file of the service the configuration names, for a daemon that runs
+ * beside another. A configuration that does not load names none, and the
+ * plugin check is the one that says why.
+ */
 export const serviceCheck = (facts: DoctorFacts): Check | undefined => {
   const service = serviceOn(facts.platform ?? process.platform);
   if (service === undefined) return undefined;
-  const file = installFile(service);
+  let name: string | undefined;
+  try {
+    name = configOf(facts).values.service?.name;
+  }
+  catch {
+    name = undefined;
+  }
+  const file = installFile(service, name);
   const exists = facts.exists ?? existsSync;
   if (!exists(file)) {
     return { name: 'Service', result: 'warn', line: `no ${service} file is at ${file}`, fix: 'ahpd service install' };

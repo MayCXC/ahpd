@@ -166,6 +166,15 @@ export interface Options {
    * no flag, as who may read a row's limits is the deployment's.
    */
   policiesOwnLimits: boolean;
+  /**
+   * The name of the service that holds this daemon, for one that runs beside
+   * another.
+   *
+   * `service.name` in the file, and absent for the plain service. It has no
+   * flag, as the file a service runs is the one place both the install and the
+   * daemon read.
+   */
+  serviceName?: string;
   /** A file every frame is appended to, both directions, one JSON line each. */
   wire?: string;
   /**
@@ -677,6 +686,13 @@ export const serverFields = {
     },
     description: 'Whether the policies saying who may use which agent, model and computer are enforced: check refuses a session and a turn that no policy allows, naming the policy that refused it, and refuses a turn or a proxy call whose limits have no room left. Off by default, and the rows are written and listed either way. payOrder says which row of one scope pays first: ending (the default), regular or extra. ownLimits, true by default, lets a person read the limits that apply to them. Set in the configuration file only.',
   },
+  service: {
+    type: 'object',
+    properties: {
+      name: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{0,39}$' },
+    },
+    description: 'The service that holds this daemon, for a daemon that runs beside another in a configuration home of its own: name, a lowercase letter or digit and then up to 39 letters, digits and dashes, installs it as ahpd@<name> on systemd and dev.ahpd.daemon.<name> on launchd. Absent is the plain ahpd and dev.ahpd.daemon. Set in the configuration file only.',
+  },
   httpApi: {
     type: ['object', 'boolean'],
     title: 'HTTP API',
@@ -727,7 +743,7 @@ export const serverFields = {
 } satisfies Record<string, Field>;
 
 /** The fields only the configuration file sets, which have no flag. */
-const FILE_ONLY = ['httpApi', 'routes', 'usage', 'modelProxy', 'policies', 'mcpServers', 'shellEnv', 'commandParser'] as const;
+const FILE_ONLY = ['httpApi', 'routes', 'usage', 'modelProxy', 'policies', 'service', 'mcpServers', 'shellEnv', 'commandParser'] as const;
 
 /** The flags that mean something only when typed, which the file does not set. */
 const TYPED_ONLY = ['stdio', 'configFile', 'noPlugins', 'noCwd', 'pluginOptions'] as const;
@@ -1201,6 +1217,7 @@ const noCwd = input['noCwd'] === true;
   const sleepAfterMinutes = given('sleepAfterMinutes');
   const sessionResidencyLimit = given('sessionResidencyLimit');
   const usageZone = given('usage')?.timezone;
+  const serviceName = given('service')?.name;
   const httpApi = httpOf(file.httpApi, source('httpApi'));
   const routes = routesOf(file.routes, source('routes'));
   const modelProxy = proxyConfiguration(given('modelProxy'));
@@ -1245,6 +1262,7 @@ const noCwd = input['noCwd'] === true;
     policiesCheck: given('policies')?.check ?? false,
     policiesPayOrder: given('policies')?.payOrder ?? 'ending',
     policiesOwnLimits: given('policies')?.ownLimits ?? true,
+    ...(serviceName === undefined ? {} : { serviceName }),
     ...(wire === undefined ? {} : { wire }),
     ...(httpApi === undefined ? {} : { httpApi }),
     ...(routes === undefined ? {} : { routes }),
