@@ -142,13 +142,15 @@ no policy allows computer kvm-shared
 
 ## How a limit is counted
 
-A turn and a proxy call walk their rows for room after the four steps allowed them. Each measure is walked on its own, in the person's order: their own rows, then the project, the team and `all` last. Within one scope, `policies.payOrder` says which row goes first.
+A turn and a proxy call walk their rows for room after the four steps allowed them. Each measure is walked on its own, in the person's order: the key's own row first, then their own rows, the project, the team and `all` last. Within one scope, `policies.payOrder` says which row goes first.
 
 1. A row with no limits takes the measure and adds no key.
 2. A row with no limit in this measure is skipped, and the measure walks on.
 3. A row with a counted limit that has used its amount is closed, and the measure spills to the next row.
 4. A `cap` row is checked and adds its keys, but it never pays; a row with room adds the keys of its limits in this measure and ends the measure.
 5. A measure no row pays is recorded with no key, and the work is refused only when no measure finds a payer.
+
+A key minted with limits adds one row of its own, walked before every row about a person. It is a `cap` about every model, scoped to the key, so it adds its keys and never pays: the limits of a key narrow what a policy allows and never allow a model alone. The row is made from the token record rather than read from a store, so it holds for a `*:*` holder and with `policies.check` off too, as long as a usage store is there.
 
 A row has room only while every counted limit has room, so a row closed in one measure pays no other. The check is before the work and the record after it, so two turns that start together can both pass an amount.
 
@@ -172,8 +174,9 @@ A record carries its owner, team and project as before, and beside them one key 
 | `policy:<id>` | `each` | `policy:<id>/<measure>/user:<id>` |
 | `pool:<name>` | `shared` | `pool:<name>/<measure>` |
 | `pool:<name>` | `each` | `pool:<name>/<measure>/user:<id>` |
+| `token:<id>` | `shared` | `pool:token:<id>/<measure>` |
 
-Every record of one turn carries the keys its check chose, so a turn written per report is charged the same way as one written at its end. With the check off, with no usage store, with no person, or for a `*:*` holder, no policy key is written.
+Every record of one turn carries the keys its check chose, so a turn written per report is charged the same way as one written at its end. With the check off, with no usage store, with no person, or for a `*:*` holder, no policy key is written. The key's own row is the exception: its `pool:token:<id>` keys are written with the check off and for a `*:*` holder, because they are the key's limits rather than a policy's.
 
 ### The refusal
 
@@ -181,6 +184,12 @@ A row with no room refuses the turn or the call, and names itself and the figure
 
 ```
 A3 has no room: 100 / 100 usd this week
+```
+
+A key's own limit refuses the same way, with the key's address in place of a row's id:
+
+```
+token:k1 has no room: 2 / 2 calls this day
 ```
 
 A `total` limit says `in total` rather than `this week`. The id is the first row the walk met with no room, and the measure is the first of its counted limits that closed.

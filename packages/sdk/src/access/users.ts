@@ -4,7 +4,9 @@ import { basename, dirname } from 'node:path';
 import { readJson, writeJsonAtomic } from '../utils/jsonfile.js';
 import { same } from '../listen.js';
 import { issuerFrom, jwtIssuer, sameIssuer } from './issuers.js';
+import { checkKeyLimits } from './policies.js';
 import { covers, membership, scopeFor } from '../usage/scopes.js';
+import type { PolicyLimit } from '../types/policies.js';
 import type { Grant, Issuer, IssuerVerify, MintedToken, Named, Principal, TokenRecord, UserFile, UserRecord, Users } from '../types/users.js';
 import { strings } from '../utils/values.js';
 
@@ -939,12 +941,28 @@ export function fileUsers(options: FileUserOptions): Users {
             throw new Error(`token ${entry.id} has a scope that is not team or team:project`);
           }
         }
+        /*
+         * The limits, read the way the mint checks them.
+         *
+         * A file holding a limit no key may have - a measure a model row does
+         * not count, a pool of `each`, a negative amount - is a file this host
+         * will not sign anybody in from, and it is reported as broken rather
+         * than read with the limit dropped.
+         */
+        let limits: PolicyLimit[] | undefined;
+        if (entry.limits !== undefined) {
+          try { limits = checkKeyLimits(entry.limits); }
+          catch (error) {
+            throw new Error(`token ${entry.id} holds limits that are not ones: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
         return {
           id: entry.id,
           user: entry.user,
           ...(entry.label === undefined ? {} : { label: entry.label }),
           ...(entry.grants === undefined ? {} : { grants: [...entry.grants] as Grant[] }),
           ...(entry.scope === undefined ? {} : { scope: entry.scope }),
+          ...(limits === undefined ? {} : { limits }),
           created: entry.created,
           ...(entry.expires === undefined ? {} : { expires: entry.expires }),
           token: entry.token,
@@ -1093,6 +1111,22 @@ export function fileUsers(options: FileUserOptions): Users {
         if (minted === undefined) return undefined;
         const live = readTokens().tokens.find((one) => one.id === minted.id);
         return live === undefined || live.user !== record.id ? undefined : live.scope;
+      },
+      /*
+       * The limits of the key they signed in with, re-read as `standing` reads
+       * the record.
+       *
+       * A key's limits are on its record and nowhere else, so a revoked or
+       * expired key answers none and the person's own secret answers none. What
+       * comes back is what the walk builds a `cap` row from, and it never allows
+       * anything on its own.
+       */
+      get keyLimits(): readonly PolicyLimit[] | undefined {
+        if (minted === undefined) return undefined;
+        const live = readTokens().tokens.find((one) => one.id === minted.id);
+        if (live === undefined || live.user !== record.id) return undefined;
+        if (live.expires !== undefined && live.expires <= Date.now()) return undefined;
+        return live.limits;
       },
       /*
        * The person, and a minted token's own life beside theirs.
@@ -1578,6 +1612,12 @@ export function fileUsers(options: FileUserOptions): Users {
         if (answer === undefined) throw new Error('this host names no team, so a key has no scope to carry');
         if (answer.refusal !== undefined) throw new Error(answer.refusal);
       }
+      /*
+       * The limits are checked as a `model` row's, and a key's pool is always
+       * `shared`. A missing pool is filled rather than refused, so a client may
+       * name an amount, a measure and a period alone.
+       */
+      const limits = given.limits === undefined ? undefined : checkKeyLimits(given.limits);
       // Only the tokens still live hold a place: an expired one is a credential
       // that no longer works, and it should not keep its person from minting.
       const limit = options.tokensPerPerson ?? 10;
@@ -1599,6 +1639,7 @@ export function fileUsers(options: FileUserOptions): Users {
         ...(given.label === undefined ? {} : { label: given.label }),
         ...(given.grants === undefined ? {} : { grants: [...given.grants] }),
         ...(given.scope === undefined ? {} : { scope: given.scope }),
+        ...(limits === undefined ? {} : { limits }),
         created: now,
         ...(given.expires === undefined ? {} : { expires: given.expires }),
         // The secret is written here and nowhere, and only as its hash.

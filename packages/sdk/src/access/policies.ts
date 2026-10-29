@@ -126,6 +126,33 @@ const limitOf = (body: unknown, kind: PolicyKind, index: number): PolicyLimit =>
 };
 
 /**
+ * A key's limits, checked as the limits of a `model` row and kept to one total.
+ *
+ * A key's limits are for the proxy, so the measures are a `model` row's; the
+ * check of one limit is `limitOf`'s, and the sentence is the one it writes. A
+ * key has one total, so a limit that names no `pool` is `shared` and one that
+ * names `each` is refused: `each` needs a member to split the total by, and one
+ * key has none.
+ */
+export function checkKeyLimits(body: unknown): PolicyLimit[] {
+  if (!Array.isArray(body)) throw wrong('limits', `is a list of limits, and that body has ${said(body)}`);
+  return (body as unknown[]).map((one, index) => {
+    if (typeof one !== 'object' || one === null || Array.isArray(one)) {
+      throw wrong(`limits[${index}]`, 'is an object holding an amount, a measure and a period');
+    }
+    const held = one as Record<string, unknown>;
+    // A missing pool is `shared`, which is the only pool a key's limit has.
+    const given = held.pool === undefined || held.pool === null ? { ...held, pool: 'shared' } : held;
+    const limit = limitOf(given, 'model', index);
+    if (limit.pool !== 'shared') {
+      throw new RpcError(INVALID_PARAMS,
+        `A key's limits[${index}].pool is shared, because one key has one total, and that body has ${said(limit.pool)}`);
+    }
+    return limit;
+  });
+}
+
+/**
  * The row a body is, or a refusal naming what is wrong with it.
  *
  * Every field the row has is checked here, and nothing else is read: `pool`,
@@ -145,6 +172,11 @@ export function checkPolicy(body: unknown): Policy {
   const scope = held.scope;
   if (typeof scope !== 'string' || scope === '') {
     throw wrong('scope', 'is all, user:<id>, team:<id> or project:<team>:<project>, and that body has none');
+  }
+  // A key's limits are on the key's own record, so no store holds a row about
+  // one: a body naming `token:` is one the walk would never read.
+  if (scope.startsWith('token:')) {
+    throw wrong('scope', 'names a key, which has its limits on its own record and no row here');
   }
   if (scope !== 'all') {
     const named = /^(user|team|project):(.*)$/u.exec(scope);
@@ -213,6 +245,11 @@ export function checkPolicy(body: unknown): Policy {
   // sending it as one, and the row below leaves it out.
   if (held.pool !== undefined && held.pool !== null && typeof held.pool !== 'string') {
     throw wrong('pool', 'is a name rows share a total under');
+  }
+  // `pool:token:` is a key's own, which `keyRowOf` writes for the totals of its
+  // limits: a store row under one would be charged to the same figure.
+  if (typeof held.pool === 'string' && held.pool.startsWith('token:')) {
+    throw wrong('pool', 'starts with token:, which is a key\'s own and not a name rows share');
   }
   if (held.cap !== undefined && held.cap !== null && typeof held.cap !== 'boolean') {
     throw wrong('cap', 'is true or false');

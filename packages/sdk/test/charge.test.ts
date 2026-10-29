@@ -348,6 +348,41 @@ describe('limitsOf', () => {
   });
 });
 
+describe('a key\'s own row', () => {
+  /** A person carrying the limits of the key they signed in with. */
+  const keyed = (who: Principal, id: string, limits: PolicyLimit[]): Principal =>
+    ({ ...who, token: id, keyLimits: limits });
+
+  it('is walked first, adds its keys, and the team row still pays', async () => {
+    const answer = await charged('model', keyed(carol, 'k1', DAY(100, 'calls', 'day')), SEARCH, { model: 'anthropic/sonnet-5' }, memoryUsage());
+    expect(poolsOf(answer)).toEqual(['policy:M2/usd', 'policy:M5/tokens', 'pool:token:k1/calls']);
+  });
+
+  it('refuses before the project row that would otherwise pay', async () => {
+    const usage = memoryUsage({ 'pool:token:k1/usd': { usd: 5 } });
+    const refusal = refusalOf(await charged('model', keyed(alice, 'k1', DAY(5, 'usd', 'day')), BILLING, { model: 'anthropic/fable-5' }, usage));
+    expect(refusal.policy).toBe('token:k1');
+    expect(refusal.message).toBe('token:k1 has no room: 5 / 5 usd this day');
+  });
+
+  it('out of room in another measure, refuses with that measure\'s sentence', async () => {
+    const usage = memoryUsage({ 'pool:token:k1/calls': { calls: 2 } });
+    const refusal = refusalOf(await charged('model', keyed(alice, 'k1', DAY(2, 'calls', 'day')), BILLING, { model: 'anthropic/fable-5' }, usage));
+    expect(refusal.measure).toBe('calls');
+    expect(refusal.message).toBe('token:k1 has no room: 2 / 2 calls this day');
+  });
+
+  it('is the only row a `*:*` holder\'s key gets, and holds them too', async () => {
+    const usage = memoryUsage({ 'pool:token:k1/calls': { calls: 2 } });
+    const refusal = refusalOf(await charged('model', keyed(dave, 'k1', DAY(2, 'calls', 'day')), BILLING, { model: 'anthropic/fable-5' }, usage));
+    expect(refusal.message).toBe('token:k1 has no room: 2 / 2 calls this day');
+
+    // With room it adds its key, and nothing else was asked of it.
+    const answer = await charged('model', keyed(dave, 'k1', DAY(100, 'calls', 'day')), BILLING, { model: 'anthropic/fable-5' }, memoryUsage());
+    expect(poolsOf(answer)).toEqual(['pool:token:k1/calls']);
+  });
+});
+
 describe('step 1', () => {
   it('allows a `*:*` holder at once, with no keys', async () => {
     const answer = await charged('model', dave, BILLING, { model: 'anthropic/fable-5' }, memoryUsage());

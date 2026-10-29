@@ -19,7 +19,7 @@
 
 import type { RequestHandler } from '@cofold/remote';
 import {
-  chargeFor, decide, type ConnectorModel, type ConnectorModels, type Cost, type ModelPricing, type ModelUse, type Owner, type PayOrder, type Policies, type ProviderConnector,
+  chargeFor, decide, keyRowOf, type ConnectorModel, type ConnectorModels, type Cost, type ModelPricing, type ModelUse, type Owner, type PayOrder, type Policies, type ProviderConnector,
   type ProviderModel, type Scope, type Usage, type Users,
 } from '@ahpd/sdk';
 import { foreign, guarded, isUnder, json, originRefusal, PROXY_PREFIX, type ApiOrigins } from '../http.js';
@@ -503,9 +503,14 @@ interface EntryCheck {
 /**
  * The policy a route is held to for one caller and one name, or nothing.
  *
- * Only with the checks on, a store, and a person behind the call. A store that
- * cannot be read refuses, as the host's own check does: a check that failed
- * open is not a check.
+ * With the checks on, a store and a person behind the call. A store that cannot
+ * be read refuses, as the host's own check does: a check that failed open is
+ * not a check.
+ *
+ * With the checks off, a key's own limits still hold: they are on the key rather
+ * than in the store, so the decision is the key's row alone and the walk is the
+ * same one. A host with neither a store nor a key with limits checks nothing and
+ * answers nothing here.
  *
  * After an allowed decision the entry is walked for room, the same way a turn
  * is, and a row with no room refuses the entry with its sentence. The keys the
@@ -518,11 +523,25 @@ interface EntryCheck {
 const policyFor = (options: ProxyOptions, charged: Charged, name: string, zone: string | undefined): EntryCheck | undefined => {
   const store = options.policies;
   const principal = charged.principal;
-  if (options.policiesCheck !== true || store === undefined || principal === undefined) return undefined;
+  if (principal === undefined) return undefined;
+  const checking = options.policiesCheck === true && store !== undefined;
+  // The key's row is added to an allowed decision by `decide` when the checks
+  // are on, so it is walked alone only when the store is not read at all.
+  const alone = checking ? undefined : keyRowOf(principal);
+  if (!checking && alone === undefined) return undefined;
   const kept = new Map<ModelEntry, string[]>();
   const allowed = async (entry: ModelEntry): Promise<string | undefined> => {
     try {
-      const decision = await decide(store, principal, charged.scope, 'model', { model: name, proxy: entry.provider });
+      let decision: Awaited<ReturnType<typeof decide>>;
+      if (checking && store !== undefined) {
+        decision = await decide(store, principal, charged.scope, 'model', { model: name, proxy: entry.provider });
+      }
+      else if (alone !== undefined) {
+        decision = { allowed: true, candidates: [alone] };
+      }
+      else {
+        return undefined;
+      }
       if (!decision.allowed) return decision.refusal.message;
       const usage = options.usage?.();
       if (usage === undefined || zone === undefined) return undefined;

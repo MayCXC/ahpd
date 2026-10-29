@@ -4,10 +4,10 @@
  *
  * `decide` answers whether a person may do a thing and which rows allowed it;
  * this is the step after it. Each measure walks those rows on its own, in the
- * person's order - their own rows, then the project, the team, then `all` - and
- * the first row with room in that measure pays for it. A row with no limits
- * takes every measure and adds no key, a row with no limit in a measure is
- * skipped for it, and a `cap` row is counted and never pays.
+ * person's order - the key's own row, their own rows, then the project, the
+ * team, then `all` - and the first row with room in that measure pays for it. A
+ * row with no limits takes every measure and adds no key, a row with no limit in
+ * a measure is skipped for it, and a `cap` row is counted and never pays.
  *
  * The keys a paying row adds are how a limit finds its own usage: a record of
  * the work carries them in `pools`, and `limitsOf` reads the store's total for
@@ -199,13 +199,21 @@ export async function limitsOf(
   return figures;
 }
 
-/** The scope level a row is charged at: the person, the project, the team, then all. */
+/** The scope level a row is charged at: the key, the person, the project, the team, then all. */
 const LEVELS: Record<'user' | 'project' | 'team', number> = { user: 0, project: 1, team: 2 };
 
-/** How specific a row's scope is, read the way `scoped` reads it. */
+/**
+ * How specific a row's scope is, read the way `scoped` reads it.
+ *
+ * A key's own row is before every row about a person: it is about the
+ * credential the call was made with, and a cap narrows what everything after it
+ * allows.
+ */
 const levelOf = (row: Policy): number => {
   if (row.scope === 'all') return 3;
-  return LEVELS[row.scope.slice(0, row.scope.indexOf(':')) as 'user' | 'project' | 'team'];
+  const what = row.scope.slice(0, row.scope.indexOf(':'));
+  if (what === 'token') return -1;
+  return LEVELS[what as 'user' | 'project' | 'team'];
 };
 
 /**

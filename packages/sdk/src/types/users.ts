@@ -10,6 +10,8 @@
  * and `fileUsers()` is one implementation of it.
  */
 
+import type { PolicyLimit } from './policies.js';
+
 /**
  * The two names that group a subject's operations rather than being one.
  *
@@ -66,6 +68,14 @@ export interface Principal {
    * hand, and for a key minted without one.
    */
   readonly keyScope?: string | undefined;
+  /**
+   * The limits of the key they signed in with, when it has any.
+   *
+   * Read from the token record on every question, as `can` reads the key's
+   * grants: a revoked or expired key answers none. Absent for the person's full
+   * secret, a token an issuer answered for, and a principal built by hand.
+   */
+  readonly keyLimits?: readonly PolicyLimit[] | undefined;
   /**
    * Whether they may do that.
    *
@@ -302,6 +312,16 @@ export interface TokenRecord {
    * charged to it rather than to the person's primary.
    */
   scope?: string;
+  /**
+   * The spend and call limits of this token, when it has any.
+   *
+   * A proxy call made with the token is refused when one of them has no room,
+   * and only narrows: a key that carries limits never allows a model no policy
+   * allows and never stops the charge to a team. The measures are a `model`
+   * row's - `usd`, `tokens` and `calls` - and the pool is always `shared`,
+   * because one key has one total. Absent means no limit of its own.
+   */
+  limits?: PolicyLimit[];
   /** When it was minted, in epoch milliseconds. */
   created: number;
   /** When it stops working, in epoch milliseconds, when it does. */
@@ -513,7 +533,7 @@ export interface Users {
    */
   mintToken?(
     user: string,
-    options?: { label?: string; grants?: readonly Grant[]; expires?: number; scope?: string },
+    options?: { label?: string; grants?: readonly Grant[]; expires?: number; scope?: string; limits?: readonly PolicyLimit[] },
   ): Promise<MintedToken>;
   /**
    * The tokens of one person, or of everybody, without their hashes.
