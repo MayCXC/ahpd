@@ -4,7 +4,7 @@ import { basename, dirname } from 'node:path';
 import { readJson, writeJsonAtomic } from '../utils/jsonfile.js';
 import { same } from '../listen.js';
 import { issuerFrom, jwtIssuer, sameIssuer } from './issuers.js';
-import { covers, membership } from '../usage/scopes.js';
+import { covers, membership, scopeFor } from '../usage/scopes.js';
 import type { Grant, Issuer, IssuerVerify, MintedToken, Named, Principal, TokenRecord, UserFile, UserRecord, Users } from '../types/users.js';
 import { strings } from '../utils/values.js';
 
@@ -931,11 +931,20 @@ export function fileUsers(options: FileUserOptions): Users {
             throw new Error(`token ${entry.id} holds a grant that is not one`);
           }
         }
+        // A scope is a place to charge, not a membership: `team:*` says any of
+        // that team's projects and is never a scope a call resolves to.
+        if (entry.scope !== undefined) {
+          const parsed = typeof entry.scope === 'string' ? membership(entry.scope) : undefined;
+          if (parsed === undefined || parsed.project === '*') {
+            throw new Error(`token ${entry.id} has a scope that is not team or team:project`);
+          }
+        }
         return {
           id: entry.id,
           user: entry.user,
           ...(entry.label === undefined ? {} : { label: entry.label }),
           ...(entry.grants === undefined ? {} : { grants: [...entry.grants] as Grant[] }),
+          ...(entry.scope === undefined ? {} : { scope: entry.scope }),
           created: entry.created,
           ...(entry.expires === undefined ? {} : { expires: entry.expires }),
           token: entry.token,
@@ -1539,6 +1548,24 @@ export function fileUsers(options: FileUserOptions): Users {
           }
         }
       }
+      /*
+       * The scope is a place the person is in now, and never a wildcard.
+       *
+       * `scopeFor` is what every call asks, so a key naming a team or project
+       * the person has since been taken out of is one they could no longer be
+       * charged for. Its sentence is the refusal here, as its answer is at the
+       * call.
+       */
+      if (given.scope !== undefined) {
+        const written = given.scope;
+        const parsed = typeof written === 'string' ? membership(written) : undefined;
+        if (parsed === undefined || parsed.project === '*') {
+          throw new Error(`${String(written)} is not a scope: a scope is team or team:project`);
+        }
+        const answer = scopeFor(principalOf(held), written);
+        if (answer === undefined) throw new Error('this host names no team, so a key has no scope to carry');
+        if (answer.refusal !== undefined) throw new Error(answer.refusal);
+      }
       // Only the tokens still live hold a place: an expired one is a credential
       // that no longer works, and it should not keep its person from minting.
       const limit = options.tokensPerPerson ?? 10;
@@ -1559,6 +1586,7 @@ export function fileUsers(options: FileUserOptions): Users {
         user,
         ...(given.label === undefined ? {} : { label: given.label }),
         ...(given.grants === undefined ? {} : { grants: [...given.grants] }),
+        ...(given.scope === undefined ? {} : { scope: given.scope }),
         created: now,
         ...(given.expires === undefined ? {} : { expires: given.expires }),
         // The secret is written here and nowhere, and only as its hash.

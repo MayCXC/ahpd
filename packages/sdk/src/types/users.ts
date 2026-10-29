@@ -283,6 +283,16 @@ export interface TokenRecord {
    * reaches, and one minted for a list never grows past that list.
    */
   grants?: Grant[];
+  /**
+   * The team and project a call made with this token is charged to, written
+   * `team` or `team:project`.
+   *
+   * Absent, the scope is whichever the person's own memberships resolve to at
+   * the call, as it was before a key could carry one. With it, the token is a
+   * lock: a call may name that scope and no other, and one that names none is
+   * charged to it rather than to the person's primary.
+   */
+  scope?: string;
   /** When it was minted, in epoch milliseconds. */
   created: number;
   /** When it stops working, in epoch milliseconds, when it does. */
@@ -487,12 +497,14 @@ export interface Users {
    * The secret is answered once and only its hash is stored. Every grant named
    * is checked against the person's grants now, so a token can never be minted
    * holding more than its person does; `expires` is epoch milliseconds and has
-   * to be in the future. Optional, like `watch`, because a directory that is
-   * not a file may keep no tokens.
+   * to be in the future. `scope` is a team or a team and project the person is
+   * in now, and the token's calls are charged to it rather than to their
+   * primary. Optional, like `watch`, because a directory that is not a file may
+   * keep no tokens.
    */
   mintToken?(
     user: string,
-    options?: { label?: string; grants?: readonly Grant[]; expires?: number },
+    options?: { label?: string; grants?: readonly Grant[]; expires?: number; scope?: string },
   ): Promise<MintedToken>;
   /**
    * The tokens of one person, or of everybody, without their hashes.

@@ -76,7 +76,7 @@ pi -> /v1 with the key -> callerOf -> users.verify -> principal { token, keyScop
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A key is minted with a scope](task-01-a-key-is-minted-with-a-scope.md) | todo | - |
+| [01 - A key is minted with a scope](task-01-a-key-is-minted-with-a-scope.md) | implemented | - |
 | [02 - A call charges the scope of its key](task-02-a-call-charges-the-scope-of-its-key.md) | todo | 01 |
 
 ## Risks and tradeoffs

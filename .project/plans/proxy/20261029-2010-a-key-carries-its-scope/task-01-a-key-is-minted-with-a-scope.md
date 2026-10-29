@@ -1,6 +1,6 @@
 ---
 title: A key is minted with a scope
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server"
 refs:
@@ -48,4 +48,11 @@ The mint refuses a scope the person is not in now, and `token list` shows the sc
 - Run `pnpm typecheck` and `pnpm test`.
 
 ## Resume
+
+- **Done so far:** `TokenRecord` has `scope?: string` and `Users.mintToken` takes `scope`. The tokens file reader refuses a scope that is not a string, that `membership` cannot parse, or whose project is `*`, and the broken-file sentence names the token and the rule. `mintToken` refuses a scope that is neither `team` nor `team:project` with `<scope> is not a scope: a scope is team or team:project`, asks `scopeFor(principalOf(held), scope)` for the rest, throws `scopeFor`'s own sentence when it refuses, and throws `this host names no team, so a key has no scope to carry` when it answers nothing. `x-ahpd/tokens/mint` takes `scope` as a string and passes it on. `ahpd token mint` has `--scope TEAM[:PROJECT]` and its description names it, and each `token list` line carries `scope <value>` when the record has one. The mint writes the scope as it was named and `MintedToken` answers it.
+- **Next action:** [task-02-a-call-charges-the-scope-of-its-key.md](task-02-a-call-charges-the-scope-of-its-key.md).
+- **Open questions:** none.
+- **Watch out for:** the mint refuses `team:*` and an empty scope with its own grammar sentence, and `scopeFor`'s `may name` sentence is what a team the person is not in gets; the plan's Validation reads that way. The scope check sits after the grant check and before the per-person token limit, so a bad scope is refused before a token is counted. `principalOf(held)` is what builds the principal, so the mint's answer and every later call's are the same resolution.
+
+Files changed by this task: `packages/sdk/src/types/users.ts`, `packages/sdk/src/access/users.ts`, `packages/sdk/src/access/tokens.ts`, `packages/server/src/commands/token.ts`, `packages/sdk/test/users-tokens.test.ts`, `packages/sdk/test/token-methods.test.ts`, `packages/server/test/token-command.test.ts`.
 

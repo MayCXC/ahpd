@@ -60,6 +60,7 @@ interface Shown {
   user: string;
   label?: string;
   grants?: string[];
+  scope?: string;
   created: number;
   expires?: number;
   secret: string;
@@ -88,13 +89,16 @@ const run = async (id: string, input: Record<string, unknown>): Promise<Output> 
 /**
  * The people a case signs in as: a member with a read grant, one who also holds
  * a write grant, and a manager with `user:write` and the member's read grant.
+ * The host names one team and one project, so a key can carry a scope.
  */
 const people = async (): Promise<{ directory: Users; ana: string; bob: string; boss: string }> => {
   const directory = fileUsers({ path: usersFile });
   await directory.addRole('reader', ['proxy:read']);
   await directory.addRole('writer', ['proxy:write']);
   await directory.addRole('manager', ['user:write']);
-  await directory.add('ana', ['reader']);
+  await directory.addTeam('backend');
+  await directory.addProject('ahpd');
+  await directory.add('ana', ['reader'], { memberships: ['backend:ahpd'] });
   await directory.add('bob', ['reader', 'writer']);
   await directory.add('boss', ['manager', 'reader']);
   return { directory, ana: await directory.mint('ana'), bob: await directory.mint('bob'), boss: await directory.mint('boss') };
@@ -192,6 +196,23 @@ describe('token at the terminal', () => {
     await run('token.mint', { user: 'ana' });
     await expect(run('token.mint', { user: 'ana' }))
       .rejects.toThrow('user ana may hold 1 tokens at most; revoke one before minting another');
+  });
+
+  it('mints a key with a scope, refuses one the person is not in, and lists it', async () => {
+    await people();
+
+    const one = minted(await run('token.mint', { user: 'ana', label: 'pi', scope: 'backend:ahpd' }));
+    expect(one.scope).toBe('backend:ahpd');
+
+    // A team the person is not in gets the sentence every call would give; a
+    // wildcard is not a scope at all.
+    await expect(run('token.mint', { user: 'ana', scope: 'sales:ahpd' })).rejects.toThrow('ana may name backend:ahpd');
+    await expect(run('token.mint', { user: 'ana', scope: 'backend:*' }))
+      .rejects.toThrow('backend:* is not a scope: a scope is team or team:project');
+
+    const listed = await run('token.list', { user: 'ana' });
+    expect(rows(listed)).toEqual([{ id: one.id, user: 'ana', label: 'pi', scope: 'backend:ahpd', created: one.created }]);
+    expect(String(listed.plain)).toContain('scope backend:ahpd');
   });
 });
 
