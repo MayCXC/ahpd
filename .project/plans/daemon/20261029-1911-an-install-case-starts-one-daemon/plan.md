@@ -1,7 +1,7 @@
 ---
 title: An install case starts one daemon
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -58,7 +58,7 @@ both daemons at claim at once -> both write the record -> the one it does not na
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The stand-in acts on a call that starts or stops a unit](task-01-the-stand-in-acts-on-a-call-that-starts-or-stops-a-unit.md) | todo | - |
+| [01 - The stand-in acts on a call that starts or stops a unit](task-01-the-stand-in-acts-on-a-call-that-starts-or-stops-a-unit.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -66,13 +66,13 @@ both daemons at claim at once -> both write the record -> the one it does not na
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-29.
-- **Next action:** [task-01-the-stand-in-acts-on-a-call-that-starts-or-stops-a-unit.md](task-01-the-stand-in-acts-on-a-call-that-starts-or-stops-a-unit.md).
+- **Done so far:** planned and built 2026-10-29. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the uninstall cases' action is a signal, given on `disable --now`.
 
 ## Final verification checklist
 
-- [ ] The case sees two starts without task 01, and one with it.
-- [ ] `server-cli-service.test.ts` and `server-cli-restart.test.ts` pass, and leave no daemon running.
-- [ ] The server suite passes, and leaves no daemon running.
+- [x] The case sees two starts without task 01, and one with it.
+- [x] `server-cli-service.test.ts` and `server-cli-restart.test.ts` pass, and leave no daemon running.
+- [x] The server suite passes, and leaves no daemon running.

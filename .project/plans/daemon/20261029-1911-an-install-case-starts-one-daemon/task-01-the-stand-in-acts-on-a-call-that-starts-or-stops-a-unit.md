@@ -1,6 +1,6 @@
 ---
 title: The stand-in acts on a call that starts or stops a unit
-status: todo
+status: done
 depends: []
 layer: server
 refs:
@@ -36,4 +36,14 @@ An install then starts the daemon once, on `enable --now`, and not again on `dae
 - No run of the two files leaves a daemon running.
 
 ## Resume
+
+Done 2026-10-29.
+Every step is built, and every check the Validation names was run.
+
+- `packages/server/test/fixtures/systemctl-fake/systemctl` - a call acts when one of its arguments is `start`, `stop`, `restart` or `--now`, and only a call that acts runs `SYSTEMCTL_DO`. The comment says which calls those are, and links systemctl's page.
+- `packages/server/test/server-cli-service.test.ts` - the comment of `started()` says it is what the stand-in does when asked to start the unit. The new case, after the last install case, writes a line to `starts` in the case's home for each daemon the stand-in starts.
+
+Judgement calls the plan does not decide, each visible in the file it is made in:
+
+- The arguments are compared whole, one by one, so a unit named `start` would act too. ahpd's units are `ahpd` and `ahpd@<name>`.
 
