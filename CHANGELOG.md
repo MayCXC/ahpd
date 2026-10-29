@@ -47,6 +47,7 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 ### Claude
 
 - A turn that starts on a new Claude CLI, for an agent the message picked, an edited record or another login, sends its prompt to that CLI, as VS Code's agent host keeps its prompt queue across a rebind. The SDK reads a new CLI's input only once its initialize request is out, which a session offering a client's tools writes late, and the prompt went to the reader of the CLI it replaced, whose closed query dropped it: the turn sat at "Thinking" for good.
+- A Claude turn that a client starts after announcing its tools is offered those tools, as VS Code's agent host rebuilds its query with them before it sends a turn. The turn waits until the CLI has taken the change, and changes reach the CLI one at a time in the order they came. The turn went out beside the change and ran without the client's tools, and two changes close together could leave the first set in place.
 - A `Bash` result too large to send shows the whole output Claude saved in a terminal on the call, as VS Code does. The call keeps Claude's notice as its text, and the terminal has exited, with 0 for a command that worked. The host keeps the output for as long as the chat lasts, and a call read back from the transcript names the terminal again.
 
 ## 0.14.0 - 2026-10-26

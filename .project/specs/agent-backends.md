@@ -135,6 +135,12 @@ AND a session tool that is called between the two calls fails.
 The reason: the SDK connects only a server name that it does not have, and `ahp` is registered when the session starts.
 WHEN the SDK refuses one of the two calls
 THEN the session keeps what the CLI has, and the next change tries again.
+WHEN a change comes while another is still being taken
+THEN it is sent once the CLI has answered the one before it.
+WHEN a turn begins while a change is being taken
+THEN its prompt goes to the CLI once the CLI has answered that change
+AND a turn with no change in hand starts at once.
+The reason: the protocol applies a session's actions in one order, so a turn a client sends after announcing its tools is a turn of a session that has them, and the host hands the tools over without waiting for them to land.
 
 ### pi models come from the pi runtime
 

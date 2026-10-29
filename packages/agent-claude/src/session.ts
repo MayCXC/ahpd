@@ -105,6 +105,7 @@ export function createSession(options: ClaudeSessionOptions): Session {
     startedWith: '',
     draft: undefined as Bag | undefined,
     beginning: undefined as string | undefined,
+    retooling: undefined as Promise<void> | undefined,
     turns: [...(options.seed ?? [])] as Bag[],
     self: undefined as unknown as Session,
   } as SessionContext;

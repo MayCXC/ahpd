@@ -180,6 +180,21 @@ export function createTurns(ctx: SessionContext): Turns {
      */
     if (busy()) return;
     /*
+     * The tools the session was handed before this turn, landed first.
+     *
+     * A change of tools reaches the CLI as `setMcpServers`, which the CLI
+     * answers once it has the servers, and the host hands it over without
+     * waiting; a turn that comes after it is a turn of a session that has
+     * those tools. Named in `beginning` while it waits, as a model switch is,
+     * so a message queued behind it waits too.
+     */
+    if (ctx.retooling !== undefined) {
+      ctx.beginning = turnId;
+      await ctx.retooling;
+      ctx.beginning = undefined;
+      if (ctx.closed) return;
+    }
+    /*
      * A session whose CLI has exited answers at once, and says why.
      *
      * The turn is recorded as one that failed rather than refused, because a
