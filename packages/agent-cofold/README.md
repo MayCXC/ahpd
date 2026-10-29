@@ -89,7 +89,7 @@ The providers `web_search` asks, in the order they are written. A failing one is
 
 An agent is a record on `x-ahpd-agents`: `{ id, engine, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model`, so `config` holds the cofold fields above, and a new record starts from the engine's one template, which sets nothing and runs on cofold's own configuration file.
 
-`computerConfigDir`, `store` and `memory` are host-only: a team's or a person's record that sets one is refused. `strictTools` is not a field of a record at all, and neither is a keyed search provider, for the reason the `tools.web.search` table gives; `adapter` and `policy` are not options of the schema at all, only values an embedder passes in code. The engine names no key variable, because cofold's key is not an environment variable: a record's `apiKey` is a `writeOnly` field of its own, so the channel keeps it in the vault under `host:agent/<id>/apiKey` for a host record, and no client, session or log gets the value.
+`computerConfigDir`, `store` and `memory` are host-only: a team's or a person's record that sets one is refused. `strictTools` is not a field of a record at all, and neither is a keyed search provider, for the reason the `tools.web.search` table gives; `adapter` and `policy` are not options of the schema at all, only values an embedder passes in code. The engine names no key variable, because cofold's key is not an environment variable: a record's `apiKey` is a `secret` field of its own, so the channel keeps it in the vault under `host:agent/<id>/apiKey` for a host record, and no client, session or log gets the value.
 
 A record that names its own endpoint and key, with the model the channel owns:
 

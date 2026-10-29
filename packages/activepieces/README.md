@@ -8,7 +8,7 @@
 
 Activepieces pieces as connectors for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon. Each piece is an adapter. Each of its actions is a tool that the host offers to a session or a bot that binds a connector of it.
 
-A connector of a piece is one account: a Resend connector is one Resend key, and two Slack connectors are two Slack workspaces. The host keeps each key in the vault, because every secret field is `writeOnly`.
+A connector of a piece is one account: a Resend connector is one Resend key, and two Slack connectors are two Slack workspaces. The host keeps each key in the vault, because every secret field says `secret`.
 
 The pieces run in a child process, with no Activepieces server and no Docker. A piece bundles an HTTP client that turns off TLS checks for the process it runs in. The daemon starts one child for the pieces and pins that setting there.
 
