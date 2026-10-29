@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { bag } from '@ahpd/sdk';
-import type { Bag } from '@ahpd/sdk';
+import type { Bag, MessageAttachment } from '@ahpd/sdk';
 
 /*
  * One Claude agent on several logins.
@@ -95,6 +95,20 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
   },
 }));
 
+/** What the blocks of a message with attachments wait for, while it is set. */
+const blocks = vi.hoisted(() => ({ gate: undefined as Promise<void> | undefined }));
+
+vi.mock('../src/session/attachments.js', async (original) => {
+  const real = await original<typeof import('../src/session/attachments.js')>();
+  return {
+    ...real,
+    blocksFor: async (...args: Parameters<typeof real.blocksFor>) => {
+      if (args[1] !== undefined && args[1].length > 0) await blocks.gate;
+      return await real.blocksFor(...args);
+    },
+  };
+});
+
 const { createSession } = await import('../src/session.js');
 const { Cooldowns } = await import('../src/logins.js');
 
@@ -110,6 +124,7 @@ const until = async (done: () => boolean): Promise<void> => {
 
 beforeEach(() => {
   sdk.reset();
+  blocks.gate = undefined;
   delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
 });
 
@@ -139,6 +154,15 @@ const tokenOf = (at = -1): unknown => (sdk.queries.at(at)?.options.env as Bag | 
 const answered = (id: string) => [
   { type: 'assistant', parent_tool_use_id: null, uuid: `end-${id}`, session_id: 'cli-1', message: { id: `msg-${id}`, role: 'assistant', model: 'claude-x', content: [{ type: 'text', text: `answer ${id}` }] } },
   { type: 'result', subtype: 'success', is_error: false, session_id: 'cli-1', duration_ms: 5 },
+];
+
+/** The CLI's answer to the prompt it was sent under `uuid`, its frames naming that prompt as SDK 0.3.301's do. */
+const answeredFor = (uuid: string, text: string) => [
+  {
+    type: 'assistant', parent_tool_use_id: null, uuid: `end-${uuid}`, session_id: 'cli-1', user_message_uuid: uuid,
+    message: { id: `msg-${uuid}`, role: 'assistant', model: 'claude-x', content: [{ type: 'text', text }] },
+  },
+  { type: 'result', subtype: 'success', is_error: false, session_id: 'cli-1', duration_ms: 5, user_message_uuids: [uuid] },
 ];
 
 it('picks the pinned login for fixed rendezvous vectors', async () => {
@@ -306,6 +330,119 @@ describe('a refused login', () => {
     expect(ofTurn(chat, 'chat/turnComplete', 't2')).toHaveLength(1);
   });
 
+  it('sends a steering message the refused attempt held to the next login, behind the prompt it sends again', async () => {
+    const now = Date.now();
+    const cooldowns = new Cooldowns(() => now);
+    const recorded: [string, string][] = [];
+    const { session, chat } = await answeredOnce(cooldowns, {
+      onTurnRecorded: (turnId: string, transcriptId: string) => { recorded.push([turnId, transcriptId]); },
+    });
+    session.begin('t2', 'two');
+    await settle();
+    const first = sdk.said.at(-1);
+    expect(session.steer?.('s1', 'and three')).toBe(true);
+    await settle();
+    const held = sdk.said.at(-1);
+    expect(held).toMatchObject({ content: 'and three', query: 0 });
+    sdk.push(...refused('rate_limit', Math.floor(now / 1000) + 3600));
+    await settle();
+
+    // The prompt again and the message behind it, each under a uuid of its own.
+    const sent = sdk.said.filter((one) => one.query === 1);
+    expect(sent.map((one) => one.content)).toEqual(['two', 'and three']);
+    const [again, steered] = sent;
+    expect(again?.uuid).not.toBe(first?.uuid);
+    expect(steered?.uuid).not.toBe(held?.uuid);
+    // The host is told the prompt's new uuid is the turn's, and nothing of the
+    // message's, so a read puts the message inside the turn.
+    expect(recorded).toContainEqual(['t2', String(again?.uuid)]);
+    expect(recorded.map(([, id]) => id)).not.toContain(String(steered?.uuid));
+
+    // The turn ends once the new CLI has answered both, with both answers in it.
+    sdk.push(...answeredFor(String(again?.uuid), 'answer two'));
+    await settle();
+    expect(ofTurn(chat, 'chat/turnComplete', 't2')).toEqual([]);
+    sdk.push(...answeredFor(String(steered?.uuid), 'answer three'));
+    await settle();
+    expect(ofTurn(chat, 'chat/turnComplete', 't2')).toHaveLength(1);
+    expect(chat.filter((action) => action.type === 'chat/turnStarted').map((action) => action.turnId)).toEqual(['t1', 't2']);
+    const t2 = JSON.stringify(chat.filter((action) => action.turnId === 't2'));
+    expect(t2).toContain('answer two');
+    expect(t2).toContain('answer three');
+  });
+
+  it('sends a steering message whose attachments were still being read at the move to the next login once', async () => {
+    const now = Date.now();
+    const cooldowns = new Cooldowns(() => now);
+    const { session } = await answeredOnce(cooldowns);
+    session.begin('t2', 'two');
+    await settle();
+    const note = join(mkdtempSync(join(tmpdir(), 'ahpd-logins-note-')), 'note.txt');
+    writeFileSync(note, 'one\n');
+    let release = (): void => {};
+    blocks.gate = new Promise<void>((resolve) => { release = resolve; });
+    const attachment = { type: 'resource', uri: `file://${note}`, label: 'note.txt', contentType: 'text/plain' } as unknown as MessageAttachment;
+    expect(session.steer?.('s1', 'and three', [attachment])).toBe(true);
+    await settle();
+    // Not sent yet: its attachment is still being read as the move comes.
+    expect(sdk.said.map((one) => one.content)).toEqual(['one', 'two']);
+    sdk.push(...refused('rate_limit', Math.floor(now / 1000) + 3600));
+    await settle();
+    release();
+    await settle();
+
+    const sent = sdk.said.filter((one) => one.query === 1);
+    expect(sent).toHaveLength(2);
+    expect(sent[0]).toMatchObject({ content: 'two' });
+    expect(JSON.stringify(sent[1]?.content)).toContain('and three');
+    expect(sdk.said.filter((one) => one.query === 0)).toHaveLength(2);
+  });
+
+  it('runs a turn opened for a steering message again on the next login, with the message as its prompt', async () => {
+    const now = Date.now();
+    const cooldowns = new Cooldowns(() => now);
+    const recorded: [string, string][] = [];
+    const { session, chat } = await answeredOnce(cooldowns, {
+      onTurnRecorded: (turnId: string, transcriptId: string) => { recorded.push([turnId, transcriptId]); },
+    });
+    session.begin('t2', 'two');
+    await settle();
+    const prompt = String(sdk.said.at(-1)?.uuid);
+    sdk.push({
+      type: 'assistant', parent_tool_use_id: null, uuid: 'part-t2', session_id: 'cli-1', user_message_uuid: prompt,
+      message: { id: 'msg-t2', role: 'assistant', model: 'claude-x', content: [{ type: 'text', text: 'partly' }] },
+    });
+    await settle();
+    expect(session.steer?.('s1', 'and three')).toBe(true);
+    await settle();
+    const held = String(sdk.said.at(-1)?.uuid);
+    sdk.push({ type: 'command_lifecycle', command_uuid: held, state: 'queued', session_id: 'cli-1' });
+    await settle();
+    // Stopped with the message held, which opens the message's own turn.
+    session.cancel('t2');
+    await settle();
+    expect(chat.filter((action) => action.type === 'chat/turnStarted').at(-1)).toMatchObject({ turnId: held, queuedMessageId: 's1' });
+    sdk.push({ type: 'result', subtype: 'success', is_error: false, session_id: 'cli-1', duration_ms: 5, user_message_uuids: [prompt] });
+    // The CLI's attempt at the message, refused.
+    sdk.push(...refused('rate_limit', Math.floor(now / 1000) + 3600)
+      .map((frame) => (frame.type === 'assistant' ? { ...frame, user_message_uuid: held } : frame)));
+    await settle();
+
+    // The message goes again as the turn's prompt, cut back to the end of the turn before it.
+    const sent = sdk.said.filter((one) => one.query === 1);
+    expect(sent.map((one) => one.content)).toEqual(['and three']);
+    expect(sent[0]?.uuid).not.toBe(held);
+    expect(sdk.queries.at(-1)?.options.resumeSessionAt).toBe('part-t2');
+    // The turn is written under the uuid it went again under, which the host is told.
+    expect(recorded).toContainEqual([held, sent[0]?.uuid]);
+
+    sdk.push(...answeredFor(String(sent[0]?.uuid), 'answer three'));
+    await settle();
+    expect(ofTurn(chat, 'chat/turnComplete', held)).toHaveLength(1);
+    expect(JSON.stringify(chat.filter((action) => action.turnId === held))).toContain('answer three');
+    expect(shownSpent(chat)).toBe(false);
+  });
+
   it('fails a turn that showed something, and starts the next turn on the next login', async () => {
     const cooldowns = new Cooldowns();
     const { session, chat } = await answeredOnce(cooldowns);
@@ -420,6 +557,45 @@ describe('a refused login', () => {
       await settle();
       expect(ofTurn(chat, 'chat/error', 't2')).toEqual([]);
       expect(sdk.said.at(-1)).toMatchObject({ content: 'two', query: 1 });
+    }
+    finally {
+      if (before === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+      else process.env.CLAUDE_CONFIG_DIR = before;
+    }
+  });
+
+  it('sends a steering message the refused attempt held to the CLI after it, when the turn ends with the refusal', async () => {
+    const id = '0a9b8c7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d';
+    const before = process.env.CLAUDE_CONFIG_DIR;
+    const home = mkdtempSync(join(tmpdir(), 'ahpd-logins-home-'));
+    process.env.CLAUDE_CONFIG_DIR = home;
+    try {
+      mkdirSync(join(home, 'projects', 'elsewhere'), { recursive: true });
+      writeFileSync(join(home, 'projects', 'elsewhere', `${id}.jsonl`), '{}\n');
+      sdk.undeletable.add(id);
+      const { session, chat } = open(`ahp-chat:/${id}`, { logins: LOGINS }, { cooldowns: new Cooldowns(), uri: `ahp-session:/${id}` });
+      await settle();
+      session.begin('t1', 'one');
+      await settle();
+      expect(session.steer?.('s1', 'and two')).toBe(true);
+      await settle();
+      const held = sdk.said.at(-1);
+      sdk.push(...refused('rate_limit').map((frame) => ({ ...frame, session_id: id })));
+      await until(() => sdk.said.some((one) => one.query === 1));
+
+      // The prompt is in the conversation already; the message is not, and goes on its own.
+      expect(ofTurn(chat, 'chat/error', 't1')).toHaveLength(1);
+      const sent = sdk.said.filter((one) => one.query === 1);
+      expect(sent.map((one) => one.content)).toEqual(['and two']);
+      expect(sent[0]?.uuid).not.toBe(held?.uuid);
+
+      // Answered, it is a turn of its own, as a failed turn's steering message is.
+      sdk.push(...answeredFor(String(sent[0]?.uuid), 'answer two').map((frame) => ({ ...frame, session_id: id })));
+      await settle();
+      expect(chat.filter((action) => action.type === 'chat/turnStarted').at(-1)).toMatchObject({
+        turnId: sent[0]?.uuid, queuedMessageId: 's1', message: { text: 'and two' },
+      });
+      expect(ofTurn(chat, 'chat/turnComplete', String(sent[0]?.uuid))).toHaveLength(1);
     }
     finally {
       if (before === undefined) delete process.env.CLAUDE_CONFIG_DIR;

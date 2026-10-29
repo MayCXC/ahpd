@@ -13,12 +13,15 @@ export interface Turns {
   /** Start the head of the queue, once there is nothing running. */
   startNext: () => void;
   /**
-   * The running turn's prompt sent again, as it went out the first time.
+   * What a turn sent a CLI that was put away, sent to the one that took its
+   * place: the running turn's prompt, as it went out the first time, and then
+   * `steers`, the steering messages the CLI put away still owed an answer to.
    *
-   * Under a new uuid, which the host is told, because the first may already be
-   * written under the old one.
+   * Each under a new uuid, the prompt's told to the host, because the first may
+   * already be written under the old one. With no turn running, the steering
+   * messages go alone, and are answered in a turn of their own.
    */
-  again: () => Promise<void>;
+  again: (steers: readonly Owed[]) => Promise<void>;
   /** Open the turn that answers the steering messages a turn that ended left with the CLI, when the CLI holds one. */
   handOver: (turnId: string) => void;
   /** Open the turn that answers the steering message sent under `uuid`, with the others its turn left. */
@@ -36,6 +39,10 @@ export interface Turns {
     cancel: (turnId: string) => void;
   };
 }
+
+/** The attachments a message holds, as a message sent to the CLI takes them. */
+const attachedTo = (message: Bag): MessageAttachment[] | undefined =>
+  Array.isArray(message.attachments) ? message.attachments as MessageAttachment[] : undefined;
 
 export function createTurns(ctx: SessionContext): Turns {
   /**
@@ -81,7 +88,11 @@ export function createTurns(ctx: SessionContext): Turns {
     // Held before the wait: a result read while the blocks are built is not
     // this prompt's answer, and has to know that one is still to come.
     if (uuid !== undefined && owed !== undefined) ctx.owed.set(uuid, owed);
+    const to = ctx.handle;
     const content = await blocksFor(text, attachments);
+    // A CLI put away meanwhile took what it was owed with it, and the one in
+    // its place is sent that by whatever put it there.
+    if (ctx.handle !== to) return;
     ctx.waiting.push({
       type: 'user',
       message: { role: 'user', content },
@@ -116,15 +127,21 @@ export function createTurns(ctx: SessionContext): Turns {
    *
    * The text a side chat's first prompt carries is not the message's text, and
    * a message's attachments are blocks of their own, so a prompt sent again is
-   * this rather than the turn's message.
+   * this rather than the turn's message. A turn opened for a steering message
+   * has that message as its prompt.
    */
   let prompted: { turn: string; text: string; attachments?: MessageAttachment[] } | undefined;
 
-  const again = async (): Promise<void> => {
+  const again = async (steers: readonly Owed[]): Promise<void> => {
     const turn = ctx.active;
-    if (turn === undefined || prompted?.turn !== String(turn.id)) return;
-    const uuid = writtenAs(String(turn.id), true);
-    await push(prompted.text, prompted.attachments, uuid, { message: bag(turn.message), steering: false, turn: String(turn.id), cli: 'sent' });
+    if (turn !== undefined && prompted?.turn === String(turn.id)) {
+      const uuid = writtenAs(String(turn.id), true);
+      await push(prompted.text, prompted.attachments, uuid, { message: bag(turn.message), steering: false, turn: String(turn.id), cli: 'sent' });
+    }
+    // Behind the prompt, in the order they went.
+    for (const one of steers) {
+      void push(str(one.message.text) ?? '', attachedTo(one.message), crypto.randomUUID(), { ...one, cli: 'sent' });
+    }
   };
 
   /**
@@ -372,8 +389,7 @@ export function createTurns(ctx: SessionContext): Turns {
     const picked = bag(message.agent);
     if (typeof picked.uri === 'string') from.agent = { uri: str(picked.uri) as string };
     // What the message was holding while it waited, which is what it is still.
-    const kept = message.attachments;
-    const attachments = Array.isArray(kept) ? kept as MessageAttachment[] : undefined;
+    const attachments = attachedTo(message);
     void beginTurn(crypto.randomUUID(), str(message.text) ?? '', model, str(next.id), from, attachments,
       next.options as TurnOptions | undefined);
   };
@@ -523,6 +539,8 @@ export function createTurns(ctx: SessionContext): Turns {
     }
     owed.turn = uuid;
     owed.steering = false;
+    const attachments = attachedTo(owed.message);
+    prompted = { turn: uuid, text: str(owed.message.text) ?? '', ...(attachments === undefined ? {} : { attachments }) };
     ctx.openTurn(ctx.mainScope, { id: uuid, message: owed.message, ...(owed.id === undefined ? {} : { queuedMessageId: owed.id }) });
     ctx.doing('Thinking');
     ctx.touch();
