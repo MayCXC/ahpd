@@ -21,9 +21,10 @@ const UNINSTALL_CALLS = ['--user', 'disable', '--now', 'ahpd'];
 const unitPath = (): string => join(home, 'systemd', 'user', 'ahpd.service');
 
 /**
- * What the stand-in manager does when it is asked: run the `ExecStart` line of
- * the unit, which is what a real manager runs, plus the flags a case cannot put
- * in the file and the variable a supervised daemon reads.
+ * What the stand-in manager does when it is asked to start the unit: run the
+ * `ExecStart` line of the unit, which is what a real manager runs, plus the
+ * flags a case cannot put in the file and the variable a supervised daemon
+ * reads.
  *
  * The line is read out of the file rather than written out again here, so the
  * unit is the thing being tested: a flag this CLI does not take would be a
@@ -105,6 +106,18 @@ describe.skipIf(!posix)('service install', () => {
     expect(existsSync(join(home, 'systemctl.log'))).toBe(false);
     // And the daemon a terminal started is still the one serving.
     expect(recordOf().pid).toBe(record.pid);
+  }, 60000);
+
+  it('starts the daemon once, on the call that starts the unit', async () => {
+    // The daemons the stand-in starts are counted, and not the ones left
+    // running: of two for one configuration home, the second stops when it
+    // finds the first in the record, unless both reach the record at once.
+    const starts = join(home, 'starts');
+    const did = await cli(['service', 'install', '--config-file', config], { env: fakeSystemctl(`echo started >> '${starts}'; ${started()}`) });
+    expect(did.code).toBe(0);
+    spawned.push(recordOf().pid);
+    expect(systemctlAsked()).toContain('daemon-reload');
+    expect(readFileSync(starts, 'utf8')).toBe('started\n');
   }, 60000);
 });
 

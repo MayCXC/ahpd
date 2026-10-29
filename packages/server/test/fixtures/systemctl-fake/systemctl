@@ -1,10 +1,18 @@
 #!/bin/sh
 # A stand-in for systemctl: says what it was asked, one argument per line, into
-# the file SYSTEMCTL_LOG names, and then does what SYSTEMCTL_DO says. A case
-# that wants the daemon the manager holds to go gives SYSTEMCTL_DO the signal
-# to send it, which is the half of `systemctl stop` that matters here. The exit
-# code is SYSTEMCTL_EXIT, so a case can have the manager refuse.
+# the file SYSTEMCTL_LOG names. A call that starts or stops a unit then does
+# what SYSTEMCTL_DO says: `start`, `stop` and `restart`, and a call with
+# `--now`, with which `enable` and `disable` also start or stop the unit. Every
+# other call, `daemon-reload` among them, changes no unit's process
+# (https://www.freedesktop.org/software/systemd/man/latest/systemctl.html).
+# A case that wants the daemon the manager holds to go gives SYSTEMCTL_DO the
+# signal to send it, which is the half of `systemctl stop` that matters here.
+# The exit code is SYSTEMCTL_EXIT, so a case can have the manager refuse.
 
 [ -n "$SYSTEMCTL_LOG" ] && for one in "$@"; do printf '%s\n' "$one" >> "$SYSTEMCTL_LOG"; done
-[ -n "$SYSTEMCTL_DO" ] && sh -c "$SYSTEMCTL_DO"
+acts=
+for one in "$@"; do
+  case "$one" in start|stop|restart|--now) acts=1 ;; esac
+done
+[ -n "$SYSTEMCTL_DO" ] && [ -n "$acts" ] && sh -c "$SYSTEMCTL_DO"
 exit "${SYSTEMCTL_EXIT:-0}"
