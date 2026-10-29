@@ -1,7 +1,7 @@
 ---
 title: A steering message is answered in the turn it steers
 domain: claude
-status: active
+status: built
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -9,17 +9,17 @@ changes:
   - specs/agent-backends.md
   - specs/sessions-and-chats.md
 refs:
-  - "[code://packages/agent-claude/src/session/turns.ts#L592-L608](../../../../packages/agent-claude/src/session/turns.ts#L592-L608) - `steer`, which pushes a steering message onto the CLI's input"
-  - "[code://packages/agent-claude/src/session/turns.ts#L69-L88](../../../../packages/agent-claude/src/session/turns.ts#L69-L88) - `push`, the one door every prompt goes through to the CLI"
-  - "[code://packages/agent-claude/src/session/turns.ts#L102-L106](../../../../packages/agent-claude/src/session/turns.ts#L102-L106) - `writtenAs`, the uuid a turn's prompt is written under"
-  - "[code://packages/agent-claude/src/session/turns.ts#L728-L790](../../../../packages/agent-claude/src/session/turns.ts#L728-L790) - `cancel`, which interrupts the CLI and ends the turn"
-  - "[code://packages/agent-claude/src/session/query.ts#L192-L207](../../../../packages/agent-claude/src/session/query.ts#L192-L207) - the input generator, which takes a steering message out of the state when it hands it over"
-  - "[code://packages/agent-claude/src/session/query.ts#L820-L970](../../../../packages/agent-claude/src/session/query.ts#L820-L970) - the result branch, which ends a turn and starts the queue"
-  - "[code://packages/agent-claude/src/session/query.ts#L533-L539](../../../../packages/agent-claude/src/session/query.ts#L533-L539) - `startQuery`, every new CLI for the conversation"
-  - "[code://packages/agent-claude/src/session/parts.ts#L227-L265](../../../../packages/agent-claude/src/session/parts.ts#L227-L265) - `openTurn`, a turn the backend opens itself"
+  - "[code://packages/agent-claude/src/session/turns.ts#L633-L648](../../../../packages/agent-claude/src/session/turns.ts#L633-L648) - `steer`, which pushes a steering message onto the CLI's input"
+  - "[code://packages/agent-claude/src/session/turns.ts#L82-L105](../../../../packages/agent-claude/src/session/turns.ts#L82-L105) - `push`, the one door every prompt goes through to the CLI"
+  - "[code://packages/agent-claude/src/session/turns.ts#L119-L123](../../../../packages/agent-claude/src/session/turns.ts#L119-L123) - `writtenAs`, the uuid a turn's prompt is written under"
+  - "[code://packages/agent-claude/src/session/turns.ts#L767-L831](../../../../packages/agent-claude/src/session/turns.ts#L767-L831) - `cancel`, which interrupts the CLI and ends the turn"
+  - "[code://packages/agent-claude/src/session/query.ts#L238-L253](../../../../packages/agent-claude/src/session/query.ts#L238-L253) - the input generator, which takes a steering message out of the state when it hands it over"
+  - "[code://packages/agent-claude/src/session/query.ts#L897-L1052](../../../../packages/agent-claude/src/session/query.ts#L897-L1052) - the result branch, which ends a turn and starts the queue"
+  - "[code://packages/agent-claude/src/session/query.ts#L594-L600](../../../../packages/agent-claude/src/session/query.ts#L594-L600) - `startQuery`, every new CLI for the conversation"
+  - "[code://packages/agent-claude/src/session/parts.ts#L227-L264](../../../../packages/agent-claude/src/session/parts.ts#L227-L264) - `openTurn`, a turn the backend opens itself"
   - "[code://packages/agent-claude/src/session/logins.ts#L185-L231](../../../../packages/agent-claude/src/session/logins.ts#L185-L231) - `runOn`, which puts a new CLI on a turn that moves logins"
   - "[code://packages/agent-claude/src/session/stream.ts#L108-L116](../../../../packages/agent-claude/src/session/stream.ts#L108-L116) - `message_start` opens a turn when none is active"
-  - "[code://packages/agent-claude/src/transcript.ts#L284-L573](../../../../packages/agent-claude/src/transcript.ts#L284-L573) - `buildTurns`, which builds the turns of a transcript"
+  - "[code://packages/agent-claude/src/transcript.ts#L286-L574](../../../../packages/agent-claude/src/transcript.ts#L286-L574) - `buildTurns`, which builds the turns of a transcript"
   - "[code://packages/sdk/src/host/lifecycle.ts#L1352-L1353](../../../../packages/sdk/src/host/lifecycle.ts#L1352-L1353) - the host refuses a turn while the chat has an active one"
   - "[code://packages/agent-claude/test/agent-claude-cancelled-turn.test.ts](../../../../packages/agent-claude/test/agent-claude-cancelled-turn.test.ts) - the pattern for a case that pushes frames between session calls"
   - "[code://packages/agent-claude/test/agent-claude-transcript.test.ts](../../../../packages/agent-claude/test/agent-claude-transcript.test.ts) - the pattern for a case that reads a transcript back"
@@ -110,12 +110,13 @@ a client stops a turn -> cancel() ends it -> a new turn begins -> the CLI answer
 | What | Source | Task |
 | --- | --- | --- |
 | A steering message is answered in the turn it steers, and the turn completes when the CLI has answered every prompt it was handed in it. | [the reference's CONTEXT.md, M10](https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/CONTEXT.md#L1595-L1609); [the reference's pipeline](https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudeSdkPipeline.ts#L688-L705); AHP 1.0.0, *Steering Messages* | 01 |
-| A steering message is sent under its own id when that id is a UUID, and under a new uuid otherwise, as a turn's prompt is. | [code://packages/agent-claude/src/session/turns.ts#L88-L92](../../../../packages/agent-claude/src/session/turns.ts#L88-L92); the reference sends a steering message under its id | 01 |
+| A steering message is sent under its own id when that id is a UUID, and under a new uuid otherwise, as a turn's prompt is. | [code://packages/agent-claude/src/session/turns.ts#L119-L123](../../../../packages/agent-claude/src/session/turns.ts#L119-L123); the reference sends a steering message under its id | 01 |
 | A result names the prompts it answered in `user_message_uuids`, or in `user_message_uuid`; a result that names none answers them all, as the backend reads a result today. | npm://@anthropic-ai/claude-agent-sdk@0.3.301, measured | 01 |
 | A successful result whose turn still owes a prompt does not end the turn; a result that reports a failure ends it as today. | The reference ends a turn at an error result; `(defaulted: a failure is shown when it happens)` | 01 |
 | The queue starts only when the CLI owes no prompt. | The reference completes a turn only when its queue drains | 01 |
-| A CLI that is put away or that dies takes the prompts it owed with it. | [code://packages/agent-claude/src/session/query.ts#L530-L533](../../../../packages/agent-claude/src/session/query.ts#L530-L533) | 01 |
-| The CLI keeps the priority it gives a prompt by default, and folds a steering message in at the next tool call; the reference's `priority: 'now'`, which stops the answer being written, is not taken. | AHP 1.0.0, `ChatState.steeringMessage`: "Message to inject into the current turn at a convenient point"; [code://packages/agent-claude/src/session/context.ts#L228-L236](../../../../packages/agent-claude/src/session/context.ts#L228-L236) | - |
+| A CLI that is put away or that dies takes the prompts it owed with it. | [code://packages/agent-claude/src/session/query.ts#L594-L600](../../../../packages/agent-claude/src/session/query.ts#L594-L600) | 01 |
+| A turn that moves to another login sends its prompt again under a new uuid, which the new CLI owes and `onTurnRecorded` tells the host. | [code://packages/agent-claude/src/session/logins.ts#L185-L231](../../../../packages/agent-claude/src/session/logins.ts#L185-L231): the move runs the turn on a new CLI and sends its prompt again | 01 |
+| The CLI keeps the priority it gives a prompt by default, and folds a steering message in at the next tool call; the reference's `priority: 'now'`, which stops the answer being written, is not taken. | AHP 1.0.0, `ChatState.steeringMessage`: "Message to inject into the current turn at a convenient point"; [code://packages/agent-claude/src/session/context.ts#L261-L271](../../../../packages/agent-claude/src/session/context.ts#L261-L271) | - |
 | Read back, a message the reader marks `isQueuedCommand` joins the open turn. | [the reference's CONTEXT.md, M10](https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/CONTEXT.md#L1597-L1606): the read-back folds a steering message into its turn | 03 |
 | Read back, the CLI's interrupt marker opens no turn and ends the open turn as cancelled. | The CLI reads a user text that starts with `[Request interrupted by user` as no prompt; a stopped turn is `cancelled` live | 03 |
 | The host records, per chat in the session's folder beside its local turns, the transcript id each turn began under: its own id at its `chat/turnStarted`, whoever opened it, and what `onTurnRecorded` says. | [docs/sdk/AGENT.md](../../../../docs/sdk/AGENT.md#agent-in-the-order-the-host-asks), *A turn is read back under the id your transcript gives it*: `onTurnRecorded` is ahpd's record of how a backend wrote a turn down; [code://packages/sdk/src/host/localturns.ts](../../../../packages/sdk/src/host/localturns.ts) `keepLocalTurn`, one file a kept turn under its chat | 03 |
@@ -126,7 +127,7 @@ a client stops a turn -> cancel() ends it -> a new turn begins -> the CLI answer
 | Each prompt the CLI owes belongs to a turn: a turn's own prompt and its steering messages to that turn. A frame or a result about a turn that is not running changes nothing in the one that is. | npm://@anthropic-ai/claude-agent-sdk@0.3.301, `user_message_uuids` on every frame and result that answers; measured, a stopped turn's result arrives after a new turn begins | 04 |
 | A turn that ends by a stop or a failure while the CLI holds its steering messages opens the turn that answers them at once. It carries the first message, with its id as `queuedMessageId`, and the others join it. | AHP 1.1.0, *Steering Messages*: consumption "represented as a new presentation turn"; [code://packages/sdk/src/host/lifecycle.ts#L1352-L1353](../../../../packages/sdk/src/host/lifecycle.ts#L1352-L1353); measured, the CLI merges a prompt it gets while such a message waits into one turn with it | 04 |
 | The CLI holds a prompt from its `queued` lifecycle until its `started` one; one with neither is still on its way and opens its turn when its answer comes. | npm://@anthropic-ai/claude-agent-sdk@0.3.301, the `command_lifecycle` frame its interrupt documents; measured | 04 |
-| A result that names a stopped turn's prompt is the stop's: a turn it also ends is cancelled, and nothing reads it as a failure. | [code://packages/agent-claude/src/session/context.ts#L203-L210](../../../../packages/agent-claude/src/session/context.ts#L203-L210), `interrupted`: a stop is not a failure | 04 |
+| A result that names a stopped turn's prompt is the stop's: a turn it also ends is cancelled, and nothing reads it as a failure. | [code://packages/agent-claude/src/session/context.ts#L221-L228](../../../../packages/agent-claude/src/session/context.ts#L221-L228), `interrupted`: a stop is not a failure | 04 |
 | A turn opened for a steering message has the message as its prompt: a stop of that turn stops it, and the CLI's answer to it afterwards goes nowhere. | [code://packages/agent-claude/src/session/query.ts#L737-L760](../../../../packages/agent-claude/src/session/query.ts#L737-L760): an answer belongs to the turn its prompt belongs to, and a turn that has ended takes no more of it | 05 |
 | A turn that moves to another login sends the new CLI the steering messages the old one owed it, behind its prompt, each under a new uuid; a turn opened for a steering message sends that message again as its prompt. | [code://packages/agent-claude/src/session/logins.ts#L185-L231](../../../../packages/agent-claude/src/session/logins.ts#L185-L231): the move sends the turn's prompt again to the new CLI; the turn owes its steering messages (task 01) | 06 |
 | A moved turn's prompt is recorded under its new uuid, and its steering messages under none, so a read puts them inside the turn. | [code://packages/agent-claude/src/session/turns.ts#L119-L123](../../../../packages/agent-claude/src/session/turns.ts#L119-L123) `writtenAs`, which says a prompt sent again to `onTurnRecorded`; the record (task 03) | 06 |
@@ -171,19 +172,16 @@ a client stops a turn -> cancel() ends it -> a new turn begins -> the CLI answer
 
 ## Resume state
 
-- **Done so far:** tasks 01 and 02 built 2026-10-28; see [implemented.md](implemented.md).
-  Task 03 built 2026-10-28: a transcript read back shows the turns a client saw live.
-  Task 04 built 2026-10-28: a stop or a failure opens the turn that answers the steering messages the CLI holds.
-  Task 05 built 2026-10-28: a stop of a steering message's own turn stops the message.
-  Task 06 built 2026-10-28: a turn that moves logins sends its steering messages again.
-- **Next action:** the agent-claude, sdk and server suites once, at one worker, then the implemented record.
+- **Done so far:** built 2026-10-28 on upstream 83e0eebf; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a case that keeps the actions a session emits must copy them, because a part announced empty is filled in place afterwards.
 
 ## Final verification checklist
 
-- [ ] Each case in `agent-claude-late-steer.test.ts` fails on the code before its task, except the folded steer, which guards.
-- [ ] Each case task 06 adds to `agent-claude-logins.test.ts` fails on the code before it.
-- [ ] agent-claude, sdk and server suites pass at one worker.
-- [ ] Boundary, typecheck, build and schema are clean.
-- [ ] `packages/sdk/test/fixtures/wire.jsonl` is unchanged in every commit.
+- [x] Each case in `agent-claude-late-steer.test.ts` fails on the code before its task, except the folded steer and the folded stop, which guard.
+- [x] Each move case task 06 adds to `agent-claude-logins.test.ts` fails on the code before it, and its attachment case fails without the check in `push`.
+- [x] The record's cases fail without it, except the two that guard a chat with no record and a local turn.
+- [x] agent-claude, sdk and server suites pass at one worker.
+- [x] Boundary, typecheck, build and schema are clean.
+- [x] `packages/sdk/test/fixtures/wire.jsonl` is unchanged in every commit.

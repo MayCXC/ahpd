@@ -6,7 +6,7 @@ layer: "sdk, agent-claude"
 refs:
   - "[code://packages/sdk/src/host/localturns.ts](../../../../packages/sdk/src/host/localturns.ts) - `turnRecordedAs`, the record, and `transcriptOf`, the read that applies it"
   - "[code://packages/sdk/src/host/spawn.ts](../../../../packages/sdk/src/host/spawn.ts) - the backend's `emit` and `onTurnRecorded`, where the record is written"
-  - "[code://packages/agent-claude/src/transcript.ts#L274-L406](../../../../packages/agent-claude/src/transcript.ts#L274-L406) - `buildTurns`, which opens a turn at every user text"
+  - "[code://packages/agent-claude/src/transcript.ts#L286-L574](../../../../packages/agent-claude/src/transcript.ts#L286-L574) - `buildTurns`, which builds the turns of a transcript"
   - "[code://packages/agent-claude/src/session/query.ts](../../../../packages/agent-claude/src/session/query.ts) - `ends`, the point a cut takes for each turn a session holds"
 ---
 
