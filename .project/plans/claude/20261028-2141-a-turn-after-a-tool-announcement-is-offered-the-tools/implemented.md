@@ -2,7 +2,7 @@
 title: A Claude turn begun after a client announced its tools is offered them - implemented
 date: 2026-10-28
 refs:
-  - git://e57f3a2a
+  - git://d6f19e20
   - "[code://packages/agent-claude/src/session/clienttools.ts](../../../../packages/agent-claude/src/session/clienttools.ts)"
   - "[code://packages/agent-claude/src/session/turns.ts](../../../../packages/agent-claude/src/session/turns.ts)"
 ---

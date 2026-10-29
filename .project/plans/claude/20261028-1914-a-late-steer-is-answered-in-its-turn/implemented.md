@@ -2,14 +2,14 @@
 title: A steering message is answered in the turn it steers - implemented
 date: 2026-10-28
 refs:
-  - git://96fb0b20
-  - git://969bbbe9
-  - git://5c302a50
-  - git://47f9c2ae
-  - git://8e2a0125
-  - git://9a1e2147
-  - git://beb1c1c2
-  - git://844eb540
+  - git://23d2ef4a
+  - git://e771cece
+  - git://45faa242
+  - git://3eb6eca7
+  - git://d9fe5216
+  - git://2eb44709
+  - git://8375bdf8
+  - git://d0041e42
   - "[code://packages/agent-claude/src/session/query.ts](../../../../packages/agent-claude/src/session/query.ts)"
   - "[code://packages/agent-claude/src/session/turns.ts](../../../../packages/agent-claude/src/session/turns.ts)"
   - "[code://packages/agent-claude/src/session/logins.ts](../../../../packages/agent-claude/src/session/logins.ts)"

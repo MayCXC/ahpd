@@ -2,7 +2,7 @@
 title: A prompt sent while a new Claude CLI starts reaches that CLI - implemented
 date: 2026-10-28
 refs:
-  - git://232b783c
+  - git://f7707b2f
   - "[code://packages/agent-claude/src/session/query.ts](../../../../packages/agent-claude/src/session/query.ts)"
 ---
 

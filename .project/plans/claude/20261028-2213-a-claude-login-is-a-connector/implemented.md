@@ -2,7 +2,12 @@
 title: A Claude login is a connector, and a failed one hands the turn on - implemented
 date: 2026-10-28
 refs:
-  - git://190047d2
+  - git://29f11690
+  - git://19baed62
+  - git://7b65888b
+  - git://95b0a179
+  - git://b2199b6d
+  - git://8f3dae70
   - "[code://packages/agent-claude/src/adapter.ts](../../../../packages/agent-claude/src/adapter.ts)"
   - "[code://packages/agent-claude/src/logins.ts](../../../../packages/agent-claude/src/logins.ts)"
   - "[code://packages/agent-claude/src/session/logins.ts](../../../../packages/agent-claude/src/session/logins.ts)"

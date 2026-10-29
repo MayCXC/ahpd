@@ -39,7 +39,7 @@ The files read and the patterns to reuse are the `refs` in the frontmatter, each
 - `rg -n "ctx.wake|input\(\)|startQuery\(" packages/agent-claude/src` - one reader per query over one shared list, one `wake` slot, three paths that close a CLI and start another before the prompt.
 - The SDK 0.3.301 source: `Query.streamInput` awaits `initializeWritten`, then for each message checks the abort signal and breaks, dropping the message it took.
 - `Query.initialize({ first: true })` awaits `captureSdkMcpServerManifests` when in-process MCP servers are declared, so a session that offers a client's tools writes the new CLI's initialize late.
-- A live cligma run on 2026-10-28 saw a turn on a new CLI sit at "Thinking" for 45 seconds with no parts, its prompt never reaching the CLI.
+- A live client run on 2026-10-28 saw a turn on a new CLI sit at "Thinking" for 45 seconds with no parts, its prompt never reaching the CLI.
 - The test mocks read a query's prompt at once, so no case covers a late reader.
 
 ### Runtime path

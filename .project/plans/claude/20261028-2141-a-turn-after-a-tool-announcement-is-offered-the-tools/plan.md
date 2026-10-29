@@ -31,7 +31,7 @@ The files read and the patterns to reuse are the `refs` in the frontmatter, each
 ### Searches performed
 
 - `rg -n "setTools" packages/sdk/src packages/agent-claude/src` - the host hands the tools over in `retool` without waiting; the backend sends them with `setMcpServers`.
-- A live cligma run on 2026-10-28: cligma set itself active with its 13 room tools, then sent a room message as a turn about a second later.
+- A live client run on 2026-10-28: the client set itself active with its 13 room tools, then sent a room message as a turn about a second later.
   The model's request for that turn held none of the room tools, and a later turn on the same CLI held all 13.
 - Two changes close together both start before either lands, and the SDK connects only a server name it does not have, so the second can leave the first set in place.
 
