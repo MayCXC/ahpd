@@ -461,6 +461,25 @@ describe('the record on disk', () => {
     expect(onDisk()).toBeUndefined();
   });
 
+  it('stops a daemon a named service holds by asking for that service', async () => {
+    put({ ...naming(process.pid, 'launchd'), serviceName: 'two' });
+    const asked: string[] = [];
+    let there = true;
+    await stop({
+      signal: () => { throw new Error('a supervised daemon is never signalled'); },
+      kill: () => { throw new Error('a supervised daemon is never killed'); },
+      alive: () => there,
+      wait: () => { there = false; return Promise.resolve(); },
+      waitMs: 10_000,
+      now: () => 0,
+      manager: {
+        stop: (service, name) => { asked.push(`stop ${service} ${String(name)}`); return Promise.resolve(); },
+        restart: () => Promise.reject(new Error('a stop does not restart')),
+      },
+    });
+    expect(asked).toEqual(['stop launchd two']);
+  });
+
   it('says what the manager has not done yet, rather than forcing a daemon it holds', async () => {
     put(naming(process.pid, 'launchd'));
     await expect(stop({

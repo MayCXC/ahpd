@@ -20,10 +20,10 @@ import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { output } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
-import { configPath, daemonLog } from '../config.js';
+import { configDir, configPath, daemonLog } from '../config.js';
 import { READY_TIMEOUT_MS, forget, running, statusLine } from '../daemon.js';
 import type { Running } from '../daemon.js';
-import { installFile, installStarts, installText, realManager, serviceOn } from '../service.js';
+import { installFile, installStarts, installText, managedAs, ownConfigHome, realManager, serviceOn } from '../service.js';
 import { checkingUpdates, updateLine } from '../update.js';
 import { manifest } from '../version.js';
 import { conflict, namedOptionsFrom, secret, serverFields, stop } from './options.js';
@@ -95,7 +95,17 @@ export const declareService = (registry: Registry<object>): Command[] => {
        */
       const options = await namedOptionsFrom(input);
       const { from } = secret(options);
-      const file = installFile(service);
+      const name = options.serviceName;
+      /*
+       * One daemon is held by one service. A daemon of this configuration home
+       * that a service of another name already holds would be started twice,
+       * so that one is taken out first, which is said rather than done.
+       */
+      if (found?.service !== undefined && found.serviceName !== name) {
+        conflict(`The daemon in ${configDir()} runs under ${found.service} as ${managedAs(found.service, found.serviceName)}. Take that service out with ahpd service uninstall, then install this one.`);
+      }
+      const file = installFile(service, name);
+      const ownHome = ownConfigHome();
       try {
         mkdirSync(dirname(file), { recursive: true });
         writeFileSync(file, installText(service, {
@@ -105,6 +115,8 @@ export const declareService = (registry: Registry<object>): Command[] => {
           home: homedir(),
           path: process.env['PATH'] ?? '',
           log: daemonLog(),
+          ...(name === undefined ? {} : { name }),
+          ...(ownHome === undefined ? {} : { configHome: ownHome }),
         }), { mode: 0o644 });
       }
       catch (error) {
@@ -112,14 +124,16 @@ export const declareService = (registry: Registry<object>): Command[] => {
       }
       const manager = realManager();
       try {
-        await manager.install(service, file);
+        // A unit under a configuration home of its own is outside the folder
+        // systemd reads units from, and is enabled by its path.
+        await manager.install(service, file, name, ownHome !== undefined);
         /*
          * A second install, over a daemon already running under the service:
          * the file it was started from has changed, and where the manager's
          * install is not what starts the service from that file again, the
          * restart is. Both managers' own words are in `installStarts`.
          */
-        if (found !== undefined && !installStarts(service)) await manager.restart(service);
+        if (found !== undefined && !installStarts(service)) await manager.restart(service, name);
       }
       catch (error) {
         conflict(`Could not install the service: ${wordsOf(error)}. The file it wrote is at ${file}.`);
@@ -147,18 +161,28 @@ export const declareService = (registry: Registry<object>): Command[] => {
     effect: 'remove',
     resource: { kind: 'service' },
     scopes: ['config:write'],
-    run: async () => {
+    // The configuration file the service was installed with, which names it.
+    input: { configFile: serverFields.configFile },
+    run: async (context) => {
       const service = serviceOn(process.platform)
         ?? stop('Taking the service out needs systemd or launchd, which this machine has not: a unit is written on Linux and an agent on macOS.');
-      const file = installFile(service);
       const found = running();
       // The daemon the service holds, which is the one that goes with it. A
       // record of one from `ahpd start` is another daemon's, and the file
       // beside it says nothing about it: it is left running.
       const held = found === undefined || found.service !== service ? undefined : found;
+      /*
+       * The service that holds the daemon is the one taken out, by the name its
+       * record holds: a name changed in the file since is not a service that
+       * holds anything. With no daemon running, the file's name is the one.
+       */
+      const name = held === undefined
+        ? (await namedOptionsFrom(context.input as Readonly<Record<string, unknown>>)).serviceName
+        : held.serviceName;
+      const file = installFile(service, name);
       if (found === undefined && !existsSync(file)) conflict('No service is installed.');
       try {
-        await realManager().uninstall(service);
+        await realManager().uninstall(service, name);
       }
       catch (error) {
         conflict(`Could not take the service out: ${wordsOf(error)}`);

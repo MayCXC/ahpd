@@ -83,6 +83,12 @@ export interface Running {
    * from a record a daemon from `ahpd start` wrote, and from an older one.
    */
   service?: Service;
+  /**
+   * The name that service was installed under, which the configuration gives a
+   * daemon that runs beside another. Present only beside `service`, and absent
+   * for the plain service and from an older record.
+   */
+  serviceName?: string;
 }
 
 /**
@@ -313,6 +319,8 @@ export function readyUrl(origin: string, token?: string): string {
  * `service` is what a supervised daemon read out of its own environment, and is
  * given by the daemon itself: a record of a daemon a manager started is written
  * by that daemon, and not by the manager, which knows nothing of records.
+ * `serviceName` is the name its configuration gives that service, kept only
+ * beside a `service`.
  */
 export function recordOf(
   announced: string,
@@ -321,6 +329,7 @@ export function recordOf(
   argv?: string[],
   control?: Control,
   service?: Running['service'],
+  serviceName?: string,
 ): Running {
   const url = /ws:\/\/[^\s,]+/.exec(announced)?.[0] ?? announced;
   const automations = /^automations (.+)$/m.exec(announced)?.[1]?.trim();
@@ -341,6 +350,7 @@ export function recordOf(
     ...(skipped.length > 0 ? { skipped } : {}),
     ...(control === undefined ? {} : { control }),
     ...(service === undefined ? {} : { service }),
+    ...(service === undefined || serviceName === undefined ? {} : { serviceName }),
   };
 }
 
@@ -773,7 +783,7 @@ const goneWithin = async (pid: number, steps: StopSteps): Promise<boolean> => {
  * is one the manager is still stopping, which is said rather than forced.
  */
 const stoppedUnderService = async (found: Running, service: Service, steps: StopSteps): Promise<StopOutcome> => {
-  await steps.manager.stop(service);
+  await steps.manager.stop(service, found.serviceName);
   if (!await goneWithin(found.pid, steps)) {
     throw new Error(`${service} did not stop pid ${String(found.pid)} within ${String(steps.waitMs / 1000)} seconds.`);
   }
