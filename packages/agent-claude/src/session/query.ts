@@ -853,6 +853,7 @@ export function createQuery(ctx: SessionContext): Query {
             : str(message.subtype) !== 'success'
               ? `The turn ended ${str(message.subtype) ?? 'without succeeding'}`
               : undefined);
+          if (wrong === undefined) ctx.answered();
           if (turn) {
             /*
              * Every turn that ends says how it ended.

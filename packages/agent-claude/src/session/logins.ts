@@ -32,6 +32,12 @@ export interface Logins {
   /** The words the running turn ends with, for a failure of its login that it did not show. */
   failure: () => string | undefined;
   /**
+   * The running turn's calls went through: kept on its login's connector, as
+   * the proxy keeps a call of an entry that worked, so a row a failure marked
+   * says the login works again.
+   */
+  answered: () => void;
+  /**
    * Whether a query is the CLI a move closed and has not replaced yet.
    *
    * A start-over waits for that CLI to exit and deletes its conversation before
@@ -194,7 +200,14 @@ export function createLogins(ctx: SessionContext): Logins {
     const said = list(bag(message.message).content).map((block) => str(bag(block).text) ?? '').join('');
     if (until !== undefined) agent.open.rest(login.id, login.token, until);
     // The proxy's log takes the provider's words with the key cut out.
-    agent.open.failed(login.id, `${error}: ${said.split(login.token).join('<token>')}`);
+    const why = `${error}: ${said.split(login.token).join('<token>')}`;
+    agent.open.failed(login.id, why);
+    // And the connector's health keeps the call, with when the login is back
+    // where the failure named it, so its row says why and until when.
+    agent.open.called(login.id, login.token, {
+      ok: false,
+      error: until === undefined ? why : `${why}; back at ${new Date(until).toISOString()}`,
+    });
     if (REFUSED.has(error)) {
       move = { turn: String(turn.id), said: `Claude refused login ${login.id} (${error})`, end: true };
       return true;
@@ -295,5 +308,10 @@ export function createLogins(ctx: SessionContext): Logins {
     ctx.startNext();
   };
 
-  return { login: undefined, loginFor, unready, limited, refused, nextLogin, moveOn, failure, replacing };
+  const answered = (): void => {
+    const login = ctx.login;
+    if (login !== undefined) ctx.options.logins?.open.called(login.id, login.token, { ok: true });
+  };
+
+  return { login: undefined, loginFor, unready, limited, refused, nextLogin, moveOn, failure, answered, replacing };
 }
