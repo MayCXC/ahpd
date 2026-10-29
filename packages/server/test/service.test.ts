@@ -10,12 +10,12 @@
  */
 
 import { homedir } from 'node:os';
-import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { join, resolve } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SERVICE_ENV } from '../src/daemon.js';
 import {
-  LABEL, UNIT, agentFile, installCalls, installFile, installStarts, installText, managerCall, plistOf, realManager,
-  serviceOn, uninstallCalls, unitFile, unitOf,
+  LABEL, UNIT, agentFile, installCalls, installFile, installStarts, installText, managerCall, ownConfigHome, plistOf,
+  realManager, serviceLabel, serviceOn, serviceUnit, uninstallCalls, unitFile, unitOf,
 } from '../src/service.js';
 import type { Run } from '../src/service.js';
 
@@ -105,6 +105,72 @@ describe('uninstallCalls', () => {
     expect(uninstallCalls('launchd', 501)).toEqual([
       { command: 'launchctl', argv: ['bootout', `gui/501/${LABEL}`] },
     ]);
+  });
+});
+
+describe('a service its configuration names', () => {
+  it('is an instance of the unit on systemd, and one more part of the label on launchd', () => {
+    expect(serviceUnit('two')).toBe('ahpd@two');
+    expect(serviceLabel('two')).toBe('dev.ahpd.daemon.two');
+    // And the plain service is what it always was.
+    expect(serviceUnit()).toBe(UNIT);
+    expect(serviceLabel()).toBe(LABEL);
+  });
+
+  it('is stopped, restarted and taken out by its own name', () => {
+    expect(managerCall('systemd', 'stop', 1000, 'two')).toEqual({ command: 'systemctl', argv: ['--user', 'stop', 'ahpd@two'] });
+    expect(managerCall('launchd', 'restart', 501, 'two'))
+      .toEqual({ command: 'launchctl', argv: ['kickstart', '-k', 'gui/501/dev.ahpd.daemon.two'] });
+    expect(uninstallCalls('systemd', 1000, 'two')).toEqual([
+      { command: 'systemctl', argv: ['--user', 'disable', '--now', 'ahpd@two'] },
+    ]);
+    expect(uninstallCalls('launchd', 501, 'two')).toEqual([
+      { command: 'launchctl', argv: ['bootout', 'gui/501/dev.ahpd.daemon.two'] },
+    ]);
+  });
+
+  it('is installed in a file of its own name, and loaded under its label', () => {
+    expect(installFile('systemd', 'two').endsWith(join('systemd', 'user', 'ahpd@two.service'))).toBe(true);
+    expect(installFile('launchd', 'two')).toBe(join(homedir(), 'Library', 'LaunchAgents', 'dev.ahpd.daemon.two.plist'));
+    const agent = '/Users/x/Library/LaunchAgents/dev.ahpd.daemon.two.plist';
+    expect(installCalls('launchd', 501, agent, 'two')).toEqual([
+      { command: 'launchctl', argv: ['bootout', 'gui/501/dev.ahpd.daemon.two'], tolerate: true },
+      { command: 'launchctl', argv: ['bootstrap', 'gui/501', agent] },
+    ]);
+  });
+});
+
+describe('a unit under a configuration home of its own', () => {
+  it('is enabled by its path, which links it into the folder systemd reads, plain or named', () => {
+    const plain = '/srv/two/systemd/user/ahpd.service';
+    expect(installCalls('systemd', 1000, plain, undefined, true)).toEqual([
+      { command: 'systemctl', argv: ['--user', 'daemon-reload'] },
+      { command: 'systemctl', argv: ['--user', 'enable', '--now', plain] },
+    ]);
+    const named = '/srv/two/systemd/user/ahpd@two.service';
+    expect(installCalls('systemd', 1000, named, 'two', true)[1])
+      .toEqual({ command: 'systemctl', argv: ['--user', 'enable', '--now', named] });
+  });
+});
+
+describe('ownConfigHome', () => {
+  let had: string | undefined;
+  beforeEach(() => { had = process.env['XDG_CONFIG_HOME']; });
+  afterEach(() => {
+    if (had === undefined) delete process.env['XDG_CONFIG_HOME'];
+    else process.env['XDG_CONFIG_HOME'] = had;
+  });
+
+  it('names a configuration home of its own', () => {
+    process.env['XDG_CONFIG_HOME'] = '/srv/two';
+    expect(ownConfigHome()).toBe(resolve('/srv/two'));
+  });
+
+  it('names nothing for the default one, unset or spelled out', () => {
+    delete process.env['XDG_CONFIG_HOME'];
+    expect(ownConfigHome()).toBeUndefined();
+    process.env['XDG_CONFIG_HOME'] = join(homedir(), '.config');
+    expect(ownConfigHome()).toBeUndefined();
   });
 });
 
@@ -203,6 +269,13 @@ describe('unitOf', () => {
     expect(unit).toContain('Environment=PATH="/usr/bin:/opt/my tools/bin"');
     expect(unitOf({ ...facts, configFile: '/home/x/100%.json' })).toContain('--config-file /home/x/100%%.json');
   });
+
+  it('names a configuration home of its own, and none for the default one', () => {
+    // A manager starts the daemon with none of the install's environment, and
+    // the folder a daemon keeps everything in is under that home.
+    expect(unitOf({ ...facts, configHome: '/home/x/two' })).toContain('Environment=XDG_CONFIG_HOME=/home/x/two\n');
+    expect(unitOf(facts)).not.toContain('XDG_CONFIG_HOME');
+  });
 });
 
 describe('plistOf', () => {
@@ -262,6 +335,18 @@ describe('plistOf', () => {
   it('writes a path that would end the text as a reference', () => {
     expect(plistOf({ ...facts, configFile: '/Users/a&b/<x>/config.json' }))
       .toContain('<string>/Users/a&amp;b/&lt;x&gt;/config.json</string>');
+  });
+
+  it('names a configuration home of its own, and none for the default one', () => {
+    // launchd starts the daemon with none of the install's environment, and the
+    // folder a daemon keeps everything in is under that home.
+    expect(plistOf({ ...facts, configHome: '/Users/x/two' }))
+      .toContain('\t\t<key>XDG_CONFIG_HOME</key>\n\t\t<string>/Users/x/two</string>\n');
+    expect(plistOf(facts)).not.toContain('XDG_CONFIG_HOME');
+  });
+
+  it('holds a service its configuration names under its own label', () => {
+    expect(plistOf({ ...facts, name: 'two' })).toContain('\t<key>Label</key>\n\t<string>dev.ahpd.daemon.two</string>');
   });
 });
 

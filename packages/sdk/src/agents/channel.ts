@@ -17,6 +17,12 @@
  * reads from its own environment when it opens the record; a team's or a
  * person's record that names one is refused.
  *
+ * A field the engine's schema marks `x-ahpd-connector`, or a list whose items
+ * it marks, names connectors by id, as a trigger's field does. A put is refused
+ * when one names no connector of the adapter the mark asks for, or one whose
+ * owner is neither the record's nor the host. A record a start reads back is
+ * not checked: the agents open before the connectors do.
+ *
  * Three commands serve an agent. `x-ahpd/agents/put` takes
  * `{ id, engine, owner, name, description?, icon?, model?, config }`, checks
  * `config` against the engine's schema, writes the record, calls the engine's
@@ -37,6 +43,7 @@
  */
 
 import { INVALID_PARAMS, INTERNAL_ERROR, RpcError } from '../rpc.js';
+import { sameOwnerOrHost } from '../automations/automations.js';
 import {
   AGENT_SECRETS,
   asOwner,
@@ -57,6 +64,7 @@ import { bag, isRecord, reason } from '../utils/values.js';
 import type { Icon } from '@microsoft/agent-host-protocol';
 import type { Agent } from '../types/agent.js';
 import type { AgentHealth, AgentOwner, AgentState, AgentTemplate, ServedEngine } from '../types/agents.js';
+import type { ConnectorRef } from '../types/connectors.js';
 import type { PluginMethod } from '../types/plugin.js';
 import type { RecordCollection, StoredRecord } from '../types/records.js';
 import type { Grant, Principal } from '../types/users.js';
@@ -109,9 +117,24 @@ export interface AgentsChannelOptions {
    * for a record the store does not already hold.
    */
   holderOf?(id: string): string | undefined;
+  /**
+   * The connectors this host serves, read at each put.
+   *
+   * A field of an engine's schema marked `x-ahpd-connector` names one of these.
+   * Absent on an embedder with no connectors, which checks no such field, as
+   * an automations store with none checks no trigger.
+   */
+  connectors?(): readonly ConnectorRef[];
   /** Where a record that could not be opened is said. */
   onProblem?(message: string): void;
 }
+
+/** The adapter a schema node's `x-ahpd-connector` mark names, or nothing for a node it does not mark. */
+const markedAdapter = (node: unknown): string | undefined => {
+  const wanted = bag(node)['x-ahpd-connector'];
+  const adapter = typeof wanted === 'string' ? wanted : bag(wanted)['adapter'];
+  return typeof adapter === 'string' && adapter !== '' ? adapter : undefined;
+};
 
 /** The live values one opened record is read through. */
 interface OpenView {
@@ -551,6 +574,39 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   };
 
   /**
+   * Refuse a record whose field names a connector its owner may not use.
+   *
+   * The check an automation's save and a session's bindings make: a field the
+   * engine's schema marks, or a list whose items it marks, names connectors of
+   * the adapter the mark says, and each has to be one this host serves of that
+   * adapter, and the record owner's own or the host's. A host record is host
+   * work, which reaches the host's connectors and no person's.
+   */
+  const refuseConnectors = (config: Record<string, unknown>, owner: AgentOwner, engine: ServedEngine): void => {
+    const served = options.connectors?.();
+    if (served === undefined) return;
+    for (const [field, property] of Object.entries(bag(engine.schema['properties']))) {
+      const one = markedAdapter(property);
+      const each = markedAdapter(bag(property)['items']);
+      const adapter = one ?? each;
+      if (adapter === undefined) continue;
+      const value = config[field];
+      const ids = one !== undefined ? [value] : Array.isArray(value) ? value : [];
+      for (const id of ids) {
+        // A value of another type is the schema's own refusal, and an empty one names nothing.
+        if (typeof id !== 'string' || id === '') continue;
+        const found = served.find((ref) => ref.id === id && ref.adapter === adapter);
+        if (found === undefined) {
+          throw new RpcError(INVALID_PARAMS, `${field} names ${id}, and this host serves no ${adapter} connector with that id`);
+        }
+        if (!sameOwnerOrHost(found.owner, owner === 'host' ? undefined : owner)) {
+          throw new RpcError(INVALID_PARAMS, `${field} names ${id}, which belongs to ${found.owner ?? 'nobody'}, so ${owner} may not use it`);
+        }
+      }
+    }
+  };
+
+  /**
    * The commands run one at a time, in the order they arrived.
    *
    * A put reads whether an id is free before it writes, so two of them run
@@ -640,6 +696,7 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     } catch (error) {
       throw new RpcError(INVALID_PARAMS, reason(error));
     }
+    refuseConnectors(config, owner, engine);
     const moved = await moveRecordSecrets({
       rules: AGENT_SECRETS,
       fields,

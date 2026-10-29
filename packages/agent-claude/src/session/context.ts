@@ -1,6 +1,6 @@
 import type { query } from '@anthropic-ai/claude-agent-sdk';
 import type { Activity, BackgroundTasks, Bag, BoundTool, OutputTerminals, Session, SessionOptions, ShellEnv, Start, SubagentChat, SubagentRequest, TerminalOutputs } from '@ahpd/sdk';
-import type { Cooldowns } from '../logins.js';
+import type { AgentLogins } from '../logins.js';
 import type { Asked, Spawned } from '../spawn.js';
 import type { Asking } from './asking.js';
 import type { ClientTools } from './clienttools.js';
@@ -13,6 +13,23 @@ import type { Servers } from './servers.js';
 import type { Stream } from './stream.js';
 import type { Turns } from './turns.js';
 import type { Workers } from './workers.js';
+
+/** A prompt the CLI was handed, for as long as no result has named it. */
+export interface Owed {
+  /** What it said, which a turn opened for its answer carries. */
+  message: Bag;
+  /** Whether it steers a turn rather than starting one. */
+  steering: boolean;
+  /** The turn its answer belongs to: its own, or the one it steers. */
+  turn: string;
+  /** A steering message's own id, the one a client knows it by. */
+  id?: string;
+  /**
+   * What the CLI said it did with it, from its `command_lifecycle` frames:
+   * nothing yet, `queued` once it holds it, `started` once it took it in.
+   */
+  cli: 'sent' | 'queued' | 'started';
+}
 
 /**
  * What this backend adds to a session's options.
@@ -95,13 +112,12 @@ export interface ClaudeSessionOptions extends SessionOptions {
   /** The list the CLI reports, as the harness offers it; absent is the CLI's. */
   offerModels?: (cli: { id: string; name: string }[]) => Promise<{ id: string; name: string }[]>;
   /**
-   * The cooldowns of the logins this session's agent runs on.
+   * The Claude logins the agent's record may name, and whose agent it is.
    *
-   * One for every session of the agent, so a login one conversation found
-   * refused is not tried by the next. Absent where a session is built by hand,
-   * and then the session keeps its own.
+   * Absent where a session is built by hand, or by an embedder with no
+   * `claude-login` adapter: the session runs as the CLI signs in.
    */
-  cooldowns?: Cooldowns;
+  logins?: AgentLogins;
   /**
    * Whether one folder is one the host vouched for, carried from `Start`.
    *
@@ -253,6 +269,20 @@ export interface SessionContext extends Omit<Config, 'methods'>, Omit<ClientTool
    */
   steering: Bag | undefined;
   /**
+   * Every prompt the CLI was handed that no result has named yet.
+   *
+   * Keyed by the uuid it was sent under. The CLI names the prompts an answer
+   * is for in `user_message_uuids`, on the answer's frames and on its result,
+   * and the turn a prompt belongs to is the turn those frames and that result
+   * are about. A steering message it reads after the turn's last tool call is
+   * run as a turn of its own once the turn's result is out, so a turn is not
+   * over while it owes one. A CLI that is put away, or that dies, takes the
+   * rest with it.
+   */
+  owed: Map<string, Owed>;
+  /** The prompt the CLI's current answer is for, from the last frame that named it. */
+  answering: string | undefined;
+  /**
    * What the host asked said to the model, and the turn it asked it for.
    *
    * Read when the turn begins, and read back by the `UserPromptSubmit` hook
@@ -378,6 +408,15 @@ export interface SessionContext extends Omit<Config, 'methods'>, Omit<ClientTool
    * question of whether a turn is running is asked of one thing.
    */
   beginning: string | undefined;
+  /**
+   * The change of tools the CLI has not finished taking, while there is one.
+   *
+   * The host hands the session a client's tools when the client becomes active
+   * and does not wait for them to land, and a turn the client sends next is a
+   * turn of a session that has them. So a change waits for the one before it,
+   * and a turn waits for the last of them before its prompt goes out.
+   */
+  retooling: Promise<void> | undefined;
 }
 
 /**

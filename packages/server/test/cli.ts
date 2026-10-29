@@ -230,6 +230,7 @@ export interface Recorded {
   argv?: string[];
   automations?: string;
   service?: string;
+  serviceName?: string;
 }
 
 export const recordOf = (): Recorded =>

@@ -1,16 +1,18 @@
+import { randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { bag } from '@ahpd/sdk';
-import type { Bag } from '@ahpd/sdk';
+import type { Adapter, AgentView, Bag, Connector, ConnectorOwner, Engine, MessageAttachment, PluginHost, Start } from '@ahpd/sdk';
 
 /*
- * One Claude agent on several logins.
+ * One Claude agent on several logins, as the model proxy routes a name over
+ * its entries.
  *
- * A record's `logins` are tokens from `claude setup-token`. Each conversation
- * orders them by a rendezvous score and runs on the first one that is not
- * cooling down; the CLI reads the token as `CLAUDE_CODE_OAUTH_TOKEN`.
+ * A record's `logins` names connectors of `claude-login`, each one account's
+ * token, in the order they are tried. A turn runs on the first ready one, and
+ * the CLI reads its token as `CLAUDE_CODE_OAUTH_TOKEN`. A record that names
+ * none runs on the agent's own credential.
  */
 
 /** Every CLI a session started, with the options it was given and a queue of the frames it sends. */
@@ -95,14 +97,29 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
   },
 }));
 
+/** What the blocks of a message with attachments wait for, while it is set. */
+const blocks = vi.hoisted(() => ({ gate: undefined as Promise<void> | undefined }));
+
+vi.mock('../src/session/attachments.js', async (original) => {
+  const real = await original<typeof import('../src/session/attachments.js')>();
+  return {
+    ...real,
+    blocksFor: async (...args: Parameters<typeof real.blocksFor>) => {
+      if (args[1] !== undefined && args[1].length > 0) await blocks.gate;
+      return await real.blocksFor(...args);
+    },
+  };
+});
+
 const { createSession } = await import('../src/session.js');
-const { Cooldowns } = await import('../src/logins.js');
+const { OpenLogins } = await import('../src/logins.js');
+type Logins = InstanceType<typeof OpenLogins>;
 
 const settle = async (times = 30): Promise<void> => {
   for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 0); });
 };
 
-/** Wait for `done` to hold, for a second at most, and then for what follows from it. */
+/** Wait for `done` to hold, for three seconds at most, and then for what follows from it. */
 const until = async (done: () => boolean): Promise<void> => {
   for (let i = 0; i < 300 && !done(); i++) await new Promise((r) => { setTimeout(r, 10); });
   await settle();
@@ -110,30 +127,42 @@ const until = async (done: () => boolean): Promise<void> => {
 
 beforeEach(() => {
   sdk.reset();
+  blocks.gate = undefined;
   delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
 });
 
-const LOGINS = [
-  { name: 'personal', token: 'token-personal' },
-  { name: 'work', token: 'token-work' },
-];
+/** One open login of `claude-login`, as the adapter's `open` keeps it; the answer closes it. */
+const opened = (logins: Logins, id: string, token: string, owner: ConnectorOwner = 'host'): (() => void) =>
+  logins.opened({ id, adapter: 'claude-login', owner, config: { token } });
 
-/** A session of a record with these values, on one chat. */
-const open = (chatUri: string, preset: Bag, extra: Record<string, unknown> = {}) => {
+/** The host's two logins, open. */
+const twoLogins = (): Logins => {
+  const logins = new OpenLogins();
+  opened(logins, 'personal', 'token-personal');
+  opened(logins, 'work', 'token-work');
+  return logins;
+};
+
+/** A session of a record with these values, on one chat, of an agent the owner holds. */
+const open = (preset: Bag, logins: Logins, extra: Record<string, unknown> = {}, owner: ConnectorOwner = 'host') => {
   const chat: Bag[] = [];
   const session = createSession({
-    uri: `ahp-session:/${chatUri}`,
-    chatUri,
+    uri: 'ahp-session:/logins',
+    chatUri: 'ahp-chat:/logins',
     cwd: mkdtempSync(join(tmpdir(), 'ahpd-logins-')),
     emit: (channel, action) => { if (channel === 'chat') chat.push(action as Bag); },
     preset,
+    logins: { open: logins, owner: () => owner },
     ...extra,
   });
   return { session, chat };
 };
 
-/** The token the CLI started `at` (the last by default) signs in with. */
-const tokenOf = (at = -1): unknown => (sdk.queries.at(at)?.options.env as Bag | undefined)?.['CLAUDE_CODE_OAUTH_TOKEN'];
+/** The environment the CLI started `at` (the last by default) was given, when it was given one. */
+const envOf = (at = -1): Bag | undefined => sdk.queries.at(at)?.options.env as Bag | undefined;
+
+/** The token the CLI started `at` signs in with. */
+const tokenOf = (at = -1): unknown => envOf(at)?.['CLAUDE_CODE_OAUTH_TOKEN'];
 
 /** A turn the CLI answered and ended, as its frames come. */
 const answered = (id: string) => [
@@ -141,152 +170,256 @@ const answered = (id: string) => [
   { type: 'result', subtype: 'success', is_error: false, session_id: 'cli-1', duration_ms: 5 },
 ];
 
-it('picks the pinned login for fixed rendezvous vectors', async () => {
-  // Fixed vectors of the rendezvous score: a change of the score would move
-  // every conversation to another account.
-  for (const [key, names, expected] of [
-    ['sess-a', ['personal', 'work'], 'work'],
-    ['sess-b', ['personal', 'work'], 'personal'],
-    ['opencode-3f2a', ['a', 'b', 'c'], 'b'],
-  ] as const) {
-    sdk.reset();
-    open(key, { logins: names.map((name) => ({ name, token: `token-${name}` })) });
-    await settle();
-    expect(tokenOf(), key).toBe(`token-${expected}`);
-  }
-});
-
-it('starts one chat on the same login every time it opens', async () => {
-  open('ahp-chat:/same', { logins: LOGINS });
-  await settle();
-  const first = tokenOf();
-  open('ahp-chat:/same', { logins: LOGINS });
-  await settle();
-  expect(first).toBeDefined();
-  expect(tokenOf()).toBe(first);
-});
-
-it('spreads conversations over the logins', async () => {
-  const three = [...LOGINS, { name: 'spare', token: 'token-spare' }];
-  const seen = new Set<unknown>();
-  for (let i = 0; i < 30; i++) {
-    open(`ahp-chat:/spread-${String(i)}`, { logins: three });
-    await settle(2);
-    seen.add(tokenOf());
-  }
-  expect(seen.size).toBeGreaterThan(1);
-});
-
-it('keeps a pushed credential and the record env, with the login between them', async () => {
-  open('sess-a', { logins: LOGINS, env: { ANTHROPIC_BASE_URL: 'https://example.invalid' } }, { env: { ANTHROPIC_API_KEY: 'pushed' } });
-  await settle();
-  const env = sdk.queries.at(-1)?.options.env as Bag;
-  expect(env['CLAUDE_CODE_OAUTH_TOKEN']).toBe('token-work');
-  expect(env['ANTHROPIC_API_KEY']).toBe('pushed');
-  expect(env['ANTHROPIC_BASE_URL']).toBe('https://example.invalid');
-});
-
-it('adds no token for a record with no logins', async () => {
-  open('ahp-chat:/none', {});
-  await settle();
-  expect(tokenOf()).toBeUndefined();
-});
-
-it('runs on the first of its order when every login cools down', async () => {
-  const cooldowns = new Cooldowns(() => 1000);
-  cooldowns.mark('personal', 5000);
-  cooldowns.mark('work', 5000);
-  open('sess-a', { logins: LOGINS }, { cooldowns });
-  await settle();
-  expect(tokenOf()).toBe('token-work');
-});
-
-it('keeps its login while the login works, and moves when it cools down', async () => {
-  let now = 1000;
-  const cooldowns = new Cooldowns(() => now);
-  const { session } = open('sess-a', { logins: LOGINS }, { cooldowns });
-  await settle();
-  expect(tokenOf()).toBe('token-work');
-
-  session.begin('t1', 'one');
-  await settle();
-  sdk.push(...answered('t1'));
-  await settle();
-  session.begin('t2', 'two');
-  await settle();
-  // The same CLI answers the second turn: nothing moved.
-  expect(sdk.queries).toHaveLength(1);
-  sdk.push(...answered('t2'));
-  await settle();
-
-  // Another session of the agent found `work` spent.
-  cooldowns.mark('work', now + 60_000);
-  session.begin('t3', 'three');
-  await settle();
-  expect(sdk.queries).toHaveLength(2);
-  expect(tokenOf()).toBe('token-personal');
-  // Resumed into the conversation the first CLI named, with nothing cut.
-  expect(sdk.queries.at(-1)?.options.resume).toBe('cli-1');
-  expect(sdk.queries.at(-1)?.options.resumeSessionAt).toBeUndefined();
-  expect(sdk.said.at(-1)).toMatchObject({ content: 'three', query: 1 });
-
-  // A cooldown that ended leaves the conversation where it is.
-  sdk.push(...answered('t3'));
-  await settle();
-  now += 120_000;
-  session.begin('t4', 'four');
-  await settle();
-  expect(sdk.queries).toHaveLength(2);
-});
-
-/*
- * A refused login hands the turn on.
- *
- * The frames below are the ones a real CLI on SDK 0.3.301 sent for a request a
- * local stub refused with the unified rate-limit headers: the SDK's
- * `rate_limit_event`, then a synthetic assistant frame carrying `error`, then a
- * `result` with `is_error`. A billing refusal has no event before it.
- */
-const SPENT = "You've hit your session limit";
-const refused = (error: string, resetsAt?: number) => [
-  ...(resetsAt === undefined ? [] : [{
-    type: 'rate_limit_event', session_id: 'cli-1',
-    rate_limit_info: { status: 'rejected', resetsAt, rateLimitType: 'five_hour' },
-  }]),
+/** The CLI's answer to the prompt it was sent under `uuid`, its frames naming that prompt as SDK 0.3.301's do. */
+const answeredFor = (uuid: string, text: string) => [
   {
-    type: 'assistant', parent_tool_use_id: null, uuid: `refused-${error}`, session_id: 'cli-1', error,
-    message: { id: 'msg-refused', role: 'assistant', model: '<synthetic>', content: [{ type: 'text', text: SPENT }] },
+    type: 'assistant', parent_tool_use_id: null, uuid: `end-${uuid}`, session_id: 'cli-1', user_message_uuid: uuid,
+    message: { id: `msg-${uuid}`, role: 'assistant', model: 'claude-x', content: [{ type: 'text', text }] },
   },
-  { type: 'result', subtype: 'success', is_error: true, session_id: 'cli-1', duration_ms: 5, result: SPENT },
+  { type: 'result', subtype: 'success', is_error: false, session_id: 'cli-1', duration_ms: 5, user_message_uuids: [uuid] },
 ];
-
-/** Whether a chat was shown the synthetic reply of a refusal. */
-const shownSpent = (chat: Bag[]): boolean => chat.some((action) => JSON.stringify(action).includes(SPENT));
 
 /** The actions a chat was sent of one type, for one turn. */
 const ofTurn = (chat: Bag[], type: string, turnId: string): Bag[] =>
   chat.filter((action) => action.type === type && action.turnId === turnId);
 
-/** A session of `LOGINS` on `sess-a`, whose order is `work` then `personal`, with one turn answered on `work`. */
-const answeredOnce = async (cooldowns: InstanceType<typeof Cooldowns>, extra: Record<string, unknown> = {}) => {
-  const opened = open('sess-a', { logins: LOGINS }, { cooldowns, ...extra });
+/** Run one turn to its answer. */
+const turn = async (session: { begin: (id: string, text: string) => void }, id: string, text: string): Promise<void> => {
+  session.begin(id, text);
   await settle();
-  opened.session.begin('t1', 'one');
+  sdk.push(...answered(id));
   await settle();
-  sdk.push(...answered('t1'));
-  await settle();
-  return opened;
 };
 
-describe('a refused login', () => {
-  it('runs a turn that showed nothing again on the next login, cut back to the turn before it', async () => {
-    const now = Date.now();
-    const cooldowns = new Cooldowns(() => now);
-    const { session, chat } = await answeredOnce(cooldowns);
+describe("a turn's login", () => {
+  it("starts the CLI on the record's first login, with its token", async () => {
+    open({ logins: ['personal', 'work'] }, twoLogins());
+    await settle();
+    expect(tokenOf()).toBe('token-personal');
+    open({ logins: ['work', 'personal'] }, twoLogins());
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+  });
+
+  it("takes the next login in the record's order when the first is not open", async () => {
+    open({ logins: ['gone', 'work', 'personal'] }, twoLogins());
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+  });
+
+  it('sets no token for a record that names no login', async () => {
+    for (const preset of [{}, { logins: [] }]) {
+      open(preset, twoLogins());
+      await settle();
+      expect(tokenOf(), JSON.stringify(preset)).toBeUndefined();
+    }
+  });
+
+  it('refuses a turn whose record names logins and has none open, and names each one', async () => {
+    const { session, chat } = open({ logins: ['gone', 'away'] }, twoLogins());
+    await settle();
+    session.begin('t1', 'one');
+    await settle();
+    const failed = ofTurn(chat, 'chat/error', 't1');
+    expect(failed).toHaveLength(1);
+    expect(JSON.stringify(failed[0])).toContain('No login this agent names is open: gone, away');
+    expect(sdk.said).toEqual([]);
+  });
+
+  it("skips another person's login and takes the host's", async () => {
+    const logins = new OpenLogins();
+    opened(logins, 'ana-login', 'token-ana', 'user:ana');
+    opened(logins, 'cy-login', 'token-cy', 'user:cy');
+    opened(logins, 'host-login', 'token-host');
+    open({ logins: ['ana-login', 'host-login'] }, logins, {}, 'user:cy');
+    await settle();
+    expect(tokenOf()).toBe('token-host');
+    open({ logins: ['ana-login', 'cy-login', 'host-login'] }, logins, {}, 'user:cy');
+    await settle();
+    expect(tokenOf()).toBe('token-cy');
+  });
+
+  it("gives a CLI on a login no key and no cloud switch from the record's env or the daemon's", async () => {
+    open({
+      logins: ['work'],
+      env: { ANTHROPIC_API_KEY: 'key', ANTHROPIC_AUTH_TOKEN: 'bearer', CLAUDE_CODE_USE_BEDROCK: '1', ANTHROPIC_BASE_URL: 'https://example.invalid' },
+    }, twoLogins());
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+    for (const variable of ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_USE_BEDROCK']) expect(envOf()?.[variable], variable).toBeUndefined();
+    expect(envOf()?.['ANTHROPIC_BASE_URL']).toBe('https://example.invalid');
+
+    const before = process.env.CLAUDE_CODE_USE_VERTEX;
+    process.env.CLAUDE_CODE_USE_VERTEX = '1';
+    try {
+      open({ logins: ['work'] }, twoLogins());
+      await settle();
+      expect(tokenOf()).toBe('token-work');
+      expect(envOf()?.['CLAUDE_CODE_USE_VERTEX']).toBeUndefined();
+    }
+    finally {
+      if (before === undefined) delete process.env.CLAUDE_CODE_USE_VERTEX;
+      else process.env.CLAUDE_CODE_USE_VERTEX = before;
+    }
+  });
+
+  it('runs a session a client pushed a key for on the key, and on no login', async () => {
+    open({ logins: ['personal', 'work'] }, twoLogins(), { env: { ANTHROPIC_API_KEY: 'pushed' } });
+    await settle();
+    expect(tokenOf()).toBeUndefined();
+    expect(envOf()?.['ANTHROPIC_API_KEY']).toBe('pushed');
+  });
+
+  it("lays the login's token over the record's env", async () => {
+    open({ logins: ['work'], env: { CLAUDE_CODE_OAUTH_TOKEN: 'the-record-s', ANTHROPIC_BASE_URL: 'https://example.invalid' } }, twoLogins());
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+    expect(envOf()?.['ANTHROPIC_BASE_URL']).toBe('https://example.invalid');
+  });
+
+  it('moves the next turn to a new CLI on the next login when its login closes, and back once it opens again', async () => {
+    const logins = new OpenLogins();
+    const close = opened(logins, 'personal', 'token-personal');
+    opened(logins, 'work', 'token-work');
+    const { session } = open({ logins: ['personal', 'work'] }, logins);
+    await settle();
+    await turn(session, 't1', 'one');
+    await turn(session, 't2', 'two');
+    // The same CLI answers the second turn: nothing moved.
+    expect(sdk.queries).toHaveLength(1);
+
+    close();
+    session.begin('t3', 'three');
+    await settle();
+    expect(sdk.queries).toHaveLength(2);
+    expect(tokenOf()).toBe('token-work');
+    // Resumed into the conversation the first CLI named.
+    expect(sdk.queries.at(-1)?.options.resume).toBe('cli-1');
+    expect(sdk.said.at(-1)).toMatchObject({ content: 'three', query: 1 });
+    sdk.push(...answered('t3'));
+    await settle();
+
+    opened(logins, 'personal', 'token-personal');
+    session.begin('t4', 'four');
+    await settle();
+    expect(sdk.queries).toHaveLength(3);
+    expect(tokenOf()).toBe('token-personal');
+    expect(sdk.said.at(-1)).toMatchObject({ content: 'four', query: 2 });
+  });
+
+  it("moves the next turn to a new CLI when a put replaces its login's token", async () => {
+    const logins = twoLogins();
+    const { session } = open({ logins: ['work', 'personal'] }, logins);
+    await settle();
+    await turn(session, 't1', 'one');
+
+    // A put closes the connector and opens it again with the new token.
+    opened(logins, 'work', 'token-work-again');
+    session.begin('t2', 'two');
+    await settle();
+    expect(sdk.queries).toHaveLength(2);
+    expect(tokenOf()).toBe('token-work-again');
+  });
+
+  it("moves the next turn when an edit names other logins, and to the agent's own credential when it names none", async () => {
+    const logins = twoLogins();
+    let values: Bag = { logins: ['personal', 'work'] };
+    const { session } = open({}, logins, { presetOf: () => values });
+    await settle();
+    expect(tokenOf()).toBe('token-personal');
+    await turn(session, 't1', 'one');
+
+    values = { logins: ['work'] };
+    session.begin('t2', 'two');
+    await settle();
+    expect(sdk.queries).toHaveLength(2);
+    expect(tokenOf()).toBe('token-work');
+    sdk.push(...answered('t2'));
+    await settle();
+
+    values = { logins: [] };
+    session.begin('t3', 'three');
+    await settle();
+    expect(sdk.queries).toHaveLength(3);
+    expect(tokenOf()).toBeUndefined();
+  });
+
+  it("runs a record's logins from the load's open connectors, through the plugin's engine", async () => {
+    const { apply } = await import('../src/plugin.js');
+    const engines: Engine[] = [];
+    const adapters: { name: string; open: (connector: unknown) => unknown }[] = [];
+    const host = {
+      paths: [mkdtempSync(join(tmpdir(), 'ahpd-logins-plugin-'))],
+      log: () => {},
+      registerAdapter: (adapter: { name: string; open: (connector: unknown) => unknown }) => { adapters.push(adapter); },
+      registerEngine: (engine: Engine) => { engines.push(engine); },
+    } as unknown as PluginHost;
+    await apply(host, {});
+    const adapter = adapters.find((one) => one.name === 'claude-login');
+    const engine = engines.find((one) => one.name === 'claude');
+    if (adapter === undefined || engine === undefined) throw new Error('the plugin registered no claude-login adapter or claude engine');
+    adapter.open({ id: 'work', adapter: 'claude-login', owner: 'host', config: { token: 'token-work' } });
+
+    const view: AgentView = {
+      id: 'claude-logins', engine: 'claude', owner: 'host', name: 'Logins',
+      description: undefined, icon: undefined, model: undefined, config: { logins: ['work'] },
+    };
+    const start: Start = {
+      uri: 'ahp-session:/claude-logins', chatUri: 'ahp-chat:/claude-logins', settings: {}, clientToolTimeoutMs: 60_000,
+      schema: () => ({ type: 'object', properties: {} }),
+      emit: () => {},
+      workingDirectory: (host as unknown as { paths: string[] }).paths[0] as string,
+    };
+    engine.open(view).create(start);
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+  });
+});
+
+/*
+ * A failed login hands the turn on, as the model proxy hands a call to its
+ * next entry.
+ *
+ * The frames below are the ones a real CLI on SDK 0.3.301 sent once it gave up
+ * on a request: for a claude.ai login's 429, the SDK's `rate_limit_event`
+ * first; then a synthetic assistant frame carrying `error`; then a `result`
+ * with `is_error`.
+ */
+const SPENT = "You've hit your session limit · resets 5pm";
+const failure = (error: string, said = SPENT, resetsAt?: number) => [
+  ...(resetsAt === undefined ? [] : [{
+    type: 'rate_limit_event', session_id: 'cli-1',
+    rate_limit_info: { status: 'rejected', resetsAt, rateLimitType: 'five_hour' },
+  }]),
+  {
+    type: 'assistant', parent_tool_use_id: null, uuid: `failed-${error}`, session_id: 'cli-1', error,
+    message: { id: 'msg-failed', role: 'assistant', model: '<synthetic>', content: [{ type: 'text', text: said }] },
+  },
+  { type: 'result', subtype: 'success', is_error: true, session_id: 'cli-1', duration_ms: 5, result: said },
+];
+
+/** Whether a chat was shown the words of a failure. */
+const shown = (chat: Bag[], said = SPENT): boolean => chat.some((action) => JSON.stringify(action).includes(said));
+
+/** An hour from now, in the epoch seconds a `rate_limit_event` names its reset in. */
+const inAnHour = (): number => Math.floor(Date.now() / 1000) + 3600;
+
+/** A session on these logins, `work` first, with one turn answered on `work`. */
+const answeredOnce = async (logins: Logins, names = ['work', 'personal'], extra: Record<string, unknown> = {}) => {
+  const session = open({ logins: names }, logins, extra);
+  await settle();
+  expect(tokenOf()).toBe('token-work');
+  await turn(session.session, 't1', 'one');
+  return session;
+};
+
+describe('a failed login', () => {
+  it('moves a turn a 429 failed before any part to the next login, cut back to the turn before it', async () => {
+    const { session, chat } = await answeredOnce(twoLogins());
     session.begin('t2', 'two');
     await settle();
     const first = sdk.said.at(-1);
-    sdk.push(...refused('rate_limit', Math.floor(now / 1000) + 3600));
+    sdk.push(...failure('rate_limit'));
     await settle();
 
     expect(sdk.queries).toHaveLength(2);
@@ -296,112 +429,275 @@ describe('a refused login', () => {
     // The same prompt, under a new uuid, to the new CLI.
     expect(sdk.said.at(-1)).toMatchObject({ content: 'two', query: 1 });
     expect(sdk.said.at(-1)?.uuid).not.toBe(first?.uuid);
-    // Until the reset the event named.
-    expect(cooldowns.until('work')).toBe((Math.floor(now / 1000) + 3600) * 1000);
     expect(ofTurn(chat, 'chat/error', 't2')).toEqual([]);
-    expect(shownSpent(chat)).toBe(false);
-
+    expect(shown(chat)).toBe(false);
     sdk.push(...answered('t2'));
     await settle();
     expect(ofTurn(chat, 'chat/turnComplete', 't2')).toHaveLength(1);
+
+    // A failure that names no retry time is not remembered: the next turn
+    // starts on the first login again.
+    session.begin('t3', 'three');
+    await settle();
+    expect(sdk.queries).toHaveLength(3);
+    expect(tokenOf()).toBe('token-work');
   });
 
-  it('fails a turn that showed something, and starts the next turn on the next login', async () => {
-    const cooldowns = new Cooldowns();
-    const { session, chat } = await answeredOnce(cooldowns);
+  it('moves a turn the same way for a 5xx, a 529 and a connection that never arrived', async () => {
+    for (const [error, said] of [
+      ['server_error', 'API Error: 500 Internal server error. This is a server-side issue, usually temporary.'],
+      ['overloaded', 'API Error: 529 Overloaded'],
+      ['server_error', 'API Error: Connection error.'],
+    ] as const) {
+      sdk.reset();
+      const { session, chat } = await answeredOnce(twoLogins());
+      session.begin('t2', 'two');
+      await settle();
+      sdk.push(...failure(error, said));
+      await settle();
+      expect(tokenOf(), said).toBe('token-personal');
+      expect(sdk.said.at(-1), said).toMatchObject({ content: 'two', query: 1 });
+      expect(shown(chat, said), said).toBe(false);
+    }
+  });
+
+  it('keeps a login whose 429 names its reset out until then, for the next turn and for other conversations', async () => {
+    const clock = { now: Date.now() };
+    const logins = new OpenLogins(() => clock.now);
+    opened(logins, 'work', 'token-work');
+    opened(logins, 'personal', 'token-personal');
+    const reset = Math.floor(clock.now / 1000) + 3600;
+    const { session } = await answeredOnce(logins);
+    session.begin('t2', 'two');
+    await settle();
+    sdk.push(...failure('rate_limit', SPENT, reset));
+    await settle();
+    expect(tokenOf()).toBe('token-personal');
+    sdk.push(...answered('t2'));
+    await settle();
+
+    // The next turn stays on the CLI it moved to.
+    await turn(session, 't3', 'three');
+    expect(sdk.queries).toHaveLength(2);
+    // Another conversation starts on the next login too.
+    open({ logins: ['work', 'personal'] }, logins, { uri: 'ahp-session:/elsewhere', chatUri: 'ahp-chat:/elsewhere' });
+    await settle();
+    expect(tokenOf()).toBe('token-personal');
+
+    // Once the reset passes, a turn starts on the first login again.
+    clock.now = reset * 1000 + 1;
+    session.begin('t4', 'four');
+    await settle();
+    expect(tokenOf()).toBe('token-work');
+    expect(sdk.said.at(-1)).toMatchObject({ content: 'four' });
+  });
+
+  it('brings a resting login back at once when a put opens it again', async () => {
+    const logins = twoLogins();
+    const { session } = await answeredOnce(logins);
+    session.begin('t2', 'two');
+    await settle();
+    sdk.push(...failure('rate_limit', SPENT, inAnHour()));
+    await settle();
+    expect(tokenOf()).toBe('token-personal');
+    sdk.push(...answered('t2'));
+    await settle();
+
+    opened(logins, 'work', 'token-work-again');
+    session.begin('t3', 'three');
+    await settle();
+    expect(tokenOf()).toBe('token-work-again');
+  });
+
+  it('sends a steering message the failed attempt held to the next login, behind the prompt it sends again', async () => {
+    const recorded: [string, string][] = [];
+    const { session, chat } = await answeredOnce(twoLogins(), ['work', 'personal'], {
+      onTurnRecorded: (turnId: string, transcriptId: string) => { recorded.push([turnId, transcriptId]); },
+    });
+    session.begin('t2', 'two');
+    await settle();
+    const first = sdk.said.at(-1);
+    expect(session.steer?.('s1', 'and three')).toBe(true);
+    await settle();
+    const held = sdk.said.at(-1);
+    expect(held).toMatchObject({ content: 'and three', query: 0 });
+    sdk.push(...failure('rate_limit', SPENT, inAnHour()));
+    await settle();
+
+    // The prompt again and the message behind it, each under a uuid of its own.
+    const sent = sdk.said.filter((one) => one.query === 1);
+    expect(sent.map((one) => one.content)).toEqual(['two', 'and three']);
+    const [again, steered] = sent;
+    expect(again?.uuid).not.toBe(first?.uuid);
+    expect(steered?.uuid).not.toBe(held?.uuid);
+    // The host is told the prompt's new uuid is the turn's, and nothing of the
+    // message's, so a read puts the message inside the turn.
+    expect(recorded).toContainEqual(['t2', String(again?.uuid)]);
+    expect(recorded.map(([, id]) => id)).not.toContain(String(steered?.uuid));
+
+    // The turn ends once the new CLI has answered both, with both answers in it.
+    sdk.push(...answeredFor(String(again?.uuid), 'answer two'));
+    await settle();
+    expect(ofTurn(chat, 'chat/turnComplete', 't2')).toEqual([]);
+    sdk.push(...answeredFor(String(steered?.uuid), 'answer three'));
+    await settle();
+    expect(ofTurn(chat, 'chat/turnComplete', 't2')).toHaveLength(1);
+    expect(chat.filter((action) => action.type === 'chat/turnStarted').map((action) => action.turnId)).toEqual(['t1', 't2']);
+    const t2 = JSON.stringify(chat.filter((action) => action.turnId === 't2'));
+    expect(t2).toContain('answer two');
+    expect(t2).toContain('answer three');
+  });
+
+  it('sends a steering message whose attachments were still being read at the move to the next login once', async () => {
+    const { session } = await answeredOnce(twoLogins());
+    session.begin('t2', 'two');
+    await settle();
+    const note = join(mkdtempSync(join(tmpdir(), 'ahpd-logins-note-')), 'note.txt');
+    writeFileSync(note, 'one\n');
+    let release = (): void => {};
+    blocks.gate = new Promise<void>((resolve) => { release = resolve; });
+    const attachment = { type: 'resource', uri: `file://${note}`, label: 'note.txt', contentType: 'text/plain' } as unknown as MessageAttachment;
+    expect(session.steer?.('s1', 'and three', [attachment])).toBe(true);
+    await settle();
+    // Not sent yet: its attachment is still being read as the move comes.
+    expect(sdk.said.map((one) => one.content)).toEqual(['one', 'two']);
+    sdk.push(...failure('rate_limit', SPENT, inAnHour()));
+    await settle();
+    release();
+    await settle();
+
+    const sent = sdk.said.filter((one) => one.query === 1);
+    expect(sent).toHaveLength(2);
+    expect(sent[0]).toMatchObject({ content: 'two' });
+    expect(JSON.stringify(sent[1]?.content)).toContain('and three');
+    expect(sdk.said.filter((one) => one.query === 0)).toHaveLength(2);
+  });
+
+  it('runs a turn opened for a steering message again on the next login, with the message as its prompt', async () => {
+    const recorded: [string, string][] = [];
+    const { session, chat } = await answeredOnce(twoLogins(), ['work', 'personal'], {
+      onTurnRecorded: (turnId: string, transcriptId: string) => { recorded.push([turnId, transcriptId]); },
+    });
+    session.begin('t2', 'two');
+    await settle();
+    const prompt = String(sdk.said.at(-1)?.uuid);
+    sdk.push({
+      type: 'assistant', parent_tool_use_id: null, uuid: 'part-t2', session_id: 'cli-1', user_message_uuid: prompt,
+      message: { id: 'msg-t2', role: 'assistant', model: 'claude-x', content: [{ type: 'text', text: 'partly' }] },
+    });
+    await settle();
+    expect(session.steer?.('s1', 'and three')).toBe(true);
+    await settle();
+    const held = String(sdk.said.at(-1)?.uuid);
+    sdk.push({ type: 'command_lifecycle', command_uuid: held, state: 'queued', session_id: 'cli-1' });
+    await settle();
+    // Stopped with the message held, which opens the message's own turn.
+    session.cancel('t2');
+    await settle();
+    expect(chat.filter((action) => action.type === 'chat/turnStarted').at(-1)).toMatchObject({ turnId: held, queuedMessageId: 's1' });
+    sdk.push({ type: 'result', subtype: 'success', is_error: false, session_id: 'cli-1', duration_ms: 5, user_message_uuids: [prompt] });
+    // The CLI's attempt at the message, refused.
+    sdk.push(...failure('rate_limit', SPENT, inAnHour())
+      .map((frame) => (frame.type === 'assistant' ? { ...frame, user_message_uuid: held } : frame)));
+    await settle();
+
+    // The message goes again as the turn's prompt, cut back to the end of the turn before it.
+    const sent = sdk.said.filter((one) => one.query === 1);
+    expect(sent.map((one) => one.content)).toEqual(['and three']);
+    expect(sent[0]?.uuid).not.toBe(held);
+    expect(sdk.queries.at(-1)?.options.resumeSessionAt).toBe('part-t2');
+    // The turn is written under the uuid it went again under, which the host is told.
+    expect(recorded).toContainEqual([held, sent[0]?.uuid]);
+
+    sdk.push(...answeredFor(String(sent[0]?.uuid), 'answer three'));
+    await settle();
+    expect(ofTurn(chat, 'chat/turnComplete', held)).toHaveLength(1);
+    expect(JSON.stringify(chat.filter((action) => action.turnId === held))).toContain('answer three');
+    expect(shown(chat)).toBe(false);
+  });
+
+  it('ends a turn that failed after it showed a part with the failure, and runs nothing again', async () => {
+    const { session, chat } = await answeredOnce(twoLogins());
     session.begin('t2', 'two');
     await settle();
     sdk.push(
       { type: 'assistant', parent_tool_use_id: null, uuid: 'part-t2', session_id: 'cli-1', message: { id: 'msg-part', role: 'assistant', model: 'claude-x', content: [{ type: 'text', text: 'half an answer' }] } },
-      ...refused('rate_limit'),
+      ...failure('rate_limit', SPENT, inAnHour()),
     );
     await settle();
     expect(sdk.queries).toHaveLength(1);
+    expect(sdk.said.filter((one) => one.content === 'two')).toHaveLength(1);
     expect(ofTurn(chat, 'chat/error', 't2')).toHaveLength(1);
-    expect(cooldowns.cooling('work')).toBe(true);
+    expect(shown(chat)).toBe(true);
 
+    // The reset it named keeps the login out, so the next turn starts on the next one.
     session.begin('t3', 'three');
     await settle();
     expect(sdk.queries).toHaveLength(2);
     expect(tokenOf()).toBe('token-personal');
-    expect(sdk.queries.at(-1)?.options.resume).toBe('cli-1');
     expect(sdk.queries.at(-1)?.options.resumeSessionAt).toBeUndefined();
   });
 
-  it('starts a conversation refused on its first turn over under its id', async () => {
-    const id = '0b6f3c9a-2d4e-4f81-9a7b-5c3d2e1f0a9b';
-    const cooldowns = new Cooldowns();
-    const { session, chat } = open(`ahp-chat:/${id}`, { logins: LOGINS }, { cooldowns, uri: `ahp-session:/${id}` });
+  it('starts a conversation that failed on its first turn over under its id', async () => {
+    const id = randomUUID();
+    const { session, chat } = open({ logins: ['work', 'personal'] }, twoLogins(), { uri: `ahp-session:/${id}`, chatUri: `ahp-chat:/${id}` });
     await settle();
     expect(sdk.queries.at(-1)?.options.sessionId).toBe(id);
-    const first = tokenOf();
     session.begin('t1', 'one');
     await settle();
-    sdk.push(...refused('rate_limit').map((frame) => ({ ...frame, session_id: id })));
+    sdk.push(...failure('rate_limit').map((frame) => ({ ...frame, session_id: id })));
     await until(() => sdk.queries.length === 2);
 
     // No entry comes before the first prompt, so the conversation goes whole and
     // a new one begins under the same id, as a chat truncated whole does.
     expect(sdk.deleted).toEqual([id]);
     expect(sdk.queries).toHaveLength(2);
-    expect(tokenOf()).not.toBe(first);
+    expect(tokenOf()).toBe('token-personal');
     expect(sdk.queries.at(-1)?.options.resume).toBeUndefined();
     expect(sdk.queries.at(-1)?.options.sessionId).toBe(id);
     expect(sdk.said.at(-1)).toMatchObject({ content: 'one', query: 1 });
     expect(ofTurn(chat, 'chat/error', 't1')).toEqual([]);
   });
 
-  it('starts a conversation over when the CLI it stopped raises as it ends', async () => {
+  it('starts a conversation over when the CLI it stopped raises as it ends, and runs its next turn', async () => {
     // A close may raise afterwards, as `consume` says of the handshake's bound.
     sdk.raising = true;
-    const id = '2c4e6a8b-1d3f-4a5c-8e7f-9b0d1f2a3c4e';
-    const { session, chat } = open(`ahp-chat:/${id}`, { logins: LOGINS }, { cooldowns: new Cooldowns(), uri: `ahp-session:/${id}` });
+    const id = randomUUID();
+    const { session, chat } = open({ logins: ['work', 'personal'] }, twoLogins(), { uri: `ahp-session:/${id}`, chatUri: `ahp-chat:/${id}` });
     await settle();
     session.begin('t1', 'one');
     await settle();
-    sdk.push(...refused('rate_limit').map((frame) => ({ ...frame, session_id: id })));
+    sdk.push(...failure('rate_limit').map((frame) => ({ ...frame, session_id: id })));
     await until(() => sdk.queries.length === 2);
     expect(sdk.deleted).toEqual([id]);
     expect(ofTurn(chat, 'chat/error', 't1')).toEqual([]);
-    expect(sdk.said.at(-1)).toMatchObject({ content: 'one', query: 1 });
-  });
-
-  it('runs the next turn of a conversation it started over', async () => {
-    const id = '5e8a1c2d-3f4b-4a6c-9d7e-0f1a2b3c4d5e';
-    const { session, chat } = open(`ahp-chat:/${id}`, { logins: LOGINS }, { cooldowns: new Cooldowns(), uri: `ahp-session:/${id}` });
-    await settle();
-    session.begin('t1', 'one');
-    await settle();
-    sdk.push(...refused('rate_limit').map((frame) => ({ ...frame, session_id: id })));
-    await until(() => sdk.queries.length === 2);
     sdk.push(...answered('t1').map((frame) => ({ ...frame, session_id: id })));
     await settle();
     expect(ofTurn(chat, 'chat/turnComplete', 't1')).toHaveLength(1);
 
     // The CLI stopped for the delete ended while the delete ran, and the session
-    // is not one whose CLI went away: the new one answers.
+    // is not one whose CLI went away: the next turn runs.
     session.begin('t2', 'two');
     await settle();
     expect(ofTurn(chat, 'chat/error', 't2')).toEqual([]);
-    expect(sdk.said.at(-1)).toMatchObject({ content: 'two', query: 1 });
+    expect(sdk.said.at(-1)).toMatchObject({ content: 'two' });
   });
 
-  it('keeps a conversation it could not delete, and ends the turn with the refusal', async () => {
-    const id = '7d1e2f3a-4b5c-4d6e-8f70-9a1b2c3d4e5f';
+  it('keeps a conversation it could not delete, and ends the turn with the failure', async () => {
     const before = process.env.CLAUDE_CONFIG_DIR;
     const home = mkdtempSync(join(tmpdir(), 'ahpd-logins-home-'));
     process.env.CLAUDE_CONFIG_DIR = home;
     try {
-      // The CLI wrote the refused prompt, and the delete of it fails.
+      const id = randomUUID();
+      // The CLI wrote the failed prompt, and the delete of it fails.
       mkdirSync(join(home, 'projects', 'elsewhere'), { recursive: true });
       writeFileSync(join(home, 'projects', 'elsewhere', `${id}.jsonl`), '{}\n');
       sdk.undeletable.add(id);
-      const { session, chat } = open(`ahp-chat:/${id}`, { logins: LOGINS }, { cooldowns: new Cooldowns(), uri: `ahp-session:/${id}` });
+      const { session, chat } = open({ logins: ['work', 'personal'] }, twoLogins(), { uri: `ahp-session:/${id}`, chatUri: `ahp-chat:/${id}` });
       await settle();
-      const first = tokenOf();
       session.begin('t1', 'one');
       await settle();
-      sdk.push(...refused('rate_limit').map((frame) => ({ ...frame, session_id: id })));
+      sdk.push(...failure('rate_limit').map((frame) => ({ ...frame, session_id: id })));
       await until(() => sdk.queries.length === 2);
 
       // The conversation comes back as it is, on the next login, and the prompt
@@ -409,17 +705,21 @@ describe('a refused login', () => {
       expect(sdk.deleted).toEqual([]);
       expect(sdk.queries.at(-1)?.options.resume).toBe(id);
       expect(sdk.queries.at(-1)?.options.resumeSessionAt).toBeUndefined();
-      expect(tokenOf()).not.toBe(first);
+      expect(tokenOf()).toBe('token-personal');
       expect(sdk.said.filter((one) => one.query === 1)).toEqual([]);
       const failed = ofTurn(chat, 'chat/error', 't1');
       expect(failed).toHaveLength(1);
       expect(JSON.stringify(failed[0])).toContain(SPENT);
       expect(JSON.stringify(failed[0])).toContain('permission denied');
 
+      // The failure named no retry time, so the next turn starts on the first
+      // login again, in the conversation as it came back.
       session.begin('t2', 'two');
       await settle();
       expect(ofTurn(chat, 'chat/error', 't2')).toEqual([]);
-      expect(sdk.said.at(-1)).toMatchObject({ content: 'two', query: 1 });
+      expect(tokenOf()).toBe('token-work');
+      expect(sdk.queries.at(-1)?.options.resume).toBe(id);
+      expect(sdk.said.at(-1)).toMatchObject({ content: 'two', query: 2 });
     }
     finally {
       if (before === undefined) delete process.env.CLAUDE_CONFIG_DIR;
@@ -427,15 +727,53 @@ describe('a refused login', () => {
     }
   });
 
-  it('fails a turn whose turn before it has no end to cut back to, and moves the next one', async () => {
-    const cooldowns = new Cooldowns();
+  it('sends a steering message the failed attempt held to the CLI after it, when the turn ends with the failure', async () => {
+    const id = '0a9b8c7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d';
+    const before = process.env.CLAUDE_CONFIG_DIR;
+    const home = mkdtempSync(join(tmpdir(), 'ahpd-logins-home-'));
+    process.env.CLAUDE_CONFIG_DIR = home;
+    try {
+      mkdirSync(join(home, 'projects', 'elsewhere'), { recursive: true });
+      writeFileSync(join(home, 'projects', 'elsewhere', `${id}.jsonl`), '{}\n');
+      sdk.undeletable.add(id);
+      const { session, chat } = open({ logins: ['work', 'personal'] }, twoLogins(), { uri: `ahp-session:/${id}`, chatUri: `ahp-chat:/${id}` });
+      await settle();
+      session.begin('t1', 'one');
+      await settle();
+      expect(session.steer?.('s1', 'and two')).toBe(true);
+      await settle();
+      const held = sdk.said.at(-1);
+      sdk.push(...failure('rate_limit').map((frame) => ({ ...frame, session_id: id })));
+      await until(() => sdk.said.some((one) => one.query === 1));
+
+      // The prompt is in the conversation already; the message is not, and goes on its own.
+      expect(ofTurn(chat, 'chat/error', 't1')).toHaveLength(1);
+      const sent = sdk.said.filter((one) => one.query === 1);
+      expect(sent.map((one) => one.content)).toEqual(['and two']);
+      expect(sent[0]?.uuid).not.toBe(held?.uuid);
+
+      // Answered, it is a turn of its own, as a failed turn's steering message is.
+      sdk.push(...answeredFor(String(sent[0]?.uuid), 'answer two').map((frame) => ({ ...frame, session_id: id })));
+      await settle();
+      expect(chat.filter((action) => action.type === 'chat/turnStarted').at(-1)).toMatchObject({
+        turnId: sent[0]?.uuid, queuedMessageId: 's1', message: { text: 'and two' },
+      });
+      expect(ofTurn(chat, 'chat/turnComplete', String(sent[0]?.uuid))).toHaveLength(1);
+    }
+    finally {
+      if (before === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+      else process.env.CLAUDE_CONFIG_DIR = before;
+    }
+  });
+
+  it('ends a turn whose turn before it has no end to cut back to, and starts nothing over', async () => {
     // A turn read back from the transcript: this process never saw its end.
     const seed = [{ id: 'r1', message: { text: 'earlier', origin: { kind: 'user' } }, responseParts: [], state: 'complete' }];
-    const { session, chat } = open('sess-a', { logins: LOGINS }, { cooldowns, resume: 'cli-1', seed });
+    const { session, chat } = open({ logins: ['work', 'personal'] }, twoLogins(), { resume: 'cli-1', seed });
     await settle();
     session.begin('t2', 'two');
     await settle();
-    sdk.push(...refused('rate_limit'));
+    sdk.push(...failure('rate_limit', SPENT, inAnHour()));
     await settle();
     expect(sdk.queries).toHaveLength(1);
     expect(ofTurn(chat, 'chat/error', 't2')).toHaveLength(1);
@@ -448,76 +786,182 @@ describe('a refused login', () => {
     expect(sdk.queries.at(-1)?.options.resumeSessionAt).toBeUndefined();
   });
 
-  it('waits for the earliest login to come back when every one cools down, and then runs on it', async () => {
-    const cooldowns = new Cooldowns();
-    const { session, chat } = await answeredOnce(cooldowns);
-    // Another session found `personal` spent a moment ago.
-    cooldowns.mark('personal', Date.now() + 1500);
+  it('ends the turn with the last failure and the earliest retry time when every login fails', async () => {
+    const logins = twoLogins();
+    opened(logins, 'home', 'token-home');
+    const { session, chat } = await answeredOnce(logins, ['work', 'personal', 'home']);
+    const soon = Math.floor(Date.now() / 1000) + 600;
     session.begin('t2', 'two');
     await settle();
-    sdk.push(...refused('rate_limit'));
+    sdk.push(...failure('rate_limit', SPENT, soon + 3600));
     await settle();
-    expect(sdk.queries).toHaveLength(1);
-    expect(chat.some((action) => action.type === 'chat/activityChanged'
-      && String(bag(action.activity).text ?? action.activity).startsWith('Waiting for a login'))).toBe(true);
-
-    await until(() => sdk.queries.length >= 2);
-    expect(sdk.queries).toHaveLength(2);
     expect(tokenOf()).toBe('token-personal');
-    expect(sdk.queries.at(-1)?.options.resumeSessionAt).toBe('end-t1');
-    expect(sdk.said.at(-1)).toMatchObject({ content: 'two', query: 1 });
+    sdk.push(...failure('rate_limit', SPENT, soon));
+    await settle();
+    expect(tokenOf()).toBe('token-home');
+    const down = 'API Error: 500 Internal server error';
+    sdk.push(...failure('server_error', down));
+    await settle();
+
+    expect(sdk.queries).toHaveLength(3);
+    const failed = ofTurn(chat, 'chat/error', 't2');
+    expect(failed).toHaveLength(1);
+    expect(JSON.stringify(failed[0])).toContain(down);
+    expect(JSON.stringify(failed[0])).toContain(`personal is back first, at ${new Date(soon * 1000).toISOString()}`);
   });
 
-  it('ends the wait when the turn is stopped, and starts no CLI', async () => {
-    const cooldowns = new Cooldowns();
-    const { session, chat } = await answeredOnce(cooldowns);
-    cooldowns.mark('personal', Date.now() + 1500);
-    session.begin('t2', 'two');
+  it('refuses a turn that starts with every open login resting, and names the earliest retry time', async () => {
+    const logins = twoLogins();
+    const { session, chat } = open({ logins: ['work', 'personal'] }, logins);
     await settle();
-    sdk.push(...refused('rate_limit'));
+    const soon = Date.now() + 600_000;
+    logins.rest('work', 'token-work', soon + 3_600_000);
+    logins.rest('personal', 'token-personal', soon);
+    session.begin('t1', 'one');
     await settle();
-    session.cancel('t2');
-    await new Promise((r) => { setTimeout(r, 1800); });
-    await settle();
-    expect(ofTurn(chat, 'chat/turnCancelled', 't2')).toHaveLength(1);
-    expect(sdk.queries).toHaveLength(1);
+    const failed = ofTurn(chat, 'chat/error', 't1');
+    expect(failed).toHaveLength(1);
+    expect(JSON.stringify(failed[0])).toContain(`No login this agent names is ready: personal is back first, at ${new Date(soon).toISOString()}`);
+    expect(sdk.said).toEqual([]);
   });
 
-  it('starts no CLI for a session closed while a turn waits', async () => {
-    const cooldowns = new Cooldowns();
-    const { session } = await answeredOnce(cooldowns);
-    cooldowns.mark('personal', Date.now() + 1500);
+  it('ends a turn whose credential was refused naming the login, and tries no other login', async () => {
+    const { session, chat } = await answeredOnce(twoLogins());
+    const denied = 'Failed to authenticate. API Error: 401 OAuth access token is invalid.';
     session.begin('t2', 'two');
     await settle();
-    sdk.push(...refused('rate_limit'));
-    await settle();
-    await session.close();
-    await new Promise((r) => { setTimeout(r, 1800); });
-    await settle();
-    expect(sdk.queries).toHaveLength(1);
-  });
-
-  it('moves nothing for a refusal of the sign-in itself', async () => {
-    const cooldowns = new Cooldowns();
-    const { session, chat } = await answeredOnce(cooldowns);
-    session.begin('t2', 'two');
-    await settle();
-    sdk.push(...refused('authentication_failed'));
+    sdk.push(...failure('authentication_failed', denied));
     await settle();
     expect(sdk.queries).toHaveLength(1);
-    expect(ofTurn(chat, 'chat/error', 't2')).toHaveLength(1);
-    expect(cooldowns.cooling('work')).toBe(false);
+    const failed = ofTurn(chat, 'chat/error', 't2');
+    expect(failed).toHaveLength(1);
+    expect(JSON.stringify(failed[0])).toContain('Claude refused login work (authentication_failed)');
+    expect(shown(chat, denied)).toBe(false);
+
+    // Nothing is remembered: the next turn starts on the same login.
+    await turn(session, 't3', 'three');
+    expect(sdk.queries).toHaveLength(1);
+    expect(sdk.said.at(-1)).toMatchObject({ content: 'three', query: 0 });
   });
 
-  it('cools a login refused for its billing down for 10 minutes', async () => {
-    const now = 1_000_000;
-    const cooldowns = new Cooldowns(() => now);
-    const { session } = await answeredOnce(cooldowns);
-    session.begin('t2', 'two');
+  it('ends the turn the same way for each other 401 or 403 of the login', async () => {
+    for (const error of ['oauth_org_not_allowed', 'verification_required']) {
+      sdk.reset();
+      const { session, chat } = await answeredOnce(twoLogins());
+      session.begin('t2', 'two');
+      await settle();
+      sdk.push(...failure(error, `refused for ${error}`));
+      await settle();
+      expect(sdk.queries, error).toHaveLength(1);
+      expect(JSON.stringify(ofTurn(chat, 'chat/error', 't2')), error).toContain(`Claude refused login work (${error})`);
+    }
+  });
+
+  it('ends the turn as it does today for every other error', async () => {
+    for (const error of ['billing_error', 'account_on_hold', 'invalid_request', 'model_not_found', 'unknown', 'max_output_tokens', 'cloud_credential_error']) {
+      sdk.reset();
+      const { session, chat } = await answeredOnce(twoLogins());
+      session.begin('t2', 'two');
+      await settle();
+      const said = `the CLI's words for ${error}`;
+      sdk.push(...failure(error, said));
+      await settle();
+      expect(sdk.queries, error).toHaveLength(1);
+      expect(ofTurn(chat, 'chat/error', 't2'), error).toHaveLength(1);
+      expect(shown(chat, said), error).toBe(true);
+    }
+  });
+});
+
+/*
+ * The plugin over a host of its own: the adapter and the engine it registers
+ * share its logins, and a failure reaches the host as a check of that
+ * connector, sent on the plugin's own connection as a client sends it.
+ */
+describe('the plugin', () => {
+  /** A host that keeps what the plugin registers, the lines it logs, and every request its connections send. */
+  const fakeHost = () => {
+    const adapters: Adapter[] = [];
+    const engines: Engine[] = [];
+    const requests: { method: string; params: unknown }[] = [];
+    const logged: string[] = [];
+    let connects = 0;
+    const host = {
+      paths: [mkdtempSync(join(tmpdir(), 'ahpd-logins-plugin-'))],
+      log: (line: string) => { logged.push(line); },
+      registerAdapter: (adapter: Adapter) => { adapters.push(adapter); },
+      registerEngine: (engine: Engine) => { engines.push(engine); },
+      connect: () => {
+        connects += 1;
+        return {
+          request: async (method: string, params: unknown) => { requests.push({ method, params }); return {}; },
+          notify: () => {},
+          send: () => {},
+          onMessage: () => {},
+          close: () => {},
+        };
+      },
+    } as unknown as PluginHost;
+    return { host, adapters, engines, requests, logged, connects: () => connects };
+  };
+
+  /** One connector of `claude-login`, as the host hands it to `open` and `check`. */
+  const connectorOf = (id: string, token: string): Connector => ({ id, adapter: 'claude-login', owner: 'host', config: { token } });
+
+  it("logs a login's failure and asks the host to check that connector, on one connection", async () => {
+    const { apply } = await import('../src/plugin.js');
+    const { host, adapters, engines, requests, logged, connects } = fakeHost();
+    // Before the load, which is when the adapter takes the `fetch` it checks with.
+    const fetcher = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetcher);
+    await apply(host, {});
+    const adapter = adapters.find((one) => one.name === 'claude-login');
+    const engine = engines.find((one) => one.name === 'claude');
+    if (adapter === undefined || engine === undefined) throw new Error('the plugin registered no claude-login adapter or claude engine');
+    adapter.open(connectorOf('work', 'token-work'));
+    adapter.open(connectorOf('personal', 'token-personal'));
+
+    const view: AgentView = {
+      id: 'claude-logins', engine: 'claude', owner: 'host', name: 'Logins',
+      description: undefined, icon: undefined, model: undefined, config: { logins: ['work', 'personal'] },
+    };
+    const start: Start = {
+      uri: 'ahp-session:/claude-logins', chatUri: 'ahp-chat:/claude-logins', settings: {}, clientToolTimeoutMs: 60_000,
+      schema: () => ({ type: 'object', properties: {} }),
+      emit: () => {},
+      workingDirectory: host.paths[0] as string,
+    };
+    const session = engine.open(view).create(start);
     await settle();
-    sdk.push(...refused('billing_error'));
-    await settle();
-    expect(cooldowns.until('work')).toBe(now + 10 * 60_000);
-    expect(tokenOf()).toBe('token-personal');
+    expect(tokenOf()).toBe('token-work');
+    await turn(session, 't1', 'one');
+
+    try {
+      const denied = 'Failed to authenticate. API Error: 401 OAuth access token is invalid.';
+      session.begin('t2', 'two');
+      await settle();
+      sdk.push(...failure('authentication_failed', denied));
+      await until(() => requests.length >= 2);
+      expect(requests).toEqual([
+        { method: 'initialize', params: { clientId: 'agent-claude', protocolVersions: ['0.9.0'] } },
+        { method: 'x-ahpd/connectors/check', params: { id: 'work' } },
+      ]);
+      expect(logged.some((line) => line.includes('work') && line.includes('authentication_failed') && line.includes(denied))).toBe(true);
+      // The check asks the API with the login's token.
+      expect(await adapter.check?.(connectorOf('work', 'token-work'))).toEqual({ result: 'ok' });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+
+      // A failure that moves the turn is checked too, on the same connection.
+      session.begin('t3', 'three');
+      await settle();
+      sdk.push(...failure('rate_limit'));
+      await until(() => requests.length >= 3);
+      expect(requests.at(-1)).toEqual({ method: 'x-ahpd/connectors/check', params: { id: 'work' } });
+      expect(tokenOf()).toBe('token-personal');
+      expect(connects()).toBe(1);
+    }
+    finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -95,6 +95,23 @@ export interface PoliciesSetting {
 }
 
 /**
+ * The service that holds this daemon, for a daemon that runs beside another.
+ *
+ * A block beside `policies`, because it is about how the daemon is kept running
+ * rather than how one run started, and it has no flag: the file `ahpd service
+ * install` writes runs the daemon with this configuration file and nothing
+ * else, so the file is where the install and the daemon both read it.
+ */
+export interface ServiceSetting {
+  /**
+   * The name the service is installed under: `ahpd@<name>` on systemd and
+   * `dev.ahpd.daemon.<name>` on launchd. Absent is the plain `ahpd` and
+   * `dev.ahpd.daemon`.
+   */
+  name?: string;
+}
+
+/**
  * What a config file may say. Every key is what a flag would have said, or
  * `http`, `usage` and `proxy`; the keys are `configSchema`'s, which the file is
  * checked against.
@@ -152,6 +169,8 @@ export interface Config {
    * enforced. Off is the default, and the rows are kept either way.
    */
   policies?: PoliciesSetting;
+  /** The service that holds this daemon, named for a daemon that runs beside another. */
+  service?: ServiceSetting;
   /**
    * The file the people who may use this host are in.
    *

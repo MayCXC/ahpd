@@ -1212,6 +1212,9 @@ export function createSpawn(ctx: HostContext): Spawn {
           // And a command waiting its turn is a command turn once it runs.
           if (ctx.commandTurns.delete(action.queuedMessageId)) ctx.commandTurns.set(turn, false);
         }
+        // A turn the chat began, under its own id: the id a read after a
+        // restart holds it by, unless the backend says it wrote it otherwise.
+        if (channel === 'chat' && action.type === 'chat/turnStarted') ctx.turnRecordedAs(uri, chatUri, turn, turn);
         const sender = senderOf(turn);
         /*
          * A Plan call the host drew is closed by the turn ending, the way the
@@ -1556,12 +1559,12 @@ export function createSpawn(ctx: HostContext): Spawn {
        * The sender's in-memory entry first, because a turn still running is
        * only in that map, and the store after it for the turn a backend names
        * once the turn is over. Nothing where the two ids agree, which is every
-       * backend that keeps the ids it was given, and no sender where nobody
-       * sent the turn.
+       * backend that keeps the ids it was given and which the turn's start
+       * recorded already, and no sender where nobody sent the turn.
        */
       onTurnRecorded: (turnId, transcriptId) => {
         if (transcriptId === turnId) return;
-        ctx.turnRecordedAs(chatUri, turnId, transcriptId);
+        ctx.turnRecordedAs(uri, chatUri, turnId, transcriptId);
         const sender = senderOf(turnId) ?? kept.sender(idOf(uri), turnId);
         if (sender !== undefined) kept.setSender(idOf(uri), transcriptId, sender);
       },

@@ -1,157 +1,227 @@
 /**
- * The Claude logins one agent runs on, the order a conversation takes them in,
- * and the cooldown a refused one waits out.
+ * The Claude logins one load of this plugin keeps open, and the ones resting.
  *
- * A login is a token from `claude setup-token`, which signs the CLI in to one
- * Claude account as `CLAUDE_CODE_OAUTH_TOKEN`. A conversation keeps one
- * account while it works, because the prompt cache is the account's, and a
- * refused account rests until its reset while the next one serves.
+ * A login is a connector of the adapter `claude-login`, holding a token from
+ * `claude setup-token`, which signs the CLI in to one Claude account as
+ * `CLAUDE_CODE_OAUTH_TOKEN`.
  * https://code.claude.com/docs/en/authentication#generate-a-long-lived-token
+ *
+ * A turn uses them as the model proxy uses its entries, in
+ * `packages/server/src/proxy/listener.ts`: a request that fails with no
+ * connection, a 429 or a 5xx goes to the next one, a refused credential is
+ * told and tried nowhere else, and a retry time a failure names is the one
+ * thing kept between turns.
  */
 
-import { createHash } from 'node:crypto';
-import type { Bag } from '@ahpd/sdk';
-import { bag } from '@ahpd/sdk';
-import { tokenOf } from './models.js';
+import type { Bag, Connector, ConnectorOwner } from '@ahpd/sdk';
+import { sameOwnerOrHost } from '@ahpd/sdk';
 
-/** One login: the name its record gives it, and the token the CLI signs in with. */
-export interface Login {
-  name: string;
+/** The adapter whose connectors are Claude logins. */
+export const LOGIN_ADAPTER = 'claude-login';
+
+/** One open login: whose it is, and the token the CLI signs in with. */
+export interface OpenLogin {
+  owner: ConnectorOwner;
   token: string;
 }
 
-/** Whether a value is a token's text or the daemon variable it is read from. */
-const isKey = (value: unknown): value is string | { fromEnv: string } =>
-  typeof value === 'string'
-  || (typeof value === 'object' && value !== null && typeof (value as { fromEnv?: unknown }).fromEnv === 'string');
+/**
+ * The variables of a credential the CLI takes before `CLAUDE_CODE_OAUTH_TOKEN`:
+ * a cloud provider's switch, a bearer token, an API key. A CLI that holds one
+ * signs in with it whatever token it is handed.
+ * https://code.claude.com/docs/en/authentication#authentication-precedence
+ */
+export const BEFORE_TOKEN = [
+  'CLAUDE_CODE_USE_BEDROCK',
+  'CLAUDE_CODE_USE_VERTEX',
+  'CLAUDE_CODE_USE_FOUNDRY',
+  'ANTHROPIC_AUTH_TOKEN',
+  'ANTHROPIC_API_KEY',
+] as const;
 
 /**
- * A record's logins, each with its token's text.
+ * The SDK's kinds of a request that failed with no connection, a 429 or a 5xx:
+ * the failures the model proxy hands to its next entry, as
+ * `docs/server/PROXY.md` says under *When a provider fails*.
  *
- * The channel opens a record with its secrets read, so a token is text here; a
- * preset may still name a daemon variable, which is read as a model source's
- * key is. An entry with no name or no token is left out, and an entry whose
- * name came earlier is the earlier one's, so no login is tried twice.
+ * Each kind is placed by its HTTP status, as the CLI 2.1.301 that the SDK runs
+ * gives it and the API's errors page names it: a 429 is `rate_limit`, a 5xx
+ * and a 529 are `server_error`, and so is a connection that never arrived,
+ * timed out or was lost; `overloaded` is a 529 where the CLI names one. The
+ * CLI sends them once its own retries on the same login are spent.
+ * https://docs.claude.com/en/api/errors
  */
-export const loginsOf = (values: Bag): Login[] => {
-  const out: Login[] = [];
-  for (const one of Array.isArray(values['logins']) ? values['logins'] : []) {
-    const held = bag(one);
-    const name = typeof held.name === 'string' ? held.name : '';
-    const token = isKey(held.token) ? tokenOf(held.token) ?? '' : '';
-    if (name === '' || token === '' || out.some((login) => login.name === name)) continue;
-    out.push({ name, token });
-  }
-  return out;
-};
+export const FAILOVER: ReadonlySet<string> = new Set(['rate_limit', 'server_error', 'overloaded']);
 
 /**
- * One conversation's score for one login: the first 8 bytes of
- * sha256("<conversation>\0<login>"), read as a big-endian unsigned integer.
- */
-const scoreOf = (key: string, name: string): bigint =>
-  createHash('sha256').update(`${key}\0${name}`).digest().readBigUInt64BE(0);
-
-/**
- * The logins in the order one conversation tries them, highest score first.
+ * The SDK's kinds of a refused credential: a 401 or a 403, which the proxy
+ * tells and sends to no other entry, because a key is the host's own
+ * configuration and the answer to it is to sign in again.
  *
- * A conversation runs on the login with the highest score, and a refused turn
- * goes to the next one in the order. The order is the same for a conversation
- * every time it is asked and different from one conversation to the next, and
- * adding a login moves only the conversations that score it highest.
+ * Each kind is placed by its HTTP status, as the CLI 2.1.301 that the SDK runs
+ * gives it and the API's errors page names it. Any 401 or 403 of the API is
+ * `authentication_failed`, as the SDK's retry frames name a 401 or a 403 too.
+ * A 401 or 403 saying the organization may not use OAuth is
+ * `oauth_org_not_allowed`, and a 403 asking for verification is
+ * `verification_required`. A `billing_error` is a 402, and an
+ * `account_on_hold` can come from a 400 of the token endpoint, or from no
+ * answer at all, so each ends a turn as any other error does.
+ * https://docs.claude.com/en/api/errors
  */
-export const ordered = (key: string, logins: Login[]): Login[] => logins
-  .map((login) => ({ login, score: scoreOf(key, login.name) }))
-  .sort((a, b) => (a.score === b.score ? 0 : a.score > b.score ? -1 : 1))
-  .map((one) => one.login);
-
-/** A refusal of a login, as the SDK said it: the assistant frame's `error`, and what a `rejected` rate-limit event named. */
-export interface Refusal {
-  /** `rate_limit` or `billing_error`. */
-  error: string;
-  /** When the refused window reopens, as the SDK's `resetsAt`. */
-  resetsAt?: number;
-  /** The window that refused, as the SDK's `rateLimitType`. */
-  window?: string;
-}
+export const REFUSED: ReadonlySet<string> = new Set([
+  'authentication_failed',
+  'oauth_org_not_allowed',
+  'verification_required',
+]);
 
 /**
- * How long a refused login cools down when nothing names its reset.
- */
-const DEFAULT_COOLDOWN_MS = 10 * 60_000;
-
-/**
- * The longest a named reset is believed, for each window: a guard against a
- * garbage value, per window so a weekly reset is not cut to hours.
- */
-const COOLDOWN_CAP_MS: Record<string, number> = {
-  five_hour: 6 * 60 * 60_000,
-  seven_day: 8 * 24 * 60 * 60_000,
-};
-
-/**
- * The SDK's `resetsAt` in epoch milliseconds.
+ * The logins resting now, and until when.
  *
- * The SDK reports seconds and types the field as a bare number, so the unit is
- * read off the value rather than assumed: below 1e11 it is seconds.
+ * A rest is the retry time a failure named, by which a client backs off as it
+ * backs off by a `retry-after` the proxy hands back, and nothing else rests a
+ * login. Each failure keeps the login out until the time it named, so of two
+ * that arrive together the later time holds. In memory: a restart that forgets
+ * a rest costs one failure, which names the time again. The clock is a
+ * parameter, so a test can move it.
  */
-const toEpochMs = (value: number | undefined): number | undefined => {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return undefined;
-  return value < 1e11 ? Math.round(value * 1000) : value;
-};
-
-/**
- * When a refused login's cooldown ends.
- *
- * A spent quota whose window is `five_hour` or `seven_day` cools down until
- * the reset the refusal names, capped for that window; any other refusal, a
- * billing one among them, cools down for 10 minutes.
- */
-export const cooldownUntil = (refusal: Refusal, now: number): number => {
-  const reset = refusal.error === 'rate_limit' ? toEpochMs(refusal.resetsAt) : undefined;
-  const cap = refusal.window === undefined ? undefined : COOLDOWN_CAP_MS[refusal.window];
-  if (reset !== undefined && cap !== undefined && reset > now) return Math.min(reset, now + cap);
-  return now + DEFAULT_COOLDOWN_MS;
-};
-
-/**
- * The logins of one agent that are cooling down, and until when.
- *
- * The record is in memory, because a restart that forgets a cooldown costs
- * one refusal, which marks the login again. A later mark may make a cooldown
- * longer and never shorter, so two refusals that arrive together keep the
- * later reset. The clock is a parameter, so a test can move it.
- */
-export class Cooldowns {
+export class Rests {
   private readonly marks = new Map<string, number>();
 
-  /** The clock the cooldowns are read against, in epoch milliseconds. */
+  /** The clock the rests are read against, in epoch milliseconds. */
   readonly now: () => number;
 
   constructor(now: () => number = Date.now) {
     this.now = now;
   }
 
-  /** Put a login in a cooldown until `until`, in epoch milliseconds. */
-  mark(name: string, until: number): void {
-    const held = this.marks.get(name);
+  /** Rest a login until `until`, in epoch milliseconds. */
+  mark(id: string, until: number): void {
+    const held = this.marks.get(id);
     if (held !== undefined && held >= until) return;
-    this.marks.set(name, until);
+    this.marks.set(id, until);
   }
 
-  /** When a login's cooldown ends, or nothing for a login that is not cooling down. */
-  until(name: string): number | undefined {
-    const held = this.marks.get(name);
+  /** When a login's rest ends, or nothing for a login that is not resting. */
+  until(id: string): number | undefined {
+    const held = this.marks.get(id);
     if (held === undefined) return undefined;
     if (held <= this.now()) {
-      this.marks.delete(name);
+      this.marks.delete(id);
       return undefined;
     }
     return held;
   }
 
-  /** Whether a login is cooling down now. */
-  cooling(name: string): boolean {
-    return this.until(name) !== undefined;
+  /** Forget a login's rest. */
+  clear(id: string): void {
+    this.marks.delete(id);
   }
 }
+
+/**
+ * The open logins of one load of this plugin, by connector id.
+ *
+ * A login is a connector of the adapter `claude-login`: one Claude account's
+ * token, kept in the host's vault and handed to the adapter's `open` with the
+ * secret read back. The adapter keeps it here until the connector closes, so a
+ * put that replaces the token, and a remove, reach a session at its next turn.
+ */
+export class OpenLogins {
+  private readonly open = new Map<string, OpenLogin>();
+
+  /**
+   * The rests of the open logins, by connector id.
+   *
+   * One for every agent that names a login, because a login's limit is its
+   * account's. A login that opens again starts with none: the time was named
+   * for the token it held, and a put may have given it another account's.
+   */
+  readonly rests: Rests;
+
+  /** What a failure of a login calls, with its id and the CLI's words. */
+  onFailure: ((id: string, why: string) => void) | undefined;
+
+  constructor(now: () => number = Date.now) {
+    this.rests = new Rests(now);
+  }
+
+  /**
+   * Keep one connector's token, as the adapter's `open` is handed it, and
+   * answer the connector's stop, which forgets it.
+   */
+  opened(connector: Connector): () => void {
+    const token = connector.config['token'];
+    if (typeof token !== 'string' || token === '') throw new Error(`${connector.id} holds no token`);
+    this.rests.clear(connector.id);
+    this.open.set(connector.id, { owner: connector.owner, token });
+    return () => { this.open.delete(connector.id); };
+  }
+
+  /** The login an open connector holds, or nothing for an id that is not open. */
+  held(id: string): OpenLogin | undefined {
+    return this.open.get(id);
+  }
+
+  /**
+   * The token of an open login an agent of this owner may run on: the owner's
+   * own, or the host's.
+   *
+   * The agents channel asks the same of a record when it is put, and a turn
+   * asks again: a record read back at a start was never checked, and the rule
+   * is the one a session's bindings and an automation's trigger are held to.
+   */
+  usable(id: string, owner: ConnectorOwner): string | undefined {
+    const held = this.open.get(id);
+    if (held === undefined) return undefined;
+    return sameOwnerOrHost(held.owner, owner === 'host' ? undefined : owner) ? held.token : undefined;
+  }
+
+  /**
+   * Rest an open login until `until`, for a failure of `token`.
+   *
+   * A failure of a token the login no longer holds was the old token's, which
+   * a put replaced while the CLI still ran on it, and rests nothing.
+   */
+  rest(id: string, token: string, until: number): void {
+    if (this.open.get(id)?.token === token) this.rests.mark(id, until);
+  }
+
+  /** Say a failure of a login, which the plugin logs and has the host check. */
+  failed(id: string, why: string): void {
+    this.onFailure?.(id, why);
+  }
+}
+
+/** The logins of one agent, as each of its sessions reads them. */
+export interface AgentLogins {
+  /** The logins this plugin keeps open, by connector id. */
+  open: OpenLogins;
+  /** Whose agent it is, read at each turn: a login is one this owner may use. */
+  owner: () => ConnectorOwner;
+}
+
+/** One login: its connector's id, and the token the CLI signs in with. */
+export interface Login {
+  id: string;
+  token: string;
+}
+
+/**
+ * A record's logins, each with its connector's token.
+ *
+ * The record names each by the id of a `claude-login` connector, and the token
+ * is the one that connector holds open. A login whose connector is not open,
+ * or is neither the agent owner's nor the host's, is left out, and an id named
+ * twice is the first one, so no login is tried twice.
+ */
+export const loginsOf = (values: Bag, logins: AgentLogins | undefined): Login[] => {
+  const out: Login[] = [];
+  if (logins === undefined) return out;
+  for (const one of Array.isArray(values['logins']) ? values['logins'] : []) {
+    const id = typeof one === 'string' ? one : '';
+    const token = id === '' ? undefined : logins.open.usable(id, logins.owner());
+    if (token === undefined || out.some((login) => login.id === id)) continue;
+    out.push({ id, token });
+  }
+  return out;
+};

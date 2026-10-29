@@ -212,6 +212,12 @@ describe('the Service check', () => {
     expect(one?.fix).toBe('ahpd service install');
   });
 
+  it('looks for the file of the service the configuration names', () => {
+    put({ service: { name: 'two' } });
+    expect(serviceCheck(facts({ platform: 'linux', exists: () => true }))?.line).toContain('ahpd@two.service');
+    expect(serviceCheck(facts({ platform: 'darwin', exists: () => true }))?.line).toContain('dev.ahpd.daemon.two.plist');
+  });
+
   it('gives no line on a system with no service manager', async () => {
     expect(serviceCheck(facts({ platform: 'freebsd' }))).toBeUndefined();
     const said = await checks(facts({ platform: 'freebsd' }));

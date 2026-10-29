@@ -281,6 +281,34 @@ describe('start, stop and status', () => {
     expect(announced().filter(alive)).toEqual([]);
   }, 60000);
 
+  /*
+   * A daemon that runs beside another, under the service its configuration
+   * names: it records that name, and both a stop and its own restart ask the
+   * manager for that service rather than for the plain one.
+   */
+  it.skipIf(!posix)('stops a daemon a named service holds by asking for that service', async () => {
+    put({ service: { name: 'two' } });
+    const daemon = await supervised(['--config-file', config]);
+    expect(recordOf().serviceName).toBe('two');
+    const stopped = await cli(['stop'], { env: fakeSystemctl(`kill -TERM ${String(daemon.pid)}`) });
+    expect({ code: stopped.code, stderr: stopped.stderr }).toEqual({ code: 0, stderr: '' });
+    expect(systemctlAsked()).toEqual(['--user', 'stop', 'ahpd@two']);
+    await gone(daemon.pid);
+  }, 60000);
+
+  it.skipIf(!posix)('hands the restart of a daemon a named service holds to that service', async () => {
+    put({ httpApi: true, plugins: [BACKEND], connectionToken: 'abc', service: { name: 'two' } });
+    const daemon = await supervised(['--config-file', config, '--connection-token', 'abc'], fakeSystemctl());
+    const answered = await fetch(`http://127.0.0.1:${new URL(daemon.url).port}/api/restart`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer abc' },
+      body: '{}',
+    });
+    expect(answered.status).toBe(200);
+    await gone(daemon.pid);
+    expect(systemctlAsked()).toEqual(['--user', '--no-block', 'restart', 'ahpd@two']);
+  }, 60000);
+
   it('says none is running to restart', async () => {
     const said = await cli(['restart']);
     expect(said.code).toBe(1);

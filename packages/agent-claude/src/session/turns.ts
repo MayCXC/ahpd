@@ -4,7 +4,7 @@ import type { Bag, Chosen, CommandTerminal, MessageAttachment, MessageFrom, OnWi
 import { blocksFor } from './attachments.js';
 import { bag, list, str, UUID } from './common.js';
 import { EFFORTS } from './config.js';
-import type { SessionContext } from './context.js';
+import type { Owed, SessionContext } from './context.js';
 
 /** What this area offers the rest of the session. */
 export interface Turns {
@@ -13,12 +13,19 @@ export interface Turns {
   /** Start the head of the queue, once there is nothing running. */
   startNext: () => void;
   /**
-   * The running turn's prompt sent again, as it went out the first time.
+   * What a turn sent a CLI that was put away, sent to the one that took its
+   * place: the running turn's prompt, as it went out the first time, and then
+   * `steers`, the steering messages the CLI put away still owed an answer to.
    *
-   * Under a new uuid, which the host is told, because the first may already be
-   * written under the old one.
+   * Each under a new uuid, the prompt's told to the host, because the first may
+   * already be written under the old one. With no turn running, the steering
+   * messages go alone, and are answered in a turn of their own.
    */
-  again: () => Promise<void>;
+  again: (steers: readonly Owed[]) => Promise<void>;
+  /** Open the turn that answers the steering messages a turn that ended left with the CLI, when the CLI holds one. */
+  handOver: (turnId: string) => void;
+  /** Open the turn that answers the steering message sent under `uuid`, with the others its turn left. */
+  present: (uuid: string) => void;
   methods: {
     begin: (turnId: string, text: string, model?: Chosen, from?: MessageFrom, attachments?: MessageAttachment[], options?: TurnOptions) => void;
     setTitle: (title: string) => void;
@@ -32,6 +39,10 @@ export interface Turns {
     cancel: (turnId: string) => void;
   };
 }
+
+/** The attachments a message holds, as a message sent to the CLI takes them. */
+const attachedTo = (message: Bag): MessageAttachment[] | undefined =>
+  Array.isArray(message.attachments) ? message.attachments as MessageAttachment[] : undefined;
 
 export function createTurns(ctx: SessionContext): Turns {
   /**
@@ -65,10 +76,23 @@ export function createTurns(ctx: SessionContext): Turns {
    * queue all reach the CLI: the wake and the touch happen in one place, and a
    * message's attachments become the blocks the CLI takes whichever way it
    * arrived. A message with none is the string it always was. `uuid` is the id
-   * the CLI writes the prompt under, which a turn's own prompt is given.
+   * the CLI writes the prompt under and names its answer by, and `owed` is the
+   * answer that is to come, held until a result names the uuid.
    */
-  const push = async (text: string, attachments?: MessageAttachment[], uuid?: string): Promise<void> => {
+  const push = async (
+    text: string,
+    attachments?: MessageAttachment[],
+    uuid?: string,
+    owed?: Owed,
+  ): Promise<void> => {
+    // Held before the wait: a result read while the blocks are built is not
+    // this prompt's answer, and has to know that one is still to come.
+    if (uuid !== undefined && owed !== undefined) ctx.owed.set(uuid, owed);
+    const to = ctx.handle;
     const content = await blocksFor(text, attachments);
+    // A CLI put away meanwhile took what it was owed with it, and the one in
+    // its place is sent that by whatever put it there.
+    if (ctx.handle !== to) return;
     ctx.waiting.push({
       type: 'user',
       message: { role: 'user', content },
@@ -103,14 +127,21 @@ export function createTurns(ctx: SessionContext): Turns {
    *
    * The text a side chat's first prompt carries is not the message's text, and
    * a message's attachments are blocks of their own, so a prompt sent again is
-   * this rather than the turn's message.
+   * this rather than the turn's message. A turn opened for a steering message
+   * has that message as its prompt.
    */
   let prompted: { turn: string; text: string; attachments?: MessageAttachment[] } | undefined;
 
-  const again = async (): Promise<void> => {
-    const turn = ctx.active === undefined ? undefined : String(ctx.active.id);
-    if (turn === undefined || prompted?.turn !== turn) return;
-    await push(prompted.text, prompted.attachments, writtenAs(turn, true));
+  const again = async (steers: readonly Owed[]): Promise<void> => {
+    const turn = ctx.active;
+    if (turn !== undefined && prompted?.turn === String(turn.id)) {
+      const uuid = writtenAs(String(turn.id), true);
+      await push(prompted.text, prompted.attachments, uuid, { message: bag(turn.message), steering: false, turn: String(turn.id), cli: 'sent' });
+    }
+    // Behind the prompt, in the order they went.
+    for (const one of steers) {
+      void push(str(one.message.text) ?? '', attachedTo(one.message), crypto.randomUUID(), { ...one, cli: 'sent' });
+    }
   };
 
   /**
@@ -179,6 +210,21 @@ export function createTurns(ctx: SessionContext): Turns {
      * far. `beginning` counts as running, which is a turn switching its model.
      */
     if (busy()) return;
+    /*
+     * The tools the session was handed before this turn, landed first.
+     *
+     * A change of tools reaches the CLI as `setMcpServers`, which the CLI
+     * answers once it has the servers, and the host hands it over without
+     * waiting; a turn that comes after it is a turn of a session that has
+     * those tools. Named in `beginning` while it waits, as a model switch is,
+     * so a message queued behind it waits too.
+     */
+    if (ctx.retooling !== undefined) {
+      ctx.beginning = turnId;
+      await ctx.retooling;
+      ctx.beginning = undefined;
+      if (ctx.closed) return;
+    }
     /*
      * A session whose CLI has exited answers at once, and says why.
      *
@@ -306,7 +352,8 @@ export function createTurns(ctx: SessionContext): Turns {
     const sent = carried === undefined ? text : `${carried}\n\n${text}`;
     carried = undefined;
     prompted = { turn: String(ctx.active.id), text: sent, ...(attachments === undefined ? {} : { attachments }) };
-    await push(sent, attachments, writtenAs(String(ctx.active.id), false));
+    const uuid = writtenAs(String(ctx.active.id), false);
+    await push(sent, attachments, uuid, { message: bag(ctx.active.message), steering: false, turn: String(ctx.active.id), cli: 'sent' });
   };
 
   /**
@@ -319,6 +366,10 @@ export function createTurns(ctx: SessionContext): Turns {
    */
   const startNext = (): void => {
     if (busy() || ctx.closed)
+      return;
+    // Nor while the CLI owes an answer: a prompt handed to it now is read after
+    // the one it owes, and that answer would be taken for this one's.
+    if (ctx.owed.size > 0)
       return;
     const next = ctx.queued.shift();
     if (!next)
@@ -353,8 +404,7 @@ export function createTurns(ctx: SessionContext): Turns {
     const picked = bag(message.agent);
     if (typeof picked.uri === 'string') from.agent = { uri: str(picked.uri) as string };
     // What the message was holding while it waited, which is what it is still.
-    const kept = message.attachments;
-    const attachments = Array.isArray(kept) ? kept as MessageAttachment[] : undefined;
+    const attachments = attachedTo(message);
     void beginTurn(crypto.randomUUID(), str(message.text) ?? '', model, str(next.id), from, attachments,
       next.options as TurnOptions | undefined);
   };
@@ -483,6 +533,51 @@ export function createTurns(ctx: SessionContext): Turns {
     });
   };
 
+  /**
+   * The turn that answers a steering message whose own turn ended, which the
+   * steering messages that turn left with the CLI join.
+   *
+   * It carries the message, under the uuid the message went to the CLI with,
+   * which is where the CLI writes it, and names it in `queuedMessageId`, as
+   * AHP 1.1.0 shows a steering message taken in by a turn of its own. A
+   * message the CLI took in inside the turn that ended stays with that turn.
+   * The message is the new turn's prompt from then on, and ends with it: a
+   * stop of that turn stops it, and the CLI's answer to it goes nowhere after.
+   * https://github.com/microsoft/agent-host-protocol/blob/main/docs/specification/chat-channel.md#steering-messages
+   */
+  const present = (uuid: string): void => {
+    const owed = ctx.owed.get(uuid);
+    if (owed === undefined || ctx.active !== undefined) return;
+    const ended = owed.turn;
+    for (const one of ctx.owed.values()) {
+      if (one.steering && one.turn === ended && one.cli !== 'started') one.turn = uuid;
+    }
+    owed.turn = uuid;
+    owed.steering = false;
+    const attachments = attachedTo(owed.message);
+    prompted = { turn: uuid, text: str(owed.message.text) ?? '', ...(attachments === undefined ? {} : { attachments }) };
+    ctx.openTurn(ctx.mainScope, { id: uuid, message: owed.message, ...(owed.id === undefined ? {} : { queuedMessageId: owed.id }) });
+    ctx.doing('Thinking');
+    ctx.touch();
+  };
+
+  /**
+   * The steering messages a turn that was stopped or failed left with the CLI,
+   * answered in a turn of their own that opens now.
+   *
+   * The CLI runs a steering message it holds once the turn it steered ends.
+   * Opened now, the turn that answers it is the chat's running turn from that
+   * moment, so a turn sent meanwhile waits behind it as behind any other:
+   * a prompt that reached the CLI first would be run with the message, as one
+   * turn with one answer. A message the CLI has not said it holds yet opens
+   * its turn when its answer comes.
+   */
+  const handOver = (turnId: string): void => {
+    const left = [...ctx.owed.entries()].filter(([, owed]) => owed.steering && owed.turn === turnId && owed.cli !== 'started');
+    const first = left[0];
+    if (first !== undefined && left.some(([, owed]) => owed.cli === 'queued')) present(first[0]);
+  };
+
   const methods: Turns['methods'] = {
     /**
      * A model named on the turn takes effect and **stays** in effect.
@@ -536,18 +631,19 @@ export function createTurns(ctx: SessionContext): Turns {
     /**
      * Into the turn that is already running, rather than after it.
      *
-     * The whole of it is `waiting.push` and a wake, which is the same door
-     * `begin` and the queue go through: the prompt handed to the CLI is a
-     * generator that stays open for the life of the session, so a message
-     * pushed while a turn runs is delivered to that turn. This was refused on
-     * the grounds that "the SDK has nowhere to put one", which was a claim
-     * about the harness nobody had tested and is not true of this one.
+     * The same door `begin` and the queue go through: the prompt handed to the
+     * CLI is a generator that stays open for the life of the session, so a
+     * message pushed while a turn runs reaches the CLI while that turn runs.
+     * The CLI folds it into the turn at the turn's next tool call. Once the
+     * model is writing its last answer there is no next tool call, and the CLI
+     * runs it after that answer's result, as a turn of its own. Either way the
+     * answer is this turn's, as the reference keeps it: it goes under a uuid,
+     * which the frames and the result answering it name, and the turn stays
+     * open until a result has named it.
+     * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/CONTEXT.md#L1595-L1609
      *
-     * Set and removed in the same breath, because it is consumed the instant
-     * it arrives: `steeringMessage` describes a message *waiting* to be
-     * injected, and nothing waits here. The protocol says the server emits
-     * the removal when it consumes one, so both go out and the state field
-     * stays empty - which is the honest description of what happened.
+     * The uuid is the steering message's own id when that is a UUID, as a
+     * turn's prompt goes under its turn's id, and a new one otherwise.
      */
     steer: (id, text, attachments) => {
       if (!ctx.active) return false;
@@ -562,7 +658,7 @@ export function createTurns(ctx: SessionContext): Turns {
       // happen in one tick.
       ctx.steering = { id, message };
       ctx.emit('chat', { type: 'chat/pendingMessageSet', kind: 'steering', id, message });
-      void push(text, attachments);
+      void push(text, attachments, UUID.test(id) ? id : crypto.randomUUID(), { message, steering: true, turn: String(ctx.active.id), id, cli: 'sent' });
       return true;
     },
 
@@ -669,11 +765,13 @@ export function createTurns(ctx: SessionContext): Turns {
       ctx.failed = undefined;
       ctx.doing('Thinking');
       const message = bag((ctx.active as Bag).message);
+      const uuid = writtenAs(turnId, true);
+      ctx.owed.set(uuid, { message, steering: false, turn: turnId, cli: 'sent' });
       ctx.waiting.push({
         type: 'user',
         message: { role: 'user', content: str(message.text) ?? '' },
         parent_tool_use_id: null,
-        uuid: writtenAs(turnId, true) as `${string}-${string}-${string}-${string}-${string}`,
+        uuid: uuid as `${string}-${string}-${string}-${string}-${string}`,
       });
       ctx.wake?.();
       ctx.wake = undefined;
@@ -698,8 +796,6 @@ export function createTurns(ctx: SessionContext): Turns {
       // And the calls a client is running for us, for the same reason: a
       // promise settled by somebody else is one a stopped turn still waits on.
       ctx.releaseCalls('The turn was stopped');
-      // And a move to another login, or the wait for one, which was this turn's.
-      ctx.stopMoving();
       void ctx.handle.interrupt().catch(() => {});
       /*
        * And the workers that turn spawned, foreground or background.
@@ -742,9 +838,11 @@ export function createTurns(ctx: SessionContext): Turns {
       ctx.touch();
       // Deliberately not `startNext`: somebody stopping a turn is stopping
       // this conversation, and starting the one behind it is the opposite of
-      // what they asked for.
+      // what they asked for. What the CLI still runs after the stop is the
+      // steering messages it holds, which are answered in a turn of their own.
+      if (turn) handOver(String(turn.id));
     },
   };
 
-  return { queued, startNext, again, methods };
+  return { queued, startNext, again, handOver, present, methods };
 }

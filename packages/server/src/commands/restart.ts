@@ -586,7 +586,7 @@ const unsignalled = (pid: number, error: unknown): string => {
  */
 const restartedUnderService = async (record: Running, service: Service, steps: AtTerminal): Promise<Running> => {
   try {
-    await steps.manager.restart(service);
+    await steps.manager.restart(service, record.serviceName);
   }
   catch (error) {
     conflict(`Could not restart it under ${service}: ${wordsOf(error)}`);

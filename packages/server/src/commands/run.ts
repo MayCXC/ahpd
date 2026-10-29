@@ -277,6 +277,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   const service = serviceIn(process.env[SERVICE_ENV]);
   delete process.env[SERVICE_ENV];
+  // The name its configuration gives that service, which only a held daemon has.
+  const serviceName = service === undefined ? undefined : options.serviceName;
 
   /*
    * Whether a clock is running, decided once and then said out loud.
@@ -851,6 +853,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     refold: (agents) => refoldAgents(agents),
     endSessionsOf: (id) => host.endSessionsOf(id),
     holderOf: agentHolder,
+    // What a field marked `x-ahpd-connector` is checked against at a put.
+    connectors: () => connectorLists.refs(),
     onProblem: listProblem,
   });
   /*
@@ -1801,7 +1805,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * failure a log read afterwards cannot see.
    */
   if (service !== undefined) {
-    const other = claim(recordOf(announcement, process.pid, token, undefined, undefined, service));
+    const other = claim(recordOf(announcement, process.pid, token, undefined, undefined, service, serviceName));
     if (other !== undefined) {
       stamp(`Another daemon is already running: ${other.url} (pid ${String(other.pid)}). Stop it with ahpd stop, then start this one again.`);
       process.exit(1);
@@ -1887,7 +1891,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * job the restart begins with would end it too. A daemon started by a
      * terminal has no manager to ask.
      */
-    ...(service === undefined ? {} : { hand: (): Promise<void> => realManager().restart(service) }),
+    ...(service === undefined ? {} : { hand: (): Promise<void> => realManager().restart(service, serviceName) }),
   });
   // From here a `shutdown` request runs the way down, as the control pipe does.
   wayDown = way.shutdown;

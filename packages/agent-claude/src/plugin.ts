@@ -17,10 +17,13 @@
  */
 
 import type { ModelEntry, ModelSource } from './models.js';
-import type { Engine, Plugin, PluginHost } from '@ahpd/sdk';
+import type { Engine, Plugin, PluginHost, PluginPeer } from '@ahpd/sdk';
+import { reason } from '@ahpd/sdk';
+import { loginAdapter } from './adapter.js';
 import { claude } from './claude.js';
 import type { ClaudeOptions } from './claude.js';
 import { sharedCatalogue as oneListing } from './catalog.js';
+import { OpenLogins } from './logins.js';
 import { kindSchema } from './options.js';
 
 /** The plugin's id, unique among the plugins one daemon loads. */
@@ -107,7 +110,7 @@ const sourcesOf = (value: unknown): ModelSource[] => (Array.isArray(value) ? val
 /** The plugin's own options, as every agent of one load is built with them. */
 type Shared = ReturnType<typeof defaultsOf>['shared'];
 
-const engineOf = (paths: string[], shared: Shared): Engine => ({
+const engineOf = (paths: string[], shared: Shared, logins: OpenLogins): Engine => ({
   name: 'claude',
   title: 'Claude Code',
   description: 'Claude Code, with one record per agent: its own directories, models and options.',
@@ -128,16 +131,62 @@ const engineOf = (paths: string[], shared: Shared): Engine => ({
     ...(Array.isArray(record.config['modelSources']) ? { modelSources: sourcesOf(record.config['modelSources']) } : {}),
     ...(typeof record.config['keepCliModels'] === 'boolean' ? { keepCliModels: record.config['keepCliModels'] } : {}),
     presetOf: () => ({ ...record.config }),
+    logins: { open: logins, owner: () => record.owner },
   }),
 });
 
+/** The client name this plugin's own connection to its host gives. */
+const CLIENT = 'agent-claude';
+
 /**
- * Register the `claude` engine.
+ * Log each failure of a login, and ask the host to check that connector, so
+ * its row shows its health.
+ *
+ * The model proxy logs each failed attempt and notes its outcome on the
+ * connector's health, in `packages/server/src/proxy/listener.ts`. A plugin
+ * notes through the connectors channel's own command, as a client does: the
+ * host runs the adapter's check and sends every reader the row. The connection
+ * is opened by the first failure, as the bot plugin opens its own by the first
+ * message, and one that failed is dropped so the next failure tries again.
+ *
+ * The connection carries the grants the plugin's configuration gives it, as
+ * `docs/plugins/PLUGINS.md` says under *A plugin is a client of its own host*.
+ * A check of a host login takes `connector:put` and `connector:host`, and a
+ * person's login is never a plugin's to check, as `ownerAllows` in
+ * `packages/sdk/src/channels/owners.ts` holds. A check the host refuses is one
+ * line in the log.
+ */
+const checkOnFailure = (host: PluginHost): ((id: string, why: string) => void) => {
+  let opened: Promise<PluginPeer> | undefined;
+  const connection = (): Promise<PluginPeer> => {
+    opened ??= (async () => {
+      const conn = host.connect();
+      await conn.request('initialize', { clientId: CLIENT, protocolVersions: ['0.9.0'] });
+      return conn;
+    })();
+    const failed = (): void => { opened = undefined; };
+    opened.catch(failed);
+    return opened;
+  };
+  return (id, why) => {
+    host.log(`${name}: login ${id} failed: ${why}`);
+    void connection()
+      .then((conn) => conn.request('x-ahpd/connectors/check', { id }))
+      .catch((error: unknown) => { host.log(`${name}: the host did not check login ${id}: ${reason(error)}`); });
+  };
+};
+
+/**
+ * Register the `claude` engine, and the `claude-login` adapter.
  *
  * The agents are records of it: one load serves every Claude Code variant, and
- * each record says which one it runs.
+ * each record says which one it runs. The logins are connectors of the
+ * adapter, kept open for the load by the one `OpenLogins` both are built over.
  */
 export const apply: Plugin['apply'] = (host, options) => {
   const { paths, shared } = defaultsOf(host, options);
-  host.registerEngine(engineOf(paths, shared));
+  const logins = new OpenLogins();
+  logins.onFailure = checkOnFailure(host);
+  host.registerAdapter(loginAdapter(logins));
+  host.registerEngine(engineOf(paths, shared, logins));
 };

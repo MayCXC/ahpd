@@ -5,6 +5,7 @@ import type { HookCallback, SDKUserMessage, SettingSource } from '@anthropic-ai/
 import { bag, list, str, UUID } from './common.js';
 import type { SessionContext } from './context.js';
 import { failureOf } from './failure.js';
+import { BEFORE_TOKEN } from '../logins.js';
 import { hostHoldsTasks, ownEnvOf, OWN_TASK_TOOLS, queryOptionsOf } from '../options.js';
 import { agentNameOf } from './customizations.js';
 
@@ -59,9 +60,11 @@ export interface Query {
   /** Move this session's CLI onto the agent a message picked, if it is not already there. */
   switchAgent: (uri: string | undefined) => string | undefined;
   /**
-   * Read a record's values again, and move the CLI onto them when they changed.
+   * Read a record's values again, find the turn's login, and move the CLI onto
+   * them when either changed.
    *
-   * Nothing for a preset. A refusal is a sentence for the turn that asked.
+   * A preset's values stay as they were read, and only its login can change. A
+   * refusal is a sentence for the turn that asked.
    */
   refreshPreset: () => string | undefined;
   /** Read one CLI's frames until it ends. */
@@ -77,6 +80,30 @@ export interface Query {
   keepStopped: HookCallback;
   /** The `UserPromptSubmit` hook that gives the turn now running what the host asked said. */
   giveHostInstructions: HookCallback;
+}
+
+/**
+ * Where each turn a resumed session opens with ended, from where each turn of
+ * its transcript's read ended, in the read's order.
+ *
+ * The host reads a turn back with the ones the chat never began inside it, as
+ * a steering message the CLI ran after the turn's last answer, so such a turn
+ * ends where the last of those ends: they follow it in the read, before the
+ * next turn the session opens with. Nothing is taken past a rewind's point,
+ * which is the last entry the conversation keeps. A session that opens with no
+ * turns named takes the read as it is.
+ */
+function endsOf(seed: readonly Bag[] | undefined, read: ReadonlyMap<string, string> | undefined, rewindAt: string | undefined): Map<string, string> {
+  if (seed === undefined) return new Map(read ?? []);
+  const opens = new Set(seed.flatMap((turn) => str(turn.id) ?? []));
+  const out = new Map<string, string>();
+  let into: string | undefined;
+  for (const [turn, entry] of read ?? []) {
+    if (opens.has(turn)) into = turn;
+    if (into !== undefined) out.set(into, entry);
+    if (entry === rewindAt) break;
+  }
+  return out;
 }
 
 export function createQuery(ctx: SessionContext): Query {
@@ -145,23 +172,28 @@ export function createQuery(ctx: SessionContext): Query {
   const denied = ctx.options.deniedMcpServers ?? [];
 
   /**
-   * What the CLI signs in with beyond the record's own `env`: the login this
-   * conversation runs on, and a pushed credential over it.
+   * An environment the CLI starts with, with what it signs in with laid over:
+   * the login the turn runs on, or a credential a client pushed.
    *
-   * The login is `CLAUDE_CODE_OAUTH_TOKEN`, the variable `claude setup-token`'s
-   * token is read from. A pushed credential is laid over it rather than under,
-   * because a client that signed in chose that key for its own sessions; the
-   * CLI then signs in with the key, which it takes before the token.
+   * A login is `CLAUDE_CODE_OAUTH_TOKEN`, the variable a `claude setup-token`
+   * token is read from. The CLI takes a cloud provider's switch and both
+   * Anthropic keys before it, so a CLI on a login gets none of them, from the
+   * record's `env` or from the daemon's, and signs in with the login. A pushed
+   * credential is laid over as it came; such a session runs on no login, which
+   * `session/logins.ts` says.
    * https://code.claude.com/docs/en/authentication#authentication-precedence
    */
-  const signIn = (): Record<string, string> => ({
-    ...(ctx.login === undefined ? {} : { CLAUDE_CODE_OAUTH_TOKEN: ctx.login.token }),
-    ...ctx.options.env,
-  });
+  const signedIn = (base: Bag): Bag => {
+    const login = ctx.login;
+    if (login === undefined) return { ...base, ...ctx.options.env };
+    const out: Bag = { ...base, CLAUDE_CODE_OAUTH_TOKEN: login.token };
+    for (const name of BEFORE_TOKEN) delete out[name];
+    return out;
+  };
 
   /**
-   * What a CLI in a machine is started with: the variant's own `env`, its login
-   * and a pushed credential over it, and `CLAUDE_CONFIG_DIR` last.
+   * What a CLI in a machine is started with: the variant's own `env`, what it
+   * signs in with laid over it, and `CLAUDE_CONFIG_DIR` last.
    *
    * Nothing of the daemon's environment: its `HOME` and `PATH` are this host's,
    * and a key it holds is the one variant's that names it with `{ fromEnv }`,
@@ -171,7 +203,7 @@ export function createQuery(ctx: SessionContext): Query {
    */
   const inMachine = (): Record<string, string> => {
     const out: Record<string, string> = {};
-    for (const [name, value] of Object.entries({ ...ownEnvOf(ctx.values), ...signIn() })) {
+    for (const [name, value] of Object.entries(signedIn(ownEnvOf(ctx.values)))) {
       if (typeof value === 'string') out[name] = value;
     }
     const dir = ctx.options.spawnConfigDir;
@@ -191,7 +223,7 @@ export function createQuery(ctx: SessionContext): Query {
   const taskToolsEnv = (): Bag => {
     if (ctx.values['enableTasks'] === false || hostHoldsTasks(ctx.values, ctx.offering)) return {};
     const env = ctx.options.spawn === undefined
-      ? { ...(fromPreset().env as Bag | undefined ?? process.env), ...signIn() }
+      ? signedIn(fromPreset().env as Bag | undefined ?? process.env)
       : inMachine();
     if (env.CLAUDE_CODE_ENABLE_TASKS !== undefined) return {};
     return { env: { ...env, CLAUDE_CODE_ENABLE_TASKS: '1' } };
@@ -211,9 +243,25 @@ export function createQuery(ctx: SessionContext): Query {
   // which is what makes a session a session rather than a series of them.
   const waiting: SDKUserMessage[] = [];
 
-  async function* input(): AsyncGenerator<(typeof waiting)[number]> {
+  /**
+   * Which query reads `waiting` now: the count of queries this session built.
+   *
+   * The list outlives a query, so a prompt pushed while a new CLI starts waits
+   * there for that CLI. The SDK reads a new query's input only once its
+   * initialize request is written, which waits on the manifests of the
+   * in-process MCP servers, so the query it replaced can still be reading when
+   * the prompt arrives; and the SDK drops what a closed query's reader is
+   * handed. A reader whose query is no longer the current one therefore takes
+   * nothing and ends, as the reference's reader returns once its query is
+   * aborted, and the queue it reads survives the rebind.
+   * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudePromptQueue.ts#L64-L86
+   * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudePromptQueue.ts#L163-L172
+   */
+  let bound = 0;
+
+  async function* input(mine: number): AsyncGenerator<(typeof waiting)[number]> {
     for (;;) {
-      while (waiting.length > 0) {
+      while (mine === bound && waiting.length > 0) {
         const next = waiting.shift() as (typeof waiting)[number];
         yield next;
         if (ctx.steering !== undefined) {
@@ -223,7 +271,7 @@ export function createQuery(ctx: SessionContext): Query {
           ctx.touch();
         }
       }
-      if (ctx.closed) return;
+      if (ctx.closed || mine !== bound) return;
       await new Promise<void>((resolve) => { ctx.wake = resolve; });
     }
   }
@@ -272,6 +320,9 @@ export function createQuery(ctx: SessionContext): Query {
      * session that says it is thinking for as long as anyone watches it.
      */
     ctx.gone = why;
+    // And it owes nothing: what it was handed went with it.
+    ctx.owed.clear();
+    ctx.answering = undefined;
     failTurn(why);
   };
 
@@ -329,7 +380,7 @@ export function createQuery(ctx: SessionContext): Query {
    * this one place rather than the two a session starts one from.
    */
   const buildQuery = (agent: string | undefined, first: boolean, cut?: string): ReturnType<typeof query> => bounded(query({
-    prompt: input(),
+    prompt: input(bound),
     options: {
       cwd: ctx.options.cwd,
       /*
@@ -417,7 +468,7 @@ export function createQuery(ctx: SessionContext): Query {
        * merging with it, so handing it a lone credential is a subprocess with
        * no `PATH` and no `HOME` - which fails as something that has nothing to
        * do with authentication. Absent when the record names no variable, the
-       * agent has no login and nobody pushed a token: the subprocess then
+       * turn runs on no login and nobody pushed a token: the subprocess then
        * inherits the daemon's environment, as an automation's does.
        */
       ...fromPreset(),
@@ -438,7 +489,7 @@ export function createQuery(ctx: SessionContext): Query {
           deniedMcpServers: denied.map((serverName) => ({ serverName })),
         },
       }),
-      ...(Object.keys(signIn()).length > 0 ? { env: { ...(fromPreset().env as Bag | undefined ?? process.env), ...signIn() } } : {}),
+      ...(ctx.login !== undefined || ctx.options.env ? { env: signedIn(fromPreset().env as Bag | undefined ?? process.env) } : {}),
       // In a machine, the env above is replaced by the variant's own alone.
       ...(ctx.options.spawn === undefined ? {} : { env: inMachine() }),
       // The switch for the task tools Claude keeps to itself.
@@ -552,9 +603,13 @@ export function createQuery(ctx: SessionContext): Query {
     },
   } as Parameters<typeof query>[0]));
 
-  /** What a CLI is started from, as the string `startedWith` holds: the record's values and the login. */
+  /**
+   * What a CLI is started from, as the string `startedWith` holds: the record's
+   * values and the login, with its token, since a put that replaces a login's
+   * token leaves the values as they were.
+   */
   const startedFrom = (values: Bag, login: SessionContext['login']): string =>
-    JSON.stringify({ values, login: login?.name ?? null });
+    JSON.stringify({ values, login: login?.id ?? null, token: login?.token ?? null });
 
   /**
    * A query for this session, and what it was built from.
@@ -563,9 +618,24 @@ export function createQuery(ctx: SessionContext): Query {
    * because every query a session builds is one of these: `begin` is where the
    * record is read again and the login chosen again, and it compares both
    * against what the CLI answering now was started with.
+   *
+   * The new query is the one that reads `waiting` from here on. The reader of
+   * the one it replaces is woken so that it ends, and the wake is cleared, so a
+   * prompt pushed before the new reader starts waits for it rather than waking
+   * the old one, as the reference wakes a reader whose query is aborted and
+   * gives the next binding a wait of its own.
+   * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudeSdkPipeline.ts#L518-L522
+   * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudeSdkPipeline.ts#L626-L629
    */
   const startQuery = (agent: string | undefined, first: boolean, cut?: string): ReturnType<typeof query> => {
     ctx.startedWith = startedFrom(ctx.values, ctx.login);
+    bound += 1;
+    const replaced = ctx.wake;
+    ctx.wake = undefined;
+    replaced?.();
+    // A new CLI owes nothing: what the last one was handed went with it.
+    ctx.owed.clear();
+    ctx.answering = undefined;
     return buildQuery(agent, first, cut);
   };
 
@@ -582,7 +652,10 @@ export function createQuery(ctx: SessionContext): Query {
    * A resumed session starts with the ends its transcript's read named for
    * the turns it opens with, and every turn it watches adds its own.
    */
-  const ends = new Map<string, string>(ctx.options.seedEnds ?? []);
+  const ends = new Map<string, string>(endsOf(ctx.options.seed, ctx.options.seedEnds, ctx.options.rewindAt));
+
+  /** The turns a result left open for an answer the CLI still owed, by turn id. */
+  const spanning = new Set<string>();
 
   /**
    * Ask the CLI for a model, and say why it would not take it if it will not.
@@ -685,6 +758,45 @@ export function createQuery(ctx: SessionContext): Query {
             });
           }
           continue;
+        }
+
+        /*
+         * What the CLI did with a prompt it was handed: queued it, started it,
+         * completed it or cancelled it. Kept for whether the CLI still holds a
+         * prompt, which a turn that ends hands over. The SDK passes the frame
+         * on without declaring it, and names it where its interrupt says a
+         * prompt it cancels ends `cancelled`.
+         */
+        if (type === 'command_lifecycle') {
+          const owed = ctx.owed.get(str(message.command_uuid) ?? '');
+          const state = str(message.state);
+          if (owed !== undefined && (state === 'queued' || state === 'started')) owed.cli = state;
+          continue;
+        }
+
+        /*
+         * Which prompt the CLI is answering, and whether its turn is the one
+         * running.
+         *
+         * The first frame of each kind in an answer names the prompt in
+         * `user_message_uuid`, and the frames after it are the same answer's.
+         * An answer belongs to the turn its prompt belongs to, and a turn that
+         * has ended takes no more of it: the rest of a stopped turn's answer
+         * goes nowhere, and neither does it reach a turn begun since. A
+         * steering message whose turn ended before the CLI took it in is
+         * answered after, in a turn of its own, which opens now if the end
+         * did not open it.
+         */
+        if (str(message.parent_tool_use_id) === undefined
+          && (type === 'stream_event' || type === 'assistant' || type === 'user')) {
+          const named = str(message.user_message_uuid);
+          if (named !== undefined) ctx.answering = named;
+          const owed = ctx.answering === undefined ? undefined : ctx.owed.get(ctx.answering);
+          const running = ctx.active === undefined ? undefined : String(ctx.active.id);
+          if (owed !== undefined && owed.turn !== running) {
+            if (owed.steering && running === undefined) ctx.present(String(ctx.answering));
+            else continue;
+          }
         }
 
         /*
@@ -792,16 +904,14 @@ export function createQuery(ctx: SessionContext): Query {
         if (type === 'conversation_reset') { ctx.newConversation(); continue; }
 
         /*
-         * A login's quota or billing, as the SDK says it.
-         *
-         * The SDK's own structured form of the API's rate-limit headers, which
-         * names the window that refused and when it reopens, comes before the
-         * assistant frame that carries the refusal's `error`.
+         * A login's limit, as the SDK says it: the structured form of the API's
+         * unified rate-limit headers, which comes before the assistant frame
+         * that carries a failure's `error` and names when the login is back.
          */
         if (type === 'rate_limit_event') { ctx.limited(bag(message.rate_limit_info)); continue; }
         if (type === 'stream_event') { ctx.streamed(bag(message.event), str(message.parent_tool_use_id) ?? ''); continue; }
         if (type === 'assistant') {
-          // A refusal the turn moves on from, which never reached a model.
+          // A failure of the turn's login that the turn does not show.
           if (ctx.refused(message)) continue;
           ctx.assistant(bag(message.message), str(message.parent_tool_use_id) ?? '');
           continue;
@@ -824,22 +934,77 @@ export function createQuery(ctx: SessionContext): Query {
 
         if (type === 'result') {
           /*
-           * The end of an attempt a refused login made, which ends nothing:
-           * the turn goes on, on the next login.
+           * The end of an attempt on a login that failed before the turn
+           * showed anything, which ends nothing when another login is ready:
+           * the turn goes on there.
            */
-          if (ctx.moving()) { void ctx.moveOn(); continue; }
+          const next = ctx.nextLogin();
+          if (next !== undefined) { void ctx.moveOn(next); continue; }
           const turn = ctx.active;
+          const running = turn === undefined ? undefined : String(turn.id);
           /*
            * Read before the turn is pushed, because the reason goes inside it.
-           * `is_error` carries the words; a subtype that is not `success` is a
-           * turn that ended badly with none, and saying which is better than
-           * an error part that says only that there was one.
+           * A failure of the turn's login that it did not show says its own
+           * words. `is_error` carries the words; a subtype that is not
+           * `success` is a turn that ended badly with none, and saying which is
+           * better than an error part that says only that there was one.
            */
-          const wrong = message.is_error === true
+          const wrong = ctx.failure() ?? (message.is_error === true
             ? (list(message.errors).map(String).join('\n') || 'The turn failed')
             : str(message.subtype) !== 'success'
               ? `The turn ended ${str(message.subtype) ?? 'without succeeding'}`
-              : undefined;
+              : undefined);
+          /*
+           * The prompts this result answered, which the CLI no longer owes,
+           * and the turns they belong to.
+           *
+           * Named in `user_message_uuids`, or in `user_message_uuid` alone. A
+           * result that names none comes from a CLI that names nothing, and
+           * answers whatever was owed.
+           */
+          const named = list(message.user_message_uuids).map(String);
+          if (str(message.user_message_uuid) !== undefined) named.push(String(message.user_message_uuid));
+          const owners = named.map((uuid) => ctx.owed.get(uuid)?.turn);
+          if (named.length === 0) ctx.owed.clear();
+          for (const uuid of named) ctx.owed.delete(uuid);
+          ctx.answering = undefined;
+          /*
+           * A result about turns that have ended, which ends none.
+           *
+           * A stopped turn's result comes after `cancel` ended the turn, and a
+           * turn begun since, or opened for the steering messages the stopped
+           * turn left, is running when it comes. It says the turn was stopped,
+           * which is not a failure.
+           */
+          if (named.length > 0 && owners.every((owner) => owner !== undefined && owner !== running)) {
+            ctx.interrupted = false;
+            if (turn === undefined) {
+              ctx.doing(undefined);
+              ctx.startNext();
+            }
+            ctx.touch();
+            continue;
+          }
+          /*
+           * A stopped turn's result that names a prompt of the running turn
+           * too: the CLI took that turn's steering message into the stopped
+           * turn as it was stopped, and it ends stopped with it.
+           */
+          const stopping = ctx.interrupted && owners.some((owner) => owner !== undefined && owner !== running);
+          /*
+           * A turn the CLI still owes an answer in.
+           *
+           * A steering message the CLI read after the turn's last tool call is
+           * run once this result is out, as a turn of the CLI's own, and its
+           * answer is this turn's: the turn stays open until a result has named
+           * every prompt handed over in it, as the reference completes a turn
+           * only when its prompts are settled. A result that failed ends it.
+           * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudeSdkPipeline.ts#L688-L705
+           */
+          if (turn && wrong === undefined && [...ctx.owed.values()].some((owed) => owed.turn === running)) {
+            spanning.add(String(turn.id));
+            continue;
+          }
           if (turn) {
             /*
              * Every turn that ends says how it ended.
@@ -851,15 +1016,22 @@ export function createQuery(ctx: SessionContext): Query {
              * `chat/turnComplete` - but a client that subscribes afterwards
              * reads the snapshot, and the snapshot is this.
              */
-            turn.state = str(message.subtype) !== 'success' ? 'error' : 'complete';
-            turn.duration = typeof message.duration_ms === 'number' ? message.duration_ms : Date.now() - ctx.startedAt;
+            turn.state = stopping ? 'cancelled' : str(message.subtype) !== 'success' ? 'error' : 'complete';
+            // `duration_ms` is the CLI's last turn alone, so a turn that took
+            // more than one of them, or that the result is not about, is
+            // measured from its own start.
+            const spanned = spanning.delete(String(turn.id));
+            turn.duration = !spanned && !stopping && typeof message.duration_ms === 'number'
+              ? message.duration_ms
+              : Date.now() - ctx.startedAt;
             // Before the turn completes, not after: the reducer hangs usage on
             // `activeTurn`, and `chat/turnComplete` is what moves that into
             // `turns` - so the other order reports it about nothing.
             // A stream that carried no partial messages leaves the sum empty,
             // and the result's own main-loop count is then the best there is.
-            const used = ctx.sum() ?? ctx.usageOf(message.usage, ctx.ran);
-            const cost = ctx.costOf(message);
+            // A stopped turn's result counts that turn, not this one.
+            const used = stopping ? ctx.sum() : ctx.sum() ?? ctx.usageOf(message.usage, ctx.ran);
+            const cost = stopping ? undefined : ctx.costOf(message);
             if (used !== undefined || cost !== undefined) {
               // The cost rides the tokens' own `_meta`, the same place cache
               // writes go, rather than beside them as a field of its own.
@@ -869,7 +1041,7 @@ export function createQuery(ctx: SessionContext): Query {
               ctx.emit('chat', { type: 'chat/usage', turnId: turn.id, usage: total });
             }
             ctx.settleOpen(turn);
-            const part = wrong === undefined ? undefined : ctx.addFailure(turn, wrong);
+            const part = wrong === undefined || stopping ? undefined : ctx.addFailure(turn, wrong);
             ctx.turns.push(turn);
             ctx.active = undefined;
             ctx.ran = undefined;
@@ -896,7 +1068,10 @@ export function createQuery(ctx: SessionContext): Query {
              * that failed was drawn as one that worked, and the reason was in
              * the snapshot and nowhere in the stream.
              */
-            if (part !== undefined) {
+            if (stopping) {
+              ctx.emit('chat', { type: 'chat/turnCancelled', turnId: turn.id, duration: turn.duration });
+            }
+            else if (part !== undefined) {
               ctx.emit('chat', { type: 'chat/error', turnId: turn.id, duration: turn.duration, part });
             }
             else {
@@ -905,13 +1080,15 @@ export function createQuery(ctx: SessionContext): Query {
           }
           // The result an interrupt ends with, for a turn `cancel` already
           // ended: it says the turn was stopped, which is not a failure.
-          const stopped = turn === undefined && ctx.interrupted;
+          const stopped = (turn === undefined && ctx.interrupted) || stopping;
           ctx.interrupted = false;
           // About the session rather than the turn: it reads into
           // `Status.Error` and into the summary, and the next turn clears it.
           if (message.is_error === true && !stopped) ctx.failed = wrong ?? 'The turn failed';
           ctx.doing(undefined);
           ctx.touch();
+          // A turn that failed or stopped leaves its steering messages with the CLI.
+          if (turn) ctx.handOver(String(turn.id));
           ctx.startNext();
         }
       }
@@ -955,18 +1132,22 @@ export function createQuery(ctx: SessionContext): Query {
    * turn already running finishes on the CLI it started on, and the turn that
    * begins after the edit is answered by a CLI built from what the record says
    * now. A preset, which no running daemon can edit, keeps the values it was
-   * read with, and only its login can change: a login that cools down hands the
-   * next turn to the conversation's next login.
+   * read with, and only its login can change: a login that closes or rests,
+   * or whose token a put replaced, hands the next turn to a CLI on the first
+   * ready one.
    *
    * The conversation moves as a `switchAgent` restart moves it: the new query
    * resumes the id the CLI gave this session, so the transcript, the model and
-   * everything the SDK said are still there. A CLI that will not stop is the
-   * turn's own refusal rather than a session that died, which is why it comes
-   * back as a sentence.
+   * everything the SDK said are still there. A CLI that will not stop, and a
+   * record whose logins are none of them ready, are the turn's own refusal
+   * rather than a session that died, which is why each comes back as a
+   * sentence.
    */
   const refreshPreset = (): string | undefined => {
     const live = ctx.options.presetOf;
     const now = live === undefined ? ctx.values : ctx.valuesOf(live());
+    const unready = ctx.unready(now);
+    if (unready !== undefined) return unready;
     const login = ctx.loginFor(now);
     if (startedFrom(now, login) === ctx.startedWith) return undefined;
     const was = ctx.handle;

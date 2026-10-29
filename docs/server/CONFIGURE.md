@@ -99,7 +99,9 @@ An unknown key is logged and ignored:
 | `terminalAutoApproveDefaults` | `--terminal-auto-approve-defaults` | `vscode` | The rules for a session whose window pushed none; `none` approves no command. See [Terminal rules](#terminal-rules) |
 | `wire` | `--wire` | | Log every frame to this file, for debugging |
 
-Keys with no flag: `httpApi`, `modelProxy`, `usage`, `policies`, `mcpServers`, `commandParser`. Flags with no key: `--no-plugins`, `--no-cwd`, `--plugin-option`, `--stdio`, `--config-file`.
+Keys with no flag: `httpApi`, `modelProxy`, `usage`, `policies`, `service`, `mcpServers`, `commandParser`. Flags with no key: `--no-plugins`, `--no-cwd`, `--plugin-option`, `--stdio`, `--config-file`.
+
+`service.name` names the service a daemon runs under beside another on the same machine. See [More than one daemon](RUN.md#more-than-one-daemon).
 
 `modelProxy` holds the model names only: a provider is a connector now, added as [The model proxy](PROXY.md#adding-a-provider) says. A file that still writes `modelProxy.providers` stops the start.
 

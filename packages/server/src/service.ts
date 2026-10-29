@@ -20,7 +20,7 @@
 
 import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { configHome } from './config.js';
 
 /**
@@ -35,6 +35,39 @@ export const UNIT = 'ahpd';
 
 /** The label launchd holds the agent under. */
 export const LABEL = 'dev.ahpd.daemon';
+
+/**
+ * The unit a service is held in: `UNIT`, or `ahpd@<name>` for a service its
+ * configuration names.
+ *
+ * A name is what lets a second daemon, in a configuration home of its own, run
+ * beside the first as a service of its own, and `<prefix>@<instance>` is
+ * systemd's own form for several of one service:
+ * https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html
+ */
+export const serviceUnit = (name?: string): string => (name === undefined ? UNIT : `${UNIT}@${name}`);
+
+/** And the label launchd holds its agent under: `LABEL`, or `dev.ahpd.daemon.<name>`. */
+export const serviceLabel = (name?: string): string => (name === undefined ? LABEL : `${LABEL}.${name}`);
+
+/** What a manager holds a service as: its unit on systemd, and its label on launchd. */
+export const managedAs = (service: Service, name?: string): string =>
+  (service === 'systemd' ? serviceUnit(name) : serviceLabel(name));
+
+/**
+ * The configuration home of this process when it is one of its own, and
+ * nothing when it is the default `~/.config`.
+ *
+ * A private `XDG_CONFIG_HOME` is how a daemon has a folder of its own, beside
+ * another on the same machine (`shellEnv` in `packages/sdk/src/machines/shellenv.ts`
+ * and `config.ts` take a service unit's own `XDG_CONFIG_HOME` as given). A
+ * manager starts a daemon with none of the environment the install ran in, so
+ * the file names that home, as it names the `PATH`.
+ */
+export const ownConfigHome = (): string | undefined => {
+  const home = resolve(configHome());
+  return home === join(homedir(), '.config') ? undefined : home;
+};
 
 /** The two things a daemon asks a manager, each a verb of that manager's command. */
 export type ManagerVerb = 'stop' | 'restart';
@@ -65,12 +98,15 @@ export interface Call {
  * the person running this: `bootout` stops it and leaves it stopped until the
  * next login loads it again, and `kickstart -k` stops the one running and
  * starts it again.
+ *
+ * `name` is the one the service was installed under, for a service its
+ * configuration names.
  */
-export const managerCall = (service: Service, verb: ManagerVerb, uid: number): Call => {
+export const managerCall = (service: Service, verb: ManagerVerb, uid: number, name?: string): Call => {
   if (service === 'systemd') {
-    return { command: 'systemctl', argv: ['--user', ...(verb === 'restart' ? ['--no-block'] : []), verb, UNIT] };
+    return { command: 'systemctl', argv: ['--user', ...(verb === 'restart' ? ['--no-block'] : []), verb, serviceUnit(name)] };
   }
-  const target = `gui/${String(uid)}/${LABEL}`;
+  const target = `gui/${String(uid)}/${serviceLabel(name)}`;
   return verb === 'stop'
     ? { command: 'launchctl', argv: ['bootout', target] }
     : { command: 'launchctl', argv: ['kickstart', '-k', target] };
@@ -84,18 +120,26 @@ export const managerCall = (service: Service, verb: ManagerVerb, uid: number): C
  * starts it now. launchd reads each plist itself, so the file is handed to it
  * instead: `bootstrap` loads the agent into the login that will own it, which is
  * the login of the person running the install.
+ *
+ * `byPath` is set for a unit written under a configuration home of its own.
+ * That is outside the folder systemd reads this user's units from, the
+ * manager's `$XDG_CONFIG_HOME/systemd/user` or `~/.config/systemd/user`
+ * (https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html),
+ * so the unit is enabled by its path, and `enable` given a path links the file
+ * into that folder first
+ * (https://www.freedesktop.org/software/systemd/man/latest/systemctl.html).
  */
-export const installCalls = (service: Service, uid: number, file: string): Call[] => (service === 'systemd'
+export const installCalls = (service: Service, uid: number, file: string, name?: string, byPath = false): Call[] => (service === 'systemd'
   ? [
     { command: 'systemctl', argv: ['--user', 'daemon-reload'] },
-    { command: 'systemctl', argv: ['--user', 'enable', '--now', UNIT] },
+    { command: 'systemctl', argv: ['--user', 'enable', '--now', byPath ? file : serviceUnit(name)] },
   ]
   : [
     // An agent that is already loaded is one `bootstrap` refuses, and a second
     // install is a file written over the one it was loaded from: the old agent
     // goes out first, and an installer meeting an agent that was not loaded
     // says so rather than failing.
-    { command: 'launchctl', argv: ['bootout', `gui/${String(uid)}/${LABEL}`], tolerate: true },
+    { command: 'launchctl', argv: ['bootout', `gui/${String(uid)}/${serviceLabel(name)}`], tolerate: true },
     { command: 'launchctl', argv: ['bootstrap', `gui/${String(uid)}`, file] },
   ]);
 
@@ -106,11 +150,12 @@ export const installCalls = (service: Service, uid: number, file: string): Call[
  * manager is not one to delete files. The stop comes with the disable, because
  * an enabled service is one this machine starts again at the next login, and an
  * agent is loaded by the login that owns it, where `bootout` is both the stop
- * and the taking out.
+ * and the taking out. The disable of a named unit also takes out the link its
+ * install made.
  */
-export const uninstallCalls = (service: Service, uid: number): Call[] => (service === 'systemd'
-  ? [{ command: 'systemctl', argv: ['--user', 'disable', '--now', UNIT] }]
-  : [{ command: 'launchctl', argv: ['bootout', `gui/${String(uid)}/${LABEL}`] }]);
+export const uninstallCalls = (service: Service, uid: number, name?: string): Call[] => (service === 'systemd'
+  ? [{ command: 'systemctl', argv: ['--user', 'disable', '--now', serviceUnit(name)] }]
+  : [{ command: 'launchctl', argv: ['bootout', `gui/${String(uid)}/${serviceLabel(name)}`] }]);
 
 /**
  * Whether what a manager is asked at install is what starts the service from the
@@ -140,8 +185,12 @@ export const serviceOn = (platform: NodeJS.Platform): Service | undefined => {
   return undefined;
 };
 
-/** Where the user unit is written: the folder systemd reads this user's units from. */
-export const unitFile = (): string => join(configHome(), 'systemd', 'user', `${UNIT}.service`);
+/**
+ * Where the user unit is written: under the configuration home, which by
+ * default is the folder systemd reads this user's units from. A unit under a
+ * configuration home of its own is linked into that folder by `installCalls`.
+ */
+export const unitFile = (name?: string): string => join(configHome(), 'systemd', 'user', `${serviceUnit(name)}.service`);
 
 /**
  * Where the LaunchAgent is written.
@@ -151,7 +200,7 @@ export const unitFile = (): string => join(configHome(), 'systemd', 'user', `${U
  * anywhere else is a file nothing ever loads. The login it belongs to is read
  * from the folder, and not from a file of this tool's.
  */
-export const agentFile = (): string => join(homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`);
+export const agentFile = (name?: string): string => join(homedir(), 'Library', 'LaunchAgents', `${serviceLabel(name)}.plist`);
 
 /** What the install knows about this machine, and the whole of what the file it writes says. */
 export interface ServiceFacts {
@@ -179,6 +228,14 @@ export interface ServiceFacts {
    * journal, and a file is the only place its output can go.
    */
   log: string;
+  /** The name the configuration gives the service, which only a service beside another needs. */
+  name?: string;
+  /**
+   * The configuration home of the install when it is one of its own, which the
+   * file sets as `XDG_CONFIG_HOME`, so the daemon keeps to the folder the
+   * install read: `ownConfigHome`.
+   */
+  configHome?: string;
 }
 
 /**
@@ -195,6 +252,12 @@ const unitWord = (word: string): string => {
     : `"${escaped.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
 };
 
+/** The lines of a unit that give its daemon a configuration home of its own, and none for the default one. */
+const unitHome = (facts: ServiceFacts): string => (facts.configHome === undefined ? '' : `# The configuration home of the install, which is its own: the daemon keeps to
+# the folder under it.
+Environment=XDG_CONFIG_HOME=${unitWord(facts.configHome)}
+`);
+
 /**
  * The unit `service install` writes.
  *
@@ -206,7 +269,8 @@ const unitWord = (word: string): string => {
  * the manager is what starts the next daemon. `WorkingDirectory` is the home of
  * this user: a daemon with no `paths` serves the folder it started in, and the
  * user manager would have picked that home by itself, which is a default of
- * one manager this file does not lean on.
+ * one manager this file does not lean on. An install from a configuration
+ * home of its own sets `XDG_CONFIG_HOME` too, so its daemon keeps to that folder.
  */
 export const unitOf = (facts: ServiceFacts): string => `[Unit]
 Description=ahpd, the agent host
@@ -224,7 +288,7 @@ Environment=AHPD_SERVICE=systemd
 # The PATH of the shell that ran the install, so the agents this host starts
 # find their own runtimes.
 Environment=PATH=${unitWord(facts.path)}
-# Started again after a crash, and not after a managed restart, which ends
+${unitHome(facts)}# Started again after a crash, and not after a managed restart, which ends
 # cleanly: the manager is what starts the next daemon.
 Restart=on-failure
 # The whole group, so nothing the daemon left running outlives the unit.
@@ -245,6 +309,13 @@ const plistWord = (word: string): string => word
   .replaceAll('<', '&lt;')
   .replaceAll('>', '&gt;');
 
+/** The entries of an agent that give its daemon a configuration home of its own, and none for the default one. */
+const plistHome = (facts: ServiceFacts): string => (facts.configHome === undefined ? '' : `		<!-- The configuration home of the install, which is its own: the daemon
+		     keeps to the folder under it. -->
+		<key>XDG_CONFIG_HOME</key>
+		<string>${plistWord(facts.configHome)}</string>
+`);
+
 /**
  * The LaunchAgent `service install` writes.
  *
@@ -255,13 +326,15 @@ const plistWord = (word: string): string => word
  * daemon record itself as one a manager holds, so `ahpd stop` and `ahpd
  * restart` ask launchd rather than sending a signal. `WorkingDirectory` is the
  * home of this user, because launchd starts a job in the root folder and a
- * daemon with no `paths` serves the folder it started in.
+ * daemon with no `paths` serves the folder it started in. An install from a
+ * configuration home of its own sets `XDG_CONFIG_HOME` too, so its daemon keeps
+ * to that folder, and a named service's agent has the label of its name.
  */
 export const plistOf = (facts: ServiceFacts): string => `<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>${LABEL}</string>
+	<string>${serviceLabel(facts.name)}</string>
 	<!-- The same daemon a terminal starts, with the configuration file named in full. -->
 	<key>ProgramArguments</key>
 	<array>
@@ -292,7 +365,7 @@ export const plistOf = (facts: ServiceFacts): string => `<?xml version="1.0" enc
 		     starts find their own runtimes. -->
 		<key>PATH</key>
 		<string>${plistWord(facts.path)}</string>
-	</dict>
+${plistHome(facts)}	</dict>
 	<!-- Where the daemon's output goes: launchd gives it no terminal to print to. -->
 	<key>StandardOutPath</key>
 	<string>${plistWord(facts.log)}</string>
@@ -303,7 +376,8 @@ export const plistOf = (facts: ServiceFacts): string => `<?xml version="1.0" enc
 `;
 
 /** Where the file an install writes goes: the folder this platform's manager reads. */
-export const installFile = (service: Service): string => (service === 'systemd' ? unitFile() : agentFile());
+export const installFile = (service: Service, name?: string): string =>
+  (service === 'systemd' ? unitFile(name) : agentFile(name));
 
 /** And what that file says. */
 export const installText = (service: Service, facts: ServiceFacts): string =>
@@ -333,20 +407,25 @@ export const run: Run = (command, argv) => new Promise((done) => {
 const firstLine = (said: string): string | undefined =>
   said.split('\n').map((one) => one.trim()).find((one) => one !== '');
 
-/** What ahpd asks the service manager of this machine about the daemon it holds. */
+/**
+ * What ahpd asks the service manager of this machine about the daemon it holds.
+ *
+ * `name` is the one the service was installed under, for a service its
+ * configuration names, and absent for the plain service.
+ */
 export interface Manager {
   /** Stop the daemon it holds, and answer once the request has been taken. */
-  stop(service: Service): Promise<void>;
+  stop(service: Service, name?: string): Promise<void>;
   /** Stop it and start it again from its own unit or agent. */
-  restart(service: Service): Promise<void>;
+  restart(service: Service, name?: string): Promise<void>;
 }
 
 /** And what an install asks it about this machine's own list of services. */
 export interface Installer {
-  /** Read the file just written and start the service from it. */
-  install(service: Service, file: string): Promise<void>;
+  /** Read the file just written and start the service from it: `byPath` as `installCalls` takes it. */
+  install(service: Service, file: string, name?: string, byPath?: boolean): Promise<void>;
   /** Stop the service and take it out of the list this machine starts at login. */
-  uninstall(service: Service): Promise<void>;
+  uninstall(service: Service, name?: string): Promise<void>;
 }
 
 /**
@@ -374,9 +453,9 @@ export const realManager = (runner: Run = run, uid: number = process.getuid?.() 
     }
   };
   return {
-    stop: (service) => each([managerCall(service, 'stop', uid)]),
-    restart: (service) => each([managerCall(service, 'restart', uid)]),
-    install: (service, file) => each(installCalls(service, uid, file)),
-    uninstall: (service) => each(uninstallCalls(service, uid)),
+    stop: (service, name) => each([managerCall(service, 'stop', uid, name)]),
+    restart: (service, name) => each([managerCall(service, 'restart', uid, name)]),
+    install: (service, file, name, byPath) => each(installCalls(service, uid, file, name, byPath)),
+    uninstall: (service, name) => each(uninstallCalls(service, uid, name)),
   };
 };
