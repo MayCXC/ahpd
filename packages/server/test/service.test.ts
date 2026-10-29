@@ -10,7 +10,7 @@
  */
 
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SERVICE_ENV } from '../src/daemon.js';
 import {
@@ -163,7 +163,7 @@ describe('ownConfigHome', () => {
 
   it('names a configuration home of its own', () => {
     process.env['XDG_CONFIG_HOME'] = '/srv/two';
-    expect(ownConfigHome()).toBe('/srv/two');
+    expect(ownConfigHome()).toBe(resolve('/srv/two'));
   });
 
   it('names nothing for the default one, unset or spelled out', () => {
