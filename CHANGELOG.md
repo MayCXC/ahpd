@@ -36,6 +36,7 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 - Every agent on the root channel has a `description`, which `AgentInfo` requires: the backend's own, or its display name.
 - Claude, ACP, cofold and pi: a terminal a call names says `isPty` as the terminal's state does, so a client parses the VT sequences a pseudoterminal writes; it said `isPty: false` whatever ran the command. An ACP server's own terminal says it too.
 - cofold: a `!` command's call is held as a client that watched it holds it, so a client that subscribes while the command runs reads the running call, and its ready says the command as its line.
+- pi: a turn names the entry pi wrote its prompt under however it ends, and when its session closes while it runs, as a host that stops closes it. A turn the host was running as it stopped read back without its sender.
 - pi: a `!` command's call names the terminal it ran in, which a client opens to watch it and read it after.
 - Claude: a chat the host resumes by an id the CLI never wrote, one nobody spoke to or one whose CLI could not sign in, starts a new conversation under that id. The CLI ended at startup with `No conversation found` when it was told to resume one. A conversation the CLI wrote is resumed from any project folder, as its resume finds it. See [packages/agent-claude/README.md](packages/agent-claude/README.md#what-it-does).
 
