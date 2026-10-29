@@ -58,7 +58,7 @@ jobs:
   # `check` rather than a second version of them.
   check-windows:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       # Before the checkout: some paths under `.project/plans` are 185
       # characters long, and with the checkout folder in front they pass the 260
@@ -86,9 +86,10 @@ jobs:
         shell: bash
 
       # Longer than `check`'s bound: the Windows run has never finished inside
-      # 300 s, and a bound it runs into reports no failures at all.
+      # 300 s, takes from 390 s to 590 s on the same tree as runners vary, and a
+      # bound it runs into reports no failures at all.
       - name: Tests
-        run: timeout 600 pnpm test:unit
+        run: timeout 900 pnpm test:unit
         shell: bash
 
       # Last, because it is the slowest and the only one that writes anything.
