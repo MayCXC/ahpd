@@ -1,0 +1,49 @@
+---
+title: A stop opens the turn that answers its steering messages
+status: todo
+depends: [task-03-the-read-back-folds-a-steer.md]
+layer: "agent-claude"
+refs:
+  - "[code://packages/agent-claude/src/session/turns.ts#L680-L740](../../../../packages/agent-claude/src/session/turns.ts#L680-L740) - `cancel`, which ends the turn and leaves its steering message with the CLI"
+  - "[code://packages/agent-claude/src/session/query.ts#L659-L679](../../../../packages/agent-claude/src/session/query.ts#L659-L679) - which prompt the CLI is answering, and whether a turn is there for it"
+  - "[code://packages/agent-claude/src/session/query.ts#L803-L920](../../../../packages/agent-claude/src/session/query.ts#L803-L920) - the result branch, which ends whatever turn is active"
+---
+
+## Objective
+
+A turn begun after a stop gets only its own answer.
+A steering message the CLI still holds at the stop is answered in a turn of its own, which opens as the stopped turn ends.
+That turn is the chat's active turn, so a new turn waits for it as for any other.
+A stopped turn's result ends no other turn.
+
+## Files
+
+- `UPDATE: packages/agent-claude/src/session/context.ts` - each owed prompt says which turn it belongs to and whether the CLI holds it.
+- `UPDATE: packages/agent-claude/src/session.ts` - the map's entry type.
+- `UPDATE: packages/agent-claude/src/session/turns.ts` - `push` records the turn; `cancel` hands the steering messages the CLI holds to their own turn.
+- `UPDATE: packages/agent-claude/src/session/query.ts` - frames and results go to the turn their prompts belong to; `command_lifecycle` frames are read; a failed result hands over too.
+- `UPDATE: packages/agent-claude/src/session/parts.ts` - a turn opened for a steering message names it in `queuedMessageId`.
+- `UPDATE: packages/agent-claude/test/agent-claude-late-steer.test.ts` - the stop cases, and a failure with a steering message queued.
+- `CREATE: packages/agent-claude/test/fixtures/claude-folded-stop.jsonl` - a stop after the CLI folded a steering message in.
+- `CREATE: packages/agent-claude/test/fixtures/claude-failed-steer.jsonl` - a turn that fails at its turn limit with a steering message queued, and that message's answer.
+- `CREATE: packages/agent-claude/test/fixtures/claude-stopped-turn.jsonl` - a stop with nothing queued, and a new prompt sent at once.
+- `UPDATE: docs/sdk/CHATS.md` - what a stop does with a steering message the CLI holds.
+- `UPDATE: .project/specs/agent-backends.md` - the stop.
+
+## Steps
+
+1. Record with each owed prompt the turn it belongs to and the steering message's id.
+2. Record from `command_lifecycle` frames whether the CLI holds a prompt or has started it.
+3. Pass over a frame of a prompt that belongs to a turn that is not running.
+4. End the active turn at a result only when the result names a prompt of that turn, or names none.
+5. Read a result that names a stopped turn's prompt as the stop's, never as a failure.
+6. Move the steering messages the CLI holds to a turn opened when their turn stops or fails.
+7. Open that turn with the first message, under its uuid, with its id as `queuedMessageId`.
+8. Add the cases, the fixtures, the docs and the spec.
+
+## Validation
+
+- `agent-claude-late-steer.test.ts` holds the stop cases: a steering message the CLI holds, one it folded in, and nothing queued.
+- The case with a steering message held fails before this task, and so does the case with nothing queued.
+- The folded case guards that no turn opens for a message the CLI took in.
+- `agent-claude-late-steer.test.ts` and `agent-claude-cancelled-turn.test.ts` pass at one worker.

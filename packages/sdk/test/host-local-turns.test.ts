@@ -640,6 +640,77 @@ describe('a Claude chat', () => {
     await elsewhere.host.close();
   });
 
+  it('reads a chat back after a restart as a client saw it live, from captures of the real CLI', async () => {
+    // agent-claude's captures of one session of the real CLI, and what the
+    // SDK's reader returned for it: a steering message the CLI ran after the
+    // turn's last answer, and one it took in at a tool call.
+    const SESSION = 'ae01151f-233d-4c04-901b-2e01f3afb037';
+    const FIRST = '9975eb65-d506-4ab4-a8e6-6b318497c4e1';
+    const LATE = '46569a15-a821-8da6-9ea4-802e84d5af14';
+    const TOOL = '34c360d4-3f3a-4633-8f85-551354bb6668';
+    const FOLDED = '7e5694fd-eb5f-8b42-88a6-5eb2f7464e74';
+    const ALPHA = 'Reply with exactly the word ALPHA and nothing else.';
+    const SLEEP = 'Run the shell command `sleep 4` with the Bash tool, then reply with exactly the word DONE.';
+    const capture = (name: string): Bag[] => readFileSync(new URL(`../../agent-claude/test/fixtures/${name}`, import.meta.url), 'utf8')
+      .split('\n').filter((line) => line.trim() !== '').map((line) => JSON.parse(line) as Bag);
+    /** A capture's frames up to the first one `at` holds for, and the rest. */
+    const upTo = (frames: Bag[], at: (frame: Bag) => boolean): [Bag[], Bag[]] => {
+      const cut = frames.findIndex(at) + 1;
+      return [frames.slice(0, cut), frames.slice(cut)];
+    };
+    const steer = async (client: Client, chat: string, id: string, text: string): Promise<void> => {
+      void client.handle({
+        method: 'dispatchAction',
+        params: { channel: chat, action: { type: 'chat/pendingMessageSet', kind: 'steering', id, message: { text } } },
+      });
+      await settle();
+    };
+    /** What a client shows of each turn: its id, how it ended, the message it answers and its prose. */
+    const shown = (turns: Bag[]): unknown[] => turns.map((turn) => [
+      turn.id,
+      turn.state,
+      (turn.message as Bag).text,
+      (turn.responseParts as Bag[]).filter((part) => part.kind === 'markdown').map((part) => part.content),
+    ]);
+
+    const dir = join(temp(), 'sessions');
+    const before = await shelled(dir);
+    const uri = `claude:/${SESSION}`;
+    await before.client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude', workingDirectories: [uriOf(DIR)] } });
+    const chat = String((await stateOf(before.client, uri)).defaultChat);
+    await stateOf(before.client, chat);
+    const [alpha, late] = upTo(capture('claude-late-steer.jsonl'), (frame) => frame.type === 'stream_event'
+      && (frame.event as Bag).type === 'content_block_delta');
+    say(before.client, chat, FIRST, ALPHA);
+    await settle();
+    await emit(...alpha);
+    await steer(before.client, chat, LATE, 'Reply with exactly the word BETA and nothing else.');
+    await emit(...late);
+    await ended(before.p, chat, FIRST);
+    const [sleeping, folded] = upTo(capture('claude-folded-steer.jsonl'), (frame) => frame.type === 'assistant'
+      && ((frame.message as Bag).content as Bag[]).some((block) => block.type === 'tool_use'));
+    say(before.client, chat, TOOL, SLEEP);
+    await settle();
+    await emit(...sleeping);
+    await steer(before.client, chat, FOLDED, 'Also, at the very end of your reply, add the word BETA2.');
+    await emit(...folded);
+    await ended(before.p, chat, TOOL);
+    expect(sdk.uuids).toEqual([FIRST, LATE, TOOL, FOLDED]);
+    const live = shown((await stateOf(before.client, chat)).turns as Bag[]);
+    expect(live).toEqual([
+      [FIRST, 'complete', ALPHA, ['ALPHA', 'BETA']],
+      [TOOL, 'complete', SLEEP, ['DONE BETA2']],
+    ]);
+    await before.host.close();
+
+    sdk.sessions.push({ sessionId: SESSION, summary: ALPHA, lastModified: 1, cwd: DIR });
+    sdk.transcript.push(...capture('claude-steered-transcript.jsonl'));
+    const after = await shelled(dir);
+    await stateOf(after.client, uri);
+    expect(shown((await stateOf(after.client, chat)).turns as Bag[])).toEqual(live);
+    await after.host.close();
+  });
+
   it('forks a session asleep since a restart at a command\'s turn, where the Claude turn read back before it ended', async () => {
     const dir = join(temp(), 'sessions');
     const before = await shelled(dir);

@@ -132,9 +132,18 @@ THEN it ends the turn.
 WHEN the turn is stopped before the CLI takes the steering message in
 THEN the CLI's answer to it is a turn of its own, under the uuid the message was sent with, carrying the message
 AND the rest of the stopped turn's answer opens no turn and joins none.
+WHEN the transcript is read back
+THEN a message the SDK's reader marks `isQueuedCommand` joins the open turn
+AND the CLI's stop text opens no turn and ends the open turn as cancelled
+AND the host reads a steering message the CLI ran late back inside the turn it steered, because the message began no turn
+AND a steering message answered in a turn of its own reads back as that turn, which began.
+WHEN a session resumes a conversation the host read back so
+THEN a turn ends where the last prompt read back inside it ends, up to a rewind's point.
 The reason: the CLI folds a steering message into a turn at its next tool call.
 One that arrives after the last tool call runs as a turn of its own.
-See [`code://packages/agent-claude/src/session/query.ts`](../../packages/agent-claude/src/session/query.ts).
+The CLI writes nothing else that ties that message to the turn it steered.
+*A turn is read back as it began* in the sessions spec says how the host reads such a turn back.
+See [`code://packages/agent-claude/src/session/query.ts`](../../packages/agent-claude/src/session/query.ts) and [`code://packages/agent-claude/src/transcript.ts`](../../packages/agent-claude/src/transcript.ts).
 
 ### A live tool change in a Claude session
 

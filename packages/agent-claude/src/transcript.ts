@@ -274,6 +274,14 @@ function isCliEcho(content: unknown): boolean {
   return first !== undefined && CLI_ECHO.test(str(first.text) ?? '');
 }
 
+/**
+ * How the text the CLI writes where a turn was stopped starts:
+ * `[Request interrupted by user]`, or `[Request interrupted by user for tool
+ * use]` when a tool call was running. The CLI reads a user text that starts so
+ * as no prompt of anybody's.
+ */
+const INTERRUPTED = '[Request interrupted by user';
+
 /** One session's history, from the frames a reader already parsed, and where each turn ended when `ends` is given. */
 function buildTurns(messages: unknown[], ends?: Map<string, string>): WireTurn<Turn>[] {
   const built: WireTurn<Turn>[] = [];
@@ -401,6 +409,20 @@ function buildTurns(messages: unknown[], ends?: Map<string, string>): WireTurn<T
       // Written by the CLI rather than said by anybody: it neither shows as a
       // prompt nor ends the exchange it sits in.
       if (frame.isCompactSummary === true || isCliEcho(message.content)) continue;
+      // A stop, which ends the turn in front of it as cancelled, as it ended live.
+      if (said.startsWith(INTERRUPTED)) {
+        if (open !== undefined) open.state = 'cancelled';
+        continue;
+      }
+      /*
+       * A steering message the CLI took in at a tool call, which comes back
+       * marked `isQueuedCommand` and is no turn of its own: its answer is the
+       * turn's it steered, as it was live. One the CLI ran after the turn's last
+       * answer is a prompt of its own here, and the host's record of the turns
+       * a chat began puts it back in the turn it steered.
+       * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/CONTEXT.md#L1597-L1606
+       */
+      if (open !== undefined && frame.isQueuedCommand === true) continue;
 
       const opened: WireTurn<Turn> = {
         id: str(frame.uuid) ?? `u${built.length}`,

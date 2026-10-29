@@ -79,6 +79,30 @@ export interface Query {
   giveHostInstructions: HookCallback;
 }
 
+/**
+ * Where each turn a resumed session opens with ended, from where each turn of
+ * its transcript's read ended, in the read's order.
+ *
+ * The host reads a turn back with the ones the chat never began inside it, as
+ * a steering message the CLI ran after the turn's last answer, so such a turn
+ * ends where the last of those ends: they follow it in the read, before the
+ * next turn the session opens with. Nothing is taken past a rewind's point,
+ * which is the last entry the conversation keeps. A session that opens with no
+ * turns named takes the read as it is.
+ */
+function endsOf(seed: readonly Bag[] | undefined, read: ReadonlyMap<string, string> | undefined, rewindAt: string | undefined): Map<string, string> {
+  if (seed === undefined) return new Map(read ?? []);
+  const opens = new Set(seed.flatMap((turn) => str(turn.id) ?? []));
+  const out = new Map<string, string>();
+  let into: string | undefined;
+  for (const [turn, entry] of read ?? []) {
+    if (opens.has(turn)) into = turn;
+    if (into !== undefined) out.set(into, entry);
+    if (entry === rewindAt) break;
+  }
+  return out;
+}
+
 export function createQuery(ctx: SessionContext): Query {
   /**
    * The `query()` options the declared values become. A pushed credential is
@@ -588,7 +612,7 @@ export function createQuery(ctx: SessionContext): Query {
    * A resumed session starts with the ends its transcript's read named for
    * the turns it opens with, and every turn it watches adds its own.
    */
-  const ends = new Map<string, string>(ctx.options.seedEnds ?? []);
+  const ends = new Map<string, string>(endsOf(ctx.options.seed, ctx.options.seedEnds, ctx.options.rewindAt));
 
   /** The turns a result left open for an answer the CLI still owed, by turn id. */
   const spanning = new Set<string>();
