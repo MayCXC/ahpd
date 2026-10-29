@@ -9,16 +9,16 @@ changes:
   - specs/agent-backends.md
   - specs/sessions-and-chats.md
 refs:
-  - "[code://packages/agent-claude/src/session/turns.ts#L529-L545](../../../../packages/agent-claude/src/session/turns.ts#L529-L545) - `steer`, a steering message pushed onto the CLI's input with no uuid"
-  - "[code://packages/agent-claude/src/session/turns.ts#L63-L73](../../../../packages/agent-claude/src/session/turns.ts#L63-L73) - `push`, the one door every prompt goes through to the CLI"
-  - "[code://packages/agent-claude/src/session/turns.ts#L88-L92](../../../../packages/agent-claude/src/session/turns.ts#L88-L92) - `writtenAs`, the uuid a turn's prompt is written under"
-  - "[code://packages/agent-claude/src/session/turns.ts#L661-L720](../../../../packages/agent-claude/src/session/turns.ts#L661-L720) - `cancel`, which interrupts the CLI and ends the turn"
-  - "[code://packages/agent-claude/src/session/query.ts#L192-L205](../../../../packages/agent-claude/src/session/query.ts#L192-L205) - the input generator, which takes a steering message out of the state when it hands it over"
-  - "[code://packages/agent-claude/src/session/query.ts#L772-L858](../../../../packages/agent-claude/src/session/query.ts#L772-L858) - the result branch, which ends the active turn and starts the queue at every result"
-  - "[code://packages/agent-claude/src/session/query.ts#L530-L533](../../../../packages/agent-claude/src/session/query.ts#L530-L533) - `startQuery`, every new CLI for the conversation"
-  - "[code://packages/agent-claude/src/session/parts.ts#L227-L257](../../../../packages/agent-claude/src/session/parts.ts#L227-L257) - `openTurn`, a turn nobody began, opened with an empty message from the agent"
+  - "[code://packages/agent-claude/src/session/turns.ts#L592-L608](../../../../packages/agent-claude/src/session/turns.ts#L592-L608) - `steer`, which pushes a steering message onto the CLI's input"
+  - "[code://packages/agent-claude/src/session/turns.ts#L69-L88](../../../../packages/agent-claude/src/session/turns.ts#L69-L88) - `push`, the one door every prompt goes through to the CLI"
+  - "[code://packages/agent-claude/src/session/turns.ts#L102-L106](../../../../packages/agent-claude/src/session/turns.ts#L102-L106) - `writtenAs`, the uuid a turn's prompt is written under"
+  - "[code://packages/agent-claude/src/session/turns.ts#L728-L790](../../../../packages/agent-claude/src/session/turns.ts#L728-L790) - `cancel`, which interrupts the CLI and ends the turn"
+  - "[code://packages/agent-claude/src/session/query.ts#L192-L207](../../../../packages/agent-claude/src/session/query.ts#L192-L207) - the input generator, which takes a steering message out of the state when it hands it over"
+  - "[code://packages/agent-claude/src/session/query.ts#L820-L970](../../../../packages/agent-claude/src/session/query.ts#L820-L970) - the result branch, which ends a turn and starts the queue"
+  - "[code://packages/agent-claude/src/session/query.ts#L533-L539](../../../../packages/agent-claude/src/session/query.ts#L533-L539) - `startQuery`, every new CLI for the conversation"
+  - "[code://packages/agent-claude/src/session/parts.ts#L227-L265](../../../../packages/agent-claude/src/session/parts.ts#L227-L265) - `openTurn`, a turn the backend opens itself"
   - "[code://packages/agent-claude/src/session/stream.ts#L108-L116](../../../../packages/agent-claude/src/session/stream.ts#L108-L116) - `message_start` opens a turn when none is active"
-  - "[code://packages/agent-claude/src/transcript.ts#L274-L406](../../../../packages/agent-claude/src/transcript.ts#L274-L406) - `buildTurns`, which opens a turn at every prompt a transcript holds"
+  - "[code://packages/agent-claude/src/transcript.ts#L284-L573](../../../../packages/agent-claude/src/transcript.ts#L284-L573) - `buildTurns`, which builds the turns of a transcript"
   - "[code://packages/sdk/src/host/lifecycle.ts#L1352-L1353](../../../../packages/sdk/src/host/lifecycle.ts#L1352-L1353) - the host refuses a turn while the chat has an active one"
   - "[code://packages/agent-claude/test/agent-claude-cancelled-turn.test.ts](../../../../packages/agent-claude/test/agent-claude-cancelled-turn.test.ts) - the pattern for a case that pushes frames between session calls"
   - "[code://packages/agent-claude/test/agent-claude-transcript.test.ts](../../../../packages/agent-claude/test/agent-claude-transcript.test.ts) - the pattern for a case that reads a transcript back"
@@ -125,7 +125,7 @@ a client stops a turn -> cancel() ends it -> a new turn begins -> the CLI answer
 | Each prompt the CLI owes belongs to a turn: a turn's own prompt and its steering messages to that turn. A frame or a result about a turn that is not running changes nothing in the one that is. | npm://@anthropic-ai/claude-agent-sdk@0.3.301, `user_message_uuids` on every frame and result that answers; measured, a stopped turn's result arrives after a new turn begins | 04 |
 | A turn that ends by a stop or a failure while the CLI holds its steering messages opens the turn that answers them at once. It carries the first message, with its id as `queuedMessageId`, and the others join it. | AHP 1.1.0, *Steering Messages*: consumption "represented as a new presentation turn"; [code://packages/sdk/src/host/lifecycle.ts#L1352-L1353](../../../../packages/sdk/src/host/lifecycle.ts#L1352-L1353); measured, the CLI merges a prompt it gets while such a message waits into one turn with it | 04 |
 | The CLI holds a prompt from its `queued` lifecycle until its `started` one; one with neither is still on its way and opens its turn when its answer comes. | npm://@anthropic-ai/claude-agent-sdk@0.3.301, the `command_lifecycle` frame its interrupt documents; measured | 04 |
-| A result that names a stopped turn's prompt is the stop's: a turn it also ends is cancelled, and nothing reads it as a failure. | [code://packages/agent-claude/src/session/context.ts#L186-L193](../../../../packages/agent-claude/src/session/context.ts#L186-L193), `interrupted`: a stop is not a failure | 04 |
+| A result that names a stopped turn's prompt is the stop's: a turn it also ends is cancelled, and nothing reads it as a failure. | [code://packages/agent-claude/src/session/context.ts#L203-L210](../../../../packages/agent-claude/src/session/context.ts#L203-L210), `interrupted`: a stop is not a failure | 04 |
 
 ## Proposed architecture
 

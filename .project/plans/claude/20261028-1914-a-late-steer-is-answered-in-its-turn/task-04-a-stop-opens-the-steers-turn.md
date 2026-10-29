@@ -4,9 +4,9 @@ status: done
 depends: [task-03-the-read-back-folds-a-steer.md]
 layer: "agent-claude"
 refs:
-  - "[code://packages/agent-claude/src/session/turns.ts#L680-L740](../../../../packages/agent-claude/src/session/turns.ts#L680-L740) - `cancel`, which ends the turn and leaves its steering message with the CLI"
-  - "[code://packages/agent-claude/src/session/query.ts#L659-L679](../../../../packages/agent-claude/src/session/query.ts#L659-L679) - which prompt the CLI is answering, and whether a turn is there for it"
-  - "[code://packages/agent-claude/src/session/query.ts#L803-L920](../../../../packages/agent-claude/src/session/query.ts#L803-L920) - the result branch, which ends whatever turn is active"
+  - "[code://packages/agent-claude/src/session/turns.ts#L728-L790](../../../../packages/agent-claude/src/session/turns.ts#L728-L790) - `cancel`, which ends the turn"
+  - "[code://packages/agent-claude/src/session/query.ts#L673-L696](../../../../packages/agent-claude/src/session/query.ts#L673-L696) - which prompt the CLI is answering, and whose turn the answer is"
+  - "[code://packages/agent-claude/src/session/query.ts#L820-L970](../../../../packages/agent-claude/src/session/query.ts#L820-L970) - the result branch, which ends a turn"
 ---
 
 ## Objective
