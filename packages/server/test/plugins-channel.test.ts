@@ -888,6 +888,26 @@ it('serves a plugin whose apply throws as not loaded, and its problem without th
   await close();
 });
 
+it('serves a load problem without a value its schema marks secret', async () => {
+  writeFileSync(config, JSON.stringify({
+    plugins: [{ name: THROWS, options: { apiKey: 'sk-live-3', token: 'tk-live-4', region: 'eu' } }],
+  }));
+  const { host, users, close } = await served();
+  const ana = await as(host, users, 'ana');
+
+  const row = (await ana.rows())['throws-secret'] as Bag;
+  expect(row['loaded']).toBe(false);
+  const alerts = row['alerts'] as Bag[];
+  expect(alerts).toHaveLength(1);
+  // A `secret` option is a credential as a `writeOnly` one is, and neither is
+  // served where the plugin's own error quoted it.
+  expect(String(alerts[0]?.['text'])).toContain('the secret fixture threw');
+  expect(String(alerts[0]?.['text'])).not.toContain('tk-live-4');
+  expect(String(alerts[0]?.['text'])).not.toContain('sk-live-3');
+  expect(JSON.stringify(row)).not.toContain('tk-live-4');
+  await close();
+});
+
 it('lists what a plugin said in apply as a warning alert, and loads it all the same', async () => {
   writeFileSync(config, JSON.stringify({ plugins: ['./fixtures/plugin-skips/index.ts'] }));
   const { host, users, close } = await served();

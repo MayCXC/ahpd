@@ -6,7 +6,7 @@
  * form, a `provider` that tells the proxy where and how to call it, a `models`
  * that reads the provider's own list, a check that proves its key, and an icon.
  *
- * The key is a secret: a schema marks it `writeOnly`, so the host keeps its
+ * The key is a secret: a schema marks it `secret`, so the host keeps its
  * value in the vault and hands the adapter the value back when it opens the
  * connector. A host connector may name `{ "fromEnv": "<NAME>" }` instead, which
  * the channel reads from the daemon's own environment.
@@ -78,7 +78,7 @@ const MODELS: Capability = {
 const KEY: Record<string, unknown> = {
   type: 'string',
   minLength: 1,
-  writeOnly: true,
+  secret: true,
   title: 'Key',
   description: 'The API key. It is kept in the vault, never in the connector.',
 };

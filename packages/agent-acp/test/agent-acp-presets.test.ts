@@ -251,7 +251,7 @@ it('offers every shipped row as a template, with a field per variable its vendor
 
   // A variable no vendor documents is still a value a record may write.
   const fields = (kind.schema as Bag)['properties'] as Bag;
-  expect((fields['env'] as Bag)['additionalProperties']).toEqual({ type: 'string', writeOnly: true, secretAtUse: true });
+  expect((fields['env'] as Bag)['additionalProperties']).toEqual({ type: 'string', secret: true, secretAtUse: true });
   // Amp's switch is the row's, so it is drawn with the value it must have.
   const amp = templates.find((one) => one.name === shipped.amp?.name);
   expect((amp?.config?.['env'] as Record<string, string>)['AMP_SKIP_UPDATE_CHECK']).toBe('1');

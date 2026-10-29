@@ -49,7 +49,7 @@ const VENDOR_SCHEMA: Record<string, unknown> = {
   type: 'object',
   properties: {
     target: { type: 'string' },
-    secret: { type: 'string', writeOnly: true },
+    secret: { type: 'string', secret: true },
   },
   required: ['target', 'secret'],
 };
@@ -165,6 +165,7 @@ async function served() {
       title: 'Plain',
       description: 'An account with no sign-in.',
       by: 'plain',
+      // A plugin written before `secret`: the host keeps `writeOnly` as the vault's.
       schema: { type: 'object', properties: { secret: { type: 'string', writeOnly: true } }, required: ['secret'] },
       capabilities: [],
       open: () => {},
@@ -424,16 +425,31 @@ it('refuses a signIn field the schema does not keep', () => {
     signIn: { title: 'Sign in', field: 'target', url: () => 'https://vendor.test/auth', exchange: async () => KEY },
   };
 
-  expect(() => host.registerAdapter(adapter)).toThrow('writeOnly');
+  expect(() => host.registerAdapter(adapter)).toThrow('marks secret');
 });
 
-it('accepts a signIn whose field is writeOnly', () => {
+it('accepts a signIn whose field is secret', () => {
   const { host } = pluginHost('vendor', CONTEXT);
   const adapter: Adapter = {
     name: 'vendor',
     title: 'Vendor',
     description: 'An account that signs in.',
     schema: VENDOR_SCHEMA,
+    capabilities: [],
+    open: () => {},
+    signIn: { title: 'Sign in', field: 'secret', url: () => 'https://vendor.test/auth', exchange: async () => KEY },
+  };
+
+  expect(() => host.registerAdapter(adapter)).not.toThrow();
+});
+
+it('accepts a signIn whose field is marked writeOnly alone, as a plugin written before secret is', () => {
+  const { host } = pluginHost('vendor', CONTEXT);
+  const adapter: Adapter = {
+    name: 'vendor',
+    title: 'Vendor',
+    description: 'An account that signs in.',
+    schema: { type: 'object', properties: { secret: { type: 'string', writeOnly: true } }, required: ['secret'] },
     capabilities: [],
     open: () => {},
     signIn: { title: 'Sign in', field: 'secret', url: () => 'https://vendor.test/auth', exchange: async () => KEY },

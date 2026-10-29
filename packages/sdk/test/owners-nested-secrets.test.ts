@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { AGENT_SECRETS, HELD, heldAgainst, moveSecrets, resolved, writeOnlyPaths } from '../src/channels/owners.js';
+import { AGENT_SECRETS, HELD, heldAgainst, isSecret, moveSecrets, resolved, secretPaths } from '../src/channels/owners.js';
 import type { Vault } from '../src/types/vault.js';
 
 /*
@@ -8,7 +8,7 @@ import type { Vault } from '../src/types/vault.js';
  * and an empty field keeps a list secret only while its entry is unchanged.
  */
 
-const KEY = { writeOnly: true, oneOf: [{ type: 'string' }, { type: 'object' }] };
+const KEY = { secret: true, oneOf: [{ type: 'string' }, { type: 'object' }] };
 
 const SCHEMA: Record<string, unknown> = {
   type: 'object',
@@ -17,7 +17,7 @@ const SCHEMA: Record<string, unknown> = {
       type: 'array',
       items: { type: 'object', properties: { fetch: { type: 'string' }, key: KEY }, required: ['fetch'] },
     },
-    env: { type: 'object', additionalProperties: { type: 'string', writeOnly: true } },
+    env: { type: 'object', additionalProperties: { type: 'string', secret: true } },
     name: { type: 'string' },
   },
 };
@@ -41,7 +41,7 @@ const put = async (
   owner: 'host' | `user:${string}` = 'user:ana',
 ): Promise<Record<string, unknown>> => moveSecrets({
   rules: AGENT_SECRETS,
-  fields: writeOnlyPaths(SCHEMA, held, config),
+  fields: secretPaths(SCHEMA, held, config),
   config,
   held,
   owner,
@@ -51,18 +51,37 @@ const put = async (
 });
 
 it('names a key in each list entry and each map value, from what the configs hold', () => {
-  expect(writeOnlyPaths(SCHEMA, {
+  expect(secretPaths(SCHEMA, {
     sources: [{ fetch: 'https://a' }, { fetch: 'https://b', key: 'k' }],
     env: { TOKEN: 't' },
     name: 'x',
   }).sort()).toEqual(['env.TOKEN', 'sources.0.key', 'sources.1.key']);
-  expect(writeOnlyPaths(SCHEMA, {})).toEqual([]);
+  expect(secretPaths(SCHEMA, {})).toEqual([]);
+});
+
+it('reads secret, the writeOnly fallback, and a secret: false that is not one', () => {
+  const schema = {
+    type: 'object',
+    properties: {
+      token: { type: 'string', secret: true },
+      legacy: { type: 'string', writeOnly: true },
+      plain: { type: 'string', writeOnly: true, secret: false },
+      env: { type: 'object', additionalProperties: { type: 'string', secret: true } },
+    },
+  };
+  expect(secretPaths(schema, { token: 'a', legacy: 'b', plain: 'c', env: { KEY: 'd' } }).sort())
+    .toEqual(['env.KEY', 'legacy', 'token']);
+  expect(isSecret({ secret: true })).toBe(true);
+  expect(isSecret({ writeOnly: true })).toBe(true);
+  expect(isSecret({ writeOnly: true, secret: false })).toBe(false);
+  expect(isSecret({ type: 'string' })).toBe(false);
+  expect(isSecret(undefined)).toBe(false);
 });
 
 it('walks a schema that names itself only as deep as the config goes', () => {
-  const node: Record<string, unknown> = { type: 'object', properties: { key: { type: 'string', writeOnly: true } } };
+  const node: Record<string, unknown> = { type: 'object', properties: { key: { type: 'string', secret: true } } };
   (node['properties'] as Record<string, unknown>)['child'] = node;
-  expect(writeOnlyPaths(node, { key: 'a', child: { key: 'b', child: {} } }).sort()).toEqual(['child.child.key', 'child.key', 'key']);
+  expect(secretPaths(node, { key: 'a', child: { key: 'b', child: {} } }).sort()).toEqual(['child.child.key', 'child.key', 'key']);
 });
 
 it('moves a list key to the vault, and a client sees <set>', async () => {

@@ -36,7 +36,7 @@ export const name = 'agent-acp';
 export const title = 'Agent ACP';
 
 /** One option's value in a record's `env`: a variable, or the name of a secret it is. */
-const envValue = { type: 'string', writeOnly: true, secretAtUse: true };
+const envValue = { type: 'string', secret: true, secretAtUse: true };
 
 /** One name a `$secret` or a `fromEnv` reference is written as. */
 const referenceOf = (keyword: '$secret' | 'fromEnv'): Record<string, unknown> => ({
@@ -50,10 +50,10 @@ const referenceOf = (keyword: '$secret' | 'fromEnv'): Record<string, unknown> =>
  * One value of `machine.env`: text, or a reference to where the text comes from.
  *
  * Every value is a credential wherever the server keeps one, so it is marked
- * `writeOnly`: a client draws it and never reads it back.
+ * `secret`: a client draws it and never reads it back.
  */
 const MACHINE_ENV_VALUE = {
-  writeOnly: true,
+  secret: true,
   secretAtUse: true,
   oneOf: [
     { type: 'string' },

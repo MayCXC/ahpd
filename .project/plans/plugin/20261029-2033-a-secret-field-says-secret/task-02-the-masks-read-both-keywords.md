@@ -1,6 +1,6 @@
 ---
 title: The masks read both keywords
-status: todo
+status: implemented
 depends: [task-01-the-host-reads-secret.md]
 layer: "server"
 refs:

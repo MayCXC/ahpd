@@ -21,7 +21,7 @@ import type { StartSession } from '../types/automations.js';
 import type { ChatRequest, PluginContracts, PortKey } from '../types/plugin.js';
 import type { Owner } from '../types/usage.js';
 import { SUBJECTS, isGrant } from '../access/users.js';
-import { writeOnly } from '../channels/owners.js';
+import { secretFields } from '../channels/owners.js';
 import { RECORD_SLUG, isRecordSlug } from '../resources/records.js';
 import { schemaGaps, type SchemaGap } from './schemagaps.js';
 
@@ -60,12 +60,57 @@ export interface CheckedSchema {
  */
 const gapsOf = (read: () => unknown): SchemaGap[] => {
   try {
-    return schemaGaps(read());
+    return schemaProblems(read());
   }
   catch {
     return [];
   }
 };
+
+/** The reason a vault field marked `writeOnly` gives at load. */
+const WRITEOUT_IN_VAULT = 'writeOnly kept in the vault; mark it secret';
+
+/** One path below another, with a dot only when there is a parent. */
+const under = (base: string, tail: string): string => (base === '' ? tail : `${base}.${tail}`);
+
+/**
+ * Every node of a schema that says `writeOnly` and nothing about `secret`.
+ *
+ * A vault field says `secret: true`, and the host keeps reading `writeOnly` as
+ * one so a plugin written before the keyword keeps its secrets out of the
+ * record. The line here is what tells such a plugin to mark the field; it never
+ * refuses the load. The walk follows `properties`, `additionalProperties` and
+ * `items` as `secretPaths` does, and names a map's key and a list's item by the
+ * schema rather than by a value, so one line names every such field a form
+ * draws. A node that says `secret: false` is not one: the plugin has said the
+ * value stays in the record.
+ */
+const writeOnlyGaps = (schema: unknown): SchemaGap[] => {
+  const gaps: SchemaGap[] = [];
+  // A schema built in code may hold itself, so a node is not walked again inside itself.
+  const walking = new Set<object>();
+  const walk = (node: unknown, path: string): void => {
+    if (typeof node !== 'object' || node === null || Array.isArray(node)) return;
+    if (walking.has(node)) return;
+    walking.add(node);
+    const held = node as Record<string, unknown>;
+    if (held['writeOnly'] === true && held['secret'] === undefined) {
+      gaps.push({ path, reason: WRITEOUT_IN_VAULT });
+    }
+    const properties = held['properties'];
+    if (typeof properties === 'object' && properties !== null && !Array.isArray(properties)) {
+      for (const [key, one] of Object.entries(properties)) walk(one, under(path, key));
+    }
+    walk(held['additionalProperties'], under(path, '*'));
+    walk(held['items'], under(path, 'items'));
+    walking.delete(node);
+  };
+  walk(schema, '');
+  return gaps;
+};
+
+/** The gaps one schema gives: the values it leaves unnamed, and the vault fields it marks `writeOnly`. */
+const schemaProblems = (schema: unknown): SchemaGap[] => [...schemaGaps(schema), ...writeOnlyGaps(schema)];
 
 /** Whether a value is that kind. Arrays are not objects and `null` is neither. */
 const right = (value: unknown, expected: Kind): boolean => {
@@ -635,7 +680,7 @@ export const checkIcons = (value: unknown, by: string, method = 'registerAdapter
  *
  * A sign-in is served as commands of its own, so every member the host calls
  * has to be there and be the right kind. The field is checked against the
- * schema here: only a `writeOnly` field is moved to the vault, and a sign-in
+ * schema here: only a field the vault keeps is moved there, and a sign-in
  * filling any other would leave the key in the record a client reads.
  */
 const checkSignIn = (value: unknown, schema: Record<string, unknown>, by: string): void => {
@@ -645,7 +690,7 @@ const checkSignIn = (value: unknown, schema: Record<string, unknown>, by: string
     throw new Error(miss(by, 'registerAdapter', 'signIn.title', 'a non-empty string, what a client prints on the button'));
   }
   if (typeof signIn.field !== 'string' || signIn.field === '') {
-    throw new Error(miss(by, 'registerAdapter', 'signIn.field', 'a non-empty string, naming a field the schema marks writeOnly'));
+    throw new Error(miss(by, 'registerAdapter', 'signIn.field', 'a non-empty string, naming a field the schema marks secret'));
   }
   for (const member of ['url', 'exchange']) {
     if (typeof signIn[member] !== 'function') {
@@ -653,8 +698,8 @@ const checkSignIn = (value: unknown, schema: Record<string, unknown>, by: string
     }
   }
   const field = signIn.field;
-  if (!writeOnly(schema).includes(field)) {
-    throw new Error(miss(by, 'registerAdapter', field, `a field the schema marks writeOnly, so the exchanged value is kept in the vault`));
+  if (!secretFields(schema).includes(field)) {
+    throw new Error(miss(by, 'registerAdapter', field, `a field the schema marks secret, so the exchanged value is kept in the vault`));
   }
 };
 
@@ -681,7 +726,7 @@ export const checkAdapter = (value: unknown, by: string): { name: string; checke
     throw new Error(miss(by, 'registerAdapter', 'schema', 'an object, the JSON Schema a client draws the form from'));
   }
   checkSignIn(object.signIn, object.schema as Record<string, unknown>, by);
-  const checked: CheckedSchema[] = [{ where: `adapter ${name}`, gaps: schemaGaps(object.schema) }];
+  const checked: CheckedSchema[] = [{ where: `adapter ${name}`, gaps: schemaProblems(object.schema) }];
   if (!Array.isArray(object.capabilities)) {
     throw new Error(miss(by, 'registerAdapter', 'capabilities', 'a list of the capabilities a connector of this adapter has'));
   }
@@ -772,5 +817,5 @@ export const checkEngine = (value: unknown, by: string): { name: string; checked
   if (typeof object.open !== 'function') {
     throw new Error(miss(by, 'registerEngine', 'open', 'a function building the backend for one record'));
   }
-  return { name, checked: [{ where: `engine ${name}`, gaps: schemaGaps(object.schema) }] };
+  return { name, checked: [{ where: `engine ${name}`, gaps: schemaProblems(object.schema) }] };
 };

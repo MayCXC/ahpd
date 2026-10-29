@@ -143,7 +143,7 @@ it('registers the cofold engine, its form, its template and its host-only fields
     expect(fields).not.toContain(owned);
   }
   // A record's key is vaulted and answered as set, never read back.
-  expect((engine?.schema.properties as Bag | undefined)?.['apiKey']).toMatchObject({ type: 'string', writeOnly: true });
+  expect((engine?.schema.properties as Bag | undefined)?.['apiKey']).toMatchObject({ type: 'string', secret: true });
 
   // One template, and it sets nothing: a record made from it runs on the
   // harness configuration at ~/.config/cofold/config.json, which the harness

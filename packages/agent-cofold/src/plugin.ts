@@ -93,7 +93,7 @@ const NOT_A_RECORD = new Set(['provider', 'displayName', 'description', 'model',
  * The `tools` a record may name.
  *
  * A search provider's `apiKey` is a credential, and the channel vaults a
- * record's top-level `writeOnly` fields only: a key nested under
+ * record's top-level `secret` fields only: a key nested under
  * `tools.web.search` would be kept in the record itself. So a record chooses
  * the capabilities and DuckDuckGo, and a keyed provider stays a plugin option,
  * which is a configuration file the daemon's own owner writes.
@@ -140,6 +140,10 @@ const kindSchema = (): Record<string, unknown> => ({
   additionalProperties: false,
   properties: {
     ...Object.fromEntries(Object.entries(optionsSchema.properties).filter(([key]) => !NOT_A_RECORD.has(key))),
+    // A record's key is kept in the vault, so a record's form says `secret`.
+    // The plugin's own option stays `writeOnly`: it is the daemon's key, which
+    // the plugin reads and no record carries.
+    apiKey: { ...(optionsSchema.properties['apiKey'] as Record<string, unknown>), secret: true },
     tools: TOOLS_OF_RECORD,
   },
 });

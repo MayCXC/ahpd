@@ -7,7 +7,7 @@
  * no plugin registers its engine any more. The engines themselves are listed on
  * `x-ahpd-engines`, built in `agents/engines.ts`.
  *
- * Where an engine's schema marks a field `writeOnly`, or names an `env` variable
+ * Where an engine's schema marks a field `secret`, or names an `env` variable
  * in `keyVariables`, the value is a secret. A put moves it to the vault under
  * `agent/<id>/<field>` in the owner's scope and keeps a
  * `{ "$secret": "<name>" }` in the record instead, so a listing, a snapshot, an
@@ -55,7 +55,7 @@ import {
   ownerAllows,
   refuseOwner,
   resolved as resolvedRecord,
-  writeOnlyPaths,
+  secretPaths,
   DENIED,
 } from '../channels/owners.js';
 import { isRecordSlug } from '../resources/records.js';
@@ -247,11 +247,11 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
   const engineOf = (record: StoredRecord): ServedEngine | undefined => options.engines()[String(record.engine)];
 
   /**
-   * The fields an engine keeps secret in a put: its `writeOnly` values at any
+   * The fields an engine keeps secret in a put: its vault values at any
    * depth, in what is sent and what was kept, and its `keyVariables`.
    */
   const secretFields = (engine: ServedEngine, config: Record<string, unknown>, kept: Record<string, unknown>): string[] => {
-    const fields = new Set(writeOnlyPaths(engine.schema, kept, config));
+    const fields = new Set(secretPaths(engine.schema, kept, config));
     for (const variable of engine.keyVariables ?? []) fields.add(`env.${variable}`);
     return [...fields];
   };

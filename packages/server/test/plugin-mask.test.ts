@@ -18,6 +18,15 @@ describe('a value walked against the schema around it', () => {
     expect(maskValue(schema, { apiKey: 'k-1', region: 'eu' })).toEqual({ apiKey: SET, region: 'eu' });
   });
 
+  it('answers a property marked secret as set, as one marked writeOnly', () => {
+    // A plugin option is marked `writeOnly` and a vault field `secret`; an
+    // answer shows neither, so both readings hide the value.
+    const schema = { properties: { apiKey: { type: 'string', writeOnly: true }, token: { type: 'string', secret: true } } };
+    expect(maskValue(schema, { apiKey: 'k-1', token: 't-1', region: 'eu' })).toEqual({ apiKey: SET, token: SET, region: 'eu' });
+    expect(maskOption(schema, 'token', 't-1')).toBe(SET);
+    expect(maskOption(schema, 'apiKey', 'k-1')).toBe(SET);
+  });
+
   it('is the same wherever in the value the mark sits', () => {
     const schema = { properties: { tools: { properties: { web: { properties: { brave: { properties: { apiKey: SECRET } } } } } } } };
     expect(maskValue(schema, { tools: { web: { brave: { apiKey: 'bs-1' } } } })).toEqual({ tools: { web: { brave: { apiKey: SET } } } });

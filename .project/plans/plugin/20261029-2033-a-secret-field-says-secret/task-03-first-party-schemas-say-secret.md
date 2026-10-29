@@ -1,6 +1,6 @@
 ---
 title: First-party schemas say secret
-status: todo
+status: implemented
 depends: [task-01-the-host-reads-secret.md]
 layer: "plugins, server, docs"
 refs:

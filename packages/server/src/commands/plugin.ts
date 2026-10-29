@@ -103,9 +103,10 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
       if (options.noPlugins) return output([], 'plugins: --no-plugins, so nothing is listed\n');
       if (options.plugins.length === 0) return output([], 'plugins: none named\n');
       // Served, a row is read by anyone holding `config:read`, so every option
-      // the plugin's schema marks `writeOnly` is answered as `<set>` and every
-      // string that may quote a spec URL has that URL's userinfo replaced; the
-      // terminal's listing is the owner reading their own configuration.
+      // the plugin's schema marks `writeOnly` or `secret` is answered as `<set>`
+      // and every string that may quote a spec URL has that URL's userinfo
+      // replaced; the terminal's listing is the owner reading their own
+      // configuration.
       // A daemon named its plugins as it loaded them; the terminal names them here.
       if (served === undefined) await pluginIdsOf(options.plugins, { configDir: configDir(), cwd: process.cwd() });
       const keys = keyed(options.plugins);

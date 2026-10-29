@@ -122,6 +122,16 @@ An option the daemon would not print is one the schema marks `writeOnly`, and th
 
 A map of variables holds a credential wherever the thing it configures keeps one, so the mark goes on the values rather than on the map.
 
+A credential is marked one of two ways, and the difference is whether the host keeps the value. `writeOnly: true` says a read never answers the value: your option is answered `<set>`, and the value stays in the file as it was written. `secret: true` says the host keeps the value in the vault: an engine's or an adapter's field marked that way is moved there on a put, and the record holds `{ "$secret": "<name>" }` in its place, so a read answers the reference and never the value.
+
+An engine's or an adapter's schema marks a vault field `secret`. A plugin written before the keyword marks it `writeOnly`, which the host still reads as one so the value stays out of the record, and the load says so with one warning line naming the field:
+
+```
+acme: engine acme apiKey: writeOnly kept in the vault; mark it secret
+```
+
+`writeOnly` alone stays right for a plugin's own option, which the daemon reads at load and no record ever holds: `<set>` is the whole of what an answer says about it.
+
 The mark is read wherever the schema says it, so a credential under `env`, under a tool of your own, or at the end of a list is answered as `<set>` the same way one at the top of an option is. It is honoured through `properties`, `additionalProperties`, `patternProperties` and `items`, and a value the schema does not describe at all is shown as it is, because only the declarations above say what of your options is a secret.
 
 Root config, `GET /api/config`, `GET /api/plugin/list` and `POST /api/plugin/config` all answer such a value as `<set>`, so a client is told the key is there and is never told what it is. A client that sends `<set>` back has said the credential is left as it is, so a form sent in whole does not overwrite it with the word; another value replaces it and `null` takes it back, at either depth. What is not named is left as the file holds it, so sending one value back does not take the rest of the object with it. The terminal's `ahpd config` is the one answer that prints the file as it is.
@@ -545,7 +555,7 @@ host.registerAdapter({
   schema: {
     type: 'object',
     properties: {
-      secret: { type: 'string', writeOnly: true, title: 'Secret', description: 'The bearer token a caller sends.' },
+      secret: { type: 'string', secret: true, title: 'Secret', description: 'The bearer token a caller sends.' },
       bot: { type: 'string', title: 'Bot', description: 'The bot a call talks to, as bot://<name>.' },
     },
     required: ['secret'],
@@ -583,11 +593,11 @@ host.registerAdapter({
 
 - `name` is a slug, and is the `adapter` every connector of it records.
 - `schema` is the JSON Schema a client draws the form from, and what a `put`
-  checks `config` against. A field it marks `writeOnly` is a secret: the host
+  checks `config` against. A field it marks `secret` is a vault field: the host
   writes the value to the vault under the owner's scope and keeps
   `{ "$secret": "<name>" }` in the record, so no record, snapshot, answer or log
   holds it. A client sends an empty value for a field it is never shown, and the
-  connector keeps the secret it has. A `writeOnly` field of a host connector may also hold `{ "fromEnv": "<NAME>" }`, the form an agent record's `env` already uses: the host reads that variable of its own environment when it opens the connector, and keeps the name in the record, which is not a secret. A team's or a person's connector that names a variable is refused, on a put and again when the record is opened, because the daemon's environment is nobody's own and a person's connector that read it could send any variable to an endpoint they choose.
+  connector keeps the secret it has. A `secret` field of a host connector may also hold `{ "fromEnv": "<NAME>" }`, the form an agent record's `env` already uses: the host reads that variable of its own environment when it opens the connector, and keeps the name in the record, which is not a secret. A team's or a person's connector that names a variable is refused, on a put and again when the record is opened, because the daemon's environment is nobody's own and a person's connector that read it could send any variable to an endpoint they choose.
 - A field marked `x-ahpd-connector` with `{ "adapter": "<name>" }` names a
   connector of that adapter. It is checked when the automation whose trigger
   holds it is saved: the host refuses an id it serves no such connector for, and
@@ -629,7 +639,7 @@ host.registerAdapter({
   `openai-responses`, `openai-images`, `openai-speech`, `openai-transcriptions`
   and `rerank`. A provider that serves one path for a dialect names it, as
   OpenRouter names `/images` for `openai-images`. `connector` is the row `open`
-  got, so a `writeOnly` field is the value the vault holds. An adapter with no
+  got, so a `secret` field is the value the vault holds. An adapter with no
   `provider` serves no model.
 - `models(connector)` is optional, and answers what the connector serves: a
   promise of `{ id, name?, context_length?, pricing? }` rows, in OpenRouter's
@@ -642,7 +652,7 @@ host.registerAdapter({
   connector's id and a local server's models are `local/llama-3`. A list that
   cannot be read keeps the one it had, and one line is written to the log. An
   adapter with no `models` serves only the names a person writes in the file.
-- `signIn` is optional, and says how a person signs in to the provider in place of typing its key. `title` is the label a client prints. `field` is the `writeOnly` field the exchange fills; a field the schema does not keep is refused at registration. `url(challenge, state)` is where a person signs in, and `exchange(code, verifier)` answers the value for `field`. The host makes the PKCE verifier and the S256 challenge, so a plugin never sees a verifier. An exchange that refuses with `HTTP <status>` alone is shown to the caller with that status, and any other message is hidden.
+- `signIn` is optional, and says how a person signs in to the provider in place of typing its key. `title` is the label a client prints. `field` is the `secret` field the exchange fills; a field the schema does not keep is refused at registration. `url(challenge, state)` is where a person signs in, and `exchange(code, verifier)` answers the value for `field`. The host makes the PKCE verifier and the S256 challenge, so a plugin never sees a verifier. An exchange that refuses with `HTTP <status>` alone is shown to the caller with that status, and any other message is hidden.
 - An adapter whose connectors serve models declares a `models` capability. The
   capability tells a client that the proxy may call a connector of it; the
   `provider` member says where. The host lists the open connectors whose adapter
@@ -690,7 +700,7 @@ host.registerEngine({
 - `schema` is the JSON Schema a client draws a record's own fields from, and
   what a put checks `config` against, before the record is written. The channel
   owns `name`, `description`, `icon` and `model` on every engine, so the schema
-  holds only that engine's fields. A field it marks `writeOnly` is a secret, as
+  holds only that engine's fields. A field it marks `secret` is a vault field, as
   is each variable in `keyVariables`: the channel keeps the value in the vault
   under `agent/<id>/<field>` in the record's owner scope, and the record holds
   `{ "$secret": "<name>" }`.
@@ -1431,7 +1441,7 @@ Six commands serve a connector:
 
 | Method | Grant | What it does |
 | --- | --- | --- |
-| `x-ahpd/connectors/put` | `connector:put`, and the owner's | Makes or changes `{ id, adapter, owner, title?, config }`, moves each `writeOnly` value to the vault, writes the record and opens it. Answers the row, with the check it waited for |
+| `x-ahpd/connectors/put` | `connector:put`, and the owner's | Makes or changes `{ id, adapter, owner, title?, config }`, moves each `secret` value to the vault, writes the record and opens it. Answers the row, with the check it waited for |
 | `x-ahpd/connectors/remove` | `connector:remove`, and the owner's | Closes `{ id }`, takes its secrets out of the vault and takes the record out |
 | `x-ahpd/connectors/check` | `connector:put`, and the owner's | Runs the check of `{ id }` again and answers the row. It refuses a connector that is not ready, or one whose adapter has no `check` |
 | `x-ahpd/connectors/signin` | `connector:put`, and the owner's | Starts a sign-in for `{ id, adapter, owner, title?, config }`, checks what a put checks except the field the adapter's `signIn` names, and answers `{ url, state }`. It refuses an adapter with no `signIn` |
@@ -1519,7 +1529,7 @@ because a client is never shown one to send back. The vault names are
 `user:<id>/agent/<id>/<field>`, and a variable in `env` is a field named
 `env.<VARIABLE>`, so a key is `host:agent/build/env.ANTHROPIC_API_KEY`.
 
-A put moves a `writeOnly` field and each `env` variable the engine names in
+A put moves a `secret` field and each `env` variable the engine names in
 `keyVariables` to the vault, and keeps `{ "$secret": "<name>" }` in the record.
 A host record's field may hold `{ "fromEnv": "<NAME>" }` instead, which the host
 reads from its own environment when it opens the record; a team's or a person's

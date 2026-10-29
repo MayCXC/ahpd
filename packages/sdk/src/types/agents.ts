@@ -44,7 +44,7 @@ export interface AgentTemplate {
 /**
  * One agent record, as it is kept.
  *
- * `config` holds the engine's own values. A field the engine marks `writeOnly`, or
+ * `config` holds the engine's own values. A field the engine marks `secret`, or
  * one of its `keyVariables`, is a secret: the record keeps
  * `{ "$secret": "<name>" }` and the vault keeps the value, so a listing, an
  * answer and the log never carry it.

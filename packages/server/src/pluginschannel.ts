@@ -46,11 +46,12 @@ const object = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 
 /**
- * The values among a spec's options that its schema marks `writeOnly`.
+ * The values among a spec's options that its schema marks `writeOnly` or `secret`.
  *
- * A plugin's own error can quote what it was handed, and a write-only option is
- * a credential. Each such value is collected here so a served load problem can
- * take it out: a reference is a name rather than a value, so it is not one.
+ * A plugin's own error can quote what it was handed, and an option marked
+ * either way is a credential. Each such value is collected here so a served
+ * load problem can take it out: a reference is a name rather than a value, so
+ * it is not one.
  */
 const secretsOf = (schema: Record<string, unknown> | undefined, value: unknown, found: string[]): void => {
   if (schema === undefined || secretRef(value) !== undefined) return;
@@ -64,7 +65,8 @@ const secretsOf = (schema: Record<string, unknown> | undefined, value: unknown, 
     for (const [key, one] of Object.entries(held)) secretsOf(schemaOf(schema, key), one, found);
     return;
   }
-  if (schema['writeOnly'] === true && typeof value === 'string' && value !== '') found.push(value);
+  const marked = schema['writeOnly'] === true || schema['secret'] === true;
+  if (marked && typeof value === 'string' && value !== '') found.push(value);
 };
 
 /**
@@ -237,7 +239,7 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
       id: withoutUserinfoIn(row.name),
       record: {
         // Both places a spec can hold a credential: the userinfo of a URL it
-        // installs from, and an option its schema marks `writeOnly`.
+        // installs from, and an option its schema marks `writeOnly` or `secret`.
         spec: withoutSpecSecrets(row.spec, schema),
         name: withoutUserinfoIn(row.name),
         state: row.state,

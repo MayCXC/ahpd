@@ -41,7 +41,7 @@ describe('the OpenRouter sign-in', () => {
     expect(adapter.signIn?.field).toBe('key');
     // The field the exchange fills is the one the schema keeps in the vault.
     const properties = adapter.schema as { properties: Record<string, Record<string, unknown>> };
-    expect(properties.properties['key']?.['writeOnly']).toBe(true);
+    expect(properties.properties['key']?.['secret']).toBe(true);
   });
 
   it('answers OpenRouter\'s own page with the challenge, the S256 method, the state and no callback', () => {

@@ -11,7 +11,7 @@ import type { Adapter, Capability, Connector } from '@ahpd/sdk';
  * `open` is where the plugin starts answering for a connector that was made or
  * was stored when the daemon started.
  *
- * `secret` and `verifyToken` are the fields a schema marks `writeOnly`, so the
+ * `secret` and `verifyToken` are the fields a schema marks `secret`, so the
  * host keeps their values in the vault and the connector's record holds a
  * reference to them. Every other field is the endpoint's own and stays in the
  * record.
@@ -53,13 +53,13 @@ const FIELDS: Record<string, Record<string, unknown>> = {
   },
   secret: {
     type: 'string',
-    writeOnly: true,
+    secret: true,
     title: 'Secret',
     description: 'The value a caller proves itself with. It is kept in the vault, never in the connector.',
   },
   verifyToken: {
     type: 'string',
-    writeOnly: true,
+    secret: true,
     title: 'Verify token',
     description: 'The token Meta sends as hub.verify_token when it checks the URL. Required for the meta scheme.',
   },
@@ -116,7 +116,7 @@ const FIELDS: Record<string, Record<string, unknown>> = {
  * The fields every alternative has: the secret, the proof and the filter.
  *
  * `secret`, `verifyToken` and the auth fields stay in the top-level
- * `properties` because that is where the host reads the `writeOnly` fields
+ * `properties` because that is where the host reads the `secret` fields
  * from. `automation` stays there too, beside `x-ahpd-automation`, which the
  * host reads from the same place.
  */
@@ -167,7 +167,7 @@ const PLAIN = alternative([...SHARED, 'automation'], ['secret']);
  * The form a person fills in to make an endpoint.
  *
  * The fields are at the top level, because that is where the host reads the
- * `writeOnly` ones and the `x-ahpd-automation` one from. Which fields a
+ * `secret` ones and the `x-ahpd-automation` one from. Which fields a
  * connector may have is in `oneOf`: the bot fields only with a bot, the
  * automation only without one, and the callback reply only with a prefix.
  */

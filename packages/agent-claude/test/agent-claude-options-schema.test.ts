@@ -42,7 +42,7 @@ it('declares every option a record holds as a property of the engine schema', as
     type: 'array',
     items: {
       type: 'object',
-      properties: { fetch: { type: 'string' }, match: { type: 'string' }, key: { writeOnly: true } },
+      properties: { fetch: { type: 'string' }, match: { type: 'string' }, key: { secret: true } },
       required: ['fetch'],
     },
   });

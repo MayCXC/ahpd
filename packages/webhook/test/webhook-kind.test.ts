@@ -74,10 +74,11 @@ async function started() {
   return { adapter, route, records, collections };
 }
 
-it('marks the secret writeOnly, so the host keeps it in the vault and not in the record', async () => {
+it('marks the secret and the verify token secret, so the host keeps them in the vault and not in the record', async () => {
   const { adapter } = await started();
   const properties = adapter.schema['properties'] as Record<string, Record<string, unknown>>;
-  expect(properties['secret']?.['writeOnly']).toBe(true);
+  expect(properties['secret']?.['secret']).toBe(true);
+  expect(properties['verifyToken']?.['secret']).toBe(true);
   expect(adapter.capabilities.map((one) => [one.type, one.title])).toEqual([['receive', 'Receives calls']]);
   // The URL a client builds from the capability, on the daemon's HTTP root.
   expect(adapter.capabilities[0]?.path).toBe('/plugins/webhook/{id}');

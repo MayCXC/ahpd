@@ -9,6 +9,7 @@
       "type": "object",
       "properties": {
         "apiKey": { "type": "string", "writeOnly": true },
+        "token": { "type": "string", "secret": true },
         "region": { "type": "string" }
       }
     }

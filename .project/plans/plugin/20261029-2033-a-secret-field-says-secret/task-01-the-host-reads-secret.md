@@ -1,6 +1,6 @@
 ---
 title: The host reads secret
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server"
 refs:
