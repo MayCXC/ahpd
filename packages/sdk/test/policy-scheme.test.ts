@@ -224,6 +224,17 @@ it('still refuses a pool that is not a string or null, and a cap that is not a b
   expect(await store.list()).toEqual([]);
 });
 
+it('refuses a row about a key, and a row drawing from a key\'s pool', async () => {
+  const { policy, store } = served();
+  // A key's limits are on the token record, so no store holds a row about one.
+  await expect(policy.write('policy://M1', body(row({ scope: 'token:k1' }))))
+    .rejects.toMatchObject({ code: -32602, message: expect.stringContaining('names a key') });
+  // And `pool:token:` is the name a key's own row writes its totals under.
+  await expect(policy.write('policy://M1', body(row({ pool: 'token:k1' }))))
+    .rejects.toMatchObject({ code: -32602, message: expect.stringContaining('pool') });
+  expect(await store.list()).toEqual([]);
+});
+
 it('refuses a body that is not a row, with the sentence the port would give', async () => {
   const { policy, store } = served();
   for (const text of ['not json', '[]', '"a policy"']) {

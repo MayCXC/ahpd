@@ -59,14 +59,15 @@ const expiresParam = (command: string, params: Record<string, unknown>): number 
  *
  * Each limit is checked by `checkKeyLimits`, which is the same check the mint
  * and the tokens file make, and its sentence is the one a bad one is refused
- * with: the measures are a `model` row's, the pool is always `shared`, and an
- * amount is never negative.
+ * with: the measures are a `model` row's, the amount is never negative, and the
+ * pool is always `shared` - a key has one total, so a limit that names no pool
+ * is given one.
  */
 const limitsParam = (command: string, params: Record<string, unknown>): PolicyLimit[] | undefined => {
   const value = params['limits'];
   if (value === undefined) return undefined;
   if (!Array.isArray(value)) {
-    throw new RpcError(INVALID_PARAMS, `${command} takes limits as a list of amount, measure, period and pool`);
+    throw new RpcError(INVALID_PARAMS, `${command} takes limits as a list of amount, measure and period`);
   }
   return checkKeyLimits(value);
 };

@@ -201,6 +201,55 @@ describe('step 1', () => {
   });
 });
 
+describe('a key\'s own row', () => {
+  /** A person carrying the limits of the key they signed in with. */
+  const keyed = (who: Principal, id: string, limits: PolicyLimit[] = DAY(5, 'usd', 'day')): Principal =>
+    ({ ...who, token: id, keyLimits: limits });
+
+  const keyRow = (decision: { candidates: Policy[] }): Policy | undefined =>
+    decision.candidates.find((one) => one.scope.startsWith('token:'));
+
+  it('allows nothing alone, whatever its limits say', async () => {
+    // erin is in no team and M1 holds only deepseek and qwen.
+    const decision = await decide(policies, keyed(erin, 'k1'), undefined, 'model', { model: 'anthropic/sonnet-5' }, TODAY);
+    expect(decision.allowed).toBe(false);
+    expect(ids(decision)).toEqual([]);
+    expect(refusalOf(decision).message).toContain('no policy allows');
+  });
+
+  it('is a candidate beside the row that allowed the call', async () => {
+    const decision = await decide(policies, keyed(alice, 'k1'), BILLING, 'model', { model: 'deepseek/deepseek-v4.1-flash' }, TODAY);
+    expect(ids(decision)).toEqual(['M1', 'token:k1']);
+    expect(keyRow(decision)).toMatchObject({
+      id: 'token:k1',
+      scope: 'token:k1',
+      kind: 'model',
+      effect: 'allow',
+      match: { model: ['*'] },
+      cap: true,
+      pool: 'token:k1',
+    });
+  });
+
+  it('is the only candidate a `*:*` holder\'s key gets', async () => {
+    const decision = await decide(policies, keyed(dave, 'k1'), BILLING, 'model', { model: 'anthropic/fable-5' }, TODAY);
+    expect(decision.allowed).toBe(true);
+    expect(ids(decision)).toEqual(['token:k1']);
+  });
+
+  it('is left out of an agent or a computer check, which a key is not spent on', async () => {
+    const decision = await decide(policies, keyed(alice, 'k1'), BILLING, 'agent', { agent: 'claude', computer: 'sandbox-alice' }, TODAY);
+    expect(ids(decision)).toEqual(['A1', 'A2', 'A3']);
+  });
+
+  it('is not written for a key with no limits, or for nobody\'s key', async () => {
+    const empty = await decide(policies, keyed(alice, 'k1', []), BILLING, 'model', { model: 'anthropic/fable-5' }, TODAY);
+    expect(ids(empty)).toEqual(['M2', 'M4']);
+    const bare = await decide(policies, alice, BILLING, 'model', { model: 'anthropic/fable-5' }, TODAY);
+    expect(ids(bare)).toEqual(['M2', 'M4']);
+  });
+});
+
 describe('the match, as the draft writes its globs', () => {
   it('matches a value whole, with `*` standing for any run within it', async () => {
     // `agent:*` holds `acp:something`, and A1's `model:` values hold qwen.

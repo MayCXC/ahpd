@@ -84,7 +84,7 @@ export { bag, currentOwner, isRecord, ownerFilter, ownerOf, ownerOfPrincipal, re
 export { absentResource, asFile, bodyText, isRecordPath, isRecordSlug, memoryRecords, putRecord, RECORD_PATH, RECORD_SLUG, removeRecord, splitResource } from './resources/records.js';
 export { secretRef, fromEnvRef, scopeOf, readSecret, readSecrets } from './access/vault.js';
 export type { SecretScope } from './access/vault.js';
-export { decide } from './access/decide.js';
+export { decide, keyRowOf } from './access/decide.js';
 export type { Asked, Decision } from './access/decide.js';
 export { chargeFor, COUNTED, keysOf, limitsOf } from './usage/charge.js';
 export type { Charge, ChargeOptions, ChargeRefusal, LimitFigure, LimitMember, PayOrder } from './usage/charge.js';

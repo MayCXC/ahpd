@@ -1,7 +1,7 @@
 ---
 title: A key has spend and call limits
 domain: policy
-status: planned
+status: built
 priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -79,7 +79,7 @@ pi -> /v1 with the key -> policyFor -> decide: the store's rows + the key's row
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A key is minted with limits](task-01-a-key-is-minted-with-limits.md) | implemented | - |
-| [02 - A call is held to its key's limits](task-02-a-call-is-held-to-its-key-limits.md) | todo | 01 |
+| [02 - A call is held to its key's limits](task-02-a-call-is-held-to-its-key-limits.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -88,8 +88,8 @@ pi -> /v1 with the key -> policyFor -> decide: the store's rows + the key's row
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-key-is-minted-with-limits.md](task-01-a-key-is-minted-with-limits.md).
+- **Done so far:** both tasks are implemented (task-01 and task-02), and [implemented.md](implemented.md) is written.
+- **Next action:** review, then set the tasks to done.
 - **Open questions:** none.
 - **Watch out for:** the plans `proxy/20261029-2010-a-key-carries-its-scope` and `usage/20261029-2011-a-record-names-its-key-and-meta` also change `TokenRecord`, `mintToken` and `ahpd token mint`. Rebase on them when they merge first.
 
