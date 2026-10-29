@@ -1,6 +1,6 @@
 ---
 title: A call charges the scope of its key
-status: todo
+status: implemented
 depends: [task-01-a-key-is-minted-with-a-scope.md]
 layer: "sdk, server, docs"
 refs:
@@ -46,4 +46,11 @@ A session opened with the key is charged the same way, because both go through `
 - By hand: point pi at the proxy with a scoped key, and send one prompt.
 
 ## Resume
+
+- **Done so far:** `Principal` has `keyScope?: string | undefined`, and `principalOf` defines it as a getter over the live token record, answering the record's `scope` and nothing when the record is gone or belongs to somebody else. `scopeFor` reads it first: a call that names nothing is charged to the key's scope over the primary, and a call naming another scope is refused with `this key charges <scope>, and the call names <named>`. A key whose scope the person no longer covers is refused with the `may name` sentence, and a key with no scope keeps the old order. The proxy caller and the session owners needed no code change; they reach it through `scopeFor`.
+- **Next action:** none. Task 01 and this one are built and await review.
+- **Open questions:** none.
+- **Watch out for:** the `scope` picker still offers every membership the person holds, and only the default moves to the key's scope; a client that picks another is refused when the work is charged rather than in the form. The by-hand pi check was not run: this box is not a host for pi and `~/.config/ahpd` is not mine to touch, so the `/v1` path is pinned by `proxy-listener.test.ts` alone.
+
+Files changed by this task: `packages/sdk/src/types/users.ts`, `packages/sdk/src/access/users.ts`, `packages/sdk/src/usage/scopes.ts`, `packages/sdk/test/scopes.test.ts`, `packages/sdk/test/session-scope.test.ts`, `packages/server/test/proxy-listener.test.ts`, `docs/server/PROXY.md`, `docs/server/USERS.md`, and `docs/sdk/USERS.md` for the mint's param table.
 

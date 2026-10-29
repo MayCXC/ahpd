@@ -266,6 +266,31 @@ describe('a caller is a person, root or a session, and may call', () => {
     for (const one of fake.received) expect(one.headers['x-ahp-scope']).toBeUndefined();
   });
 
+  it('charges a call with a key that carries a scope, and refuses a header that names another', async () => {
+    const fake = await okProvider();
+    const usage = memoryUsage();
+    const served = await proxy({ ...table(fake.endpoint), usage: () => usage });
+    // ana's primary is `backend:billing`; the key is minted for `backend:ahpd`.
+    const one = await who.users.mintToken!('ana', { grants: ['proxy:call'], scope: 'backend:ahpd' });
+    const key = { 'x-api-key': one.secret };
+
+    expect((await send(served.port, CHAT, { headers: key, body: CALL })).status).toBe(200);
+    await pause(20);
+    expect(usage.entries.map((entry) => [entry.team, entry.project])).toEqual([['backend', 'ahpd']]);
+
+    // The scope the call names is another one, even one ana's memberships hold.
+    const foreign = await send(served.port, MESSAGES, { headers: { ...key, 'x-ahp-scope': 'backend:billing' }, body: CALL });
+    expect(foreign.status).toBe(403);
+    expect(isAnthropicError(foreign.json)).toBe(true);
+    expect(foreign.json).toMatchObject({
+      error: { type: 'permission_error', message: 'this key charges backend:ahpd, and the call names backend:billing' },
+    });
+    // Naming the key's own scope, and naming none, both go to it.
+    expect((await send(served.port, MESSAGES, { headers: { ...key, 'x-ahp-scope': 'backend:ahpd' }, body: CALL })).status).toBe(200);
+    await pause(20);
+    expect(usage.entries.map((entry) => entry.project)).toEqual(['ahpd', 'ahpd']);
+  });
+
   it('answers a token whose answers as a session, without asking the directory', async () => {
     const fake = await okProvider();
     let verified = 0;

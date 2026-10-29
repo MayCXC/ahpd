@@ -58,6 +58,15 @@ export interface Principal {
    */
   readonly token?: string;
   /**
+   * The scope of the key they signed in with, when the key carries one.
+   *
+   * Read from the token record at each question, as `can` reads its grants, so
+   * a scope written on the record is in force without a new connection. Absent
+   * for the person's full secret, an issuer's token and a principal built by
+   * hand, and for a key minted without one.
+   */
+  readonly keyScope?: string | undefined;
+  /**
    * Whether they may do that.
    *
    * A question rather than the set it is answered from: the gate asks what it

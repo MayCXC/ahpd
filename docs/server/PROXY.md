@@ -64,6 +64,14 @@ A person needs `proxy:call` to call and `proxy:models` to list the models. The `
 
 A person's call is charged to a team and project, named in an `X-AHP-Scope` header or a `?scope=` query (`backend` or `backend:billing`), and to their primary otherwise. Neither the header nor the query goes to the provider.
 
+A key can carry its own scope, so a client that is handed nothing but a base URL and a key is charged where the key says. That is what pi needs:
+
+```bash
+ahpd token mint --user ana --grant proxy:call --grant proxy:models --scope backend:billing --label pi
+```
+
+A call made with such a key is charged to its scope when it names none, and refused with 403 when it names another. The scope is checked at every call, so a membership taken away stops the key without a revoke. See [Users](USERS.md#tokens-of-their-own).
+
 A session's own token is answered as that session, when the host hands sessions a token for the proxy.
 
 ## Adding a provider

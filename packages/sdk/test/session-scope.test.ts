@@ -55,9 +55,16 @@ const dan: Principal = {
   teams: [{ id: 'backend' }, { id: 'frontend' }],
 };
 
+/**
+ * ana, signed in with a key that carries its own scope: the same memberships
+ * and primary, and one of them locked in.
+ */
+const eve: Principal = { ...ana, keyScope: 'frontend:controllr' };
+
 const directory = (): Users => ({
   resource: RECORD,
-  verify: async (token) => (token === 'ana' ? ana : token === 'bob' ? bob : token === 'dan' ? dan : undefined),
+  verify: async (token) => (token === 'ana' ? ana : token === 'bob' ? bob
+    : token === 'dan' ? dan : token === 'keyed' ? eve : undefined),
   list: async () => [],
   grantsOfRoles: async () => [],
   grantsOfPerson: async () => undefined,
@@ -519,4 +526,33 @@ it('keeps the scope beside the session a later daemon resumes', async () => {
   // And the charge is still what it was settled as, rather than nothing now
   // that somebody with nothing has said something.
   expect(store.scope('scoped')).toEqual({ team: 'backend', project: 'ahpd' });
+});
+
+it('charges a session opened with a key to the scope the key carries', async () => {
+  const store = memorySessions();
+  const { agent, began } = backend();
+  const host = createHost({ path: DIR, agents: [agent], users: directory(), sessions: store });
+  const wire = peer();
+  const client = host.accept(wire);
+  await client.handle({
+    method: 'initialize',
+    params: { clientId: 'keyed', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] },
+  });
+  await client.handle({
+    method: 'authenticate', params: { channel: ROOT, resource: RECORD.resource, token: 'keyed' },
+  });
+
+  // The picker still offers every membership the person holds; what it starts
+  // on is the key's scope, because that is what naming none resolves to.
+  expect((await offered(client)).scope).toMatchObject({
+    enum: ['backend:ahpd', 'backend:controllr', 'frontend:controllr'],
+    default: 'frontend:controllr',
+  });
+
+  await client.handle({ method: 'createSession', params: { channel: uri, provider: 'echo', config: {} } });
+  await turn(client);
+  await settle();
+
+  expect(began).toEqual(['go']);
+  expect(store.scope('scoped')).toEqual({ team: 'frontend', project: 'controllr' });
 });

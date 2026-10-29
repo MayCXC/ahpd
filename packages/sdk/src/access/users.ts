@@ -1083,6 +1083,18 @@ export function fileUsers(options: FileUserOptions): Users {
       get projects(): readonly Named[] { return read().file.projects ?? []; },
       get teams(): readonly Named[] { return read().file.teams ?? []; },
       /*
+       * The team and project the key signed in with is charged to.
+       *
+       * Re-read on every question as `can` is: a record that was revoked or
+       * that names no `scope` answers nothing here, and the call falls back to
+       * the person's primary as it did before a key could carry one.
+       */
+      get keyScope(): string | undefined {
+        if (minted === undefined) return undefined;
+        const live = readTokens().tokens.find((one) => one.id === minted.id);
+        return live === undefined || live.user !== record.id ? undefined : live.scope;
+      },
+      /*
        * The person, and a minted token's own life beside theirs.
        *
        * A token is looked up again on every question, as the person is: a
