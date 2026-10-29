@@ -115,11 +115,32 @@ tail -f ~/.config/ahpd/daemon.log   # macOS
 
 ::: info Environment
 The file gets the `PATH` of the shell that ran `service install`, so the agents this host starts find their own runtimes. The daemon's own interpreter is written in full, so a `node` from nvm needs no `PATH` of its own.
+
+A configuration home of its own is an `XDG_CONFIG_HOME` that is not `~/.config`. An install from one writes that home into the file too, so the daemon the manager starts keeps to the folder under it. Which of the daemon's environment an agent's shells get is [`shellEnv`](../sdk/HOST.md#configuration-keys)'s to say.
 :::
 
 After an upgrade, run `ahpd service install` again: it writes the file for the new binary and starts the daemon from it. `ahpd service uninstall` stops the daemon, takes the service out of the list this machine starts at login, and removes the file.
 
 `service install` is refused while a daemon from `ahpd start` runs - stop that one first.
+
+### More than one daemon
+
+A second daemon on the same machine has a configuration home of its own, and a port of its own. Name its service in its configuration file, `$XDG_CONFIG_HOME/ahpd/config.json`, so it installs beside the first one:
+
+```json
+{ "port": 9188, "service": { "name": "two" } }
+```
+
+```bash
+XDG_CONFIG_HOME=~/.config/ahpd-two ahpd service install
+```
+
+| Platform | Service | File |
+| --- | --- | --- |
+| Linux | `ahpd@two` | `$XDG_CONFIG_HOME/systemd/user/ahpd@two.service`, linked into the folder systemd reads units from |
+| macOS | `dev.ahpd.daemon.two` | `~/Library/LaunchAgents/dev.ahpd.daemon.two.plist` |
+
+Run every command for that daemon with its `XDG_CONFIG_HOME`. Its record names its service, so `ahpd stop`, `ahpd restart` and `ahpd service uninstall` reach that service and not the first one. `service install` is refused for a daemon that a service of another name already holds.
 
 ## Served folders
 
