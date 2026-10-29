@@ -1,6 +1,6 @@
 ---
 title: A service is installed under its name
-status: todo
+status: done
 depends: []
 layer: server
 refs:
@@ -52,4 +52,26 @@ A configuration that names no service installs and takes out `ahpd` and `dev.ahp
 - Run `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema`, and see each exit 0.
 
 ## Resume
+
+Done 2026-10-29.
+Every step is built, and every check the Validation names was run.
+
+`"service": { "name": "two" }` in the configuration file is `Options.serviceName`.
+The install, the uninstall and each manager call take it: `ahpd@two` on systemd, and `dev.ahpd.daemon.two` on launchd.
+A configuration that names none installs and takes out `ahpd` and `dev.ahpd.daemon`.
+
+File by file:
+
+- `packages/server/src/config.ts` - `ServiceSetting`, and `Config.service`.
+- `packages/server/src/commands/options.ts` - the `service` field with the name's pattern, `service` in `FILE_ONLY`, and `Options.serviceName`.
+- `packages/server/src/service.ts` - `serviceUnit`, `serviceLabel`, and `managedAs`, which names the unit or the label of a manager. `ownConfigHome` is the configuration home of the install when it is not `~/.config`. `installCalls` enables a unit by its path when it is asked to. `ServiceFacts` takes `name` and `configHome`, which `unitOf` and `plistOf` write as the label and as `XDG_CONFIG_HOME`.
+- `packages/server/src/commands/service.ts` - the install reads the name, and refuses a daemon that a service of another name holds. From a configuration home of its own, it writes that home into the file and enables the unit by its path. The uninstall takes `--config-file`. It takes out the service the record of the held daemon names, or the one the configuration names when no daemon runs.
+- `packages/server/test/service.test.ts` - a named service's names, calls, files and text, a unit under a configuration home of its own, and `ownConfigHome`.
+- `packages/server/test/server-cli-service.test.ts` - a named install beside the plain one, the refusal, and both uninstalls. Each case has a configuration home of its own, so the plain cases expect the unit enabled by its path, and `XDG_CONFIG_HOME` in it.
+
+Judgement calls the plan does not decide, each visible in the file it is made in:
+
+- `XDG_CONFIG_HOME` is written by every install from a configuration home of its own, named or not. The daemon a manager starts has the manager's environment, and without the variable it keeps to `~/.config/ahpd`.
+- The unit of such an install is enabled by its path, named or not. The folder it is written in is not one the user manager reads.
+- The refusal names the unit or the label of the service that holds the daemon, so the person knows which one to take out.
 

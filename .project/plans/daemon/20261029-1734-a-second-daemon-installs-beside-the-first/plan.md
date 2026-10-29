@@ -1,7 +1,7 @@
 ---
 title: A second daemon installs beside the first
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -22,6 +22,8 @@ refs:
   - "[code://packages/server/src/scheduled.ts#L163](../../../../packages/server/src/scheduled.ts#L163) - `isAutomationId`, the shape of an id a person types"
   - "[code://packages/server/test/cli.ts#L137](../../../../packages/server/test/cli.ts#L137) - each command-line case has a configuration home of its own, and installs the plain service"
   - "[code://docs/plugins/COMPUTERS.md#L833](../../../../docs/plugins/COMPUTERS.md#L833) - a second daemon on one machine is one with an `XDG_CONFIG_HOME` of its own"
+  - "[code://packages/server/src/config.ts#L310-L313](../../../../packages/server/src/config.ts#L310-L313) - `shellEnv`, for a daemon with an environment of its own: a service unit with a private `XDG_CONFIG_HOME`"
+  - "[code://docs/sdk/HOST.md#L99](../../../../docs/sdk/HOST.md#L99) - a daemon that runs as a service unit has an environment of its own, and `shellEnv` says which of it reaches a shell"
   - https://www.freedesktop.org/software/systemd/man/latest/systemctl.html - `enable PATH` links a unit file outside the unit folders, and `disable` undoes the link
   - https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html - `<prefix>@<instance>.service`, systemd's form for several of one service
 ---
@@ -69,9 +71,10 @@ ahpd stop | ahpd restart -> daemon.ts | restart.ts -> manager.stop(service) | ma
 | The configuration file names the service, in a block it alone sets | The install takes the configuration file alone ([code://packages/server/src/commands/service.ts#L62-L72](../../../../packages/server/src/commands/service.ts#L62-L72)); `policies` is such a block | 01 |
 | A configuration that names none installs `ahpd` and `dev.ahpd.daemon`, as every case already does | [code://packages/server/test/cli.ts#L137](../../../../packages/server/test/cli.ts#L137) | 01 |
 | A named service is `ahpd@<name>` on systemd and `dev.ahpd.daemon.<name>` on launchd | systemd's instance form, https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html, and one more part of a reverse-DNS label | 01 |
+| Each named service on systemd has a unit file of its own name, and no template | systemd reads a file of the instance's own name before it looks for a template (https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html). The install writes the whole of what its file says for its own daemon ([code://packages/server/src/service.ts#L156](../../../../packages/server/src/service.ts#L156)), and writes it again for the new binary after an upgrade ([code://docs/server/RUN.md#L120](../../../../docs/server/RUN.md#L120)). A template would let one daemon's install change the other's binary | 01 |
 | A name is a lowercase letter or digit, then up to 39 letters, digits and dashes | [code://packages/server/src/scheduled.ts#L163](../../../../packages/server/src/scheduled.ts#L163) | 01 |
-| A named service's file sets `XDG_CONFIG_HOME` to the configuration home of the install | [code://docs/plugins/COMPUTERS.md#L833](../../../../docs/plugins/COMPUTERS.md#L833) | 01 |
-| systemd enables a named unit by its path, which links it into its unit folder | https://www.freedesktop.org/software/systemd/man/latest/systemctl.html | 01 |
+| An install whose configuration home is its own, named or not, writes that home into the file as `XDG_CONFIG_HOME`. An install from `~/.config` writes none | A service unit with a private `XDG_CONFIG_HOME` ([code://packages/server/src/config.ts#L310-L313](../../../../packages/server/src/config.ts#L310-L313), [code://docs/sdk/HOST.md#L99](../../../../docs/sdk/HOST.md#L99)), and a second daemon is one with its own ([code://docs/plugins/COMPUTERS.md#L833](../../../../docs/plugins/COMPUTERS.md#L833)) | 01 |
+| systemd enables a unit under a configuration home of its own by its path, which links it into its unit folder, and a unit under `~/.config` by its name | https://www.freedesktop.org/software/systemd/man/latest/systemctl.html | 01 |
 | An install refuses a second service for a daemon that a service already holds | The refusal of a daemon from `ahpd start` ([code://packages/server/src/commands/service.ts#L80-L90](../../../../packages/server/src/commands/service.ts#L80-L90)) | 01 |
 | The daemon records the name, and stop and restart reach the service by it | [code://packages/server/src/daemon.ts#L80-L85](../../../../packages/server/src/daemon.ts#L80-L85) | 02 |
 
@@ -86,25 +89,25 @@ ahpd stop | ahpd restart -> daemon.ts | restart.ts -> manager.stop(service) | ma
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A service is installed under its name](task-01-a-service-is-installed-under-its-name.md) | todo | - |
-| [02 - Its daemon is reached under that name](task-02-its-daemon-is-reached-under-that-name.md) | todo | 01 |
-| [03 - The docs say how a second daemon runs](task-03-the-docs-say-how-a-second-daemon-runs.md) | todo | 01, 02 |
+| [01 - A service is installed under its name](task-01-a-service-is-installed-under-its-name.md) | done | - |
+| [02 - Its daemon is reached under that name](task-02-its-daemon-is-reached-under-that-name.md) | done | 01 |
+| [03 - The docs say how a second daemon runs](task-03-the-docs-say-how-a-second-daemon-runs.md) | done | 01, 02 |
 
 ## Risks and tradeoffs
 
 - A name changed in the file while its service runs is the name the next stop reaches. The install refuses a second service for one daemon, so the person takes the old one out first.
-- systemd reads a named unit from its daemon's configuration home, so that folder must be there when the user manager starts.
+- systemd reads a unit under a configuration home of its own through the link `enable` makes. That folder must be there when the user manager starts.
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-29.
-- **Next action:** [task-01-a-service-is-installed-under-its-name.md](task-01-a-service-is-installed-under-its-name.md).
+- **Done so far:** planned and built 2026-10-29. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** each command-line case has a configuration home of its own, and still installs the plain service.
+- **Watch out for:** each command-line case has a configuration home of its own. Its plain install is enabled by its path, and its file sets `XDG_CONFIG_HOME`.
 
 ## Final verification checklist
 
-- [ ] A case installs a named service, sees `ahpd@two` enabled by its path, and fails without task 01.
-- [ ] The plain install's calls and file are unchanged, and the existing cases pass untouched.
-- [ ] Stop, restart and uninstall of a named service reach `ahpd@two` and `dev.ahpd.daemon.two`.
-- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` exit 0, and the server suite passes.
+- [x] A case installs a named service, sees `ahpd@two` enabled by its path, and fails without task 01.
+- [x] An install from `~/.config` enables its unit by its name, and its file sets no `XDG_CONFIG_HOME`.
+- [x] Stop, restart and uninstall of a named service reach `ahpd@two` and `dev.ahpd.daemon.two`.
+- [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` exit 0, and the server suite passes.

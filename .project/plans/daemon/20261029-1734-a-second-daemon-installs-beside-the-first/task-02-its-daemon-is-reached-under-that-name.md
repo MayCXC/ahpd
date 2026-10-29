@@ -1,6 +1,6 @@
 ---
 title: Its daemon is reached under that name
-status: todo
+status: done
 depends: [task-01-a-service-is-installed-under-its-name.md]
 layer: server
 refs:
@@ -51,4 +51,24 @@ A daemon a named service holds records the name beside its manager.
 - Run `pnpm -s typecheck`, and see it exit 0.
 
 ## Resume
+
+Done 2026-10-29.
+Every step is built but the status line of step 4, and every check the Validation names was run.
+
+A daemon a manager started records `serviceName` beside `service`, when its configuration names one.
+`ahpd stop`, `ahpd restart` and the daemon's own restart ask the manager for the service by that name.
+`ahpd doctor` looks for the file of the service its configuration names.
+
+File by file:
+
+- `packages/server/src/daemon.ts` - `Running.serviceName`, and the name as the last argument of `recordOf`, kept only beside a service. The stop through the manager passes it.
+- `packages/server/src/commands/run.ts` - `serviceName` is the configuration's name for a daemon `AHPD_SERVICE` says a manager started. It goes into the record and into the daemon's own restart.
+- `packages/server/src/commands/restart.ts` - the restart through the manager passes the recorded name.
+- `packages/server/src/doctor.ts` - the Service check reads the name from the configuration, and looks for that file.
+- `packages/server/test/daemon.test.ts`, `packages/server/test/doctor.test.ts` and `packages/server/test/server-cli-restart.test.ts` - a stop of a named service, the check for its file, and a stop and a restart at the command line.
+
+Judgement calls the plan does not decide, each visible in the file it is made in:
+
+- `statusLine` names the manager, as for every service. The configuration names the service, and *More than one daemon* in `RUN.md` gives its unit and label.
+- A record without `serviceName` reaches `ahpd` and `dev.ahpd.daemon`, so a daemon recorded by an older release stops and restarts as it did.
 

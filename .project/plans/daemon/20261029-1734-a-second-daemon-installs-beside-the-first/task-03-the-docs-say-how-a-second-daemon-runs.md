@@ -1,6 +1,6 @@
 ---
 title: The docs say how a second daemon runs
-status: todo
+status: done
 depends: [task-01-a-service-is-installed-under-its-name.md, task-02-its-daemon-is-reached-under-that-name.md]
 layer: docs
 refs:
@@ -32,4 +32,12 @@ refs:
 - Read the section against the code of tasks 01 and 02.
 
 ## Resume
+
+Done 2026-10-29.
+Every step is built, and every check the Validation names was run.
+
+- `docs/server/RUN.md` - *More than one daemon*, after the paragraph on `service install` and `ahpd start`. It gives a second daemon's configuration home, port and `service.name`. It gives the unit, the label and the file of each manager, and runs each command under the daemon's `XDG_CONFIG_HOME`. The *Environment* box says that an install from a configuration home of its own writes that home into the file. It links `shellEnv` for which of the daemon's environment a shell gets.
+- `docs/server/CONFIGURE.md` - `service` among the keys with no flag, and one line linking *More than one daemon*.
+
+The prose lint finds two long sentences, at `RUN.md:109` and `CONFIGURE.md:11`, both in text the change does not touch.
 
