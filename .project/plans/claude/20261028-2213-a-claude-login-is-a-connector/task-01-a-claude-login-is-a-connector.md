@@ -1,6 +1,6 @@
 ---
 title: A Claude login is a connector
-status: todo
+status: done
 depends: []
 layer: "agent-claude, sdk, server"
 refs:
@@ -56,4 +56,12 @@ The plugin keeps each open login's token and owner for the engine.
 - Run the new cases on the code before this task, and expect them to fail.
 
 ## Resume
+
+Done 2026-10-28.
+The adapter's nine cases fail on the code before this task, which has no `src/adapter.ts` for them to load.
+The host adapters' cases pass on the moved `probe`, in the server suite.
+A load refuses an adapter its manifest's contracts do not name, so the manifest names `claude-login`.
+The check counts tokens, a model request, because a `setup-token` token makes model requests and nothing else.
+Both calls were measured with a `/login` token, which holds more scopes, and neither with a `setup-token` token.
+A retired model answers 404 after the token is accepted, so the check then says `failed` and not `denied`.
 

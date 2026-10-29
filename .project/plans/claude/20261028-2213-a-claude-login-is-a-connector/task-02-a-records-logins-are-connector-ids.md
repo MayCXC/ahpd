@@ -1,6 +1,6 @@
 ---
 title: A record's logins are connector ids
-status: todo
+status: done
 depends: [task-01-a-claude-login-is-a-connector.md]
 layer: "sdk, server, agent-claude"
 refs:
@@ -66,4 +66,13 @@ The rotation reads each named login's token from its open connector, and does wh
 - Run the new cases on the code before this task, and expect them to fail.
 
 ## Resume
+
+Done 2026-10-28.
+Four of the channel's five cases fail on task 01's code; the case of a field the schema does not mark keeps today's behaviour.
+Twenty-one of the logins file's 24 cases fail on task 01's code.
+Two of the other three keep the merged behaviour: a record with no logins, and a refused sign-in.
+The third, a session closed during a wait, passes there because that code reads no login from a connector id, so nothing waits.
+A login's field is `id`, the connector's id the record names.
+A put that replaces a login's token leaves the record's values as they were.
+So a CLI is started from its login's token as well as its id.
 

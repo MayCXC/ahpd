@@ -1,6 +1,6 @@
 ---
 title: A failed login is checked
-status: todo
+status: done
 depends: [task-03-a-failed-login-hands-the-turn-on.md]
 layer: "agent-claude"
 refs:
@@ -43,4 +43,9 @@ The README, the spec and the changelog say what a login is and what a failure of
 - Run `lint-prose.mjs` on the README section and the spec scenario, and expect no finding.
 
 ## Resume
+
+Done 2026-10-28.
+The plugin's case fails on task 03's code: no request reaches the host.
+A case stubs `fetch` before the plugin loads, because the adapter takes its `fetch` when it is built.
+The README section and the spec scenario pass `lint-prose.mjs`.
 

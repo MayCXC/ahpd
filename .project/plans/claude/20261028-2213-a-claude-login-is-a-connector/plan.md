@@ -1,7 +1,7 @@
 ---
 title: A Claude login is a connector, and a failed one hands the turn on
 domain: claude
-status: active
+status: built
 priority: medium
 created: 2026-10-28
 revalidated: 2026-10-28
@@ -148,10 +148,10 @@ turn begins -> refreshPreset takes the first ready login -> CLAUDE_CODE_OAUTH_TO
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - a-claude-login-is-a-connector](task-01-a-claude-login-is-a-connector.md) | todo | - |
-| [02 - a-records-logins-are-connector-ids](task-02-a-records-logins-are-connector-ids.md) | todo | 01 |
-| [03 - a-failed-login-hands-the-turn-on](task-03-a-failed-login-hands-the-turn-on.md) | todo | 02 |
-| [04 - a-failed-login-is-checked](task-04-a-failed-login-is-checked.md) | todo | 03 |
+| [01 - a-claude-login-is-a-connector](task-01-a-claude-login-is-a-connector.md) | done | - |
+| [02 - a-records-logins-are-connector-ids](task-02-a-records-logins-are-connector-ids.md) | done | 01 |
+| [03 - a-failed-login-hands-the-turn-on](task-03-a-failed-login-hands-the-turn-on.md) | done | 02 |
+| [04 - a-failed-login-is-checked](task-04-a-failed-login-is-checked.md) | done | 03 |
 
 ## Risks and tradeoffs
 
@@ -165,15 +165,15 @@ turn begins -> refreshPreset takes the first ready login -> CLAUDE_CODE_OAUTH_TO
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-claude-login-is-a-connector.md](task-01-a-claude-login-is-a-connector.md).
+- **Done so far:** tasks 01 to 04, 2026-10-28; [implemented.md](implemented.md) says what exists.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the CLI writes a failed prompt, so a turn that runs again without a cut shows the model its prompt twice.
 
 ## Final verification checklist
 
-- [ ] Each new case fails before its task and passes after it.
-- [ ] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and `pnpm schema` pass.
-- [ ] The agent-claude, sdk and server suites pass at one worker.
-- [ ] The README says how to give an agent its logins, the spec has the scenario, and the changelog has the entry.
-- [ ] PLUGINS.md says what a field marked `x-ahpd-connector` does in an engine's schema.
+- [x] Each new case fails before its task and passes after it.
+- [x] `pnpm boundary`, `pnpm typecheck`, `pnpm build` and `pnpm schema` pass.
+- [x] The agent-claude, sdk and server suites pass at one worker.
+- [x] The README says how to give an agent its logins, the spec has the scenario, and the changelog has the entry.
+- [x] PLUGINS.md says what a field marked `x-ahpd-connector` does in an engine's schema.

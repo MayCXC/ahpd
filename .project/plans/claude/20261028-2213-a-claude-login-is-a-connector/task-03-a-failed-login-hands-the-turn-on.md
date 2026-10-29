@@ -1,6 +1,6 @@
 ---
 title: A failed login hands the turn on
-status: todo
+status: done
 depends: [task-02-a-records-logins-are-connector-ids.md]
 layer: "agent-claude"
 refs:
@@ -72,4 +72,16 @@ A failure that names a retry time keeps the login out until then, and nothing el
 - Run the new cases on the code before this task, and expect them to fail.
 
 ## Resume
+
+Done 2026-10-28.
+Sixteen of the file's 26 cases fail on task 02's code.
+Nine of the other ten hold on task 02's code too.
+They are the start-over, the cut, a failure after a part, a put and an owner's login.
+So are a record with no logins, the token over the record's `env` and the plugin's engine.
+The tenth, the next login when the first is not open, passes there because the merged order of that chat puts `work` first.
+A failure rests a login only for the token the CLI ran on.
+A put that replaced the token mid-turn keeps the new one in use.
+A conversation that a start-over could not delete ends its turn.
+Its next turn starts on the first login again, since the failure named no time.
+The kinds sit in `FAILOVER` and `REFUSED` by the status the CLI gives each, read against the API's errors page.
 
