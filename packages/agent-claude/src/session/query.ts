@@ -2,6 +2,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import { idOf } from '@ahpd/sdk';
 import type { Bag } from '@ahpd/sdk';
 import type { HookCallback, SDKUserMessage, SettingSource } from '@anthropic-ai/claude-agent-sdk';
+import { clearFor } from '../catalog.js';
 import { bag, list, str, UUID } from './common.js';
 import type { SessionContext } from './context.js';
 import { failureOf } from './failure.js';
@@ -203,9 +204,16 @@ export function createQuery(ctx: SessionContext): Query {
    * Only a UUID is handed over: the SDK takes an id of that shape, and a name a
    * client made up goes to the CLI instead, which invents one the host records
    * once the CLI says what it is.
+   *
+   * The CLI takes the name only on a clean transcript, so a transcript of it
+   * that holds no conversation is cleared first. A session in a machine keeps
+   * its files there, out of this host's reach.
    */
-  const namedUnder = (id: string): { sessionId: string } | Record<string, never> =>
-    UUID.test(id) ? { sessionId: id } : {};
+  const namedUnder = (id: string): { sessionId: string } | Record<string, never> => {
+    if (!UUID.test(id)) return {};
+    if (ctx.options.spawn === undefined) clearFor(id, ctx.options.cwd);
+    return { sessionId: id };
+  };
 
   // The input stream. A query with a live stream stays open between turns,
   // which is what makes a session a session rather than a series of them.

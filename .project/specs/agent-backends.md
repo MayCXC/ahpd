@@ -86,13 +86,18 @@ See [`code://packages/agent-claude/src/session/turns.ts`](../../packages/agent-c
 ### A Claude conversation the CLI never wrote
 
 WHEN the host starts a Claude session with `resume`
-AND no project folder holds a transcript for that id
+AND no project folder holds a transcript of that id with an entry of a conversation in it
 THEN the backend sends no `resume`, no fork point and no rewind point
 AND it starts a new conversation under the chat's own id, or under that id when the chat has none.
-WHEN a project folder holds the transcript, the folder's own or another one
+WHEN a project folder holds the transcript with an entry in it, the folder's own or another one
 THEN the backend resumes it.
+WHEN the backend starts a new conversation under an id
+AND the project folder of the session's folder holds a transcript of that id with no entry of a conversation in it
+THEN the backend deletes that transcript before the CLI starts.
 The reason: the CLI writes a conversation when its first message reaches it.
-It ends at startup when it is told to resume an id it has no file for.
+A CLI closed after its prompt arrived and before it wrote the prompt's entry leaves a transcript of its other lines alone.
+The CLI ends at startup when it is told to resume an id with no entry.
+It also ends at startup when it is told to start a conversation under an id that its folder's project holds a transcript for.
 See [`code://packages/agent-claude/src/catalog.ts`](../../packages/agent-claude/src/catalog.ts).
 
 ### A Claude agent runs on several logins
