@@ -1,5 +1,5 @@
 import { probe } from './probe.js';
-import { serversFor } from './mcp.js';
+import { offeredServers, serversFor } from './mcp.js';
 import { createSession, EFFORT_LABELS, EFFORTS } from './session.js';
 import { restoreSavedOutputs } from './session/savedoutput.js';
 import { turnsOf, subagentsOf } from './transcript.js';
@@ -651,15 +651,21 @@ export function claude(options: ClaudeOptions): Agent {
       /*
        * The MCP servers, declared by this host rather than found by the CLI.
        *
-       * The same files the CLI reads - `.mcp.json` beside the project and
-       * `mcpServers` in `~/.claude.json` - handed to the SDK so they are
-       * *its* servers. That is what makes a token a client signed in with
-       * applicable: `setMcpServers` re-declares only what the SDK was given.
+       * The servers the host offers every session, its own and its client
+       * plugins', and over them the same files the CLI reads - `.mcp.json`
+       * beside the project and `mcpServers` in `~/.claude.json` - which are
+       * nearer the work, as the project's file is nearer than the home one.
+       * All of them handed to the SDK so they are *its* servers. That is what
+       * makes a token a client signed in with applicable: `setMcpServers`
+       * re-declares only what the SDK was given.
        *
        * A folder the host did not vouch for contributes none of its own: its
        * `.mcp.json` names servers this host would run as commands.
        */
-      mcpServers: serversFor([cwd, ...(start.additional ?? [])], start.trusted),
+      mcpServers: {
+        ...offeredServers(start.mcpServers, cwd, options.log),
+        ...serversFor([cwd, ...(start.additional ?? [])], start.trusted),
+      },
       /*
        * The client plugins, as the directories the host copied them into.
        *
