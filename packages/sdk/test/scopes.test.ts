@@ -41,6 +41,42 @@ const unteamed = (principal: Principal): Principal => {
 /** The plan's own example: a wildcard team, one project of another, and a primary. */
 const luiz = person(['backend:*', 'frontend:controllr'], 'backend:ahpd', ['ahpd', 'cofold', 'controllr']);
 
+/** The same person, signed in with a key that carries `scope`. */
+const keyed = (principal: Principal, scope: string): Principal => ({ ...principal, keyScope: scope });
+
+it('charges a key that carries a scope to it, over the primary', () => {
+  // No name: the key wins over the primary `backend:ahpd`.
+  expect(scopeFor(keyed(luiz, 'frontend:controllr'))?.scope).toEqual({ team: 'frontend', project: 'controllr' });
+  // Naming the key's own scope is the same answer.
+  expect(scopeFor(keyed(luiz, 'frontend:controllr'), 'frontend:controllr')?.scope)
+    .toEqual({ team: 'frontend', project: 'controllr' });
+  // A key with no scope keeps the order there was before one could carry it.
+  expect(scopeFor(luiz)?.scope).toEqual({ team: 'backend', project: 'ahpd' });
+});
+
+it('refuses a call that names a scope other than the key\'s, even one the person holds', () => {
+  const answer = scopeFor(keyed(luiz, 'frontend:controllr'), 'backend:ahpd');
+  expect(answer?.scope).toBeUndefined();
+  expect(answer?.refusal).toBe('this key charges frontend:controllr, and the call names backend:ahpd');
+  // A wildcard is a name like any other here, so it is the lock that answers.
+  expect(scopeFor(keyed(luiz, 'backend:ahpd'), 'backend:*')?.refusal)
+    .toBe('this key charges backend:ahpd, and the call names backend:*');
+});
+
+it('resolves the key\'s scope as a named one, and refuses it once the membership is gone', () => {
+  // The key's scope is a project of a `team:*`, which the membership has to
+  // cover like any other name: taken out of the team, the key charges nowhere.
+  const gone: Principal = { ...luiz, memberships: ['backend:*'] };
+  const answer = scopeFor(keyed(gone, 'frontend:controllr'));
+  expect(answer?.scope).toBeUndefined();
+  expect(answer?.refusal).toBe('luiz may name backend:ahpd, backend:cofold, backend:controllr');
+  // A key whose scope this install no longer names is refused the same way.
+  expect(scopeFor(keyed(luiz, 'frontend:gone'))?.refusal)
+    .toBe('luiz may name backend:ahpd, backend:cofold, backend:controllr, frontend:controllr');
+  // And a key whose host names no team is still nothing to charge, not a refusal.
+  expect(scopeFor(keyed(teamless(luiz), 'frontend:controllr'))).toBeUndefined();
+});
+
 it('resolves nothing named to the primary, and what the primary names to itself', () => {
   expect(scopeFor(luiz)?.scope).toEqual({ team: 'backend', project: 'ahpd' });
   expect(scopeFor(luiz, 'frontend:controllr')?.scope).toEqual({ team: 'frontend', project: 'controllr' });

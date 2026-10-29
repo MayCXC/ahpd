@@ -57,6 +57,7 @@ interface StoredToken {
   user: string;
   label?: string;
   grants?: string[];
+  scope?: string;
   created: number;
   expires?: number;
   token: string;
@@ -169,6 +170,68 @@ it('refuses a grant its person does not hold, and names the grant', async () => 
   const minted = await users.mintToken!('ana', { grants: ['file:read'] });
   expect(minted.grants).toEqual(['file:read']);
   expect(stored().tokens[0]?.grants).toEqual(['file:read']);
+});
+
+it('mints a key that carries the scope its calls are charged to', async () => {
+  const users = open();
+  await users.addTeam('backend');
+  await users.addProject('ahpd');
+  await users.addProject('cofold');
+  await users.add('ana', ['member'], { memberships: ['backend:*'] });
+
+  // A project under `team:*` is a place the person is in, and the key keeps
+  // the name it was minted with.
+  const minted = await users.mintToken!('ana', { scope: 'backend:ahpd' });
+  expect(minted.scope).toBe('backend:ahpd');
+  expect(stored().tokens[0]?.scope).toBe('backend:ahpd');
+  expect((await users.tokens!('ana'))[0]?.scope).toBe('backend:ahpd');
+  // What the mint answered is what the secret signs in with.
+  const held = await users.verify(minted.secret);
+  expect(held?.token).toBe(minted.id);
+
+  // A key without a scope carries none, as every key did before.
+  const plain = await users.mintToken!('ana');
+  expect(plain.scope).toBeUndefined();
+  expect(stored().tokens[1]).not.toHaveProperty('scope');
+});
+
+it('refuses a scope the person is not in now, and one that names a wildcard', async () => {
+  const users = open();
+  await users.addTeam('backend');
+  await users.addTeam('sales');
+  await users.addProject('ahpd');
+  await users.add('ana', ['member'], { memberships: ['backend:*'] });
+
+  // The refusal is the one every call gives, naming what may be named.
+  await expect(users.mintToken!('ana', { scope: 'sales:ahpd' }))
+    .rejects.toThrow('ana may name backend:ahpd');
+  // A wildcard is not a place to charge, and neither is a word that is no scope.
+  await expect(users.mintToken!('ana', { scope: 'backend:*' }))
+    .rejects.toThrow('backend:* is not a scope: a scope is team or team:project');
+  await expect(users.mintToken!('ana', { scope: '' }))
+    .rejects.toThrow('is not a scope: a scope is team or team:project');
+  expect(await users.tokens!()).toEqual([]);
+});
+
+it('refuses a scope on a host that names no team', async () => {
+  const users = open();
+  await users.add('ana', ['member']);
+  await expect(users.mintToken!('ana', { scope: 'backend:ahpd' }))
+    .rejects.toThrow('this host names no team, so a key has no scope to carry');
+  expect(await users.tokens!()).toEqual([]);
+});
+
+it('reads a tokens file whose scope is not a place as no tokens at all', async () => {
+  writeFileSync(path, JSON.stringify({ users: [{ id: 'ana', roles: ['member'], token: '' }] }));
+  for (const scope of ['backend:*', ':ahpd', 'backend:', '', 3]) {
+    writeFileSync(tokensPath, JSON.stringify({
+      tokens: [{ id: 't1', user: 'ana', created: 1, token: 'sha256:0', scope }],
+    }));
+    const said: string[] = [];
+    const users = open({ onProblem: (one) => said.push(one) });
+    expect(await users.tokens!(), String(scope)).toEqual([]);
+    expect(said.some((one) => one.includes('has a scope that is not team or team:project')), String(scope)).toBe(true);
+  }
 });
 
 it('refuses an unknown person, and an expires that is not a future date', async () => {

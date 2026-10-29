@@ -183,6 +183,7 @@ it('refuses a param of the wrong shape, and a directory refusal with its sentenc
   await expect(ask('mint', { label: 7 }, ana)).rejects.toMatchObject({ code: -32602, message: 'x-ahpd/tokens/mint takes label as a string' });
   await expect(ask('mint', { grants: 'proxy:read' }, ana)).rejects.toMatchObject({ code: -32602, message: 'x-ahpd/tokens/mint takes grants as a list of grant strings' });
   await expect(ask('mint', { expires: 'tomorrow' }, ana)).rejects.toMatchObject({ code: -32602, message: 'x-ahpd/tokens/mint takes expires as epoch milliseconds' });
+  await expect(ask('mint', { scope: 7 }, ana)).rejects.toMatchObject({ code: -32602, message: 'x-ahpd/tokens/mint takes scope as a string' });
   // The directory refuses a grant the person does not hold and an expiry in the
   // past; its own sentence is the answer.
   await expect(ask('mint', { grants: ['proxy:write'] }, ana)).rejects.toMatchObject({

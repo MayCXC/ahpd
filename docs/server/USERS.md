@@ -28,7 +28,7 @@ ahpd user token ana --url
 | `ahpd user member <id> <team[:project]>...` | Teams and projects their work may be charged to |
 | `ahpd user primary <id> [team[:project]]` | Where work that names none is charged |
 | `ahpd team add <id>`, `ahpd project add <id>` | Name a team or project |
-| `ahpd token mint [--user <id>]` | Mint a token of their own, shown once |
+| `ahpd token mint [--user <id>] [--scope <team[:project]>]` | Mint a token of their own, shown once |
 | `ahpd token list [--user <id>]` | Show tokens, without any secret or hash |
 | `ahpd token rm <token id> [--user <id>]` | Revoke one token |
 
@@ -51,11 +51,13 @@ The secret goes to stdout and the warning to stderr, so a script can read the cr
 
 Without `--grant` the token holds every grant its person holds, now and later. A token never holds a grant its person does not hold. A mint refuses one, and each call reads the person's grants again, so a grant taken from the person is taken from the token too. `--expires` takes a date such as `2026-12-31` or an ISO timestamp; without it a token does not expire. A revoked or expired token fails on its next call, with no reconnection.
 
+`--scope <team[:project]>` writes the team and project its calls are charged to, so a client given only the key and a base URL is charged where the operator said rather than where the person's primary is. The mint refuses a scope the person is not in now, and one written `team:*`. A call made with the key is charged to its scope when it names none, and refused with 403 when it names another; the scope is checked at every call, so a membership taken away stops the key without a revoke.
+
 A minted token cannot mint, list or revoke tokens. Sign in with the person's full token for that. `ahpd user token <id>` still mints that one full token, and the tokens a person minted stay.
 
 At a terminal `--user <id>` names whose tokens they are. `token list` without one lists everybody's; `token mint` and `token rm` need one, because a terminal has nobody signed in. Over `/api` a person's token acts for that person, and `--user` needs `user:write` and is bounded by that person's grants. The host mints at most `tokensPerPerson` live tokens per person, ten unless configured otherwise; an expired token does not count.
 
-`ahpd token list` shows the id, the label, the grants, the creation date and the expiry of each token, and never a secret or a hash.
+`ahpd token list` shows the id, the label, the grants, the scope, the creation date and the expiry of each token, and never a secret or a hash.
 
 ## Roles
 
