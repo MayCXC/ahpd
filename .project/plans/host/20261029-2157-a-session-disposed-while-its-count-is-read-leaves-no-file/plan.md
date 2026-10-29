@@ -1,7 +1,7 @@
 ---
 title: A session disposed while its count is read leaves no file
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -63,7 +63,7 @@ git diff ends -> kept.setChanges -> a row of counts alone -> a file of counts al
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A count arrives for a session that is gone](task-01-a-count-arrives-for-a-session-that-is-gone.md) | todo | - |
+| [01 - A count arrives for a session that is gone](task-01-a-count-arrives-for-a-session-that-is-gone.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -71,12 +71,12 @@ git diff ends -> kept.setChanges -> a row of counts alone -> a file of counts al
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-count-arrives-for-a-session-that-is-gone.md](task-01-a-count-arrives-for-a-session-that-is-gone.md).
+- **Done so far:** planned and built 2026-10-29. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the count is a `git diff`, so the read can end after any later event.
 
 ## Final verification checklist
 
-- [ ] A session disposed while its count is read leaves no file.
-- [ ] Every other case in `host-catalogue.test.ts` passes.
+- [x] A session disposed while its count is read leaves no file.
+- [x] Every other case in `host-catalogue.test.ts` passes.

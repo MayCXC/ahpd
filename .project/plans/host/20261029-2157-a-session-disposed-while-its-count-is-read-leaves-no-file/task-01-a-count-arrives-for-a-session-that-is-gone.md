@@ -1,6 +1,6 @@
 ---
 title: A count arrives for a session that is gone
-status: todo
+status: done
 depends: []
 layer: sdk
 refs:
@@ -32,4 +32,7 @@ A session disposed while its count is read keeps no file.
 - Every other case in `host-catalogue.test.ts` passes.
 
 ## Resume
+
+Done 2026-10-29.
+Every step is built, and every check the Validation names was run.
 
