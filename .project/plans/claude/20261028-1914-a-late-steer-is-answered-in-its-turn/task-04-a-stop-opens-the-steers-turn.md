@@ -1,6 +1,6 @@
 ---
 title: A stop opens the turn that answers its steering messages
-status: todo
+status: done
 depends: [task-03-the-read-back-folds-a-steer.md]
 layer: "agent-claude"
 refs:
@@ -27,6 +27,8 @@ A stopped turn's result ends no other turn.
 - `CREATE: packages/agent-claude/test/fixtures/claude-folded-stop.jsonl` - a stop after the CLI folded a steering message in.
 - `CREATE: packages/agent-claude/test/fixtures/claude-failed-steer.jsonl` - a turn that fails at its turn limit with a steering message queued, and that message's answer.
 - `CREATE: packages/agent-claude/test/fixtures/claude-stopped-turn.jsonl` - a stop with nothing queued, and a new prompt sent at once.
+- `CREATE: packages/agent-claude/test/fixtures/claude-failed-steer-transcript.jsonl` - what the SDK's reader returns for the session of the failure capture.
+- `UPDATE: packages/sdk/test/host-local-turns.test.ts` - the failure capture through a host, read back by another on the same store.
 - `UPDATE: docs/sdk/CHATS.md` - what a stop does with a steering message the CLI holds.
 - `UPDATE: .project/specs/agent-backends.md` - the stop.
 
@@ -46,4 +48,17 @@ A stopped turn's result ends no other turn.
 - `agent-claude-late-steer.test.ts` holds the stop cases: a steering message the CLI holds, one it folded in, and nothing queued.
 - The case with a steering message held fails before this task, and so does the case with nothing queued.
 - The folded case guards that no turn opens for a message the CLI took in.
-- `agent-claude-late-steer.test.ts` and `agent-claude-cancelled-turn.test.ts` pass at one worker.
+- Read back after a restart, a steering message answered after a failure is its own turn, as live.
+  The host recorded that turn as it began; left out of the record, it reads back inside the failed turn.
+- `agent-claude-late-steer.test.ts`, `agent-claude-cancelled-turn.test.ts` and `host-local-turns.test.ts` pass at one worker.
+
+## Resume
+
+Done 2026-10-28.
+On task 03's code three of the four new cases failed, and the folded guard passed.
+After a stop or a failure, no turn was active until the steering message's answer came.
+The host would have begun a turn sent meanwhile.
+The stopped turn's result ended a turn begun after the stop as a failure.
+The cases for a stop, a result's usage, a resumed prompt and a recorded turn pass too.
+So do the six files that drive the steering path.
+The failure case of `host-local-turns.test.ts` fails with the turns a backend opens left out of the record.

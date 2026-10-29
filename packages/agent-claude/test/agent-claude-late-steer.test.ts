@@ -25,7 +25,14 @@ import type { Bag } from '@ahpd/sdk';
  *   `sleep 4`, in the same session;
  * - `claude-cancelled-steer.jsonl`: one at the first text delta of a turn that
  *   was interrupted once the CLI had queued it, which the CLI ran after the
- *   stop, and then a third prompt sent after that message's result.
+ *   stop, and then a third prompt sent after that message's result;
+ * - `claude-stopped-turn.jsonl`: a turn interrupted at its first text delta
+ *   with nothing queued, and a prompt sent right after the stop;
+ * - `claude-folded-stop.jsonl`: a turn interrupted at its first text delta
+ *   after the CLI folded in a message sent at its tool call;
+ * - `claude-failed-steer.jsonl`: a turn that failed at a turn limit of one,
+ *   with a message sent as its tool's result arrived, which the CLI ran after
+ *   the failure.
  * Trimmed: the `system/init` frames to the fields this host reads, thinking
  * signatures shortened, and the rate limit events left out.
  *
@@ -112,6 +119,15 @@ const FOLDED = '7e5694fd-eb5f-8b42-88a6-5eb2f7464e74';
 const STOPPED = '624de920-26a9-4fbf-b003-2ee6adf70168';
 const SURVIVOR = 'cf45d386-073e-8d42-90d8-c9f220a3d39d';
 const GAMMA = '9a9f0415-a3b9-4dd3-8784-8ecb598426be';
+/** A stop with nothing queued, and a prompt sent right after it. */
+const HALTED = 'b894055c-32a4-4d79-9e12-1f5d77db9866';
+const AFTER = '352a49cc-15ea-4bac-8f49-bdacd767953e';
+/** A stop after the CLI folded a steering message in. */
+const FOLD_STOPPED = '932db394-2ecd-4674-9536-593a3644009b';
+const FOLD_STEER = 'df6deef5-26bc-45aa-81b0-10339b67e721';
+/** A turn that failed at its turn limit with a steering message queued. */
+const LIMITED = '0bbc4aff-8f2b-4536-a33a-8d0587e38461';
+const AFTER_LIMIT = 'efe5b13b-5b99-8a8e-88c6-aec14eb8e451';
 
 const ALPHA_TEXT = 'Reply with exactly the word ALPHA and nothing else.';
 const BETA_TEXT = 'Reply with exactly the word BETA and nothing else.';
@@ -119,6 +135,8 @@ const DONE_TEXT = 'Run the shell command `sleep 4` with the Bash tool, then repl
 const BETA2_TEXT = 'Also, at the very end of your reply, add the word BETA2.';
 const COUNT_TEXT = 'Count from 1 to 60, one number per line, and nothing else.';
 const GAMMA_TEXT = 'Reply with exactly the word GAMMA and nothing else.';
+const SLEEP_COUNT_TEXT = 'Run the shell command `sleep 3` with the Bash tool, then count from 1 to 40, one number per line.';
+const SLEEP_DONE_TEXT = 'Run the shell command `sleep 3` with the Bash tool, then reply with exactly the word DONE.';
 
 /** Where a capture's frames stop for something to be sent: just after the frame `at` finds. */
 const splitAfter = (frames: Record<string, unknown>[], at: (frame: Bag) => boolean): [Record<string, unknown>[], Record<string, unknown>[]] => {
@@ -143,6 +161,17 @@ const renamed = (frames: Record<string, unknown>[], from: string, to: string): R
 
 /** The uuid the session handed the CLI its last message under. */
 const lastSent = (): string => String(sdk.handed.at(-1)?.uuid ?? '');
+
+/**
+ * A turn a client sends, as the host takes it: refused while the chat has an
+ * active turn, which is the host's rule in `packages/sdk/src/host/lifecycle.ts`,
+ * and begun otherwise. Whether it was begun.
+ */
+const hostSends = (session: { chatState: () => unknown; begin: (turnId: string, text: string) => void }, turnId: string, text: string): boolean => {
+  if ((session.chatState() as Bag).activeTurn !== undefined) return false;
+  session.begin(turnId, text);
+  return true;
+};
 
 async function opened() {
   sdk.reset();
@@ -373,5 +402,123 @@ it('reads a stop that came while a tool call ran back as a cancelled turn', asyn
   expect(history(read)).toEqual([
     ['f6f6985d-8229-4c51-9468-ce0c145f71db', 'cancelled', 'Run the shell command `sleep 8` with the Bash tool, then reply with exactly the word DONE.', 'user', []],
     ['bac3f7c1-5bc6-82a0-bf9f-fcb5bcf77548', 'complete', BETA_TEXT, 'user', ['BETA']],
+  ]);
+});
+
+it('opens the turn of a steering message the CLI holds as its turn is stopped, so a turn sent meanwhile waits for it', async () => {
+  const { session, chat, before } = await opened();
+  const [first, rest] = splitAfter(fixture('claude-cancelled-steer.jsonl'), isDelta);
+  const [queued, afterStop] = splitAfter(rest, (frame) => frame.type === 'command_lifecycle' && frame.command_uuid === SURVIVOR);
+  const [answered, third] = splitAfter(afterStop, (frame) => frame.type === 'result'
+    && (frame.user_message_uuids as string[]).includes(SURVIVOR));
+  session.begin(STOPPED, COUNT_TEXT);
+  await settle();
+  sdk.push(...first);
+  await settle();
+  expect(session.steer?.('s-stop', BETA_TEXT)).toBe(true);
+  await settle();
+  const steered = lastSent();
+  sdk.push(...renamed(queued, SURVIVOR, steered));
+  await settle();
+  session.cancel(STOPPED);
+  await settle();
+
+  // The steering message's turn opens as the stopped turn ends, naming the message it answers.
+  expect(chat.filter((one) => one.type === 'chat/turnStarted').at(-1)).toMatchObject({
+    turnId: steered, queuedMessageId: 's-stop', message: { text: BETA_TEXT, origin: { kind: 'user' } },
+  });
+  // It is the chat's active turn, so the host refuses a turn sent now.
+  expect(hostSends(session, GAMMA, GAMMA_TEXT)).toBe(false);
+
+  sdk.push(...renamed(answered, SURVIVOR, steered));
+  await settle();
+  // Answered, it ends, and a turn sent now gets only its own answer.
+  expect(hostSends(session, GAMMA, GAMMA_TEXT)).toBe(true);
+  await settle();
+  sdk.push(...renamed(third, SURVIVOR, steered));
+  await settle();
+  expect(sdk.handed.map((one) => one.uuid)).toEqual([STOPPED, steered, GAMMA]);
+  expect(history(replayed(before, chat).turns as Bag[])).toEqual([
+    [STOPPED, 'cancelled', COUNT_TEXT, 'user', [STOPPED_PROSE]],
+    [steered, 'complete', BETA_TEXT, 'user', ['BETA']],
+    [GAMMA, 'complete', GAMMA_TEXT, 'user', ['GAMMA']],
+  ]);
+});
+
+it('ends no turn sent after a stop at the stopped turn\'s result', async () => {
+  const { session, chat, before } = await opened();
+  const [first, rest] = splitAfter(fixture('claude-stopped-turn.jsonl'), isDelta);
+  session.begin(HALTED, COUNT_TEXT);
+  await settle();
+  sdk.push(...first);
+  await settle();
+  session.cancel(HALTED);
+  await settle();
+  // Nothing was left with the CLI, so a turn sent now begins at once.
+  expect(hostSends(session, AFTER, GAMMA_TEXT)).toBe(true);
+  await settle();
+  sdk.push(...rest);
+  await settle();
+
+  expect(chat.filter((one) => one.type === 'chat/error')).toEqual([]);
+  expect(history(replayed(before, chat).turns as Bag[])).toEqual([
+    [HALTED, 'cancelled', COUNT_TEXT, 'user', ['1']],
+    [AFTER, 'complete', GAMMA_TEXT, 'user', ['GAMMA']],
+  ]);
+});
+
+it('opens no turn for a steering message the CLI took in before the stop', async () => {
+  const { session, chat, before } = await opened();
+  const [first, rest] = splitAfter(fixture('claude-folded-stop.jsonl'), isToolCall);
+  const [taken, after] = splitAfter(rest, isDelta);
+  session.begin(FOLD_STOPPED, SLEEP_COUNT_TEXT);
+  await settle();
+  sdk.push(...first);
+  await settle();
+  expect(session.steer?.('s-folded', BETA2_TEXT)).toBe(true);
+  await settle();
+  const steered = lastSent();
+  sdk.push(...renamed(taken, FOLD_STEER, steered));
+  await settle();
+  session.cancel(FOLD_STOPPED);
+  await settle();
+
+  // The CLI had started the message inside the stopped turn, so no turn is left to answer it.
+  expect((session.chatState() as Bag).activeTurn).toBeUndefined();
+  sdk.push(...renamed(after, FOLD_STEER, steered));
+  await settle();
+  expect(chat.filter((one) => one.type === 'chat/turnStarted')).toHaveLength(1);
+  expect(chat.filter((one) => one.type === 'chat/error')).toEqual([]);
+  const live = history(replayed(before, chat).turns as Bag[]);
+  expect(live).toEqual([[FOLD_STOPPED, 'cancelled', SLEEP_COUNT_TEXT, 'user', ['1']]]);
+  // Read back, the stopped turn is the one a client saw.
+  const read = await readBack(renamed(fixture('claude-folded-stop-transcript.jsonl'), FOLD_STEER, steered));
+  expect(history(read).slice(-1)).toEqual(live);
+});
+
+it('opens the turn of a steering message the CLI holds when its turn fails', async () => {
+  const { session, chat, before } = await opened();
+  // The probe sent the steering message as the tool's result arrived, which is the turn's last round.
+  const [first, rest] = splitAfter(fixture('claude-failed-steer.jsonl'), (frame) => frame.type === 'user');
+  const [failed, answered] = splitAfter(rest, (frame) => frame.type === 'result');
+  session.begin(LIMITED, SLEEP_DONE_TEXT);
+  await settle();
+  sdk.push(...first);
+  await settle();
+  expect(session.steer?.('s-limit', BETA_TEXT)).toBe(true);
+  await settle();
+  const steered = lastSent();
+  sdk.push(...renamed(failed, AFTER_LIMIT, steered));
+  await settle();
+
+  // The turn ends where it failed, and the steering message's turn is the chat's active turn at once.
+  expect(chat.filter((one) => one.type === 'chat/error')).toEqual([expect.objectContaining({ turnId: LIMITED })]);
+  expect(chat.filter((one) => one.type === 'chat/turnStarted').at(-1)).toMatchObject({ turnId: steered, queuedMessageId: 's-limit' });
+  expect(hostSends(session, GAMMA, GAMMA_TEXT)).toBe(false);
+  sdk.push(...renamed(answered, AFTER_LIMIT, steered));
+  await settle();
+  expect(history(replayed(before, chat).turns as Bag[])).toEqual([
+    [LIMITED, 'error', SLEEP_DONE_TEXT, 'user', []],
+    [steered, 'complete', BETA_TEXT, 'user', ['BETA']],
   ]);
 });

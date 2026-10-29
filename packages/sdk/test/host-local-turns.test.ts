@@ -548,6 +548,49 @@ describe('a Claude chat', () => {
     return { host, client, p, store };
   };
 
+  /** One of agent-claude's captures of the real CLI, or what the SDK's reader returned for its session. */
+  const capture = (name: string): Bag[] => readFileSync(new URL(`../../agent-claude/test/fixtures/${name}`, import.meta.url), 'utf8')
+    .split('\n').filter((line) => line.trim() !== '').map((line) => JSON.parse(line) as Bag);
+  /** A capture's frames up to the first one `at` holds for, and the rest. */
+  const upTo = (frames: Bag[], at: (frame: Bag) => boolean): [Bag[], Bag[]] => {
+    const cut = frames.findIndex(at) + 1;
+    return [frames.slice(0, cut), frames.slice(cut)];
+  };
+  /** A steering message a client sends into the turn that is running. */
+  const steer = async (client: Client, chat: string, id: string, text: string): Promise<void> => {
+    void client.handle({
+      method: 'dispatchAction',
+      params: { channel: chat, action: { type: 'chat/pendingMessageSet', kind: 'steering', id, message: { text } } },
+    });
+    await settle();
+  };
+  /** What a client shows of each turn: its id, how it ended, the message it answers and its prose. */
+  const shown = (turns: Bag[]): unknown[][] => turns.map((turn) => [
+    turn.id,
+    turn.state,
+    (turn.message as Bag).text,
+    (turn.responseParts as Bag[]).filter((part) => part.kind === 'markdown').map((part) => part.content),
+  ]);
+  /** A session of the captured CLI session's id, with its chat watched, on a host at `dir`. */
+  const sessionOf = async (dir: string, session: string) => {
+    const at = await shelled(dir);
+    const uri = `claude:/${session}`;
+    await at.client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude', workingDirectories: [uriOf(DIR)] } });
+    const chat = String((await stateOf(at.client, uri)).defaultChat);
+    await stateOf(at.client, chat);
+    return { ...at, uri, chat };
+  };
+  /** The same session read back by a host started again on the store at `dir`, its CLI having written `transcript`. */
+  const readAgain = async (dir: string, session: string, summary: string, transcript: Bag[]): Promise<unknown[][]> => {
+    sdk.sessions.push({ sessionId: session, summary, lastModified: 1, cwd: DIR });
+    sdk.transcript.push(...transcript);
+    const after = await shelled(dir);
+    await stateOf(after.client, `claude:/${session}`);
+    const read = shown((await stateOf(after.client, chatUriFor(`claude:/${session}`))).turns as Bag[]);
+    await after.host.close();
+    return read;
+  };
+
   it('anchors a command\'s turn to the uuid the turn before it was written under, and has it back after a restart', async () => {
     const dir = join(temp(), 'sessions');
     const before = await shelled(dir);
@@ -651,34 +694,9 @@ describe('a Claude chat', () => {
     const FOLDED = '7e5694fd-eb5f-8b42-88a6-5eb2f7464e74';
     const ALPHA = 'Reply with exactly the word ALPHA and nothing else.';
     const SLEEP = 'Run the shell command `sleep 4` with the Bash tool, then reply with exactly the word DONE.';
-    const capture = (name: string): Bag[] => readFileSync(new URL(`../../agent-claude/test/fixtures/${name}`, import.meta.url), 'utf8')
-      .split('\n').filter((line) => line.trim() !== '').map((line) => JSON.parse(line) as Bag);
-    /** A capture's frames up to the first one `at` holds for, and the rest. */
-    const upTo = (frames: Bag[], at: (frame: Bag) => boolean): [Bag[], Bag[]] => {
-      const cut = frames.findIndex(at) + 1;
-      return [frames.slice(0, cut), frames.slice(cut)];
-    };
-    const steer = async (client: Client, chat: string, id: string, text: string): Promise<void> => {
-      void client.handle({
-        method: 'dispatchAction',
-        params: { channel: chat, action: { type: 'chat/pendingMessageSet', kind: 'steering', id, message: { text } } },
-      });
-      await settle();
-    };
-    /** What a client shows of each turn: its id, how it ended, the message it answers and its prose. */
-    const shown = (turns: Bag[]): unknown[] => turns.map((turn) => [
-      turn.id,
-      turn.state,
-      (turn.message as Bag).text,
-      (turn.responseParts as Bag[]).filter((part) => part.kind === 'markdown').map((part) => part.content),
-    ]);
-
     const dir = join(temp(), 'sessions');
-    const before = await shelled(dir);
-    const uri = `claude:/${SESSION}`;
-    await before.client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude', workingDirectories: [uriOf(DIR)] } });
-    const chat = String((await stateOf(before.client, uri)).defaultChat);
-    await stateOf(before.client, chat);
+    const before = await sessionOf(dir, SESSION);
+    const { chat } = before;
     const [alpha, late] = upTo(capture('claude-late-steer.jsonl'), (frame) => frame.type === 'stream_event'
       && (frame.event as Bag).type === 'content_block_delta');
     say(before.client, chat, FIRST, ALPHA);
@@ -702,13 +720,40 @@ describe('a Claude chat', () => {
       [TOOL, 'complete', SLEEP, ['DONE BETA2']],
     ]);
     await before.host.close();
+    expect(await readAgain(dir, SESSION, ALPHA, capture('claude-steered-transcript.jsonl'))).toEqual(live);
+  });
 
-    sdk.sessions.push({ sessionId: SESSION, summary: ALPHA, lastModified: 1, cwd: DIR });
-    sdk.transcript.push(...capture('claude-steered-transcript.jsonl'));
-    const after = await shelled(dir);
-    await stateOf(after.client, uri);
-    expect(shown((await stateOf(after.client, chat)).turns as Bag[])).toEqual(live);
-    await after.host.close();
+  it('reads a steering message answered after a failed turn back as the turn of its own it was live', async () => {
+    // The session of agent-claude's capture of a turn that failed at its turn
+    // limit with a steering message queued, which the CLI then answered.
+    const SESSION = '2b965eb7-14a6-40b2-a9fa-f65ed1c95121';
+    const LIMITED = '0bbc4aff-8f2b-4536-a33a-8d0587e38461';
+    const STEERED = 'efe5b13b-5b99-8a8e-88c6-aec14eb8e451';
+    const SLEEP = 'Run the shell command `sleep 3` with the Bash tool, then reply with exactly the word DONE.';
+    const dir = join(temp(), 'sessions');
+    const before = await sessionOf(dir, SESSION);
+    const { chat } = before;
+    // The probe sent the message as the tool's result arrived, which was the turn's last round.
+    const [first, rest] = upTo(capture('claude-failed-steer.jsonl'), (frame) => frame.type === 'user');
+    say(before.client, chat, LIMITED, SLEEP);
+    await settle();
+    await emit(...first);
+    await steer(before.client, chat, STEERED, 'Reply with exactly the word BETA and nothing else.');
+    await emit(...rest);
+    await ended(before.p, chat, STEERED);
+    const live = shown((await stateOf(before.client, chat)).turns as Bag[]);
+    expect(live).toEqual([
+      [LIMITED, 'error', SLEEP, []],
+      [STEERED, 'complete', 'Reply with exactly the word BETA and nothing else.', ['BETA']],
+    ]);
+    await before.host.close();
+
+    // Its turn began, so the record holds it and it is not read back inside the
+    // failed one. The transcript says nothing of the failure, so the failed
+    // turn reads back as the turn a read gives every finished one.
+    const read = await readAgain(dir, SESSION, SLEEP, capture('claude-failed-steer-transcript.jsonl'));
+    const asked = (turns: unknown[][]): unknown[] => turns.map(([id, , text, prose]) => [id, text, prose]);
+    expect(asked(read)).toEqual(asked(live));
   });
 
   it('forks a session asleep since a restart at a command\'s turn, where the Claude turn read back before it ended', async () => {

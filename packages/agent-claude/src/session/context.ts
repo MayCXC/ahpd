@@ -14,6 +14,23 @@ import type { Stream } from './stream.js';
 import type { Turns } from './turns.js';
 import type { Workers } from './workers.js';
 
+/** A prompt the CLI was handed, for as long as no result has named it. */
+export interface Owed {
+  /** What it said, which a turn opened for its answer carries. */
+  message: Bag;
+  /** Whether it steers a turn rather than starting one. */
+  steering: boolean;
+  /** The turn its answer belongs to: its own, or the one it steers. */
+  turn: string;
+  /** A steering message's own id, the one a client knows it by. */
+  id?: string;
+  /**
+   * What the CLI said it did with it, from its `command_lifecycle` frames:
+   * nothing yet, `queued` once it holds it, `started` once it took it in.
+   */
+  cli: 'sent' | 'queued' | 'started';
+}
+
 /**
  * What this backend adds to a session's options.
  *
@@ -255,16 +272,15 @@ export interface SessionContext extends Omit<Config, 'methods'>, Omit<ClientTool
   /**
    * Every prompt the CLI was handed that no result has named yet.
    *
-   * Keyed by the uuid it was sent under, with the message it carried and
-   * whether it was a steering message. The CLI names the prompts an answer is
-   * for in `user_message_uuids`, on the answer's frames and on its result. A
-   * steering message it reads after the turn's last tool call is run as a turn
-   * of its own once the turn's result is out, so a turn is not over while it
-   * owes one. A CLI that is put away, or that dies, takes the rest with it.
+   * Keyed by the uuid it was sent under. The CLI names the prompts an answer
+   * is for in `user_message_uuids`, on the answer's frames and on its result,
+   * and the turn a prompt belongs to is the turn those frames and that result
+   * are about. A steering message it reads after the turn's last tool call is
+   * run as a turn of its own once the turn's result is out, so a turn is not
+   * over while it owes one. A CLI that is put away, or that dies, takes the
+   * rest with it.
    */
-  owed: Map<string, { message: Bag; steering: boolean }>;
-  /** The uuid the running turn's own prompt was sent under. */
-  prompt: string | undefined;
+  owed: Map<string, Owed>;
   /** The prompt the CLI's current answer is for, from the last frame that named it. */
   answering: string | undefined;
   /**

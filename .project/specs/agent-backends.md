@@ -129,9 +129,15 @@ WHEN a message waits in the queue meanwhile
 THEN it starts only after that result.
 WHEN a result names no prompt
 THEN it ends the turn.
-WHEN the turn is stopped before the CLI takes the steering message in
-THEN the CLI's answer to it is a turn of its own, under the uuid the message was sent with, carrying the message
+WHEN the turn is stopped or fails while the CLI holds the steering message
+THEN a turn of its own opens at once, under the uuid the message was sent with, carrying the message
+AND it names the message in `queuedMessageId`
+AND the CLI's answer to the message is that turn's
 AND the rest of the stopped turn's answer opens no turn and joins none.
+WHEN a client sends a turn while that turn runs
+THEN the host refuses it, as it refuses any turn sent while one runs.
+WHEN a stopped turn's result comes while another turn runs
+THEN it ends no turn.
 WHEN the transcript is read back
 THEN a message the SDK's reader marks `isQueuedCommand` joins the open turn
 AND the CLI's stop text opens no turn and ends the open turn as cancelled
@@ -142,6 +148,7 @@ THEN a turn ends where the last prompt read back inside it ends, up to a rewind'
 The reason: the CLI folds a steering message into a turn at its next tool call.
 One that arrives after the last tool call runs as a turn of its own.
 The CLI writes nothing else that ties that message to the turn it steered.
+A prompt that reaches the CLI while such a message waits there runs with it, as one turn with one answer.
 *A turn is read back as it began* in the sessions spec says how the host reads such a turn back.
 See [`code://packages/agent-claude/src/session/query.ts`](../../packages/agent-claude/src/session/query.ts) and [`code://packages/agent-claude/src/transcript.ts`](../../packages/agent-claude/src/transcript.ts).
 

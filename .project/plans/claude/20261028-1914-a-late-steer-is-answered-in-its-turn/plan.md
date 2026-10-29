@@ -148,7 +148,7 @@ a client stops a turn -> cancel() ends it -> a new turn begins -> the CLI answer
 | [01 - A steered turn ends when its prompts are answered](task-01-a-steered-turn-ends-when-answered.md) | done | - |
 | [02 - A late answer opens a turn with its prompt](task-02-a-late-answer-opens-its-own-turn.md) | done | 01 |
 | [03 - The read-back folds a steering message](task-03-the-read-back-folds-a-steer.md) | done | 02 |
-| [04 - A stop opens the turn of its steering messages](task-04-a-stop-opens-the-steers-turn.md) | doing | 03 |
+| [04 - A stop opens the turn of its steering messages](task-04-a-stop-opens-the-steers-turn.md) | done | 03 |
 
 ## Risks and tradeoffs
 
@@ -164,8 +164,8 @@ a client stops a turn -> cancel() ends it -> a new turn begins -> the CLI answer
 
 - **Done so far:** tasks 01 and 02 built 2026-10-28; see [implemented.md](implemented.md).
   Task 03 built 2026-10-28: a transcript read back shows the turns a client saw live.
-  The captures for task 04 are fixtures in `packages/agent-claude/test/fixtures`.
-- **Next action:** task 04, the stop cases, written to fail before its code.
+  Task 04 built 2026-10-28: a stop or a failure opens the turn that answers the steering messages the CLI holds.
+- **Next action:** the agent-claude, sdk and server suites once, at one worker, then the implemented record.
 - **Open questions:** none.
 - **Watch out for:** a case that keeps the actions a session emits must copy them, because a part announced empty is filled in place afterwards.
 

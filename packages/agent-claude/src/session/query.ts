@@ -721,25 +721,42 @@ export function createQuery(ctx: SessionContext): Query {
         }
 
         /*
-         * Which prompt the CLI is answering, and whether a turn is there for it.
+         * What the CLI did with a prompt it was handed: queued it, started it,
+         * completed it or cancelled it. Kept for whether the CLI still holds a
+         * prompt, which a turn that ends hands over. The SDK passes the frame
+         * on without declaring it, and names it where its interrupt says a
+         * prompt it cancels ends `cancelled`.
+         */
+        if (type === 'command_lifecycle') {
+          const owed = ctx.owed.get(str(message.command_uuid) ?? '');
+          const state = str(message.state);
+          if (owed !== undefined && (state === 'queued' || state === 'started')) owed.cli = state;
+          continue;
+        }
+
+        /*
+         * Which prompt the CLI is answering, and whether its turn is the one
+         * running.
          *
          * The first frame of each kind in an answer names the prompt in
          * `user_message_uuid`, and the frames after it are the same answer's.
-         * A steering message whose turn ended before the CLI took it in, the
-         * turn stopped or failed, is answered after: that answer is a turn of
-         * its own, which carries the steering message. The rest of the answer
-         * to a stopped turn's own prompt belongs to that turn, which takes no
-         * more of it.
+         * An answer belongs to the turn its prompt belongs to, and a turn that
+         * has ended takes no more of it: the rest of a stopped turn's answer
+         * goes nowhere, and neither does it reach a turn begun since. A
+         * steering message whose turn ended before the CLI took it in is
+         * answered after, in a turn of its own, which opens now if the end
+         * did not open it.
          */
         if (str(message.parent_tool_use_id) === undefined
           && (type === 'stream_event' || type === 'assistant' || type === 'user')) {
           const named = str(message.user_message_uuid);
           if (named !== undefined) ctx.answering = named;
           const owed = ctx.answering === undefined ? undefined : ctx.owed.get(ctx.answering);
-          if (owed?.steering === true && ctx.active === undefined) {
-            ctx.openTurn(ctx.mainScope, { id: String(ctx.answering), message: owed.message });
+          const running = ctx.active === undefined ? undefined : String(ctx.active.id);
+          if (owed !== undefined && owed.turn !== running) {
+            if (owed.steering && running === undefined) ctx.present(String(ctx.answering));
+            else continue;
           }
-          else if (owed?.steering === false && (ctx.active === undefined || ctx.answering !== ctx.prompt)) continue;
         }
 
         /*
@@ -884,6 +901,7 @@ export function createQuery(ctx: SessionContext): Query {
            */
           if (ctx.moving()) { void ctx.moveOn(); continue; }
           const turn = ctx.active;
+          const running = turn === undefined ? undefined : String(turn.id);
           /*
            * Read before the turn is pushed, because the reason goes inside it.
            * `is_error` carries the words; a subtype that is not `success` is a
@@ -896,7 +914,8 @@ export function createQuery(ctx: SessionContext): Query {
               ? `The turn ended ${str(message.subtype) ?? 'without succeeding'}`
               : undefined;
           /*
-           * The prompts this result answered, which the CLI no longer owes.
+           * The prompts this result answered, which the CLI no longer owes,
+           * and the turns they belong to.
            *
            * Named in `user_message_uuids`, or in `user_message_uuid` alone. A
            * result that names none comes from a CLI that names nothing, and
@@ -904,9 +923,33 @@ export function createQuery(ctx: SessionContext): Query {
            */
           const named = list(message.user_message_uuids).map(String);
           if (str(message.user_message_uuid) !== undefined) named.push(String(message.user_message_uuid));
+          const owners = named.map((uuid) => ctx.owed.get(uuid)?.turn);
           if (named.length === 0) ctx.owed.clear();
           for (const uuid of named) ctx.owed.delete(uuid);
           ctx.answering = undefined;
+          /*
+           * A result about turns that have ended, which ends none.
+           *
+           * A stopped turn's result comes after `cancel` ended the turn, and a
+           * turn begun since, or opened for the steering messages the stopped
+           * turn left, is running when it comes. It says the turn was stopped,
+           * which is not a failure.
+           */
+          if (named.length > 0 && owners.every((owner) => owner !== undefined && owner !== running)) {
+            ctx.interrupted = false;
+            if (turn === undefined) {
+              ctx.doing(undefined);
+              ctx.startNext();
+            }
+            ctx.touch();
+            continue;
+          }
+          /*
+           * A stopped turn's result that names a prompt of the running turn
+           * too: the CLI took that turn's steering message into the stopped
+           * turn as it was stopped, and it ends stopped with it.
+           */
+          const stopping = ctx.interrupted && owners.some((owner) => owner !== undefined && owner !== running);
           /*
            * A turn the CLI still owes an answer in.
            *
@@ -917,7 +960,7 @@ export function createQuery(ctx: SessionContext): Query {
            * only when its prompts are settled. A result that failed ends it.
            * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudeSdkPipeline.ts#L688-L705
            */
-          if (turn && wrong === undefined && ctx.owed.size > 0) {
+          if (turn && wrong === undefined && [...ctx.owed.values()].some((owed) => owed.turn === running)) {
             spanning.add(String(turn.id));
             continue;
           }
@@ -932,11 +975,12 @@ export function createQuery(ctx: SessionContext): Query {
              * `chat/turnComplete` - but a client that subscribes afterwards
              * reads the snapshot, and the snapshot is this.
              */
-            turn.state = str(message.subtype) !== 'success' ? 'error' : 'complete';
+            turn.state = stopping ? 'cancelled' : str(message.subtype) !== 'success' ? 'error' : 'complete';
             // `duration_ms` is the CLI's last turn alone, so a turn that took
-            // more than one of them is measured from its own start.
+            // more than one of them, or that the result is not about, is
+            // measured from its own start.
             const spanned = spanning.delete(String(turn.id));
-            turn.duration = !spanned && typeof message.duration_ms === 'number'
+            turn.duration = !spanned && !stopping && typeof message.duration_ms === 'number'
               ? message.duration_ms
               : Date.now() - ctx.startedAt;
             // Before the turn completes, not after: the reducer hangs usage on
@@ -944,8 +988,9 @@ export function createQuery(ctx: SessionContext): Query {
             // `turns` - so the other order reports it about nothing.
             // A stream that carried no partial messages leaves the sum empty,
             // and the result's own main-loop count is then the best there is.
-            const used = ctx.sum() ?? ctx.usageOf(message.usage, ctx.ran);
-            const cost = ctx.costOf(message);
+            // A stopped turn's result counts that turn, not this one.
+            const used = stopping ? ctx.sum() : ctx.sum() ?? ctx.usageOf(message.usage, ctx.ran);
+            const cost = stopping ? undefined : ctx.costOf(message);
             if (used !== undefined || cost !== undefined) {
               // The cost rides the tokens' own `_meta`, the same place cache
               // writes go, rather than beside them as a field of its own.
@@ -955,7 +1000,7 @@ export function createQuery(ctx: SessionContext): Query {
               ctx.emit('chat', { type: 'chat/usage', turnId: turn.id, usage: total });
             }
             ctx.settleOpen(turn);
-            const part = wrong === undefined ? undefined : ctx.addFailure(turn, wrong);
+            const part = wrong === undefined || stopping ? undefined : ctx.addFailure(turn, wrong);
             ctx.turns.push(turn);
             ctx.active = undefined;
             ctx.ran = undefined;
@@ -982,7 +1027,10 @@ export function createQuery(ctx: SessionContext): Query {
              * that failed was drawn as one that worked, and the reason was in
              * the snapshot and nowhere in the stream.
              */
-            if (part !== undefined) {
+            if (stopping) {
+              ctx.emit('chat', { type: 'chat/turnCancelled', turnId: turn.id, duration: turn.duration });
+            }
+            else if (part !== undefined) {
               ctx.emit('chat', { type: 'chat/error', turnId: turn.id, duration: turn.duration, part });
             }
             else {
@@ -991,13 +1039,15 @@ export function createQuery(ctx: SessionContext): Query {
           }
           // The result an interrupt ends with, for a turn `cancel` already
           // ended: it says the turn was stopped, which is not a failure.
-          const stopped = turn === undefined && ctx.interrupted;
+          const stopped = (turn === undefined && ctx.interrupted) || stopping;
           ctx.interrupted = false;
           // About the session rather than the turn: it reads into
           // `Status.Error` and into the summary, and the next turn clears it.
           if (message.is_error === true && !stopped) ctx.failed = wrong ?? 'The turn failed';
           ctx.doing(undefined);
           ctx.touch();
+          // A turn that failed or stopped leaves its steering messages with the CLI.
+          if (turn) ctx.handOver(String(turn.id));
           ctx.startNext();
         }
       }

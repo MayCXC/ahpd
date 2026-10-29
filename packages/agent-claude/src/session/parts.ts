@@ -36,7 +36,7 @@ export interface Parts {
   /** Say the session is no longer waiting on one request. */
   inputNeededRemoved: (id: string) => void;
   /** The turn a conversation is on, opened if it has none, with the id and the message given. */
-  openTurn: (scope?: Scope, opening?: { id: string; message: Bag }) => Bag;
+  openTurn: (scope?: Scope, opening?: { id: string; message: Bag; queuedMessageId?: string }) => Bag;
   /** Announce a prose part. */
   addPart: (scope: Scope, part: Bag) => void;
   /** Hold a tool call for the snapshot, without announcing it. */
@@ -224,13 +224,13 @@ export function createParts(ctx: SessionContext): Parts {
 
   // ------------------------------------------------------------- translation
 
-  const openTurn = (scope: Scope = ctx.mainScope, opening?: { id: string; message: Bag }): Bag => {
+  const openTurn = (scope: Scope = ctx.mainScope, opening?: { id: string; message: Bag; queuedMessageId?: string }): Bag => {
     if (scope.turn) return scope.turn;
     // A turn the client did not begin: the agent spoke first, which happens on
-    // a resumed session. Better an id of our own than a turn with none. Or the
-    // CLI is answering a steering message after the turn it steered ended,
-    // and the turn opens with that message, under the uuid it went to the CLI
-    // with, which is where the CLI writes it.
+    // a resumed session. Better an id of our own than a turn with none. Or it
+    // answers the steering messages a turn that ended left with the CLI, and
+    // opens with the first of them, under the uuid it went to the CLI with,
+    // which is where the CLI writes it.
     // `usage` is required on an `ActiveTurn` and means "not measured yet".
     // Leaving the key off put a turn on the wire that did not satisfy its own
     // type, which nothing here would have noticed.
@@ -258,6 +258,7 @@ export function createParts(ctx: SessionContext): Parts {
       turnId: opened.id,
       startedAt: opened.startedAt,
       message: opened.message,
+      ...(opening?.queuedMessageId === undefined ? {} : { queuedMessageId: opening.queuedMessageId }),
     });
     return opened;
   };
