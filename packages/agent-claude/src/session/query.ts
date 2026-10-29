@@ -211,9 +211,25 @@ export function createQuery(ctx: SessionContext): Query {
   // which is what makes a session a session rather than a series of them.
   const waiting: SDKUserMessage[] = [];
 
-  async function* input(): AsyncGenerator<(typeof waiting)[number]> {
+  /**
+   * Which query reads `waiting` now: the count of queries this session built.
+   *
+   * The list outlives a query, so a prompt pushed while a new CLI starts waits
+   * there for that CLI. The SDK reads a new query's input only once its
+   * initialize request is written, which waits on the manifests of the
+   * in-process MCP servers, so the query it replaced can still be reading when
+   * the prompt arrives; and the SDK drops what a closed query's reader is
+   * handed. A reader whose query is no longer the current one therefore takes
+   * nothing and ends, as the reference's reader returns once its query is
+   * aborted, and the queue it reads survives the rebind.
+   * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudePromptQueue.ts#L64-L86
+   * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudePromptQueue.ts#L163-L172
+   */
+  let bound = 0;
+
+  async function* input(mine: number): AsyncGenerator<(typeof waiting)[number]> {
     for (;;) {
-      while (waiting.length > 0) {
+      while (mine === bound && waiting.length > 0) {
         const next = waiting.shift() as (typeof waiting)[number];
         yield next;
         if (ctx.steering !== undefined) {
@@ -223,7 +239,7 @@ export function createQuery(ctx: SessionContext): Query {
           ctx.touch();
         }
       }
-      if (ctx.closed) return;
+      if (ctx.closed || mine !== bound) return;
       await new Promise<void>((resolve) => { ctx.wake = resolve; });
     }
   }
@@ -329,7 +345,7 @@ export function createQuery(ctx: SessionContext): Query {
    * this one place rather than the two a session starts one from.
    */
   const buildQuery = (agent: string | undefined, first: boolean, cut?: string): ReturnType<typeof query> => bounded(query({
-    prompt: input(),
+    prompt: input(bound),
     options: {
       cwd: ctx.options.cwd,
       /*
@@ -563,9 +579,21 @@ export function createQuery(ctx: SessionContext): Query {
    * because every query a session builds is one of these: `begin` is where the
    * record is read again and the login chosen again, and it compares both
    * against what the CLI answering now was started with.
+   *
+   * The new query is the one that reads `waiting` from here on. The reader of
+   * the one it replaces is woken so that it ends, and the wake is cleared, so a
+   * prompt pushed before the new reader starts waits for it rather than waking
+   * the old one, as the reference wakes a reader whose query is aborted and
+   * gives the next binding a wait of its own.
+   * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudeSdkPipeline.ts#L518-L522
+   * https://github.com/microsoft/vscode/blob/3a2421399905c0c044dade3048a797d1e9ba33d4/src/vs/platform/agentHost/node/claude/claudeSdkPipeline.ts#L626-L629
    */
   const startQuery = (agent: string | undefined, first: boolean, cut?: string): ReturnType<typeof query> => {
     ctx.startedWith = startedFrom(ctx.values, ctx.login);
+    bound += 1;
+    const replaced = ctx.wake;
+    ctx.wake = undefined;
+    replaced?.();
     return buildQuery(agent, first, cut);
   };
 
