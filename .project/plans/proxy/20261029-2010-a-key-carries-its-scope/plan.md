@@ -1,7 +1,7 @@
 ---
 title: A key carries the scope it charges
 domain: proxy
-status: active
+status: built
 priority: high
 created: 2026-10-29
 revalidated: 2026-10-29
