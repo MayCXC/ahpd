@@ -1,6 +1,6 @@
 ---
 title: The wait and the cases give a slow start room
-status: todo
+status: done
 depends: []
 layer: server
 refs:
@@ -33,4 +33,15 @@ refs:
 - Run `pnpm -s typecheck`, and see it exit 0.
 
 ## Resume
+
+Done 2026-10-29.
+Every step is built, and every check the Validation names was run.
+
+`packages/server/test/daemon-backend.test.ts` has `ENDS_WITHIN_MS`, 40000, and `CASE_MS`, 60000, after `REPO`.
+`run` waits `ENDS_WITHIN_MS`, and each of the seven cases ends with `CASE_MS`, the two plugin cases' 10000 among them.
+The comment at the wait in `run` says why there is a wait at all. The comment on the constants says why it is 40 s.
+
+Judgement calls the plan does not decide, each visible in the file it is made in:
+
+- One timeout for every case, and not the suite's default for the cases that had none. Each of them runs a daemon, and a wait above the suite's 5 s needs a case timeout above it.
 

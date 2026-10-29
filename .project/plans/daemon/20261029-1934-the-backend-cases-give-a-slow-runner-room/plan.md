@@ -1,7 +1,7 @@
 ---
 title: The backend cases give a slow runner room
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -58,7 +58,7 @@ daemon -> load its source through the loader -> read its plugins -> announce -> 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The wait and the cases give a slow start room](task-01-the-wait-and-the-cases-give-a-slow-start-room.md) | todo | - |
+| [01 - The wait and the cases give a slow start room](task-01-the-wait-and-the-cases-give-a-slow-start-room.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -66,13 +66,13 @@ daemon -> load its source through the loader -> read its plugins -> announce -> 
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-29.
-- **Next action:** [task-01-the-wait-and-the-cases-give-a-slow-start-room.md](task-01-the-wait-and-the-cases-give-a-slow-start-room.md).
+- **Done so far:** planned and built 2026-10-29. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a run pinned to one CPU is the slow runner on purpose; its loops are stopped by pid.
 
 ## Final verification checklist
 
-- [ ] Pinned to one CPU beside busy loops, the file fails before task 01 and passes after it.
-- [ ] Idle, the file passes before and after.
-- [ ] The server suite passes.
+- [x] Pinned to one CPU beside busy loops, the file fails before task 01 and passes after it.
+- [x] Idle, the file passes before and after.
+- [ ] The server suite passes. On a busy machine this file passes, and cases elsewhere fail at their own limits.
