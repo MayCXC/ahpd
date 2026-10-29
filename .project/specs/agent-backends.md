@@ -97,25 +97,37 @@ See [`code://packages/agent-claude/src/catalog.ts`](../../packages/agent-claude/
 
 ### A Claude agent runs on several logins
 
-WHEN a Claude record holds `logins`
-THEN each conversation orders them by a rendezvous score of its chat's URI and each login's name
-AND its CLI runs on the first login of the order that is not cooling down, with the token as `CLAUDE_CODE_OAUTH_TOKEN`
-AND the conversation keeps that login while it is not cooling down.
-WHEN the API refuses a turn with `rate_limit` or `billing_error`
-THEN the login cools down for every session of the agent, until the reset the `rate_limit_event` names, or for 10 minutes
-AND a turn that showed nothing runs again on the next login it has not tried, with its prompt sent once more
+WHEN a Claude record's `logins` names open connectors of `claude-login` that the record's owner or the host owns
+THEN a turn runs on the first of them in the record's order that is not resting
+AND its CLI gets that login's token as `CLAUDE_CODE_OAUTH_TOKEN`, and no key and no cloud provider's switch.
+WHEN the record names no login, or a client pushed a key
+THEN the session runs on the agent's own credential, or on that key.
+WHEN the record names logins and none of them is open
+THEN the turn is refused, and the refusal names each one.
+WHEN a request fails with `rate_limit`, `server_error` or `overloaded` before the turn showed anything
+THEN the turn runs again on the next login it has not tried, with its prompt sent once more
 AND a new CLI resumes the conversation at the end of the turn before it
 AND with no turn before it, the conversation starts over under its id.
-WHEN the refused turn showed something, or the turn before it has no end in `ends`
-THEN the turn fails, and the next turn starts on the next login.
+WHEN such a request fails after the turn showed something, or the turn before it has no end in `ends`
+THEN the turn ends with the failure, and nothing runs again.
 WHEN the conversation of a turn that starts over cannot be deleted
-THEN it comes back as it was on the next login, and the turn fails with the refusal.
-WHEN every login cools down or was tried
-THEN the turn waits until the earliest cooldown ends, and a stop ends the wait.
+THEN it comes back as it was on the next login, and the turn ends with the failure.
+WHEN a request fails with `authentication_failed`, `oauth_org_not_allowed` or `verification_required`, a 401 or a 403
+THEN the turn ends with `Claude refused login <id> (<kind>)`, and no other login is tried.
+WHEN a `rejected` `rate_limit_event` names a reset before the failure
+THEN the login rests for every session until then, and a put of the login ends the rest.
+WHEN no login is left to try
+THEN the turn ends with the last failure and the first login back, with when
+AND a turn that starts with every open login resting ends at once the same way.
+WHEN a request fails with any other error, `billing_error` and `account_on_hold` among them
+THEN the turn ends as it did before.
+WHEN a login fails
+THEN the plugin logs the CLI's words and asks the host to check that connector.
 
-The reason: the prompt cache belongs to the account.
-An attempt that has shown something already happened, so it never runs again on another account.
-See [`code://packages/agent-claude/src/session/logins.ts`](../../packages/agent-claude/src/session/logins.ts).
+The reason: the model proxy hands a call to its next entry on no connection, a 429 or a 5xx.
+Once a byte has reached the caller, it runs nothing again.
+It tells a key's refusal and tries no other entry, and its caller backs off by the `retry-after` it returns.
+See [`code://packages/agent-claude/src/session/logins.ts`](../../packages/agent-claude/src/session/logins.ts) and [`code://docs/server/PROXY.md`](../../docs/server/PROXY.md).
 
 ### A prompt sent while a new Claude CLI starts
 

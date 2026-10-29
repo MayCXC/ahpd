@@ -22,8 +22,8 @@
 
 import { fileURLToPath } from 'node:url';
 import {
-  type Adapter, type Capability, type CheckResult, type Connector, MODEL_DIALECTS, type ModelDialect, type ModelProvider,
-  type ProviderModel,
+  type Adapter, type Capability, type Connector, MODEL_DIALECTS, type ModelDialect, type ModelProvider, probe,
+  PROBE_TIMEOUT_MS, type ProviderModel,
 } from '@ahpd/sdk';
 import type { Icon } from '@ahpd/sdk';
 import { resolveIcons, type IconProblem } from '../icons.js';
@@ -45,9 +45,6 @@ const ANTHROPIC_ENDPOINT = 'https://api.anthropic.com';
 
 /** The endpoint OpenAI answers on, until a connector says otherwise. */
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1';
-
-/** How long one check may take. The channel gives it ten, so this ends first. */
-const CHECK_TIMEOUT_MS = 8_000;
 
 /** The version Anthropic's models endpoint asks for, so a check is about the key and not the header. */
 const ANTHROPIC_VERSION = '2023-06-01';
@@ -139,28 +136,6 @@ const acceptsOf = (connector: Connector): ModelDialect[] => {
   return kept.length === 0 ? ['openai-chat'] : kept;
 };
 
-/**
- * One check: a `GET` with the key, mapped to the four outcomes.
- *
- * A call that does not connect, a timeout included, is `unreachable`. A 2xx is
- * `ok`, a 401 or 403 is `denied`, and any other answer is `failed` with its
- * status. The body is cancelled rather than read: only the status says whether
- * the key works, and a provider's sentence may quote it.
- */
-const probe = async (url: string, headers: Record<string, string>, fetcher: typeof fetch): Promise<CheckResult> => {
-  let answer: Response;
-  try {
-    answer = await fetcher(url, { headers, redirect: 'error', signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) });
-  } catch {
-    return { result: 'unreachable' };
-  }
-  await answer.body?.cancel().catch(() => undefined);
-  if (answer.ok) return { result: 'ok' };
-  const message = `HTTP ${String(answer.status)}`;
-  if (answer.status === 401 || answer.status === 403) return { result: 'denied', message };
-  return { result: 'failed', message };
-};
-
 /** A JSON object, when a value is one. */
 const plain = (value: unknown): Record<string, unknown> | undefined =>
   (typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined);
@@ -196,7 +171,7 @@ const modelsOf = (
  * one call of the same kind.
  */
 const listed = async (url: string, headers: Record<string, string>, fetcher: typeof fetch): Promise<unknown> => {
-  const answer = await fetcher(url, { headers, redirect: 'error', signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) });
+  const answer = await fetcher(url, { headers, redirect: 'error', signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
   if (!answer.ok) {
     await answer.body?.cancel().catch(() => undefined);
     throw new Error(`HTTP ${String(answer.status)}`);
@@ -370,7 +345,7 @@ export function hostAdapters(options: HostAdapterOptions = {}): Record<string, A
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ code, code_verifier: verifier, code_challenge_method: PKCE_METHOD }),
           redirect: 'error',
-          signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
+          signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
         });
         if (!answer.ok) {
           // The body may quote the code, so a refusal is its status and nothing else.

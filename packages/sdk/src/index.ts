@@ -109,6 +109,7 @@ export type { Binding } from './connectors/bindings.js';
 export { actionTools, actionToolName } from './connectors/actions.js';
 export type { ActionHost } from './connectors/actions.js';
 export { adaptersChannel } from './connectors/adapters.js';
+export { probe, PROBE_TIMEOUT_MS } from './connectors/probe.js';
 export type { AdaptersChannel, AdaptersChannelOptions } from './connectors/adapters.js';
 export { enginesChannel } from './agents/engines.js';
 export type { EnginesChannel, EnginesChannelOptions } from './agents/engines.js';

@@ -853,6 +853,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     refold: (agents) => refoldAgents(agents),
     endSessionsOf: (id) => host.endSessionsOf(id),
     holderOf: agentHolder,
+    // What a field marked `x-ahpd-connector` is checked against at a put.
+    connectors: () => connectorLists.refs(),
     onProblem: listProblem,
   });
   /*

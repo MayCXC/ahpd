@@ -1,7 +1,7 @@
 import type { Bag } from '@ahpd/sdk';
 import { forgetSession } from '../catalog.js';
-import { Cooldowns, cooldownUntil, loginsOf, ordered } from '../logins.js';
-import type { Login, Refusal } from '../logins.js';
+import { BEFORE_TOKEN, FAILOVER, loginsOf, REFUSED } from '../logins.js';
+import type { Login } from '../logins.js';
 import { bag, list, str } from './common.js';
 import type { SessionContext } from './context.js';
 import { failureOf } from './failure.js';
@@ -9,34 +9,28 @@ import { failureOf } from './failure.js';
 /** What this area offers the rest of the session. */
 export interface Logins {
   /**
-   * The login the running CLI was started on, or nothing for an agent with no
-   * logins, whose CLI signs in as the daemon's does.
+   * The login the running CLI was started on, or nothing for a CLI on the
+   * agent's own credential or on a key a client pushed.
    */
   login: Login | undefined;
-  /**
-   * The cooldowns of this session's agent.
-   *
-   * One for every session of the agent, handed in by `claude()`, so a login one
-   * conversation found refused is not tried by the next.
-   */
-  cooldowns: Cooldowns;
   /** The login a turn that starts now runs on, from the values it starts with. */
   loginFor: (values: Bag) => Login | undefined;
-  /** A `rate_limit_event` from the CLI, kept for the refusal it announces. */
+  /** Why a turn that starts now cannot run: its record names logins, and none is ready. */
+  unready: (values: Bag) => string | undefined;
+  /** A `rate_limit_event` from the CLI, kept for the retry time the failure after it names. */
   limited: (info: Bag) => void;
   /**
-   * Whether an assistant frame is a refusal the running turn moves on from.
-   *
-   * Such a frame is the CLI's own words for a request that never reached a
-   * model, and the turn runs again elsewhere, so it is not shown.
+   * Whether an assistant frame is a failure of the running turn's login that
+   * the turn does not show: one the turn moves on from, or one it ends with
+   * words of its own.
    */
   refused: (message: Bag) => boolean;
-  /** Whether the running turn is moving to another login, so its `result` ends nothing. */
-  moving: () => boolean;
-  /** Run the refused turn again on the next login, or wait for one to come back. */
-  moveOn: () => Promise<void>;
-  /** End a move or a wait, for a turn that was stopped. */
-  stopMoving: () => void;
+  /** The login a failed turn goes on on, read at its `result`, or nothing when the turn ends there. */
+  nextLogin: () => Login | undefined;
+  /** Run the failed turn again on `login`. */
+  moveOn: (login: Login) => Promise<void>;
+  /** The words the running turn ends with, for a failure of its login that it did not show. */
+  failure: () => string | undefined;
   /**
    * Whether a query is the CLI a move closed and has not replaced yet.
    *
@@ -46,44 +40,77 @@ export interface Logins {
   replacing: (handle: unknown) => boolean;
 }
 
-/**
- * The refusals that move a turn to another login.
- *
- * A spent quota and a billing refusal are the account's own; another account
- * may well be able to serve. An authentication failure is not one of them,
- * and neither is anything an account does not decide, which the CLI retries
- * by itself.
- */
-const MOVES = new Set(['rate_limit', 'billing_error']);
-
 /** Whether a turn is a `!` command's, which ran on no CLI. */
 const isCommand = (turn: Bag): boolean => list(turn.responseParts)
   .some((part) => str(bag(bag(part).toolCall).toolCallId) === `${String(turn.id)}:command`);
 
 export function createLogins(ctx: SessionContext): Logins {
-  const cooldowns = ctx.options.cooldowns ?? new Cooldowns();
+  /**
+   * Whether a client pushed a key for this session.
+   *
+   * A pushed token is spent on the sessions its connection asks for, as
+   * `docs/sdk/AUTHENTICATION.md` says of `authenticate`, so such a session runs
+   * on the key and on no login.
+   */
+  const pushed = (): boolean => BEFORE_TOKEN.some((name) => {
+    const value = ctx.options.env?.[name];
+    return typeof value === 'string' && value !== '';
+  });
+
+  /** The connector ids a record's `logins` names, in its order, each once. */
+  const named = (values: Bag): string[] => {
+    if (ctx.options.logins === undefined || pushed()) return [];
+    const ids: string[] = [];
+    for (const one of list(values['logins'])) {
+      const id = str(one);
+      if (id !== undefined && id !== '' && !ids.includes(id)) ids.push(id);
+    }
+    return ids;
+  };
+
+  /** Each named login whose connector is open and belongs to the agent's owner or to the host, in the record's order. */
+  const usable = (values: Bag): Login[] => (pushed() ? [] : loginsOf(values, ctx.options.logins));
+
+  /** When a login comes back, or nothing for one that is not resting. */
+  const restOf = (id: string): number | undefined => ctx.options.logins?.open.rests.until(id);
 
   /**
-   * The session's own login while it is not cooling down, and otherwise the
-   * first in this conversation's order that is not.
+   * The logins a turn may run on, in the record's order: the usable ones that
+   * are not resting.
    *
-   * A conversation stays on its login because the prompt cache is the
-   * account's: an existing session stays on a healthy account and only a new
-   * one starts elsewhere. With every login cooling down, the first in the
-   * order is tried anyway, since a cooldown is a guess about an account that
-   * may have reset.
-   *
-   * The order is the chat's, by its URI: the conversation this CLI carries is
-   * that chat, and the URI is what names it again after a restart.
+   * The model proxy's route, which sends a name to the first entry in the
+   * file's order with a connector the caller may use, and keeps the rest in
+   * order, as `docs/server/PROXY.md` says under *How a name is routed*. A record
+   * that names no login runs on the agent's own credential.
    */
-  const loginFor = (values: Bag): Login | undefined => {
-    const all = loginsOf(values);
-    if (all.length === 0) return undefined;
-    const held = ctx.login;
-    const kept = held === undefined ? undefined : all.find((one) => one.name === held.name && one.token === held.token);
-    if (kept !== undefined && !cooldowns.cooling(kept.name)) return kept;
-    const order = ordered(ctx.options.chatUri, all);
-    return order.find((one) => !cooldowns.cooling(one.name)) ?? order[0];
+  const ready = (values: Bag): Login[] => usable(values).filter((one) => restOf(one.id) === undefined);
+
+  const loginFor = (values: Bag): Login | undefined => ready(values)[0];
+
+  /** The usable login that comes back first, and when, or nothing when none rests. */
+  const soonest = (values: Bag): string | undefined => {
+    let first: { id: string; at: number } | undefined;
+    for (const one of usable(values)) {
+      const at = restOf(one.id);
+      if (at !== undefined && (first === undefined || at < first.at)) first = { id: one.id, at };
+    }
+    return first === undefined ? undefined : `${first.id} is back first, at ${new Date(first.at).toISOString()}`;
+  };
+
+  /**
+   * The refusal of a turn whose record names logins, none of them ready.
+   *
+   * The proxy's answer to a call no open connector serves, which names each
+   * provider it looked for, as *What a refusal means* in `docs/server/PROXY.md`
+   * says. With every open login resting, it names the first back instead.
+   */
+  const unready = (values: Bag): string | undefined => {
+    const ids = named(values);
+    if (ids.length === 0 || ready(values).length > 0) return undefined;
+    const back = soonest(values);
+    return back === undefined
+      ? `No login this agent names is open: ${ids.join(', ')}`
+      : `No login this agent names is ready: ${back}`;
   };
 
   /** What the CLI's last `rate_limit_event` said, while it said `rejected`. */
@@ -92,38 +119,47 @@ export function createLogins(ctx: SessionContext): Logins {
     rejected = str(info.status) === 'rejected' ? info : undefined;
   };
 
-  /** The logins the running turn has tried since it last waited, by its id. */
-  let tried: { turn: string; names: Set<string> } | undefined;
+  /**
+   * The retry time a `rejected` event names, in epoch milliseconds.
+   *
+   * Its `resetsAt` is in the epoch seconds the CLI reads the API's
+   * `anthropic-ratelimit-unified-reset` in, the time the API's `retry-after`
+   * counts down to.
+   */
+  const retryOf = (info: Bag | undefined): number | undefined => {
+    const at = info?.resetsAt;
+    return typeof at === 'number' && Number.isFinite(at) && at > 0 ? at * 1000 : undefined;
+  };
+
+  /** The logins the running turn has tried, by its id. */
+  let tried: { turn: string; ids: Set<string> } | undefined;
 
   /**
-   * Where the running turn's move cuts the conversation back to.
+   * The running turn's failure, while it moves to the next login or ends.
    *
-   * `at` is the last chain entry of the turn before it on the CLI, where a
-   * rewind cuts. `over` is a conversation whose first turn this is, which has
-   * no entry before its prompt and starts over instead: its conversation is
-   * deleted and a new one begins under its id, as a chat truncated whole does.
-   * `said` is the refusal's own words, for a turn that ends with them after all.
+   * `said` is what the turn ends with. `at` is the last chain entry of the turn
+   * before it on the CLI, where a move cuts. `over` is a conversation whose
+   * first turn this is, which has no entry before its prompt and starts over
+   * instead: its conversation is deleted and a new one begins under its id, as
+   * a chat truncated whole does. `end` is a failure that moves nowhere.
    */
-  let move: { turn: string; said: string; at?: string; over?: true } | undefined;
-
-  /** The timer of a turn waiting for a login to come back. */
-  let waiting: ReturnType<typeof setTimeout> | undefined;
+  let move: { turn: string; said: string; at?: string; over?: true; end?: true } | undefined;
 
   /** The CLI a move closed, until the next one is in its place. */
   let closing: unknown;
   const replacing = (handle: unknown): boolean => closing !== undefined && handle === closing;
 
   /**
-   * Where a refused turn is cut back to, or nothing when it cannot be.
+   * Where a failed turn is cut back to, or nothing when it cannot be.
    *
    * The last turn before it that ran on the CLI, skipping `!` commands, which
    * the CLI never saw. Its entry in `ends` is where a rewind cuts. A turn read
    * back after a restart has an entry only once the backend records one at the
-   * transcript read, and a turn with none cannot be cut back to: the turn
-   * fails rather than run again on a conversation that still holds the
-   * refused prompt. With no turn before it at all, a conversation this process
-   * started holds nothing but that prompt, and starts over; one it resumed, or
-   * one in a machine whose files this host cannot delete, does not.
+   * transcript read, and a turn with none cannot be cut back to: the turn ends
+   * with its failure rather than run again on a conversation that still holds
+   * the failed prompt. With no turn before it at all, a conversation this
+   * process started holds nothing but that prompt, and starts over; one it
+   * resumed, or one in a machine whose files this host cannot delete, does not.
    */
   const cutOf = (): { at?: string; over?: true } | undefined => {
     for (let i = ctx.turns.length - 1; i >= 0; i--) {
@@ -136,29 +172,36 @@ export function createLogins(ctx: SessionContext): Logins {
     return { over: true };
   };
 
+  /*
+   * The model proxy's loop over its entries, in
+   * `packages/server/src/proxy/listener.ts`, with a login for an entry: each
+   * outcome is noted for the connector, a refused credential is told and sent
+   * to no other entry, and no connection, a 429 or a 5xx goes to the next entry
+   * while nothing has reached the caller. Once a byte has, nothing is run
+   * again, as `docs/server/PROXY.md` says under *When a provider fails*.
+   */
   const refused = (message: Bag): boolean => {
     const error = str(message.error);
-    const turn = ctx.active;
-    if (error === undefined || !MOVES.has(error) || turn === undefined || ctx.login === undefined) return false;
-    if (str(message.parent_tool_use_id) !== undefined && str(message.parent_tool_use_id) !== '') return false;
-    const refusal: Refusal = {
-      error,
-      ...(rejected !== undefined && typeof rejected.resetsAt === 'number' ? { resetsAt: rejected.resetsAt } : {}),
-      ...(rejected !== undefined && str(rejected.rateLimitType) !== undefined ? { window: str(rejected.rateLimitType) as string } : {}),
-    };
+    if (error === undefined) return false;
+    const until = retryOf(rejected);
     rejected = undefined;
-    cooldowns.mark(ctx.login.name, cooldownUntil(refusal, cooldowns.now()));
-    /*
-     * Run again only a turn that showed nothing yet.
-     *
-     * An attempt that has shown content or run a tool never runs again on
-     * another account, because those happened; a turn that has a part fails
-     * here as it always did, and the next turn starts on the next login.
-     */
+    const turn = ctx.active;
+    const login = ctx.login;
+    const agent = ctx.options.logins;
+    if (turn === undefined || login === undefined || agent === undefined) return false;
+    if (str(message.parent_tool_use_id) !== undefined && str(message.parent_tool_use_id) !== '') return false;
+    if (!FAILOVER.has(error) && !REFUSED.has(error)) return false;
+    const said = list(bag(message.message).content).map((block) => str(bag(block).text) ?? '').join('');
+    if (until !== undefined) agent.open.rest(login.id, login.token, until);
+    // The proxy's log takes the provider's words with the key cut out.
+    agent.open.failed(login.id, `${error}: ${said.split(login.token).join('<token>')}`);
+    if (REFUSED.has(error)) {
+      move = { turn: String(turn.id), said: `Claude refused login ${login.id} (${error})`, end: true };
+      return true;
+    }
     if (list(turn.responseParts).length > 0) return false;
     const cut = cutOf();
     if (cut === undefined) return false;
-    const said = list(bag(message.message).content).map((block) => str(bag(block).text) ?? '').join('');
     move = { turn: String(turn.id), said, ...cut };
     return true;
   };
@@ -166,20 +209,49 @@ export function createLogins(ctx: SessionContext): Logins {
   const moving = (): boolean => move !== undefined && ctx.active !== undefined && move.turn === String(ctx.active.id);
 
   /**
+   * The first ready login in the record's order that the failed turn has not
+   * tried, as the proxy tries each entry once for a call.
+   */
+  const nextLogin = (): Login | undefined => {
+    const held = move;
+    if (held === undefined || held.end === true || !moving()) return undefined;
+    if (tried?.turn !== held.turn) tried = { turn: held.turn, ids: new Set() };
+    const done = tried.ids;
+    if (ctx.login !== undefined) done.add(ctx.login.id);
+    return ready(ctx.values).find((one) => !done.has(one.id));
+  };
+
+  /**
+   * The words a turn ends with when its failure moves it nowhere.
+   *
+   * A refused credential's own sentence; otherwise the last failure's words,
+   * with the first login back and when, as the proxy answers its caller with
+   * the last entry's answer and its `retry-after`.
+   */
+  const failure = (): string | undefined => {
+    const held = move;
+    if (held === undefined || !moving()) return undefined;
+    move = undefined;
+    if (held.end === true) return held.said;
+    const back = soonest(ctx.values);
+    return back === undefined ? held.said : `${held.said}\nNo login this agent names is left to try: ${back}`;
+  };
+
+  /**
    * Put a new CLI on the turn's conversation, on `login`, and send the turn's
    * prompt to it again.
    *
-   * Cut back to the end of the turn before it, as a rewind cuts, so the refused
+   * Cut back to the end of the turn before it, as a rewind cuts, so the failed
    * prompt is not in the conversation the new CLI resumes; or, for a
    * conversation's first turn, started over under its id. The conversation's
    * entry for this turn goes with the cut or the delete, so it is taken out of
    * `ends`.
    *
-   * A conversation whose delete fails still holds the refused prompt and its
+   * A conversation whose delete fails still holds the failed prompt and its
    * reply. It comes back as it is, on the new login, and the turn ends with the
-   * refusal, as a turn with no cut point does; the reply stays its last entry.
+   * failure, as a turn with no cut point does; the reply stays its last entry.
    */
-  const runOn = async (login: Login | undefined): Promise<void> => {
+  const moveOn = async (login: Login): Promise<void> => {
     const held = move;
     const turn = ctx.active;
     if (held === undefined || turn === undefined || held.turn !== String(turn.id)) return;
@@ -223,51 +295,5 @@ export function createLogins(ctx: SessionContext): Logins {
     ctx.startNext();
   };
 
-  /**
-   * The next login the refused turn runs on, or a wait for the first one back.
-   *
-   * Each login is tried once by a turn; when every one is cooling down or
-   * tried, the turn waits until the earliest cooldown ends and tries them all
-   * again, which is the backoff Aaron asked for. The turn waits itself, and
-   * says until when.
-   */
-  const moveOn = async (): Promise<void> => {
-    if (!moving() || ctx.login === undefined) return;
-    const turn = String(ctx.active?.id);
-    if (tried?.turn !== turn) tried = { turn, names: new Set() };
-    tried.names.add(ctx.login.name);
-    const order = ordered(ctx.options.chatUri, loginsOf(ctx.values));
-    // A record edited to hold no logins runs on the CLI's own sign-in, as one
-    // that never held any does.
-    if (order.length === 0) {
-      await runOn(undefined);
-      return;
-    }
-    const next = order.find((one) => !tried?.names.has(one.name) && !cooldowns.cooling(one.name));
-    if (next !== undefined) {
-      await runOn(next);
-      return;
-    }
-    const due = order.map((one) => ({ one, at: cooldowns.until(one.name) ?? cooldowns.now() }));
-    const soonest = due.reduce((a, b) => (b.at < a.at ? b : a));
-    ctx.doing(`Waiting for a login, until ${new Date(soonest.at).toISOString()}`);
-    waiting = setTimeout(() => {
-      waiting = undefined;
-      if (!moving()) return;
-      tried = { turn, names: new Set() };
-      // The login waited for, should the timer come a moment before the clock
-      // passes its cooldown.
-      const back = order.find((one) => !cooldowns.cooling(one.name)) ?? soonest.one;
-      ctx.doing('Thinking');
-      void runOn(back);
-    }, Math.max(0, soonest.at - cooldowns.now()));
-  };
-
-  const stopMoving = (): void => {
-    if (waiting !== undefined) clearTimeout(waiting);
-    waiting = undefined;
-    move = undefined;
-  };
-
-  return { login: undefined, cooldowns, loginFor, limited, refused, moving, moveOn, stopMoving, replacing };
+  return { login: undefined, loginFor, unready, limited, refused, nextLogin, moveOn, failure, replacing };
 }

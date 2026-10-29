@@ -279,8 +279,6 @@ export function createSession(options: ClaudeSessionOptions): Session {
 
     close: () => {
       ctx.closed = true;
-      // A turn waiting for a login, or moving to one, waits on nothing now.
-      ctx.stopMoving();
       ctx.ended.clear();
       ctx.pastLines.clear();
       ctx.answeredInputs.clear();
