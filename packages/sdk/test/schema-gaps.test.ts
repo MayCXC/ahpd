@@ -156,4 +156,55 @@ describe('a registration with a gap', () => {
       'acme: adapter acme capability send input: array with no items',
     ]);
   });
+
+  it('loads an adapter whose vault field says writeOnly alone, and says to mark it secret', () => {
+    const lines: string[] = [];
+    const recorded = pluginHost('acme', context(), { alert: (alert) => { lines.push(alert.text); } });
+    recorded.host.registerAdapter({
+      name: 'acme', title: 'Acme', description: 'One adapter.',
+      schema: { type: 'object', properties: { apiKey: { type: 'string', writeOnly: true }, region: { type: 'string' } } },
+      capabilities: [],
+      open: () => undefined,
+    });
+
+    expect(recorded.contribution.adapters['acme']).toBeDefined();
+    expect(lines).toEqual(['acme: adapter acme apiKey: writeOnly kept in the vault; mark it secret']);
+  });
+
+  it('says nothing about a vault field that says secret, at the top or under env', () => {
+    const lines: string[] = [];
+    const recorded = pluginHost('acme', context(), { alert: (alert) => { lines.push(alert.text); } });
+    recorded.host.registerEngine({
+      ...engine({
+        type: 'object',
+        properties: {
+          apiKey: { type: 'string', secret: true },
+          env: { type: 'object', additionalProperties: { type: 'string', secret: true } },
+          plain: { type: 'string', writeOnly: true, secret: false },
+        },
+      }),
+      keyVariables: ['TOKEN'],
+    });
+
+    expect(lines).toEqual([]);
+  });
+
+  it('names each path a schema marks writeOnly alone, at any depth', () => {
+    const lines: string[] = [];
+    const recorded = pluginHost('acme', context(), { alert: (alert) => { lines.push(alert.text); } });
+    recorded.host.registerEngine(engine({
+      type: 'object',
+      properties: {
+        apiKey: { type: 'string', writeOnly: true },
+        env: { type: 'object', additionalProperties: { type: 'string', writeOnly: true } },
+        logins: { type: 'array', items: { type: 'object', properties: { token: { type: 'string', writeOnly: true } } } },
+      },
+    }));
+
+    expect(lines).toEqual([
+      'acme: engine acme apiKey: writeOnly kept in the vault; mark it secret',
+      'acme: engine acme env.*: writeOnly kept in the vault; mark it secret',
+      'acme: engine acme logins.items.token: writeOnly kept in the vault; mark it secret',
+    ]);
+  });
 });

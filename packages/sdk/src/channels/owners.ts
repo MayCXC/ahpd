@@ -60,8 +60,8 @@ export interface SecretRules {
   /**
    * Whether a secret may sit under an object field, as an agent's `env` does.
    *
-   * Off, only a top-level `writeOnly` field is a secret, which is what a
-   * connector's config has always been.
+   * Off, only a top-level vault field is a secret, which is what a connector's
+   * config has always been.
    */
   nested: boolean;
 }
@@ -125,11 +125,27 @@ export const secretNameOf = (subject: SecretSubject, owner: ConnectorOwner, id: 
   return `${owner}/${rest}`;
 };
 
-/** The fields a schema marks `writeOnly`: the values that are secrets. */
-export const writeOnly = (schema: Record<string, unknown>): string[] => {
+/**
+ * Whether a schema node says its value is kept in the vault.
+ *
+ * `secret: true` is the keyword a vault field is marked with. `writeOnly` says
+ * only that a read never answers the value, and a plugin written before
+ * `secret` existed marks its vault fields with it: a node that says `writeOnly`
+ * and nothing about `secret` is a vault field still, so such a plugin keeps
+ * working. A node that says `secret: false` beside `writeOnly: true` is not
+ * one: the plugin has said the value stays in the record, answered `<set>`.
+ */
+export const isSecret = (node: unknown): boolean => {
+  if (!isRecord(node)) return false;
+  if (node['secret'] === true) return true;
+  return node['secret'] === undefined && node['writeOnly'] === true;
+};
+
+/** The top-level fields a schema says are kept in the vault: the values that are secrets. */
+export const secretFields = (schema: Record<string, unknown>): string[] => {
   const properties = bag(schema['properties']);
   return Object.entries(properties)
-    .filter(([, one]) => isRecord(one) && one['writeOnly'] === true)
+    .filter(([, one]) => isSecret(one))
     .map(([field]) => field);
 };
 
@@ -137,7 +153,7 @@ export const writeOnly = (schema: Record<string, unknown>): string[] => {
 const under = (base: string, tail: string): string => (base === '' ? tail : `${base}.${tail}`);
 
 /**
- * The path of every value a schema marks `writeOnly`, at any depth, in the configs given.
+ * The path of every value a schema says is kept in the vault, at any depth, in the configs given.
  *
  * A property, a value of `additionalProperties` and an item of a list are each
  * walked, so a key inside one entry of a list is a secret as a top-level field
@@ -148,14 +164,14 @@ const under = (base: string, tail: string): string => (base === '' ? tail : `${b
  * The walk goes only as deep as a config does, so a schema that names itself
  * ends where the value ends.
  */
-export const writeOnlyPaths = (
+export const secretPaths = (
   schema: Record<string, unknown>,
   ...configs: Record<string, unknown>[]
 ): string[] => {
   const found = new Set<string>();
   const walk = (node: unknown, value: unknown, path: string): void => {
     if (!isRecord(node)) return;
-    if (node['writeOnly'] === true && path !== '') { found.add(path); return; }
+    if (isSecret(node) && path !== '') { found.add(path); return; }
     if (isRecord(value)) {
       const properties = bag(node['properties']);
       for (const [key, one] of Object.entries(properties)) walk(one, value[key], under(path, key));

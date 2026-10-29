@@ -12,7 +12,7 @@
  * call that failed. Health is in memory only, so a restart clears it and the
  * checks at start fill the first part again.
  *
- * Where an adapter's schema marks a field `writeOnly`, the value is a secret. A
+ * Where an adapter's schema marks a field `secret`, the value is a secret. A
  * put moves it to the vault under `connector/<id>/<field>` in the owner's
  * scope and keeps a `{ "$secret": "<name>" }` in the record instead, so a
  * listing, a snapshot, an answer and the log never carry it. A field sent
@@ -71,7 +71,7 @@ import {
   ownerAllows,
   refuseOwner,
   resolved as resolvedRecord,
-  writeOnly,
+  secretFields,
 } from '../channels/owners.js';
 import { isRecordSlug } from '../resources/records.js';
 import { recordsChannel, type RecordsChannel } from '../resources/recordschannel.js';
@@ -671,7 +671,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
      * keeps a secret is not refused for being empty.
      */
     const checked: Record<string, unknown> = { ...config };
-    for (const field of writeOnly(adapter.schema)) {
+    for (const field of secretFields(adapter.schema)) {
       if (field === asked.filled) {
         checked[field] = HELD;
         continue;
@@ -704,7 +704,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     const moving = before !== undefined && was !== owner;
     const moved = await moveRecordSecrets({
       rules: CONNECTOR_SECRETS,
-      fields: writeOnly(adapter.schema),
+      fields: secretFields(adapter.schema),
       config,
       held: kept,
       owner,
@@ -772,7 +772,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       }
       // A plugin's adapter is checked when it registers, and a host adapter is
       // not: a field the schema does not keep would leave the key in the record.
-      if (!writeOnly(adapter.schema).includes(signIn.field)) {
+      if (!secretFields(adapter.schema).includes(signIn.field)) {
         throw new RpcError(INVALID_PARAMS, `${adapterName} signs in to a field its schema does not keep`);
       }
       const ready = await prepare(params, reader, { command: SIGNIN, filled: signIn.field });

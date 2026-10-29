@@ -251,6 +251,22 @@ describe('every schema a first-party plugin registers names every value', () => 
   }
 });
 
+describe('every vault field a first-party plugin draws says secret', () => {
+  /*
+   * The host still reads `writeOnly` as a vault field, and the load says so
+   * with one warning line. A first-party plugin that still marked a field that
+   * way would carry that line at every start, so none may.
+   */
+  for (const sample of SAMPLES) {
+    it(`${sample.name} gives no line saying to mark a vault field secret`, () => {
+      const one = loaded.get(sample.name);
+      if (one === undefined) throw new Error(`${sample.name} was not loaded`);
+
+      expect(one.alerts.filter((text) => text.includes('writeOnly kept in the vault'))).toEqual([]);
+    });
+  }
+});
+
 describe('every schema the host draws names every value', () => {
   it('has no gap in the daemon config, an MCP server or the proxy', () => {
     expect([

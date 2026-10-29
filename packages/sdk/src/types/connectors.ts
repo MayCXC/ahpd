@@ -262,7 +262,7 @@ export interface ConnectorHealth {
  * The host builds the PKCE values: a verifier it keeps, the S256 challenge and
  * a state. The adapter puts the challenge in its vendor's sign-in URL, and
  * runs the exchange against the code a person pastes back. The answer is the
- * value of one field the adapter's schema marks `writeOnly`, which the put
+ * value of one field the adapter's schema marks `secret`, which the put
  * path moves to the vault.
  *
  * Neither half is handed a secret. The code belongs to the person, the verifier
@@ -272,7 +272,7 @@ export interface ConnectorHealth {
 export interface SignIn {
   /** What a client prints on the button. */
   title: string;
-  /** The field of the adapter's schema the exchange fills: one marked `writeOnly`. */
+  /** The field of the adapter's schema the exchange fills: one marked `secret`. */
   field: string;
   /** Where a person signs in, given the challenge and the state the host made. */
   url(challenge: string, state: string): string;
@@ -320,7 +320,7 @@ export interface Adapter {
    * How the proxy calls one connector of this adapter, when it serves models.
    *
    * It reads the connector's resolved config, so a field the schema marks
-   * `writeOnly` is the value the vault holds rather than the reference a record
+   * `secret` is the value the vault holds rather than the reference a record
    * keeps. Absent, a connector of this adapter serves no model.
    */
   provider?(connector: Connector): ModelProvider;
@@ -336,7 +336,7 @@ export interface Adapter {
   /**
    * How a person signs in to this adapter's provider, when it has one.
    *
-   * The field it names is one the schema marks `writeOnly`, and a sign-in fills
+   * The field it names is one the schema marks `secret`, and a sign-in fills
    * it with the value the exchange answers. Absent, a connector of this adapter
    * is made by a put alone.
    */

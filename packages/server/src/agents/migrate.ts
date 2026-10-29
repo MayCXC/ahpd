@@ -37,7 +37,7 @@
 
 import { copyFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { bag, isRecord, isRecordSlug, knownAgents, reason, RECORD_SLUG, writeOnlyPaths } from '@ahpd/sdk';
+import { bag, isRecord, isRecordSlug, knownAgents, reason, RECORD_SLUG, secretPaths } from '@ahpd/sdk';
 import type { PluginSpec, RecordCollection, ServedEngine, StoredRecord, Vault } from '@ahpd/sdk';
 import { sourceOf } from '../plugins.js';
 import { readEntry, writeEntry } from '../install.js';
@@ -470,15 +470,15 @@ export const planPresets = (options: PlanOptions): PresetPlan => {
 };
 
 /**
- * The fields an engine keeps secret in one config: its `writeOnly` values at
- * any depth and its `keyVariables`.
+ * The fields an engine keeps secret in one config: its vault values at any
+ * depth and its `keyVariables`.
  *
  * The same set the agents channel moves on a put, so a record this writes keeps
  * no value a listing would serve. A key inside a list entry is moved by
  * `splitModels`, which runs after this; the paths here reach objects only.
  */
 const secretFieldsOf = (engine: ServedEngine, config: Record<string, unknown>): string[] => {
-  const fields = new Set(writeOnlyPaths(engine.schema, config));
+  const fields = new Set(secretPaths(engine.schema, config));
   for (const variable of engine.keyVariables ?? []) fields.add(`env.${variable}`);
   return [...fields];
 };

@@ -1069,8 +1069,8 @@ export async function optionsSchemaOf(
  *
  * `properties` first, then `patternProperties`, then `additionalProperties`, so
  * the loader and the mask find the same node for a key whichever of the three
- * declares it: which option is a `secretAtUse` one and which is a `writeOnly` one
- * are two questions about one declaration.
+ * declares it: which option is a `secretAtUse` one, and which is a `writeOnly`
+ * or `secret` one, are two questions about one declaration.
  */
 export const schemaOf = (schema: Record<string, unknown>, key: string): Record<string, unknown> => {
   const properties = isRecord(schema['properties']) ? schema['properties'] : {};

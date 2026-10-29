@@ -50,27 +50,27 @@ describe('a piece becomes an adapter', () => {
     expect(nameOf('left-pad')).toBeUndefined();
   });
 
-  it('gives a SECRET_TEXT auth one writeOnly string, secret_text', () => {
+  it('gives a SECRET_TEXT auth one secret string, secret_text', () => {
     const auth: AuthDescription = { type: 'SECRET_TEXT', displayName: 'API Key', description: 'The key.' };
     const schema = schemaOf(auth);
 
     expect(schema).toEqual({
       type: 'object',
       properties: {
-        secret_text: { type: 'string', writeOnly: true, title: 'API Key', description: 'The key.' },
+        secret_text: { type: 'string', secret: true, title: 'API Key', description: 'The key.' },
       },
       required: ['secret_text'],
     });
   });
 
-  it("uses Slack's custom auth entry, with both tokens writeOnly and the bot token required", () => {
+  it("uses Slack's custom auth entry, with both tokens secret and the bot token required", () => {
     const mapped = adapterOf(piece({ package: '@activepieces/piece-slack', displayName: 'Slack', auth: SLACK_AUTH }));
     const schema = mapped.adapter?.schema as Record<string, unknown>;
     const properties = schema['properties'] as Record<string, Record<string, unknown>>;
 
     expect(Object.keys(properties)).toEqual(['botToken', 'userToken']);
-    expect(properties['botToken']).toMatchObject({ type: 'string', writeOnly: true, title: 'Bot Token' });
-    expect(properties['userToken']).toMatchObject({ type: 'string', writeOnly: true, title: 'User Token' });
+    expect(properties['botToken']).toMatchObject({ type: 'string', secret: true, title: 'Bot Token' });
+    expect(properties['userToken']).toMatchObject({ type: 'string', secret: true, title: 'User Token' });
     expect(schema['required']).toEqual(['botToken']);
   });
 

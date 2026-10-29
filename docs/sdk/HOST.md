@@ -151,7 +151,7 @@ Pushing a key acts in one of two ways, and the answer says which.
 
 That split, and the reason it is per key rather than all-or-nothing, is decision A configuration change applies live where the key can, and otherwise on `ahpd restart`.
 
-A key shows what the file holds rather than what this run is using, and when a start flag overrode it the key's description says so. A credential is never sent back: every value a plugin's own options schema marks `writeOnly`, however deep in its options the mark sits, is answered as `<set>`, here and over the API alike, and a client that sends that back has said the credential is left as it is.
+A key shows what the file holds rather than what this run is using, and when a start flag overrode it the key's description says so. A credential is never sent back: every value a schema marks `writeOnly`, or `secret`, however deep in its options the mark sits, is answered as `<set>`, here and over the API alike, and a client that sends that back has said the credential is left as it is. A client drawing a record's form reads the same two keywords off the record's schema: a field marked `secret` is one a read answers as `{ "$secret": "<name>" }`, so the field is drawn as set and the value is never asked for again.
 
 ## Commands
 

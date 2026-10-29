@@ -77,7 +77,7 @@ describe('the host provider adapters', () => {
     for (const [name, endpoint] of Object.entries(defaults)) {
       const form = formOf(adapters[name]!);
       expect(form.required).toEqual(['key']);
-      expect(form.properties['key']).toMatchObject({ type: 'string', writeOnly: true });
+      expect(form.properties['key']).toMatchObject({ type: 'string', secret: true });
       expect(form.properties['endpoint']).toMatchObject({ type: 'string', default: endpoint });
     }
   });
@@ -87,7 +87,7 @@ describe('the host provider adapters', () => {
     expect(form.required).toEqual(['endpoint']);
     expect(form.properties['endpoint']).toMatchObject({ type: 'string' });
     expect(form.properties['endpoint']).not.toHaveProperty('default');
-    expect(form.properties['key']).toMatchObject({ type: 'string', writeOnly: true });
+    expect(form.properties['key']).toMatchObject({ type: 'string', secret: true });
     expect(form.properties['accepts']).toMatchObject({ type: 'array', default: ['openai-chat'] });
   });
 

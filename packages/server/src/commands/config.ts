@@ -58,7 +58,9 @@ const walk = (schema: Record<string, unknown>, value: unknown): unknown => {
   // schema says about the option it is written for: hiding it would hide only
   // where the value comes from.
   if (secretRef(value) !== undefined) return value;
-  if (schema['writeOnly'] === true) return SET;
+  // A plugin option is marked `writeOnly` and a vault field `secret`; neither is
+  // answered, whichever of the two a schema says.
+  if (schema['writeOnly'] === true || schema['secret'] === true) return SET;
   const items = object(schema['items']);
   if (Array.isArray(value)) return items === undefined ? value : value.map((one) => walk(items, one));
   const held = object(value);
@@ -69,11 +71,12 @@ const walk = (schema: Record<string, unknown>, value: unknown): unknown => {
 /**
  * What one value answers, given the options schema the plugin declared.
  *
- * `writeOnly` is honoured wherever in that schema it says it, so a credential
- * nested under an option of its own - a search provider's key under a web
- * tool - answers `<set>` the same way one at the top does. A value the schema
- * does not describe is carried as it is: only the plugin's own declarations say
- * what of its options is a secret.
+ * A credential is honoured wherever in that schema it says so, whether the node
+ * says `writeOnly`, as a plugin option does, or `secret`, as a vault field
+ * does: one nested under an option of its own - a search provider's key under a
+ * web tool - answers `<set>` the same way one at the top does. A value the
+ * schema does not describe is carried as it is: only the plugin's own
+ * declarations say what of its options is a secret.
  *
  * `schema` is `undefined` for a plugin whose schema was never read, one that
  * could not be imported or is switched off and so was never loaded: nothing
@@ -131,9 +134,9 @@ export const schemasFor = async (specs: PluginSpec[]): Promise<Map<string, Recor
 };
 
 /**
- * A plugin entry as an answer shows it: every value its schema marks `writeOnly`
- * as `<set>`, and every other as the file holds it. An entry that is only a name,
- * or has no options, is answered as it is.
+ * A plugin entry as an answer shows it: every value its schema marks
+ * `writeOnly` or `secret` as `<set>`, and every other as the file holds it. An
+ * entry that is only a name, or has no options, is answered as it is.
  */
 export const withoutOptionValues = (spec: PluginSpec, schema: Record<string, unknown> | undefined): PluginSpec =>
   typeof spec === 'object' && spec !== null && spec.options !== undefined
@@ -153,8 +156,8 @@ export const withoutSpecSecrets = (spec: PluginSpec, schema: Record<string, unkn
  *
  * The connection token is the deployment's own root credential, and a plugin
  * entry holds one more place a secret is written: the userinfo of a URL it
- * installs from. An option the plugin's own schema marks `writeOnly` is
- * answered as `<set>` and any other as the file holds it.
+ * installs from. An option the plugin's own schema marks `writeOnly` or
+ * `secret` is answered as `<set>` and any other as the file holds it.
  * The terminal's own `config` is the process owner reading their own file and
  * keeps printing it.
  */

@@ -737,9 +737,10 @@ export interface HostOptions {
  * The daemon's settings, as the host shows them and hands changes back.
  *
  * The schema is `state.config.schema` in all but name: its `properties` are the
- * keys a client draws a form from, and one key may say `writeOnly` on a property
- * for a value that must never be answered. What `values` holds is the file as it
- * is now, not the host's copy of what was last pushed.
+ * keys a client draws a form from, and one key may say `writeOnly`, or `secret`
+ * as a plugin's form does, on a property for a value that must never be
+ * answered. What `values` holds is the file as it is now, not the host's copy
+ * of what was last pushed.
  */
 export interface RootConfigPort {
   /** The keys this daemon carries, as a `ConfigSchema`'s `properties`. */

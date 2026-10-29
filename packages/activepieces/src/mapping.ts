@@ -7,7 +7,7 @@ import type { ActionDescription, AuthDescription, PieceDescription, PropDescript
  * A piece is one adapter, `ap-<name>`, and each of its actions is an `action`
  * capability, with the action's props as the input a client draws. The piece's
  * auth is the connector's schema, so a connector of the adapter is one account:
- * each secret field is `writeOnly`, and the host keeps its value in the vault.
+ * each secret field is `secret`, and the host keeps its value in the vault.
  *
  * The mapping reads only the description the child sent, so it holds no piece
  * and no function of one. What a piece does with its auth and its input is the
@@ -139,12 +139,12 @@ export function inputOf(props: Record<string, PropDescription>): Record<string, 
  * this plugin does not offer.
  *
  * A `SECRET_TEXT` auth is the one string the piece reads as `auth.secret_text`.
- * A `CUSTOM_AUTH` auth is its own props, each secret among them `writeOnly`, so
+ * A `CUSTOM_AUTH` auth is its own props, each secret among them `secret`, so
  * the host keeps each value in the vault.
  */
 export function schemaOf(auth: AuthDescription): Record<string, unknown> | undefined {
   if (auth.type === 'SECRET_TEXT') {
-    const field: Record<string, unknown> = { type: 'string', writeOnly: true, title: auth.displayName };
+    const field: Record<string, unknown> = { type: 'string', secret: true, title: auth.displayName };
     if (auth.description !== undefined && auth.description !== '') field['description'] = auth.description;
     return { type: 'object', properties: { secret_text: field }, required: ['secret_text'] };
   }
@@ -157,7 +157,7 @@ export function schemaOf(auth: AuthDescription): Record<string, unknown> | undef
     if (schema === undefined) continue;
     if (prop.type === 'SECRET_TEXT') {
       schema['type'] = 'string';
-      schema['writeOnly'] = true;
+      schema['secret'] = true;
     }
     properties[name] = schema;
     if (prop.required) required.push(name);
@@ -171,7 +171,7 @@ export function schemaOf(auth: AuthDescription): Record<string, unknown> | undef
 /**
  * The auth value a piece reads, built from the connector's config.
  *
- * The host reads each `writeOnly` field back from the vault before it hands
+ * The host reads each `secret` field back from the vault before it hands
  * the connector over, so the config holds the values themselves. A secret-text
  * piece reads `auth.secret_text`, and a custom-auth piece reads each field
  * under `auth.props`, by the name the piece declared.

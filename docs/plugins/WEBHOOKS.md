@@ -13,8 +13,8 @@ An endpoint is a `webhook` connector: a JSON record in `<configDir>/connectors/<
 | `owner` | `host`, `team:<team>` or `user:<id>`. The secrets are kept under that owner's scope |
 | `config.bot` | The bot a call talks to, as `bot://<slug>`. An endpoint names `bot` or `automation`, not both |
 | `config.automation` | The id of the automation a call starts, such as `ci-review`. Leave both it and `bot` out to fire the `webhook` trigger |
-| `config.secret` | The value a caller proves itself with. The field is `writeOnly`, so it is kept in the vault and never in the record. For `meta`, it is the app secret its signature uses |
-| `config.verifyToken` | The token Meta must send as `hub.verify_token` when it checks the URL. `writeOnly`, and required for `meta` |
+| `config.secret` | The value a caller proves itself with. The field is `secret`, so it is kept in the vault and never in the record. For `meta`, it is the app secret its signature uses |
+| `config.verifyToken` | The token Meta must send as `hub.verify_token` when it checks the URL. `secret`, and required for `meta` |
 | `config.auth` | How a caller proves itself, one of the schemes below. The default is `bearer` |
 | `config.header` | The header the proof is in, for `header` and `hmac`. GitLab sends `x-gitlab-token` |
 | `config.algorithm` | The hash an `hmac` uses: `sha256`, `sha1` or `sha512`. Required for `hmac` |

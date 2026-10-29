@@ -274,7 +274,7 @@ const MODEL_SOURCE: Bag = {
     fetch: { type: 'string' },
     match: { type: 'string' },
     key: {
-      writeOnly: true,
+      secret: true,
       secretAtUse: true,
       oneOf: [REFERENCE('fromEnv'), { type: 'string' }],
     },

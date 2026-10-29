@@ -58,7 +58,7 @@ it('is registered by a load, with its token kept in the vault and a sign-in that
   const adapter = options.adapters?.['claude-login'];
   expect(adapter?.title).toBe('Claude login');
   const properties = adapter?.schema['properties'] as Record<string, Record<string, unknown>>;
-  expect(properties['token']?.['writeOnly']).toBe(true);
+  expect(properties['token']?.['secret']).toBe(true);
   expect(adapter?.schema['required']).toEqual(['token']);
   expect(adapter?.signIn?.field).toBe('token');
   expect(adapter?.signIn?.title).toBe('Sign in with Claude');

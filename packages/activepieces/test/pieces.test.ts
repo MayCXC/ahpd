@@ -97,7 +97,7 @@ describe('the pieces are adapters', () => {
     for (const name of ['ap-resend', 'ap-telegram-bot']) {
       expect(adapter(name).schema).toEqual({
         type: 'object',
-        properties: { secret_text: expect.objectContaining({ type: 'string', writeOnly: true }) },
+        properties: { secret_text: expect.objectContaining({ type: 'string', secret: true }) },
         required: ['secret_text'],
       });
     }
@@ -108,8 +108,8 @@ describe('the pieces are adapters', () => {
     const properties = schema['properties'] as Record<string, Record<string, unknown>>;
 
     expect(Object.keys(properties)).toEqual(['botToken', 'userToken']);
-    expect(properties['botToken']).toMatchObject({ type: 'string', writeOnly: true });
-    expect(properties['userToken']).toMatchObject({ type: 'string', writeOnly: true });
+    expect(properties['botToken']).toMatchObject({ type: 'string', secret: true });
+    expect(properties['userToken']).toMatchObject({ type: 'string', secret: true });
     expect(schema['required']).toEqual(['botToken']);
     expect(schema).not.toHaveProperty('authUrl');
     expect(schema).not.toHaveProperty('scope');

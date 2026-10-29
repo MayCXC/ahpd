@@ -83,7 +83,7 @@ export function loginAdapter(logins: OpenLogins, options: LoginAdapterOptions = 
         token: {
           type: 'string',
           minLength: 1,
-          writeOnly: true,
+          secret: true,
           title: 'Token',
           description: 'A token from claude setup-token. A sign-in fills it, and the vault keeps it.',
         },
