@@ -1,7 +1,7 @@
 ---
 title: A failed turn says the CLI's words
 domain: claude
-status: active
+status: built
 priority: high
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -61,7 +61,7 @@ result (success, is_error, result: the words) -> errors is empty -> "The turn fa
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The error part says the words](task-01-the-error-part-says-the-words.md) | pending | - |
+| [01 - The error part says the words](task-01-the-error-part-says-the-words.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -69,12 +69,12 @@ result (success, is_error, result: the words) -> errors is empty -> "The turn fa
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-error-part-says-the-words.md](task-01-the-error-part-says-the-words.md).
+- **Done so far:** planned and built 2026-10-29. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the case feeds the two frames the CLI sent, as they came.
 
 ## Final verification checklist
 
-- [ ] A turn the CLI failed ends with an error part that holds the CLI's words.
-- [ ] The words are not shown as a markdown part.
+- [x] A turn the CLI failed ends with an error part that holds the CLI's words.
+- [x] The words are not shown as a markdown part.

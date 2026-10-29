@@ -1,6 +1,6 @@
 ---
 title: The error part says the words
-status: pending
+status: done
 depends: []
 layer: agent-claude
 refs:
@@ -35,4 +35,5 @@ A lead assistant frame with `error` adds no part.
 
 ## Resume
 
-Not started.
+Done 2026-10-29.
+Every step is built, and every check the Validation names was run.
