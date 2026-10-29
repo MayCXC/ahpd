@@ -1,6 +1,6 @@
 ---
 title: The host's servers are declared
-status: pending
+status: done
 depends: []
 layer: agent-claude
 refs:
@@ -37,4 +37,5 @@ refs:
 
 ## Resume
 
-Not started.
+Done 2026-10-29.
+Every step is built, and every check the Validation names was run.

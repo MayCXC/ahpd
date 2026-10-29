@@ -1,7 +1,7 @@
 ---
 title: A Claude session is offered the host's MCP servers
 domain: claude
-status: active
+status: built
 priority: high
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -65,7 +65,7 @@ CLI: plugin servers skipped, daemon config never read -> the session has neither
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host's servers are declared](task-01-the-hosts-servers-are-declared.md) | pending | - |
+| [01 - The host's servers are declared](task-01-the-hosts-servers-are-declared.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -74,13 +74,13 @@ CLI: plugin servers skipped, daemon config never read -> the session has neither
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-hosts-servers-are-declared.md](task-01-the-hosts-servers-are-declared.md).
+- **Done so far:** planned and built 2026-10-29. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the home file's servers come from the account the case runs as, so a case names no exact set.
 
 ## Final verification checklist
 
-- [ ] A session is declared the host's servers beside the ones the CLI's files name.
-- [ ] The project's file wins a name both use.
-- [ ] A stdio server that starts in another folder is left out and said.
+- [x] A session is declared the host's servers beside the ones the CLI's files name.
+- [x] The project's file wins a name both use.
+- [x] A stdio server that starts in another folder is left out and said.
