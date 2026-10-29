@@ -1,6 +1,6 @@
 ---
 title: A transcript with no message starts under its id
-status: pending
+status: done
 depends: []
 layer: agent-claude
 refs:
@@ -45,4 +45,5 @@ refs:
 
 ## Resume
 
-Not started.
+Done 2026-10-29.
+Every step is built, and every check the Validation names was run.

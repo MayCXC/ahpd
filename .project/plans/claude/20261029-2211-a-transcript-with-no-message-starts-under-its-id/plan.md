@@ -1,7 +1,7 @@
 ---
 title: A transcript with no message starts under its id
 domain: claude
-status: active
+status: built
 priority: high
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -78,7 +78,7 @@ written: false -> namedUnder -> query({ sessionId }) -> CLI: Session ID is alrea
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A transcript with no message starts under its id](task-01-a-transcript-with-no-message-starts-under-its-id.md) | pending | - |
+| [01 - A transcript with no message starts under its id](task-01-a-transcript-with-no-message-starts-under-its-id.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -88,14 +88,14 @@ written: false -> namedUnder -> query({ sessionId }) -> CLI: Session ID is alrea
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-transcript-with-no-message-starts-under-its-id.md](task-01-a-transcript-with-no-message-starts-under-its-id.md).
+- **Done so far:** planned and built 2026-10-29. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the cases write the CLI's own lines, so a case shows what the CLI does with them.
 
 ## Final verification checklist
 
-- [ ] A resume of a transcript with no entry starts a new conversation under its id, and the transcript is gone.
-- [ ] A transcript with no entry under a new session's id is gone before its CLI starts.
-- [ ] A transcript with an entry is never deleted.
-- [ ] The cases that resume a conversation pass with the CLI's own first entry.
+- [x] A resume of a transcript with no entry starts a new conversation under its id, and the transcript is gone.
+- [x] A transcript with no entry under a new session's id is gone before its CLI starts.
+- [x] A transcript with an entry is never deleted.
+- [x] The cases that resume a conversation pass with the CLI's own first entry.
