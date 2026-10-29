@@ -26,9 +26,16 @@ export type PolicyEffect = 'allow' | 'deny';
  * Who a row is about.
  *
  * `all` is everyone and behaves like any other scope; the rest name one person,
- * one team, or one project of one team.
+ * one team, or one project of one team. `token:` names one key, and is the row
+ * a key's own limits make: no store holds one, and `checkPolicy` refuses it
+ * from a body.
  */
-export type PolicyScope = 'all' | `user:${string}` | `team:${string}` | `project:${string}:${string}`;
+export type PolicyScope =
+  | 'all'
+  | `user:${string}`
+  | `team:${string}`
+  | `project:${string}:${string}`
+  | `token:${string}`;
 
 /** One value type a `match` may hold. */
 export type PolicyValueType = 'model' | 'proxy' | 'agent' | 'computer';

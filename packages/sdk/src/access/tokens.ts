@@ -3,7 +3,7 @@
  *
  * | Command | Params | Answers |
  * | --- | --- | --- |
- * | `x-ahpd/tokens/mint` | `user?`, `label?`, `grants?`, `expires?`, `scope?` | the `MintedToken`, with its `secret` |
+ * | `x-ahpd/tokens/mint` | `user?`, `label?`, `grants?`, `expires?`, `scope?`, `limits?` | the `MintedToken`, with its `secret` |
  * | `x-ahpd/tokens/list` | `user?` | the token records, without their hashes |
  * | `x-ahpd/tokens/revoke` | `id`, `user?` | `{}` |
  *
@@ -14,8 +14,10 @@
  */
 
 import { refusalReason } from '../host.js';
+import { checkKeyLimits } from './policies.js';
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import type { PluginMethod } from '../types/plugin.js';
+import type { PolicyLimit } from '../types/policies.js';
 import type { Grant, Principal, TokenRecord, Users } from '../types/users.js';
 
 /** What a minted token is told when it asks to manage tokens. */
@@ -50,6 +52,23 @@ const expiresParam = (command: string, params: Record<string, unknown>): number 
     throw new RpcError(INVALID_PARAMS, `${command} takes expires as epoch milliseconds`);
   }
   return value;
+};
+
+/**
+ * The spend and call limits a key carries, or a refusal saying the param is a list.
+ *
+ * Each limit is checked by `checkKeyLimits`, which is the same check the mint
+ * and the tokens file make, and its sentence is the one a bad one is refused
+ * with: the measures are a `model` row's, the pool is always `shared`, and an
+ * amount is never negative.
+ */
+const limitsParam = (command: string, params: Record<string, unknown>): PolicyLimit[] | undefined => {
+  const value = params['limits'];
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new RpcError(INVALID_PARAMS, `${command} takes limits as a list of amount, measure, period and pool`);
+  }
+  return checkKeyLimits(value);
 };
 
 export const tokenMethods = (directory: Users): Record<string, PluginMethod> => {
@@ -124,14 +143,17 @@ export const tokenMethods = (directory: Users): Record<string, PluginMethod> => 
         const grants = grantsParam(mint, params);
         const expires = expiresParam(mint, params);
         const scope = option(mint, params, 'scope');
+        const limits = limitsParam(mint, params);
         // The directory refuses a grant the person does not hold, a scope they
-        // are not in, an expiry in the past and a mint past the limit; its
+        // are not in, an expiry in the past, a limit that is not one and a mint
+        // past the limit; its
         // sentence is the answer.
         return await mintToken(target, {
           ...(label === undefined ? {} : { label }),
           ...(grants === undefined ? {} : { grants }),
           ...(expires === undefined ? {} : { expires }),
           ...(scope === undefined ? {} : { scope }),
+          ...(limits === undefined ? {} : { limits }),
         }).catch((error: unknown) => {
           throw new RpcError(-32009, error instanceof Error ? error.message : String(error));
         });

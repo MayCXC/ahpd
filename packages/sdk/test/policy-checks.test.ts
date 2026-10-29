@@ -25,7 +25,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { memoryAutomations } from '../src/automations/automations.js';
 import { computersFor } from '../src/machines/computers.js';
 import { createHost, ROOT } from '../src/host.js';
-import { memoryPolicies } from '../src/access/policies.js';
+import { checkKeyLimits, memoryPolicies } from '../src/access/policies.js';
 import { fileUsers } from '../src/access/users.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent, Start } from '../src/types/agent.js';
@@ -503,5 +503,43 @@ describe('the same cases with the switch off', () => {
     // and the switch was never its gate.
     const gated = computersFor(machines(), 'cofold', 'cofold:/one');
     await expect(gated.how?.('sandbox-alice', { command: 'cofold' })).rejects.toThrow('prepared for claude, pi');
+  });
+});
+
+describe('a key\'s limits', () => {
+  it('takes the measures a model row counts in', () => {
+    expect(checkKeyLimits([
+      { amount: 5, measure: 'usd', period: 'day', pool: 'shared' },
+      { amount: 100_000, measure: 'tokens', period: 'month', pool: 'shared' },
+      { amount: 100, measure: 'calls', period: 'week', pool: 'shared' },
+    ])).toEqual([
+      { amount: 5, measure: 'usd', period: 'day', pool: 'shared' },
+      { amount: 100_000, measure: 'tokens', period: 'month', pool: 'shared' },
+      { amount: 100, measure: 'calls', period: 'week', pool: 'shared' },
+    ]);
+  });
+
+  it('fills a pool that is not named with shared, because one key has one total', () => {
+    expect(checkKeyLimits([{ amount: 5, measure: 'usd', period: 'day' }]))
+      .toEqual([{ amount: 5, measure: 'usd', period: 'day', pool: 'shared' }]);
+  });
+
+  it('refuses each, which has no member to split a key\'s total by', () => {
+    expect(() => checkKeyLimits([{ amount: 5, measure: 'usd', period: 'day', pool: 'each' }]))
+      .toThrow('A key\'s limits[0].pool is shared, because one key has one total, and that body has each');
+  });
+
+  it('refuses a measure a model row does not count in', () => {
+    expect(() => checkKeyLimits([{ amount: 5, measure: 'turns', period: 'day' }]))
+      .toThrow('A policy\'s limits[0].measure is one of usd, tokens, calls for a model policy, and that body has turns');
+  });
+
+  it('refuses a negative amount', () => {
+    expect(() => checkKeyLimits([{ amount: -1, measure: 'usd', period: 'day' }]))
+      .toThrow('A policy\'s limits[0].amount is a number that is not negative');
+  });
+
+  it('refuses a body that is not a list of limits', () => {
+    expect(() => checkKeyLimits({ amount: 5 })).toThrow('A policy\'s limits is a list of limits, and that body has {"amount":5}');
   });
 });

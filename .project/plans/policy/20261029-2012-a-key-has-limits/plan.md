@@ -78,7 +78,7 @@ pi -> /v1 with the key -> policyFor -> decide: the store's rows + the key's row
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A key is minted with limits](task-01-a-key-is-minted-with-limits.md) | todo | - |
+| [01 - A key is minted with limits](task-01-a-key-is-minted-with-limits.md) | implemented | - |
 | [02 - A call is held to its key's limits](task-02-a-call-is-held-to-its-key-limits.md) | todo | 01 |
 
 ## Risks and tradeoffs
