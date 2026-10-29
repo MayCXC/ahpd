@@ -1,6 +1,6 @@
 ---
 title: A login's calls are kept on its connector
-status: pending
+status: done
 depends: []
 layer: sdk, agent-claude
 refs:
@@ -41,4 +41,5 @@ The Claude engine notes each call of a login: a refusal with its words and its r
 
 ## Resume
 
-Not started.
+Done 2026-10-29.
+Every step is built, and every check the Validation names was run.

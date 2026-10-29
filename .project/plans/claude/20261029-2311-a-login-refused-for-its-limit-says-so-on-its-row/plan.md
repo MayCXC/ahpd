@@ -1,7 +1,7 @@
 ---
 title: A login refused for its limit says so on its row
 domain: claude
-status: active
+status: built
 priority: high
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -67,7 +67,7 @@ row: health.check ok, nothing about the refusal
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A login's calls are kept on its connector](task-01-a-logins-calls-are-kept-on-its-connector.md) | pending | - |
+| [01 - A login's calls are kept on its connector](task-01-a-logins-calls-are-kept-on-its-connector.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -76,13 +76,13 @@ row: health.check ok, nothing about the refusal
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-logins-calls-are-kept-on-its-connector.md](task-01-a-logins-calls-are-kept-on-its-connector.md).
+- **Done so far:** planned and built 2026-10-29. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the plugin's configuration needs `connector:put`, and `connector:host` for a host login, as for a check.
 
 ## Final verification checklist
 
-- [ ] A note from the plugin of the adapter is kept in the row's health, and a note from anyone else is refused.
-- [ ] A login's refusal is noted with its words and when it is back, and a turn that went through as a call that worked.
-- [ ] The plugin sends its notes on the connection its checks use.
+- [x] A note from the plugin of the adapter is kept in the row's health, and a note from anyone else is refused.
+- [x] A login's refusal is noted with its words and when it is back, and a turn that went through as a call that worked.
+- [x] The plugin sends its notes on the connection its checks use.
