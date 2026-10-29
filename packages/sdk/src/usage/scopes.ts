@@ -162,7 +162,11 @@ const refused = (principal: Principal): string => {
 /**
  * What a piece of work is for, or why nothing could be said.
  *
- * `named` is what the work said, `team` or `team:project`. Without it the
+ * `named` is what the work said, `team` or `team:project`. A key that carries a
+ * scope of its own comes first: the work is charged to that scope when it names
+ * none, whatever the person's primary is, and a call that names another is
+ * refused rather than resolved - the scope of a key is a lock, and the same
+ * membership check decides it as decides any named scope. Without one, the
  * person's primary is used, and with no primary their one concrete membership
  * - the case a harness pointed at this host with nothing but a key and a base
  * URL is in.
@@ -176,8 +180,15 @@ const refused = (principal: Principal): string => {
 export function scopeFor(principal: Principal | undefined, named?: string): ScopeAnswer | undefined {
   if (principal === undefined) return undefined;
   if (principal.teams === undefined || principal.teams.length === 0) return undefined;
+  // A record whose scope is not a place is no lock, and the old order applies:
+  // the reader refuses one, so this is the answer for a hand-built principal.
+  const key = principal.keyScope === undefined ? undefined : membership(principal.keyScope);
   const wanted = named === undefined || named === '' ? undefined : membership(named);
   if (wanted === undefined) {
+    // The key's own scope, over the primary: a call that names nothing is
+    // charged to the scope the key was minted with, and to what that scope
+    // resolves to now.
+    if (key !== undefined) return scopeFor(principal, key.written);
     const primary = principal.primary;
     // The primary is one of their memberships, checked when the file was read,
     // so this is the same answer naming it would have given.
@@ -185,6 +196,11 @@ export function scopeFor(principal: Principal | undefined, named?: string): Scop
     const concrete = heldBy(principal).filter((one) => !anyProject(one));
     const [only] = concrete;
     return concrete.length === 1 && only !== undefined ? { scope: scopeOf(only) } : { refusal: refused(principal) };
+  }
+  // The lock: a call with a key that carries a scope may name that scope and
+  // no other, even one the person holds by their own memberships.
+  if (key !== undefined && key.written !== wanted.written) {
+    return { refusal: `this key charges ${key.written}, and the call names ${wanted.written}` };
   }
   if (wanted.project === '*') return { refusal: refused(principal) };
   // A project this install does not name is not one anybody works in, whatever

@@ -124,6 +124,11 @@ const mintFields = {
     description: 'When it stops working, as a date such as 2026-12-31 or an ISO timestamp. Without it the token does not expire.',
     cli: { value: 'DATE' },
   },
+  scope: {
+    type: 'string',
+    description: 'The team and project its calls are charged to, written team or team:project, and one the person is in now. A call made with it may name that scope and no other.',
+    cli: { value: 'TEAM[:PROJECT]' },
+  },
 } satisfies Record<string, Field>;
 
 /** Whose tokens a verb is about, when it is not the caller's own. */
@@ -151,7 +156,7 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
   const mint = registry.action({
     id: 'token.mint',
     summary: 'Mint a token of your own',
-    description: 'Limited to grants you hold now, and shown once. --grant once per grant; without one it holds every grant its person does. --expires takes a date such as 2026-12-31, and --url prints the whole ws:// URL a client can be given.',
+    description: 'Limited to grants you hold now, and shown once. --grant once per grant; without one it holds every grant its person does. --expires takes a date such as 2026-12-31. --scope names the team and project its calls are charged to, and a call made with it may name no other. --url prints the whole ws:// URL a client can be given.',
     surfaces: { cli: { pattern: ['token', 'mint'] }, http: { method: 'POST', path: '/token/mint' } },
     // A create: the token does not exist yet, so this names no row.
     effect: 'add',
@@ -172,6 +177,7 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
       await boundFor(context, directory, target, caller.own);
       const label = context.optional<string>('label');
       const grants = context.list<string>('grants');
+      const scope = context.optional<string>('scope');
       const specified = context.optional<string>('expires');
       let expires: number | undefined;
       if (specified !== undefined) {
@@ -179,13 +185,14 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
         if (!Number.isFinite(read)) stop(`${specified} is not a date.`);
         expires = read;
       }
-      // The directory refuses a grant the person does not hold, an expiry in
-      // the past and a mint past the limit; said here so it reads as the verb's
-      // own refusal rather than a stack trace.
+      // The directory refuses a grant the person does not hold, a scope they
+      // are not in, an expiry in the past and a mint past the limit; said here
+      // so it reads as the verb's own refusal rather than a stack trace.
       const minted = await mintToken(target, {
         ...(label === undefined ? {} : { label }),
         ...(grants.length === 0 ? {} : { grants: grants as Grant[] }),
         ...(expires === undefined ? {} : { expires }),
+        ...(scope === undefined ? {} : { scope }),
       }).catch((error: unknown) => {
         stop(error instanceof Error ? error.message : String(error));
       });
@@ -202,7 +209,7 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
   const list = registry.action({
     id: 'token.list',
     summary: 'The tokens a person holds',
-    description: 'Each token\'s id, label, grants, when it was made and when it expires. A hash and a secret are never answered.',
+    description: 'Each token\'s id, label, grants, scope, when it was made and when it expires. A hash and a secret are never answered.',
     surfaces: { cli: { pattern: ['token', 'list'] }, http: { method: 'GET', path: '/token/list' } },
     // No key: this is the listing, and each row carries the `id` `token rm`
     // takes.
@@ -232,7 +239,8 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
             ? `every grant of ${one.user}`
             : one.grants.length === 0 ? 'no grants' : one.grants.join(' ');
           const expiry = one.expires === undefined ? 'no expiry' : `expires ${new Date(one.expires).toISOString()}`;
-          return `${one.id}  ${one.label ?? '(no label)'}  ${grants}  created ${new Date(one.created).toISOString()}  ${expiry}\n`;
+          const scope = one.scope === undefined ? '' : `  scope ${one.scope}`;
+          return `${one.id}  ${one.label ?? '(no label)'}  ${grants}${scope}  created ${new Date(one.created).toISOString()}  ${expiry}\n`;
         }).join('');
       return output(rows, text);
     },

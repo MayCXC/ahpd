@@ -506,7 +506,8 @@ it('runs a !command in a shell rather than asking a model', async () => {
   await client.handle({ method: 'subscribe', params: { channel: chatUri } });
 
   begin(client, chatUri, 't1', '!echo cofold-ran-it');
-  await until(() => ended(p, chatUri));
+  // A real shell, which can take seconds to start on Windows.
+  await until(() => ended(p, chatUri), 4000);
 
   // The host's shell, not the model: one tool call named `terminal`, completed
   // with what the shell printed. Before `ran` existed here this turn was handed
@@ -707,7 +708,7 @@ it('announces the session idle with the turnComplete that ends a !command', asyn
   await client.handle({ method: 'createSession', params: { channel: uri, provider: 'cofold' } });
   await client.handle({ method: 'subscribe', params: { channel: chatUri } });
   begin(client, chatUri, 't1', '!echo cofold-ran-it');
-  await until(() => ended(p, chatUri));
+  await until(() => ended(p, chatUri), 4000);
   expect(types(p, chatUri)).toContain('chat/toolCallComplete');
   expect(statusAtEnd(p, uri, chatUri, 'chat/turnComplete')).toBe(Status.Idle);
 });

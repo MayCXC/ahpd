@@ -332,7 +332,7 @@ person's grants, and each is revoked without touching the others.
 
 | Command | Params | Answers |
 | --- | --- | --- |
-| `x-ahpd/tokens/mint` | `user?`, `label?`, `grants?`, `expires?` | the token, with its `secret` |
+| `x-ahpd/tokens/mint` | `user?`, `label?`, `grants?`, `expires?`, `scope?` | the token, with its `secret` |
 | `x-ahpd/tokens/list` | `user?` | the tokens, without their hashes |
 | `x-ahpd/tokens/revoke` | `id`, `user?` | `{}` |
 
@@ -345,7 +345,9 @@ connection has no reader, so it has to name a person.
 The mint's `grants` is a list of grants the person holds now. Without one,
 the token holds every grant its person does, read at each check. `expires`
 is epoch milliseconds in the future. Without it the token does not expire.
-The answer carries the `secret` once, and the directory keeps only its
+`scope` is a team or a team and project the person is in now, and the token's
+calls are charged to it, so a call naming another scope is refused. The
+answer carries the `secret` once, and the directory keeps only its
 hash. The list answers the same records without a hash or a secret.
 
 A reader that signed in with a minted token is refused all three with

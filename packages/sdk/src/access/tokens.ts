@@ -3,7 +3,7 @@
  *
  * | Command | Params | Answers |
  * | --- | --- | --- |
- * | `x-ahpd/tokens/mint` | `user?`, `label?`, `grants?`, `expires?` | the `MintedToken`, with its `secret` |
+ * | `x-ahpd/tokens/mint` | `user?`, `label?`, `grants?`, `expires?`, `scope?` | the `MintedToken`, with its `secret` |
  * | `x-ahpd/tokens/list` | `user?` | the token records, without their hashes |
  * | `x-ahpd/tokens/revoke` | `id`, `user?` | `{}` |
  *
@@ -123,12 +123,15 @@ export const tokenMethods = (directory: Users): Record<string, PluginMethod> => 
         const label = option(mint, params, 'label');
         const grants = grantsParam(mint, params);
         const expires = expiresParam(mint, params);
-        // The directory refuses a grant the person does not hold, an expiry in
-        // the past and a mint past the limit; its sentence is the answer.
+        const scope = option(mint, params, 'scope');
+        // The directory refuses a grant the person does not hold, a scope they
+        // are not in, an expiry in the past and a mint past the limit; its
+        // sentence is the answer.
         return await mintToken(target, {
           ...(label === undefined ? {} : { label }),
           ...(grants === undefined ? {} : { grants }),
           ...(expires === undefined ? {} : { expires }),
+          ...(scope === undefined ? {} : { scope }),
         }).catch((error: unknown) => {
           throw new RpcError(-32009, error instanceof Error ? error.message : String(error));
         });
