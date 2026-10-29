@@ -1,7 +1,7 @@
 ---
 title: A disposed session is deleted once its agent has stopped
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -65,7 +65,7 @@ CLI exits 3 ms later -> writes its last lines -> the transcript is back
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The copy is deleted after the agents stop](task-01-the-copy-is-deleted-after-the-agents-stop.md) | pending | - |
+| [01 - The copy is deleted after the agents stop](task-01-the-copy-is-deleted-after-the-agents-stop.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -73,12 +73,12 @@ CLI exits 3 ms later -> writes its last lines -> the transcript is back
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-copy-is-deleted-after-the-agents-stop.md](task-01-the-copy-is-deleted-after-the-agents-stop.md).
+- **Done so far:** planned and built 2026-10-29. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a backend whose close answers nothing is waited for no longer than before.
 
 ## Final verification checklist
 
-- [ ] What an agent writes as it exits is deleted with the session's copy.
-- [ ] Every other case in `session-delete.test.ts` passes.
+- [x] What an agent writes as it exits is deleted with the session's copy.
+- [x] Every other case in `session-delete.test.ts` passes.
