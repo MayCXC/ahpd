@@ -653,6 +653,12 @@ export function createCatalogue(ctx: HostContext): Catalogue {
    * running and one waiting behind it. A turn of many tool calls asks on every
    * one of them, and each is a `git diff`, so the later asks only record
    * whether a turn is still running, and a burst of ten costs two reads.
+   *
+   * A count is written only for a session this host is still running, the
+   * sessions a respawn holds among them. A read takes a `git diff`'s time, and a
+   * session disposed while it ran has had its row forgotten: a count written
+   * after would make a row, and a file, of counts alone, which the next daemon
+   * lists as a session nobody can open.
    */
   const summarizing = new Set<string>();
   const summaryWaiting = new Map<string, boolean>();
@@ -677,7 +683,7 @@ export function createCatalogue(ctx: HostContext): Catalogue {
             : await source?.sessionSummary?.(dir, idOf(uri), whileRunning);
         }
         catch { /* a count that could not be read is the count that was there */ }
-        if (read !== undefined) {
+        if (read !== undefined && (sessions.has(uri) || ctx.respawning.has(uri))) {
           kept.setChanges(idOf(uri), read);
           summaryMoved(uri);
         }

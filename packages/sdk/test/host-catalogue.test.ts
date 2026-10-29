@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1462,6 +1462,32 @@ describe("a row's counts are the session's own", () => {
     // The folder says 99 of its own; what comes back is what the session was
     // measured at before the daemon stopped.
     expect(listed.items.find((one) => one.resource === 'ahp-session:/live')?.changes?.files).toBe(4);
+  });
+
+  it('keeps no file for a session disposed while its counts were being read', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-counts-'));
+    made.push(dir);
+    // The read held until the session is gone: a session disposed a second
+    // after it was made, while the counts after its baseline are still running.
+    let release = (): void => {};
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let asked = false;
+    const source = {
+      ...ownWork({ live: 4 }),
+      sessionSummary: async () => { asked = true; await held; return { files: 4 }; },
+    };
+    const { client, uri } = await turned({ changes: source, sessions: fileSessions({ dir }) }, 'live');
+    await vi.waitFor(() => { expect(asked).toBe(true); });
+
+    await client.handle({ method: 'disposeSession', params: { channel: uri } });
+    await settle();
+    release();
+    await settle();
+
+    // A disposed session's file goes with it, and a count that arrives after
+    // has nothing to be written into: a file of counts alone is a session the
+    // next daemon lists and nobody can open.
+    expect(existsSync(join(dir, 'live.json'))).toBe(false);
   });
 });
 
