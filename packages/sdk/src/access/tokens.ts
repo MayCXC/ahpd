@@ -3,14 +3,16 @@
  *
  * | Command | Params | Answers |
  * | --- | --- | --- |
- * | `x-ahpd/tokens/mint` | `user?`, `label?`, `grants?`, `expires?`, `scope?`, `limits?`, `meta?` | the `MintedToken`, with its `secret` |
- * | `x-ahpd/tokens/list` | `user?` | the token records, without their hashes |
- * | `x-ahpd/tokens/revoke` | `id`, `user?` | `{}` |
+ * | `x-ahpd/tokens/mint` | `user?`, `team?`, `label?`, `grants?`, `expires?`, `scope?`, `limits?`, `meta?` | the `MintedToken`, with its `secret` |
+ * | `x-ahpd/tokens/list` | `user?`, `team?` | the token records, without their hashes |
+ * | `x-ahpd/tokens/revoke` | `id`, `user?`, `team?` | `{}` |
  *
  * Each needs `user:write`, and `authorize` lets in a reader without it for
- * their own tokens, as the usage commands do for a reader's own pools. The
- * commands of `ahpd token` do the same work with the same checks; `expires` is
- * epoch milliseconds here, which is the unit a token record keeps.
+ * their own tokens, as the usage commands do for a reader's own pools. A
+ * `team` names a team instead of a person, and needs `user:write`: no reader
+ * has a team of their own. The commands of `ahpd token` do the same work with
+ * the same checks; `expires` is epoch milliseconds here, which is the unit a
+ * token record keeps.
  */
 
 import { refusalReason } from '../host.js';
@@ -98,23 +100,36 @@ export const tokenMethods = (directory: Users): Record<string, PluginMethod> => 
     return { mintToken, tokens, revokeToken };
   };
 
+  /** The team a command names, refused beside `user` and refused as an empty string. */
+  const teamParam = (command: string, params: Record<string, unknown>): string | undefined => {
+    const team = option(command, params, 'team');
+    if (team !== undefined && team === '') throw new RpcError(INVALID_PARAMS, `${command} takes team as a non-empty string`);
+    if (team !== undefined && params['user'] !== undefined) {
+      throw new RpcError(INVALID_PARAMS, `${command} takes user or team, not both`);
+    }
+    return team;
+  };
+
   /**
    * Whose tokens a command is about, or the refusal that takes no body.
    *
    * A principal carrying a `token` id signed in with a minted token, so it is
    * not the person and may not manage the person's tokens. The root connection
-   * has no reader and no tokens of its own, so it has to name a person.
+   * has no reader and no tokens of its own, so it has to name a person or a
+   * team. A team is answered as a team, and no person is defaulted beside it.
    */
   const whose = (
     command: string,
     params: Record<string, unknown>,
     reader: Principal | undefined,
-  ): { target: string; own: string | undefined } => {
+  ): { user?: string; team?: string; own: string | undefined } => {
     if (reader?.token !== undefined) throw new RpcError(-32009, MINTED);
+    const team = teamParam(command, params);
+    if (team !== undefined) return { team, own: reader?.id };
     const named = option(command, params, 'user');
     const target = named === undefined || named === '' ? reader?.id : named;
     if (target === undefined) throw new RpcError(INVALID_PARAMS, `${command} needs user when nobody is signed in`);
-    return { target, own: reader?.id };
+    return { user: target, own: reader?.id };
   };
 
   /**
@@ -134,13 +149,26 @@ export const tokenMethods = (directory: Users): Record<string, PluginMethod> => 
   };
 
   /**
-   * A reader's own tokens need no grant; another person's do.
+   * A team's key needs `user:write`, and no reader has a team of their own.
+   *
+   * The root connection is not held to it, as it is not for another person's
+   * key. A team has no grants to be bounded by, so this is the whole check.
+   */
+  const boundTeam = async (reader: Principal | undefined): Promise<void> => {
+    if (reader === undefined) return;
+    if (!reader.can('user:write')) throw new RpcError(-32009, refusalReason(reader.id, 'user:write'));
+  };
+
+  /**
+   * A reader's own tokens need no grant; another person's or a team's do.
    *
    * Asked only of a caller the `user:write` grant refuses, so a reader who
-   * holds it is never asked and reaches the body's own check.
+   * holds it is never asked and reaches the body's own check. A caller that
+   * names a team is refused here, because no reader has a team of their own.
    */
   const authorize: PluginMethod['authorize'] = async (params, reader) => {
     if (reader.token !== undefined) return false;
+    if (params['team'] !== undefined) return false;
     const named = params['user'];
     return named === undefined || named === reader.id;
   };
@@ -156,8 +184,9 @@ export const tokenMethods = (directory: Users): Record<string, PluginMethod> => 
       authorize,
       handle: async (params, reader) => {
         const { mintToken } = keeper();
-        const { target } = whose(mint, params, reader);
-        await bound(reader, target, reader?.id);
+        const { user, team } = whose(mint, params, reader);
+        if (team === undefined && user !== undefined) await bound(reader, user, reader?.id);
+        if (team !== undefined) await boundTeam(reader);
         const label = option(mint, params, 'label');
         const grants = grantsParam(mint, params);
         const expires = expiresParam(mint, params);
@@ -167,7 +196,8 @@ export const tokenMethods = (directory: Users): Record<string, PluginMethod> => 
         // The directory refuses a grant the person does not hold, a scope they
         // are not in, an expiry in the past, a limit or a meta that is not one,
         // and a mint past the limit; its sentence is the answer.
-        return await mintToken(target, {
+        return await mintToken(user, {
+          ...(team === undefined ? {} : { team }),
           ...(label === undefined ? {} : { label }),
           ...(grants === undefined ? {} : { grants }),
           ...(expires === undefined ? {} : { expires }),
@@ -185,9 +215,13 @@ export const tokenMethods = (directory: Users): Record<string, PluginMethod> => 
       authorize,
       handle: async (params, reader) => {
         const { tokens } = keeper();
-        const { target } = whose(list, params, reader);
-        await bound(reader, target, reader?.id);
-        return await tokens(target);
+        const { user, team } = whose(list, params, reader);
+        if (team !== undefined) {
+          await boundTeam(reader);
+          return (await tokens()).filter((one) => one.team === team);
+        }
+        if (user !== undefined) await bound(reader, user, reader?.id);
+        return await tokens(user);
       },
     },
     [revoke]: {
@@ -197,24 +231,38 @@ export const tokenMethods = (directory: Users): Record<string, PluginMethod> => 
       handle: async (params, reader) => {
         const { tokens, revokeToken } = keeper();
         if (reader?.token !== undefined) throw new RpcError(-32009, MINTED);
+        const team = teamParam(revoke, params);
         const named = option(revoke, params, 'user');
-        // The token id finds the person, so a root connection names one the way
-        // it does for the other two rather than removing any token by id.
-        if (reader === undefined && (named === undefined || named === '')) {
+        // The token id finds its owner, so a root connection names a person or a
+        // team the way it does for the other two rather than removing any token
+        // by id.
+        if (team === undefined && reader === undefined && (named === undefined || named === '')) {
           throw new RpcError(INVALID_PARAMS, `${revoke} needs user when nobody is signed in`);
         }
         const id = option(revoke, params, 'id');
         if (id === undefined || id === '') throw new RpcError(INVALID_PARAMS, `${revoke} needs id, a token id`);
         const one: Omit<TokenRecord, 'token'> | undefined = (await tokens()).find((each) => each.id === id);
-        if (one === undefined || (named !== undefined && named !== '' && named !== one.user)) {
-          throw new RpcError(-32008, `No token called ${id}.`);
+        if (one === undefined) throw new RpcError(-32008, `No token called ${id}.`);
+        if (one.team !== undefined) {
+          // A team key is another team's to a caller that named none, or one
+          // that named a different team.
+          if (team !== one.team) throw new RpcError(-32008, `No token called ${id}.`);
+          await boundTeam(reader);
         }
-        // Another person's token is missing to a reader who may not manage it,
-        // as the terminal's `token rm` answers, so its id is not confirmed.
-        if (reader !== undefined && one.user !== reader.id && !reader.can('user:write')) {
-          throw new RpcError(-32008, `No token called ${id}.`);
+        else {
+          if (team !== undefined) throw new RpcError(-32008, `No token called ${id}.`);
+          if (named !== undefined && named !== '' && named !== one.user) {
+            throw new RpcError(-32008, `No token called ${id}.`);
+          }
+          // Another person's token is missing to a reader who may not manage
+          // it, as the terminal's `token rm` answers, so its id is not
+          // confirmed.
+          if (one.user === undefined) throw new RpcError(-32008, `No token called ${id}.`);
+          if (reader !== undefined && one.user !== reader.id && !reader.can('user:write')) {
+            throw new RpcError(-32008, `No token called ${id}.`);
+          }
+          await bound(reader, one.user, reader?.id);
         }
-        await bound(reader, one.user, reader?.id);
         if (!await revokeToken(id)) throw new RpcError(-32008, `No token called ${id}.`);
         return {};
       },

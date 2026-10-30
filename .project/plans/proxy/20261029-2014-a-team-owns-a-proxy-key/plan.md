@@ -80,7 +80,7 @@ the same key on /api or the websocket -> users.verify answers nothing -> 401
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A token record can name a team](task-01-a-token-record-can-name-a-team.md) | implemented | - |
-| [02 - A team key is minted, listed and revoked](task-02-a-team-key-is-minted-listed-revoked.md) | todo | 01 |
+| [02 - A team key is minted, listed and revoked](task-02-a-team-key-is-minted-listed-revoked.md) | implemented | 01 |
 | [03 - The proxy charges a team key to its team](task-03-the-proxy-charges-a-team-key.md) | todo | 01 |
 
 ## Risks and tradeoffs
@@ -90,8 +90,8 @@ the same key on /api or the websocket -> users.verify answers nothing -> 401
 
 ## Resume state
 
-- **Done so far:** [task-01-a-token-record-can-name-a-team.md](task-01-a-token-record-can-name-a-team.md) is implemented: a record names a user or a team, `verify` refuses a team key, `verifyTeamKey` answers its team, and the mint makes a team key.
-- **Next action:** start [task-02-a-team-key-is-minted-listed-revoked.md](task-02-a-team-key-is-minted-listed-revoked.md).
+- **Done so far:** [task-01-a-token-record-can-name-a-team.md](task-01-a-token-record-can-name-a-team.md) and [task-02-a-team-key-is-minted-listed-revoked.md](task-02-a-team-key-is-minted-listed-revoked.md) are implemented: a record names a user or a team, `verify` refuses a team key, `verifyTeamKey` answers its team, the mint makes a team key, and the token commands and `--team` manage it.
+- **Next action:** start [task-03-the-proxy-charges-a-team-key.md](task-03-the-proxy-charges-a-team-key.md).
 - **Open questions:** none.
 - **Watch out for:** the plans of the scope, the meta and the limits change `TokenRecord` and `principalOf` first. A team principal reads `keyScope`, `keyMeta` and `keyLimits` the same way.
 
