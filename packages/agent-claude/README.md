@@ -190,7 +190,7 @@ Sessions the host is not running are read from Claude's transcripts, so clients 
 
 A question somebody answered reads back answered, in the session and in a subagent's chat. The CLI writes the answers as the `toolUseResult` of the transcript entry that holds the question's result. The SDK's `getSessionMessages` leaves that field out, so a session's own file is read for it, one line at a time.
 
-A session the host resumes picks up the conversation the CLI wrote under that id, in any project folder. The CLI writes a conversation when its first message reaches it, so a chat nobody spoke to, or one whose CLI could not sign in, has none, and the CLI refuses to resume it. Such a session starts a new conversation under that id instead, under the chat's own id where it has one, as VS Code's agent host does.
+A session the host resumes picks up the conversation the CLI wrote under that id, in any project folder. The CLI writes a conversation when its first message reaches it, so a chat nobody spoke to, or one whose CLI could not sign in, has none, and the CLI refuses to resume it. Neither has a CLI closed after its prompt arrived and before it wrote the prompt's entry, which leaves a transcript with no entry of a conversation in it. Such a session starts a new conversation under that id instead, under the chat's own id where it has one, as VS Code's agent host does. The CLI starts a conversation under an id only when its folder's project holds no transcript for it, so a transcript there with no entry is deleted first, as VS Code's agent host deletes a transcript before it starts a conversation over under the same id.
 
 ## The agent a message picks
 

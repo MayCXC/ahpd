@@ -1,5 +1,5 @@
 import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
-import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { closeSync, existsSync, fstatSync, openSync, readdirSync, readSync, realpathSync, rmSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { SDKSessionInfo } from '@anthropic-ai/claude-agent-sdk';
@@ -84,27 +84,88 @@ const projectsDir = (): string => join(process.env.CLAUDE_CONFIG_DIR ?? join(hom
 /** Whether an id can name a transcript file, which is all an id here is ever looked up as. */
 const fileNamed = (id: string): boolean => /^[A-Za-z0-9-]+$/.test(id);
 
+/** The transcript for `id` in `project`, where the CLI writes it. */
+const transcriptIn = (project: string, id: string): string => join(projectsDir(), project, `${id}.jsonl`);
+
 /** Whether `project` holds a transcript for `id` that is not empty. */
 const holds = (project: string, id: string): boolean => {
-  try { return statSync(join(projectsDir(), project, `${id}.jsonl`)).size > 0; }
+  try { return statSync(transcriptIn(project, id)).size > 0; }
   catch { return false; }
+};
+
+/**
+ * The project folder of `folder`, spelled the way the SDK spells it: from its
+ * real path where it has one and as given where it does not.
+ */
+const projectOf = (folder: string): string => {
+  let real = folder;
+  try { real = realpathSync(folder); }
+  catch { /* a folder that is gone keeps its transcript under the name it had */ }
+  return real.replace(/[^A-Za-z0-9]/g, '-');
 };
 
 /**
  * Whether the project folder of `folder` holds a transcript for `id` that is not
  * empty, which is where the SDK finds it without looking anywhere else.
  *
- * The folder is spelled the way the SDK spells it, from its real path where it
- * has one and as given where it does not. An id that is not a filename has no
- * transcript.
+ * An id that is not a filename has no transcript.
  */
 function hasTranscript(id: string, folder: string): boolean {
   if (!fileNamed(id)) return false;
-  let real = folder;
-  try { real = realpathSync(folder); }
-  catch { /* a folder that is gone keeps its transcript under the name it had */ }
-  return holds(real.replace(/[^A-Za-z0-9]/g, '-'), id);
+  return holds(projectOf(folder), id);
 }
+
+/** What every entry of a conversation carries, and the CLI's other lines in a transcript do not. */
+const ENTRY = Buffer.from('"parentUuid":');
+/** How much of each end of a transcript is read first. */
+const END = 65536;
+/** How much of the rest is read at a time, and how much of it at most. */
+const STEP = 1048576;
+const MOST = 16777216;
+
+/**
+ * Whether `file` is a transcript that holds a conversation: at least one entry
+ * of it, which is what the CLI's resume needs. It ends at startup with
+ * `No conversation found` for a transcript of its other lines alone, the last
+ * prompt, the cost and the like, which is what a CLI leaves when it is closed
+ * after a prompt reached it and before it wrote the prompt's entry.
+ *
+ * The SDK's own test, read as it reads it: the first and the last 64 KiB, then
+ * the rest 1 MiB at a time with each read's last bytes carried into the next,
+ * up to 16 MiB, past which a transcript is taken to hold one. Synchronous,
+ * because a session is built synchronously and its CLI starts as it is.
+ * npm://@anthropic-ai/claude-agent-sdk@0.3.301 (sdk.mjs, the check its session
+ * listing makes of a conversation a session continued in)
+ */
+const conversation = (file: string): boolean => {
+  let fd: number;
+  try { fd = openSync(file, 'r'); }
+  catch { return false; }
+  try {
+    const size = fstatSync(fd).size;
+    const head = Buffer.alloc(Math.min(END, size));
+    readSync(fd, head, 0, head.length, 0);
+    if (head.includes(ENTRY)) return true;
+    if (size <= END) return false;
+    const tail = Buffer.alloc(END);
+    readSync(fd, tail, 0, END, size - END);
+    if (tail.includes(ENTRY)) return true;
+    const chunk = Buffer.alloc(STEP + ENTRY.length);
+    let kept = 0;
+    for (let at = 0; at < MOST;) {
+      const read = readSync(fd, chunk, kept, STEP, at);
+      if (read === 0) return false;
+      const end = kept + read;
+      if (chunk.subarray(0, end).includes(ENTRY)) return true;
+      kept = Math.min(ENTRY.length, end);
+      chunk.copyWithin(0, end - kept, end);
+      at += read;
+    }
+    return true;
+  }
+  catch { return false; }
+  finally { closeSync(fd); }
+};
 
 /**
  * Whether the CLI wrote a conversation under `id`, which is the only kind of id
@@ -119,12 +180,30 @@ function hasTranscript(id: string, folder: string): boolean {
  * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeAgent.ts#L1728-L1744
  */
 export function written(id: string, folder: string): boolean {
-  if (hasTranscript(id, folder)) return true;
   if (!fileNamed(id)) return false;
+  if (conversation(transcriptIn(projectOf(folder), id))) return true;
   let projects: string[];
   try { projects = readdirSync(projectsDir()); }
   catch { return false; }
-  return projects.some((project) => holds(project, id));
+  return projects.some((project) => conversation(transcriptIn(project, id)));
+}
+
+/**
+ * Make way for a new conversation under `id` in `folder`.
+ *
+ * The CLI starts a conversation under a name only on a clean transcript: it
+ * ends at startup with `Session ID <id> is already in use` when the project of
+ * its folder holds a transcript for that id, whatever the transcript holds. So
+ * a transcript there that holds no conversation is deleted first, as the
+ * reference deletes a transcript before it starts a conversation over under the
+ * same id. One that holds a conversation is never deleted.
+ * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeAgent.ts#L1141-L1168
+ */
+export function clearFor(id: string, folder: string): void {
+  if (!fileNamed(id)) return;
+  const file = transcriptIn(projectOf(folder), id);
+  if (!existsSync(file) || conversation(file)) return;
+  rmSync(file, { force: true });
 }
 
 /**

@@ -22,7 +22,8 @@ process.env.CLAUDE_CONFIG_DIR = config;
 
 /**
  * The conversation `id` as the CLI writes it once its first message reaches
- * it: a file in the project folder of `cwd`, spelled as the CLI spells it.
+ * it: a file in the project folder of `cwd`, spelled as the CLI spells it,
+ * whose first entry is the prompt, as CLI 2.1.301 wrote one.
  *
  * A case that resumes a conversation says the CLI wrote it here, since the
  * backend starts any other under the id it was asked to resume.
@@ -33,7 +34,13 @@ export function wrote(id: string, cwd: string): void {
   catch { /* a folder that is not there is spelled as given */ }
   const project = join(config, 'projects', real.replace(/[^A-Za-z0-9]/g, '-'));
   mkdirSync(project, { recursive: true });
-  writeFileSync(join(project, `${id}.jsonl`), '{}\n');
+  writeFileSync(join(project, `${id}.jsonl`), `${JSON.stringify({
+    parentUuid: null, isSidechain: false, promptId: 'f0829d44-61b9-476c-abb6-cb4427e28cb3', type: 'user',
+    message: { role: 'user', content: 'hi' }, uuid: '6f79faf7-646d-4773-b101-06232d161be1',
+    timestamp: '2026-10-29T22:14:15.249Z', permissionMode: 'auto', promptSource: 'sdk', turnOrigin: 'sdk',
+    turnPosition: { promptIndex: 0, turnIndex: 1 }, userType: 'external', entrypoint: 'sdk-cli',
+    cwd: real, sessionId: id, version: '2.1.301', gitBranch: 'master',
+  })}\n`);
 }
 
 export interface Fake {

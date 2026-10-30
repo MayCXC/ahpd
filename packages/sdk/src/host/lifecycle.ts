@@ -241,19 +241,22 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
    * terminals they claimed killed, the worktree removed if clean, the run that
    * started it unlinked, and everything this host kept *about* the session
    * let go. What the backend keeps is the backend's, and `removeSession` asks
-   * for it once this is done.
+   * for it once this is done and what it answers has settled: every chat's
+   * agent stopped. An agent still exiting writes the last of its copy as it
+   * goes, as a Claude CLI does, so a copy deleted before then comes back.
    */
-  const teardown = (held: Held, uri: string): void => {
+  const teardown = (held: Held, uri: string): Promise<void> => {
     // First, while the chats are still here to be recognised: a closed chat is
     // one no map names, and a record left behind is a row nothing can reach.
     ctx.background.forgetSession(uri);
+    const closing: Promise<void>[] = [];
     for (const [chatUri, chat] of held.chats) {
       // The senders of what this chat still holds, because a closed backend
       // ends no turn and runs nothing it had queued.
       forgetSendersIn(chat.chatState());
       // This is a removal, one of the two roads that dispose: a session that
       // is gone from here is gone inside its machine as well.
-      chat.close('dispose');
+      closing.push(Promise.resolve(chat.close('dispose')).catch(() => {}));
       byChat.delete(chatUri);
       drafts.delete(chatUri);
       madeFrom.delete(chatUri);
@@ -437,6 +440,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
       if (changesetOf(channel, uri)) ctx.shown.delete(channel);
     }
     activeSessionsMoved();
+    return Promise.all(closing).then(() => undefined);
   };
 
   /*
@@ -628,7 +632,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
       try { await options.changes?.removeCheckpoints?.(directory, idOf(uri)); }
       catch { /* the session goes either way */ }
     }
-    if (held !== undefined) teardown(held, uri);
+    if (held !== undefined) await teardown(held, uri);
     else await deletedInside(uri);
     let failure = await deleted(uri, agent, directory);
     /*
