@@ -2,7 +2,7 @@
 
 One file per area of the host. Each says what is true today and links the decision behind a choice rather than repeating its reasoning, and a reader finds an area by its file name.
 
-The files are in three folders, one for each kind of reader.
+The files are in three folders, one for each kind of reader, and the release notes are in a fourth.
 
 ## server
 
@@ -65,5 +65,17 @@ For a person who writes a plugin, and one page for each plugin that ships in thi
 | [tunnel-devtunnel.md](plugins/tunnel-devtunnel.md) | Forwards the bound port through a Microsoft Dev Tunnel so VS Code can reach the daemon from anywhere |
 | [webhook.md](plugins/webhook.md) | Webhooks for the daemon: a URL that talks to a bot or fires an automation |
 | [WEBHOOKS.md](plugins/WEBHOOKS.md) | Webhooks: a URL that talks to a bot or fires an automation, with a secret per endpoint |
+
+## updates
+
+What changed in each release: one page for each minor release, with its patch releases on the same page.
+
+| File | What it covers |
+| --- | --- |
+| [archive.md](updates/archive.md) | Every release, by year |
+| [v0_14.md](updates/v0_14.md) | 0.14.0 and 0.14.1 |
+| [v0_13.md](updates/v0_13.md) | 0.13.0 |
+| [v0_12.md](updates/v0_12.md) | 0.12.0 |
+| [v0_11.md](updates/v0_11.md) | 0.11.0 |
 
 What the repository is, and how to start it, is the root README. Where the reference lives and which revisions were last read is [REFERENCE.md](../REFERENCE.md). The reasoning behind a choice these files link is under [`.project/decisions/`](../.project/decisions/).
