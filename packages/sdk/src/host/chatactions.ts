@@ -1185,7 +1185,7 @@ export function chatAction(
           refuse(connection.peer, channel, action, origin, steered.refusal);
           break;
         }
-        if (!session.steer(String(action.id ?? ''), String(message.text ?? ''), steered.attachments)) {
+        if (!session.steer(String(action.id ?? ''), String(message.text ?? ''), steered.attachments, messageFrom(message))) {
           no('Nothing is running in this chat to steer');
         }
         break;

@@ -993,15 +993,18 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
        * that was already waiting stays waiting: a steer is in front of it, and
        * it starts when the steered turn ends.
        *
+       * The new turn carries who sent the steered message, so a correction an
+       * agent sent shows as that agent's turn rather than as the person's.
+       *
        * False where there is no open turn to steer, which is a message the host
        * refuses rather than one it quietly turns into a turn of its own.
        */
-      steer: (_pendingId, text) => {
+      steer: (_pendingId, text, _attachments, from) => {
         const held = open;
         if (held === undefined) return false;
         // Ended without the queue: the steered turn is in front of it.
         finish(held, 'complete', [], false);
-        beginTurn(crypto.randomUUID(), text);
+        beginTurn(crypto.randomUUID(), text, from);
         return true;
       },
 
