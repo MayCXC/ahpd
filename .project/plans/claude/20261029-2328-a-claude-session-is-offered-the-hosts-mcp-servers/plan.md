@@ -50,14 +50,14 @@ CLI: plugin servers skipped, daemon config never read -> the session has neither
 | What | Source | Task |
 | --- | --- | --- |
 | `create` declares `start.mcpServers` beside the servers of the CLI's files | TOOLS.md, and `skipMcpDiscovery` | 01 |
-| The CLI's files win a name the host's map uses too, the project's over the home file | `serversFor`'s own order, nearer winning; the reference leaves a clash to the SDK | 01 |
+| A name the host's map and the CLI's files both use is handed over as the host's, and the CLI settles the clash | The reference leaves a clash between its own servers and the CLI's files to the SDK | 01 |
 | An HTTP server goes as it is, and a stdio server without its directory | The SDK's server shapes | 01 |
 | A stdio server whose directory is not the session's folder is left out and said | The reference leaves it out; the ACP backend says what it drops | 01 |
 | TOOLS.md and `Start.mcpServers` say what the Claude backend does | Both name the in-process backends as ones that ignore the map | 01 |
 
 ## Proposed architecture
 
-- **Data flow** - `offeredServers` turns `start.mcpServers` into the SDK's shape, and `serversFor`'s servers go over it.
+- **Data flow** - `offeredServers` turns `start.mcpServers` into the SDK's shape, over `serversFor`'s servers.
 - **Layer responsibilities** - agent-claude: `mcp.ts`, `claude.ts`; sdk: the doc of `Start.mcpServers`.
 - **Source-of-truth files** - [`code://packages/agent-claude/src/mcp.ts`](../../../../packages/agent-claude/src/mcp.ts)
 
@@ -69,8 +69,7 @@ CLI: plugin servers skipped, daemon config never read -> the session has neither
 
 ## Risks and tradeoffs
 
-- A name the host's map and a CLI file both use runs the file's server, which is nearer the work.
-  This order is ours: the reference leaves the clash to the SDK.
+- A name the host's map and a CLI file both use runs whichever server the CLI's own precedence picks.
 
 ## Resume state
 
@@ -82,5 +81,5 @@ CLI: plugin servers skipped, daemon config never read -> the session has neither
 ## Final verification checklist
 
 - [x] A session is declared the host's servers beside the ones the CLI's files name.
-- [x] The project's file wins a name both use.
+- [x] A name the project's file uses too is handed over as the host's.
 - [x] A stdio server that starts in another folder is left out and said.

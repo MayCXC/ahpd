@@ -4,11 +4,11 @@ date: 2026-10-29
 refs:
   - git://f7677dcf - the change
   - "[code://packages/agent-claude/src/mcp.ts#L21](../../../../packages/agent-claude/src/mcp.ts#L21) - `offeredServers`, the host's servers in the SDK's shape"
-  - "[code://packages/agent-claude/src/claude.ts#L666](../../../../packages/agent-claude/src/claude.ts#L666) - declared under the servers of the CLI's files"
+  - "[code://packages/agent-claude/src/claude.ts#L671](../../../../packages/agent-claude/src/claude.ts#L671) - handed over beside the servers of the CLI's files, the host's for a name both use"
 ---
 
 A Claude session is offered the MCP servers the host offers every session.
-The servers of the CLI's own files win a name both use.
+A name the CLI's own files use too is handed over as the host's, and the CLI's own precedence settles it.
 
 ## What was built
 
@@ -22,7 +22,7 @@ The servers of the CLI's own files win a name both use.
 ## Verified
 
 - On the code before the change, the first and the third case fail with the host's servers missing.
-  The second case passes, since the project's file won before as well.
+- The second case fails while the project's file is declared over the host's server, and passes once the host's is handed over.
 - After the change, the three cases pass.
 - The sdk suite's `toolauth.test.ts` failed in the full run, 4 cases, on a mock without `offeredServers`.
   It passes with the mock's new member.

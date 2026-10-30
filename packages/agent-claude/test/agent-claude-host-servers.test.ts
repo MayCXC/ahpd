@@ -96,9 +96,11 @@ it("declares the host's servers beside the ones the CLI's own files name", async
   expect(servers['gmail']).toEqual({ type: 'http', url: 'https://mcp.example.com/gmail' });
 });
 
-it("lets the project's own file win a name the host's map uses too", async () => {
+it("hands the SDK the host's server for a name the project's file uses too, and leaves the clash to the CLI", async () => {
   const { servers } = await declared(project(), { gmail: { type: 'http', url: 'https://host.example.com/gmail' } }, true);
-  expect(servers['gmail']).toEqual({ type: 'http', url: 'https://mcp.example.com/gmail' });
+  // The CLI reads the project's file itself, and its own precedence weighs that
+  // server against the one it was handed.
+  expect(servers['gmail']).toEqual({ type: 'http', url: 'https://host.example.com/gmail' });
 });
 
 it("declares the host's servers in a folder nobody vouched for, and leaves out one that starts elsewhere, saying so", async () => {

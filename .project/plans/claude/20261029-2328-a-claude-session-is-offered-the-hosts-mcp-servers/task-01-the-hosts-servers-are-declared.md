@@ -11,7 +11,8 @@ refs:
 
 ## Objective
 
-`create` declares the host's servers, in the SDK's shape, with the servers of the CLI's files over them.
+`create` hands the SDK the host's servers, in the SDK's shape, beside the servers of the CLI's files.
+A name both use is handed over as the host's, and the CLI's own precedence settles it.
 
 ## Files
 
@@ -26,7 +27,7 @@ refs:
 2. Add a case where the host's map and the project's file use one name.
 3. Add a case with a stdio server in another folder, in a folder nobody vouched for.
 4. Run the cases, and see the first and the third fail.
-5. Add `offeredServers`, and declare its servers under the CLI's files.
+5. Add `offeredServers`, and hand its servers over beside the CLI's files.
 6. Run the cases again, and see them pass.
 
 ## Validation
