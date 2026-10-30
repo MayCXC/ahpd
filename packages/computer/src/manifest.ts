@@ -66,15 +66,6 @@ export interface Profile {
    * has the machine fetch the session's branch from the tree's `origin`.
    */
   code?: CodeRoute;
-  /**
-   * The vault secret a `clone` machine's fetch from `origin` uses as its git
-   * credential, by name.
-   *
-   * Only ever a name: a profile that writes the credential itself is left out
-   * at load. It is read when a machine is made, for the machine's owner and
-   * team, and reaches only that fetch.
-   */
-  gitCredential?: string;
   mounts?: string[];
   workdir?: string;
   /**

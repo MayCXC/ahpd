@@ -12,7 +12,7 @@ import { byName, DOCKER_OWN, DOCKER_OWN_PREFIX, dockerOwn } from './byname.js';
 import { sourceOnHost, spelledOnHost, windowsHost } from './hostpath.js';
 import { cliMountOf, cliVolumeOf, copyOf, gitVolumeOf, guardFor, guardedMounts, idsOfUser, MACHINE_GIT, MACHINE_USER, openReadingOf, seedOf, treeOf, userLabelOf, volumeFlagOf } from './gitdir.js';
 import type { GitGuard, GitMounts, SessionTree } from './gitdir.js';
-import { bundleOfTree, codeRouteOf, CREDENTIAL_ENV, credentialArgs, httpsOf, originOf, SEED_BUNDLE, SEED_REF } from './clone.js';
+import { bundleOfTree, codeRouteOf, httpsOf, originOf, SEED_BUNDLE, SEED_REF } from './clone.js';
 import type { CodeRoute } from './clone.js';
 import { absoluteOnHost, mountParts } from './manifest.js';
 import { archiveOf, FILLED_MARKER, firstFileOf, IMAGE_PATH, MACHINE_PARTS, once, partsLabel, partsSaid, pathWith, volumeOf } from './parts.js';
@@ -472,14 +472,6 @@ export interface MachineSpec {
   gitGuard?: GitGuard;
   /** How a machine on another box's Docker is given its code; `bundle` when absent. */
   code?: CodeRoute;
-  /**
-   * The git credential a `clone` machine fetches from `origin` with: the
-   * value, read from the vault for this machine's owner when it was made.
-   *
-   * Given to that one fetch by name in its environment, and never written to
-   * a label, an argv or the machine's git config.
-   */
-  gitCredential?: string;
   /**
    * Whether the machine works in the host's tree or in a copy of it, at the
    * tree's own path in the volume it commits into; `shared` when absent.
@@ -2173,12 +2165,11 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
    * the machine, and answer the commit it is at.
    *
    * The `clone` route: the box reaches the remote itself, so nothing of this
-   * host's history is sent. An ssh origin is fetched by its https form, since
-   * the machine holds no ssh key, and that is the address its `origin` names. A branch `origin` does not have is refused, since
-   * the machine could only be seeded from a commit the session is not on. The
-   * credential, where the profile names one, reaches the two commands that
-   * talk to `origin`, by name in their environment and read by an inline
-   * helper: it is in no argv, and nothing in the machine keeps it.
+   * host's history is sent. The machine holds no credential, so origin is
+   * fetched by its https form and only a public repository can be fetched;
+   * that is the address its `origin` names. A branch `origin` does not have
+   * is refused, since the machine could only be seeded from a commit the
+   * session is not on.
    */
   const fetchedInto = async (
     container: string,
@@ -2198,21 +2189,19 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
       throw new Error(`${spec.name} fetches the session's branch from origin, and ${root} is on no branch; code: "bundle" sends the commit from this host`);
     }
     await asUser(['git', `--git-dir=${at}`, 'config', 'remote.origin.url', origin]);
-    const given = byName(spec.gitCredential === undefined ? {} : { [CREDENTIAL_ENV]: spec.gitCredential });
-    const helper = spec.gitCredential === undefined ? [] : credentialArgs();
     const toOrigin = (args: string[]): string[] => [
-      'exec', ...given.flags, ...(spec.user === undefined ? [] : ['--user', spec.user]), container,
-      'git', `--git-dir=${at}`, ...helper, ...args,
+      'exec', ...(spec.user === undefined ? [] : ['--user', spec.user]), container,
+      'git', `--git-dir=${at}`, ...args,
     ];
     // `--exit-code` is 2 when origin answered and has no such branch.
-    const listed = await ran(options, toOrigin(['ls-remote', '--exit-code', 'origin', `refs/heads/${branch}`]), undefined, given.env);
+    const listed = await ran(options, toOrigin(['ls-remote', '--exit-code', 'origin', `refs/heads/${branch}`]));
     if (listed.code === 2) {
       throw new Error(`${spec.name} fetches branch ${branch} from origin, and origin has no ${branch}; push it, or use code: "bundle", which brings it without a push`);
     }
     if (listed.code !== 0) {
       throw new Error(`git ls-remote origin in ${spec.name} exited ${String(listed.code)}: ${listed.stderr.trim() || listed.stdout.trim() || 'no output'}`);
     }
-    await must(toOrigin(['fetch', '-q', '--no-tags', 'origin', `+refs/heads/${branch}:${SEED_REF}`]), given.env);
+    await must(toOrigin(['fetch', '-q', '--no-tags', 'origin', `+refs/heads/${branch}:${SEED_REF}`]));
     return (await asUser(['git', `--git-dir=${at}`, 'rev-parse', SEED_REF])).trim() || undefined;
   };
 

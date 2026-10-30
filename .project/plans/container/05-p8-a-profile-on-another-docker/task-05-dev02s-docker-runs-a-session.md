@@ -18,9 +18,9 @@ A disposable profile with `server: "dev02"` runs a cofold session on dev02, and 
 ## Steps
 
 1. Build an image with ahpd and the agent plugins on dev02's Docker.
-2. A profile with that image and `server`, and `needs.cofoldConfig` naming a cofold config written for dev02 with dev02's own key (task 02 refuses the host's own); start a disposable session, commit, leave; check the branch on this host. Once with the default `code: "bundle"`, once with `code: "clone"` and a `gitCredential` from the vault.
+2. A profile with that image and `server`, and `needs.cofoldConfig` naming a cofold config written for dev02 with dev02's own key (task 02 refuses the host's own); start a disposable session, commit, leave; check the branch on this host. Once with the default `code: "bundle"`, once with `code: "clone"` on a public repository.
 3. Restart this host mid-session and continue.
-4. Run it again with the vault's key and the `gitCredential` secret absent: the `bundle` session still runs, a `clone` profile's create is refused with a sentence naming the secret, and no other profile or session is affected.
+4. Run it again with the vault's key absent: the session is refused with a sentence naming the key, and no other profile or session is affected.
 
 ## Validation
 

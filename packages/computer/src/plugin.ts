@@ -118,11 +118,8 @@ export const profilesOf = (value: unknown): Record<string, Profile> | undefined 
       // The box from `ssh.machines` its machines are made on, checked against
       // that option once both are read.
       ...(text('server') === undefined ? {} : { server: text('server') as string }),
-      // How a machine there is given the session's code, and the vault secret
-      // a `clone` fetches with, kept only as a name: a credential written out
-      // is left out with the whole profile once the option is read.
+      // How a machine there is given the session's code.
       ...(said.code === 'bundle' || said.code === 'clone' ? { code: said.code } : {}),
-      ...(secretRef(said.gitCredential) === undefined ? {} : { gitCredential: secretRef(said.gitCredential) as string }),
       ...(text('workdir') === undefined ? {} : { workdir: text('workdir') as string }),
       ...(words(said.mounts) === undefined ? {} : { mounts: words(said.mounts) as string[] }),
       // The agents a profile prepares for, and any value it gives their needs.
@@ -423,17 +420,6 @@ export const apply: Plugin['apply'] = (host, options) => {
   for (const [key, one] of Object.entries(profiles ?? {})) {
     if (one.server === undefined || ssh?.machines[one.server] !== undefined) continue;
     host.log(`${name}: profiles.${key} names the server ${one.server}, which ssh.machines does not, so the profile is left out`);
-    delete profiles?.[key];
-  }
-  /*
-   * A `gitCredential` written as the credential itself rather than as a vault
-   * reference: the profile is left out with a line, so a token in clear in the
-   * configuration makes no machine, and the other profiles load.
-   */
-  for (const [key, one] of Object.entries(options.profiles as Record<string, unknown> | undefined ?? {})) {
-    const said = typeof one === 'object' && one !== null ? (one as Record<string, unknown>).gitCredential : undefined;
-    if (said === undefined || secretRef(said) !== undefined) continue;
-    host.log(`${name}: profiles.${key}.gitCredential is not a { "$secret": "<name>" } reference, so the profile is left out; put the credential in the vault and name it there`);
     delete profiles?.[key];
   }
   /*
@@ -1850,22 +1836,6 @@ export const apply: Plugin['apply'] = (host, options) => {
        */
       const own = await revealed(profile.needs, agents, forSession, work, secret);
       /*
-       * The git credential a `clone` machine fetches with, read here for the
-       * machine's owner and team like every other vault value, and only for a
-       * profile that clones. A secret that cannot be read refuses this create
-       * alone, naming the profile and the secret.
-       */
-      const named = profile.code === 'clone' ? profile.gitCredential : undefined;
-      let gitCredential: string | undefined;
-      if (named !== undefined) {
-        try {
-          gitCredential = await secret(named, work);
-        }
-        catch (error) {
-          throw new Error(`profile ${key} clones with the git credential ${named}, which could not be read: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
-      /*
        * The session's folder wins over the profile's, and is written into the
        * profile rather than the body: a body's `folder` is the deployment's to
        * allow, and this one is the operator's own source plus the host's own
@@ -1944,7 +1914,6 @@ export const apply: Plugin['apply'] = (host, options) => {
           // its own: `sessionRepository` for the root it sits below and the
           // git directory beside it, `sessionFolder` for the folder.
           ...git,
-          ...(gitCredential === undefined ? {} : { gitCredential }),
           disposable: { profile: key, ...(profile.disposableAlone === true ? { alone: true } : {}) },
           // The session this machine is made for, which is what a daemon
           // restarting finds it by, and the daemon making it, which is what

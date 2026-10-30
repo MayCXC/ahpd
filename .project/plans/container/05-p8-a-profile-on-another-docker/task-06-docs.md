@@ -18,7 +18,7 @@ refs:
 ## Steps
 
 1. Show one example profile with `server` and the `ssh.machines` entry it names.
-2. Say what `code: "bundle"` and `code: "clone"` each do, that `bundle` is the default and puts no credential in the box, and that `clone` needs the branch on `origin` and a `gitCredential` named from the vault for a private remote.
+2. Say what `code: "bundle"` and `code: "clone"` each do, that `bundle` is the default and puts no credential in the box, and that `clone` needs the branch on a public `origin`, fetched by https.
 
 ## Validation
 

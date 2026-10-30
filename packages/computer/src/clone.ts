@@ -6,8 +6,7 @@
  * repository is seeded from a git bundle of the tree's `HEAD`, made here and
  * copied in: the bundle holds every object the checkout needs, and no
  * credential reaches the box. A profile may instead have the machine fetch the
- * session's branch from the tree's `origin`, with a git credential it names from
- * the vault. Either way the commit lands in the seed ref, and the work comes
+ * session's branch from a public `origin` over https. Either way the commit lands in the seed ref, and the work comes
  * back the way it does from any machine with a repository of its own, by
  * bring-back.
  */
@@ -41,27 +40,6 @@ export type CodeRoute = 'bundle' | 'clone';
 
 /** The route a profile names, which is `bundle` where it names none. */
 export const codeRouteOf = (profile: { code?: CodeRoute }): CodeRoute => profile.code ?? 'bundle';
-
-/**
- * The variable a machine's fetch from `origin` reads the git credential from.
- *
- * Given to that one `docker exec` by name, so the value is in the environment
- * of the `docker` program and of the git it runs, and in no argv.
- */
-export const CREDENTIAL_ENV = 'AHPD_GIT_CREDENTIAL';
-
-/**
- * The `-c` arguments that have git ask `CREDENTIAL_ENV` for a password.
- *
- * An inline helper, so nothing is written into the machine's git config: it is
- * a setting of the one command that carries it. The empty helper first drops
- * any helper the image configured. The username is a placeholder: a token is
- * read by GitHub and GitLab as the password, whatever the user.
- */
-export const credentialArgs = (): string[] => [
-  '-c', 'credential.helper=',
-  '-c', `credential.helper=!f() { test "$1" = get && echo username=ahpd && echo "password=$${CREDENTIAL_ENV}"; }; f`,
-];
 
 /** One git command in a tree on this host, with the argv every git here runs. */
 const hostGit = (root: string, args: string[]): { code: number; stdout: string; stderr: string } => {

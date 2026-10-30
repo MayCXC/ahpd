@@ -1,51 +1,46 @@
 ---
-title: A profile may have its machine clone from origin, with a git credential named from the vault
+title: A profile may have its machine clone from a public origin
 status: done
 depends: [task-03-the-code-arrives-by-clone.md]
 layer: "computer"
 refs:
-  - "[code://packages/computer/src/manifest.ts#L36-L218](../../../../packages/computer/src/manifest.ts#L36-L218) - `Profile`, which gains `code` and `gitCredential`"
+  - "[code://packages/computer/src/manifest.ts#L36-L218](../../../../packages/computer/src/manifest.ts#L36-L218) - `Profile`, which gains `code`"
   - "[code://packages/computer/src/plugin.ts#L99-L169](../../../../packages/computer/src/plugin.ts#L99-L169) - `profilesOf`, where a profile's fields are read"
-  - "[code://.project/plans/vault/01-p1-the-vault-and-its-local-file/task-04-a-plugin-option-names-a-secret.md](../../vault/01-p1-the-vault-and-its-local-file/task-04-a-plugin-option-names-a-secret.md) - a plugin option written `{ \"$secret\" }` is the secret's value when `apply` runs"
 ---
 
 ## Objective
 
-A profile on another Docker with `code: "clone"` has its machine clone the repository from its `origin` remote and check out the session's branch, using a git credential the profile names from the vault as `gitCredential: { "$secret": "<scope:name>" }`, read with `host.secret` when the machine is made, for the machine's owner.
-A credential that cannot be read fails only that create, with a sentence naming the profile and the secret; the plugin and every other profile load and work.
+A profile on another Docker with `code: "clone"` has its machine fetch the session's branch from its `origin` remote, by its https form.
+The machine holds no ssh key and no token, so only a public repository can be fetched; private repositories are in [deferred.md](deferred.md).
 The default stays `code: "bundle"` (task 03); the way back is host/67's bring-back, the same for both.
 
 ## Files
 
-- `UPDATE: packages/computer/src/manifest.ts:36-218` - `Profile.code?: 'bundle' | 'clone'` and `Profile.gitCredential?: string`, documented.
-- `UPDATE: packages/computer/src/plugin.ts:99-169` - read both; `gitCredential` is `secretAtUse: true` and `writeOnly` in the schema, as a need value is, so the loader passes the reference through and never reads it at load.
-- `UPDATE: packages/computer/src/clone.ts` - `bringIn` gains the `clone` route beside `bundle`: the machine runs `git clone` of the repository's `origin` URL with the session's branch, the credential given by name through p1's route and read by an inline credential helper from the environment, never in argv or in the clone's config.
+- `UPDATE: packages/computer/src/manifest.ts:36-218` - `Profile.code?: 'bundle' | 'clone'`, documented.
+- `UPDATE: packages/computer/src/plugin.ts:99-169` - read `code`, and fail the load on a value that is not `bundle` or `clone`.
+- `UPDATE: packages/computer/src/clone.ts` - `codeRouteOf` picks the route, and `httpsOf` gives an ssh origin's https form.
+- `UPDATE: packages/computer/src/runtime.ts` - `fetchedInto`, the `clone` route, beside `bundledInto`.
 - `UPDATE: packages/computer/test/computer-disposable.test.ts` - the cases below.
 
 ## Steps
 
-1. `code` is read in one place, `codeRouteOf(profile)`, which answers `bundle` when it is absent; the two routes share task 03's interface, so a third can be added.
-2. The `clone` route needs the session's branch on `origin`: a branch origin does not have is refused with a sentence that names the branch and says `code: "bundle"` brings it without a push.
-3. The credential reaches only the clone command, by name in its environment (p1's `byName`); the helper prints it to git and nothing else, and it is not kept in the machine's environment or its git config after the clone.
-4. A `clone` profile with no `gitCredential` clones without one, for a public remote.
-5. A `gitCredential` that is not a `$secret` reference skips that profile with one line at load, so a token is not written into config in clear, and the other profiles load.
-6. The secret is read at create with `host.secret(name, { owner, team })` for the machine's owner and team, never at load.
+1. Read `code` in one place, `codeRouteOf(profile)`, which answers `bundle` when it is absent.
+2. Set the machine's `origin` to the https form of the tree's `origin`.
+3. Refuse a branch that origin does not have, and say that `code: "bundle"` brings it without a push.
+4. Fetch the branch into the seed ref, and let the bundle route's checkout and bring-back take it from there.
 
 ## Validation
 
-- With the fake Docker, a `code: "clone"` profile's create runs `git clone <origin> --branch <branch>` inside and records no credential value in any argv; the credential is in that exec's environment only.
-- A branch origin does not have is refused with the sentence.
-- With the secret absent from the fake vault, a `clone` profile's create is refused naming the secret, the plugin loads, and a `bundle` profile beside it makes its machine.
-- A plain-text `gitCredential` skips that profile with a line, and the others load.
+- With the fake Docker, a `code: "clone"` profile fetches the https form of an ssh origin.
+- That create sends no bundle.
+- The create refuses a branch that origin does not have, and removes the machine.
 - A profile with no `code` runs task 03's bundle route unchanged.
 - By hand on dev02 in task 05, once each way.
 
 ## Resume
 
-- **Done:** 2026-10-30. `codeRouteOf` in [`clone.ts`](../../../../packages/computer/src/clone.ts) picks the route, and `seedGit` calls `bundledInto` or `fetchedInto`. The credential is read with `host.secret` in the disposable create, for the session's owner and team.
+- **Done:** 2026-10-30. `codeRouteOf` in [`clone.ts`](../../../../packages/computer/src/clone.ts) picks the route, and `seedGit` calls `bundledInto` or `fetchedInto`.
 - **Departure:** the `clone` route is a fetch, not `git clone`. It runs `git ls-remote --exit-code origin refs/heads/<branch>`, then `git fetch origin +refs/heads/<branch>:refs/ahpd/seed` in the machine's own git directory. The checkout and bring-back are then the bundle route's, unchanged.
-- **Departure:** the credential goes to those two commands as `-e AHPD_GIT_CREDENTIAL`, read by an inline `-c credential.helper`. Nothing is written to the machine's git config.
-- **Departure:** only the disposable create reads `gitCredential`, because only a session's machine has a repository to seed.
 - **Departure:** `code` takes `bundle` or `clone`, and any other value fails the load, as `gitGuard` does.
-- **Added:** an ssh origin is fetched by its https form (`httpsOf`), with or without a `gitCredential`, and the checkout's `origin` names it too. Softov chose this on 2026-10-30.
-- **Tests:** five in [`computer-disposable.test.ts`](../../../../packages/computer/test/computer-disposable.test.ts), and `EVERY_FIELD` in [`computer-options-schema.test.ts`](../../../../packages/computer/test/computer-options-schema.test.ts) has both fields. Task 03's bundle tests pass unchanged.
+- **Departure:** no `gitCredential`. Everything in the machine can read a key or token there. So the machine fetches by https with none, and private repositories wait. Softov chose this on 2026-10-30.
+- **Tests:** two in [`computer-disposable.test.ts`](../../../../packages/computer/test/computer-disposable.test.ts), `httpsOf` in [`computer-far-git.test.ts`](../../../../packages/computer/test/computer-far-git.test.ts), and `EVERY_FIELD` in [`computer-options-schema.test.ts`](../../../../packages/computer/test/computer-options-schema.test.ts) has `code`. Task 03's bundle tests pass unchanged.
