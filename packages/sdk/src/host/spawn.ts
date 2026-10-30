@@ -805,8 +805,8 @@ export function createSpawn(ctx: HostContext): Spawn {
       ? nestedAgent(agent, {
         plugins: plugin === undefined ? [] : [plugin],
         log,
-        ...(options.nodeRestart === undefined ? {} : { restart: options.nodeRestart }),
         ...(connect === undefined ? {} : {
+          restart: options.nodeRestart ?? 'end',
           start: (asked: NestedAsked) => connect(asked.id, {
             plugins: asked.plugins,
             ...(asked.cwd === undefined ? {} : { cwd: asked.cwd }),

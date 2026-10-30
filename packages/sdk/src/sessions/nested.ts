@@ -146,13 +146,14 @@ export interface NestedOptions {
   /** One line worth keeping. Nothing is logged without one. */
   log?: (line: string) => void;
   /**
-   * What the session does when the host inside goes while it is ready.
+   * What the session does when a host that `start` answered goes while it is ready.
    *
-   * `end`, the default, ends the session with a sentence, and the next turn
-   * resumes it by the inner host's id. `reconnect` keeps it, and opens it
-   * again through the same `start` - which is how a session on a node survives
-   * the node's `ahpd join` restarting: the node dials the hub again, and the
-   * port hands this session a socket on the other side.
+   * `end` stops the session with a sentence, and the next turn resumes it by
+   * the inner host's id. `reconnect` keeps it, and opens it again through the
+   * same `start` - which is how a session on a node survives the node's
+   * `ahpd join` restarting: the node dials the hub again, and the port hands
+   * this session a socket on the other side. Left out, or for a host the
+   * default started, the session ends for good, as a machine's does.
    */
   restart?: 'end' | 'reconnect';
 }
@@ -384,7 +385,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
   const log = options.log ?? ((): void => { /* nothing is kept without one */ });
   const timeoutMs = options.timeoutMs ?? ANSWER_TIMEOUT;
   const plugins = options.plugins;
-  const restart = options.restart ?? 'end';
+  const restart = options.restart;
   const said = start.settings?.computer;
   const id = computerId(said);
   if (id === undefined) {
@@ -432,6 +433,8 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
   let resuming = start.resume !== undefined;
   /** Whether the host inside is being opened again, so one gone host starts one. */
   let reopening = false;
+  /** Whether the host inside is one `start` answered, which is the only kind `restart` applies to. */
+  let answered = false;
   /** The sentence this session ended with, gone for good: the host refuses what follows. */
   let ended: string | undefined;
   /**
@@ -543,15 +546,20 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
    * What the host inside going means for the session.
    *
    * Before it ever came up, it is a start that failed, and its own sentence is
-   * the useful one. Once it is ready, `end` - the default - stops the session
-   * where it ran, and the next turn opens it again by the inner host's id;
-   * `reconnect` keeps it and opens it again through the same `start`, which is
-   * how a session on a node outlives the node's `ahpd join` restarting.
+   * the useful one. Once it is ready, a host `start` answered goes as
+   * `restart` says: `end` stops the session where it ran, and the next turn
+   * opens it again by the inner host's id; `reconnect` keeps it and opens it
+   * again through the same `start`, which is how a session on a node outlives
+   * the node's `ahpd join` restarting. Any other host going ends the session.
    */
   const lost = (why: string): void => {
     if (ended !== undefined || closed) return;
     if (!ready) {
       fail(`${provider}'s host inside computer://${id} ended before its session started${why === '' ? '' : ` (${why})`}.${lastWords()}`);
+      return;
+    }
+    if (restart === undefined || !answered) {
+      fail(`${provider}'s host inside computer://${id} ended${why === '' ? '' : `: ${why}`}.${lastWords()}`);
       return;
     }
     if (restart === 'reconnect') {
@@ -953,7 +961,9 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       ...(start.workingDirectory === undefined ? {} : { cwd: start.workingDirectory }),
       ...(start.computers === undefined ? {} : { computers: start.computers }),
     };
-    const answer = (options.start === undefined ? undefined : await options.start(asked)) ?? await startInside(asked);
+    const offered = options.start === undefined ? undefined : await options.start(asked);
+    answered = offered !== undefined;
+    const answer = offered ?? await startInside(asked);
     const started: NestedStarted = 'stdin' in answer ? { host: answer } : answer;
     const opened = started.host;
     host = opened;
