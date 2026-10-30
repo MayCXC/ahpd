@@ -790,10 +790,15 @@ export interface Session {
    * becomes that server's `Authorization` header and the server is asked to
    * connect again; nothing else in the session is told.
    *
+   * `server` is the customization id of the server a client's `target` named.
+   * The token is then that server's alone: another server waiting for the
+   * same resource is not given it. With no `server`, the backend gives it to
+   * a server waiting for the resource.
+   *
    * Optional: a backend that cannot re-declare a server leaves it out, and the
    * host then advertises no resource for one to be signed into.
    */
-  authenticated?(resource: string, token: string): Promise<boolean>;
+  authenticated?(resource: string, token: string, server?: string): Promise<boolean>;
 
   /**
    * The OAuth resources this session's MCP servers need signing into.

@@ -1308,12 +1308,29 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       return true;
     },
     awaiting: () => [...awaited],
-    /* A token for a resource the inner session asked for, handed to the inner host. */
-    authenticated: async (resource: string, token: string): Promise<boolean> => {
+    /*
+     * A token for a resource the inner session asked for, handed to the inner host.
+     *
+     * One aimed at a server goes in aimed at the same server, which the
+     * session inside publishes under the same id, so the host there gives it
+     * to that server alone. The resource then stays awaited, because another
+     * server inside may still wait for it.
+     */
+    authenticated: async (resource: string, token: string, server?: string): Promise<boolean> => {
       if (client === undefined || !ready || closed || ended !== undefined || !awaited.has(resource)) return false;
       try {
-        await client.request('authenticate', { channel: ROOT, resource, token });
-        awaited.delete(resource);
+        /*
+         * Through a widened `request`, because the client is typed over the
+         * 1.0.0 package and `target` came after it, with no version of its own.
+         */
+        const ask = client.request.bind(client) as unknown as (method: string, params: Record<string, unknown>) => Promise<unknown>;
+        await ask('authenticate', {
+          channel: ROOT,
+          resource,
+          token,
+          ...(server === undefined ? {} : { target: { kind: 'mcpServer', session: innerSession, customizationId: server } }),
+        });
+        if (server === undefined) awaited.delete(resource);
         return true;
       }
       catch (error) {

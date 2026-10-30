@@ -19,7 +19,7 @@ export interface Servers {
   methods: {
     setCustomizationEnabled: (id: string, enabled: boolean) => Promise<boolean>;
     startMcpServer: (id: string) => Promise<boolean>;
-    authenticated: (resource: string, token: string) => Promise<boolean>;
+    authenticated: (resource: string, token: string, server?: string) => Promise<boolean>;
     awaiting: () => string[];
     stopMcpServer: (id: string) => Promise<boolean>;
   };
@@ -402,14 +402,21 @@ export function createServers(ctx: SessionContext): Servers {
     /*
      * A token a client signed in with, put where the server will use it.
      *
+     * The server the client's target named, or the first that waits for the
+     * resource when it named none. Either way only a server waiting for that
+     * resource takes it, and a named one takes it alone, even beside another
+     * server that waits for the same resource.
+     *
      * The whole set is re-declared, not the one server: `setMcpServers`
      * replaces the SDK's dynamic servers with what it is given, so sending one
      * would take the others away. Then the server is asked to connect again,
      * which is when the CLI tries the header.
      */
-    authenticated: async (resource, token) => {
-      const named = [...wanted.entries()].find(([, published]) => published.resource === resource)?.[0];
-      if (named === undefined) return false;
+    authenticated: async (resource, token, server) => {
+      const named = server === undefined
+        ? [...wanted.entries()].find(([, published]) => published.resource === resource)?.[0]
+        : serverNamed(server);
+      if (named === undefined || wanted.get(named)?.resource !== resource) return false;
       const config = declared[named];
       if (config === undefined) return false;
       const headers = typeof config.headers === 'object' && config.headers !== null

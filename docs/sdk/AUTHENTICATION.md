@@ -77,6 +77,8 @@ The host advertises, on every agent, a record describing its sign-in: `resource`
 
 A token pushed for a backend's own resource or an MCP server's is held per connection, unverified, and spent only on the sessions that connection asks for. An empty token withdraws it; what is already running keeps the credential it was started with. `expiresIn`, a positive integer of seconds, is kept beside the token, and `auth/required` with `reason: 'expired'` is sent to that connection when it runs out.
 
+A client that answers one MCP server's sign-in names that server in `target`, by the session's URI and the server's customization id, both as this host published them. The token is then that server's alone: no server beside it, no other session and no backend's own resource is given it, even one with the same resource, and an empty token with the same target takes back only that server's. A target whose session this host does not hold, whose id names no MCP server of that session, at the top level or inside another customization, or whose server is not waiting for that resource, is `-32602`. When such a token runs out, `auth/required` names that session. A session that runs in a computer hands the target on to the host inside.
+
 ## An issuer
 
 A host that is its own issuer mints every secret and prints it for a person to paste. A client that only acquires tokens through an OAuth provider cannot do anything with a pasted secret, so a deployment can name an authorization server instead:
