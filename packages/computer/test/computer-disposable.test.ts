@@ -534,6 +534,7 @@ it('a disposable machine that refuses removal is tried again', async () => {
   // The delay runs out, the removal is refused, and the machine is kept - with
   // the git volume holding its work, which the removal would have taken.
   await advanceUntil(() => refused().length >= 1);
+  console.log(lines.join('\n'), JSON.stringify(held(farOf(state)).calls), JSON.stringify(held(state).calls));
   expect(refused().some((one) => one.includes('left-behind'))).toBe(true);
   expect(held(state).machines.map((one) => one.name)).toEqual(['left-behind']);
   expect(held(state).calls.some((one) => one[0] === 'rm')).toBe(false);
@@ -2472,3 +2473,109 @@ it('gives a machine a copy of the tree where the profile says sessionTree copy',
   const boundSeeded = (held(boundState).commands ?? []).map((one) => one.command.join(' '));
   expect(boundSeeded.some((one) => one.includes('reset --hard'))).toBe(false);
 });
+
+/*
+ * container/05 p8 task 03: a session's code on another box's Docker.
+ *
+ * A profile with a `server` makes its machines on the box's Docker, which has
+ * no path of this host's to mount. The scripted `docker` keeps the box's
+ * machines in a file of their own, so what is found there was run with the
+ * box's `DOCKER_HOST`.
+ *
+ * These run on the real clock: a box's reads are bounded by a timer of the
+ * router's, and a faked clock moved past it cuts off a scripted call that has
+ * not had the real time to answer.
+ */
+
+/** A case that reaches a box: the server check and every call run the scripted ssh and docker. */
+const FAR_CASE = 30_000;
+
+const SSH = fileURLToPath(new URL('./fixtures/ssh.mjs', import.meta.url));
+
+/** The file the scripted Docker keeps for the box `dev02`. */
+const farOf = (state: string): string => `${state}.${encodeURIComponent('ssh://dev02')}`;
+
+/** A host with one disposable profile made on `dev02`'s Docker, and the plugin's log. */
+const withFarRepository = async (state: string, lines: string[]) => {
+  const check = `${state}.check`;
+  writeFileSync(check, [
+    'os_id=debian', 'arch=x86_64', 'cpus=6', 'memory_kb=11718656', 'home_free_kb=52428800',
+    'varlib_free_kb=20971520', 'docker=26.1.5+dfsg1', 'docker_access=yes', 'user=softov',
+  ].join('\n'));
+  return (await load(options(state, {
+    env: { DOCKER_FAKE_STATE: state, SSH_FAKE_LOG: `${state}.ssh.jsonl`, SSH_FAKE_CHECK: check },
+    ssh: { command: process.execPath, args: [SSH], machines: { dev02: { destination: 'dev02' } } },
+    profiles: { claude: { title: 'Claude', image: 'node:22', disposable: true, sessionFolder: true, disposableDelay: 1000, server: 'dev02' } },
+  }), [agentWith()], (line) => { lines.push(line); }, { worktrees: gitWorktrees() }, undefined, dirname(state))).options;
+};
+
+it('seeds a machine on another box\'s Docker from a bundle copied in, with no path of this host\'s mounted', async () => {
+  const dir = realpathSync(temp());
+  const state = join(dir, 'docker.json');
+  const { repo } = repositoryIn(dir);
+
+  const loaded = await withFarRepository(state, []);
+  const { open } = await room(loaded);
+  await open('ahp-session:/one', { computer: 'disposable:claude' }, repo);
+
+  const far = held(farOf(state));
+  const box = far.machines[0] as NonNullable<Held['machines'][number]>;
+  expect(held(state).machines).toEqual([]);
+  // The machine's own git directory, and nothing of this host's.
+  expect(box.mounts).toEqual([`ahpd-git-${box.name}:${machinePathOf(repo)}`]);
+  expect(box.labels?.['ahpd.git']).toBe('fetch');
+  // The bundle goes in by `docker cp`, is fetched into the seed ref, and is removed.
+  const copied = far.calls.find((one) => one[0] === 'cp' && one[2] === `${box.name}:/tmp/ahpd-seed.bundle`);
+  expect(copied?.[1]).toMatch(/seed\.bundle$/u);
+  const commands = (far.commands ?? []).map((one) => one.command.join(' '));
+  expect(commands.some((one) => one.includes('fetch -q --no-tags /tmp/ahpd-seed.bundle +HEAD:refs/ahpd/seed'))).toBe(true);
+  expect(commands.some((one) => one.includes('rm -f /tmp/ahpd-seed.bundle'))).toBe(true);
+  // And the bundle this host made is gone from it.
+  expect(existsSync(copied?.[1] ?? '')).toBe(false);
+}, FAR_CASE);
+
+it('brings a machine on another box\'s Docker back over that Docker when its session leaves, and removes it', async () => {
+  const dir = realpathSync(temp());
+  const state = join(dir, 'docker.json');
+  const { repo } = repositoryIn(dir);
+
+  const lines: string[] = [];
+  const loaded = await withFarRepository(state, lines);
+  const { open, dispose } = await room(loaded);
+  await open('ahp-session:/one', { computer: 'disposable:claude' }, repo);
+  const name = (held(farOf(state)).machines[0] as NonNullable<Held['machines'][number]>).name;
+
+  await dispose('ahp-session:/one');
+  await until(() => held(farOf(state)).machines.length === 0, 4000);
+  const far = held(farOf(state));
+  expect(far.machines).toEqual([]);
+  // The leave asked the box's Docker for the machine's branches, and this
+  // host's Docker was never asked anything.
+  expect((far.commands ?? []).some((one) => one.id === name && one.command.join(' ').includes('for-each-ref'))).toBe(true);
+  expect(far.calls.some((one) => one[0] === 'rm')).toBe(true);
+  expect(held(state).calls.filter((one) => one[0] !== 'ps')).toEqual([]);
+}, FAR_CASE);
+
+it('keeps a machine on another box\'s Docker whose work cannot be brought back, and names it', async () => {
+  const dir = realpathSync(temp());
+  const state = join(dir, 'docker.json');
+  const { repo } = repositoryIn(dir);
+  writeFileSync(farOf(state), JSON.stringify({
+    machines: [],
+    calls: [],
+    answers: [{ when: 'for-each-ref', err: 'fatal: not a git repository', code: 128 }],
+  }));
+
+  const lines: string[] = [];
+  const loaded = await withFarRepository(state, lines);
+  const { open, dispose } = await room(loaded);
+  await open('ahp-session:/one', { computer: 'disposable:claude' }, repo);
+  const name = (held(farOf(state)).machines[0] as NonNullable<Held['machines'][number]>).name;
+
+  await dispose('ahp-session:/one');
+  const refused = (): string[] => lines.filter((one) => one.includes('still here'));
+  await until(() => refused().length >= 1, 4000);
+  expect(refused().some((one) => one.includes(name))).toBe(true);
+  expect(held(farOf(state)).machines.map((one) => one.name)).toEqual([name]);
+  expect(held(farOf(state)).calls.some((one) => one[0] === 'rm')).toBe(false);
+}, FAR_CASE);

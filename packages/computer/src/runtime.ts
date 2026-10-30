@@ -12,6 +12,7 @@ import { byName, DOCKER_OWN, DOCKER_OWN_PREFIX, dockerOwn } from './byname.js';
 import { sourceOnHost, spelledOnHost, windowsHost } from './hostpath.js';
 import { cliMountOf, cliVolumeOf, copyOf, gitVolumeOf, guardFor, guardedMounts, idsOfUser, MACHINE_GIT, MACHINE_USER, openReadingOf, seedOf, treeOf, userLabelOf, volumeFlagOf } from './gitdir.js';
 import type { GitGuard, GitMounts, SessionTree } from './gitdir.js';
+import { bundleOfTree, originOf, SEED_BUNDLE, SEED_REF } from './clone.js';
 import { absoluteOnHost, mountParts } from './manifest.js';
 import { archiveOf, FILLED_MARKER, firstFileOf, IMAGE_PATH, MACHINE_PARTS, once, partsLabel, partsSaid, pathWith, volumeOf } from './parts.js';
 import type { ArchiveEntry, MadePart, Tarball } from './parts.js';
@@ -2119,6 +2120,36 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
   };
 
   /**
+   * The tree's `HEAD`, put in a machine on another box as a bundle and fetched
+   * into its seed ref, with the tree's `origin` named in its config.
+   *
+   * Answers the commit the seed ref holds, or nothing for a tree with no
+   * commit, which has no history to send. The bundle is removed from both
+   * hosts whether the fetch worked or not.
+   */
+  const bundledInto = async (
+    container: string,
+    root: string,
+    at: string,
+    asUser: (args: string[]) => Promise<string>,
+  ): Promise<string | undefined> => {
+    const host = hostPathOf(root);
+    const origin = originOf(host);
+    if (origin !== undefined) await asUser(['git', `--git-dir=${at}`, 'config', 'remote.origin.url', origin]);
+    if (seedOf(host).commit === undefined) return undefined;
+    const bundle = bundleOfTree(host);
+    try {
+      await must(['cp', bundle.file, `${container}:${SEED_BUNDLE}`]);
+      await asUser(['git', `--git-dir=${at}`, 'fetch', '-q', '--no-tags', SEED_BUNDLE, `+HEAD:${SEED_REF}`]);
+      return (await asUser(['git', `--git-dir=${at}`, 'rev-parse', SEED_REF])).trim() || undefined;
+    }
+    finally {
+      bundle.drop();
+      await ran(options, ['exec', '--user', '0', container, 'rm', '-f', SEED_BUNDLE]);
+    }
+  };
+
+  /**
    * Seed a machine's own git directory, in the machine, from the tree it was given.
    *
    * The machine's git directory is a volume, which Docker made owned by root,
@@ -2155,7 +2186,9 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     const root = git.copy === true ? git.volume : machinePathOf(spec.repository ?? spec.folder ?? spec.devcontainer ?? '');
     const at = git.copy === true ? (git.volume === undefined ? undefined : posix.join(git.volume, '.git')) : git.volume;
     const objects = git.objects;
-    if (root === undefined || root === '' || at === undefined || git.volume === undefined || objects === undefined) return;
+    if (root === undefined || root === '' || at === undefined || git.volume === undefined) return;
+    // A machine on another box has no host objects to read, and is seeded from a bundle.
+    if (objects === undefined && options.remote !== true) return;
     const seed = seedOf(hostPathOf(root));
     const asUser = (args: string[]): Promise<string> =>
       must(['exec', ...(spec.user === undefined ? [] : ['--user', spec.user]), container, ...args]);
@@ -2188,14 +2221,22 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
        * make it on `init` would otherwise have nowhere to put the file.
        */
       const owner = ids ?? { uid: 0, gid: 0 };
-      await must(
-        ['cp', '-a', '-', `${container}:${posix.join(at, 'objects')}`],
-        undefined,
-        archiveOf([
-          { name: 'info/', bytes: Buffer.alloc(0), directory: true, ...owner },
-          { name: 'info/alternates', bytes: Buffer.from(`${objects}\n`, 'utf8'), ...owner },
-        ]),
-      );
+      if (objects !== undefined) {
+        await must(
+          ['cp', '-a', '-', `${container}:${posix.join(at, 'objects')}`],
+          undefined,
+          archiveOf([
+            { name: 'info/', bytes: Buffer.alloc(0), directory: true, ...owner },
+            { name: 'info/alternates', bytes: Buffer.from(`${objects}\n`, 'utf8'), ...owner },
+          ]),
+        );
+      }
+      /*
+       * On another box's Docker, the history is a bundle of the tree's `HEAD`
+       * instead, fetched into the seed ref: the commit the checkout below is
+       * made at is the one the bundle carried, read back from that ref.
+       */
+      const commit = objects === undefined ? await bundledInto(container, root, at, asUser) : seed.commit;
       // The identity a commit needs, and nothing else of the host's config.
       if (seed.name !== undefined) await asUser(['git', ...own, 'config', 'user.name', seed.name]);
       if (seed.email !== undefined) await asUser(['git', ...own, 'config', 'user.email', seed.email]);
@@ -2207,10 +2248,10 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
       // The branch the tree is on, at the commit it is at; a tree on no branch
       // gives a machine on none, whose work is fetched to the hidden ref only.
       if (seed.branch !== undefined) await asUser(['git', ...own, 'symbolic-ref', 'HEAD', `refs/heads/${seed.branch}`]);
-      if (seed.commit !== undefined) {
+      if (commit !== undefined) {
         await asUser(seed.branch === undefined
-          ? ['git', ...own, 'update-ref', '--no-deref', 'HEAD', seed.commit]
-          : ['git', ...own, 'update-ref', `refs/heads/${seed.branch}`, seed.commit]);
+          ? ['git', ...own, 'update-ref', '--no-deref', 'HEAD', commit]
+          : ['git', ...own, 'update-ref', `refs/heads/${seed.branch}`, commit]);
         /*
          * The index that commit names, so git in the machine is clean before
          * the agent has touched anything - and under `copy` the tree as well,
@@ -2522,6 +2563,23 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     hostGit(tree, ['rev-parse', '--verify', '--quiet', ref]).stdout.trim();
 
   /**
+   * Where a bundle of a machine's work is measured from: `from`, or on another
+   * box's Docker, where the machine has no commit the host made after its seed,
+   * the seed ref when the machine lacks `from`. Nothing where it has neither,
+   * and the bundle then carries the whole history.
+   */
+  const measuredFrom = async (id: string, at: string, found: Record<string, unknown>, tree: string, from: string): Promise<string> => {
+    if (options.remote !== true || from === '') return from;
+    const asked = async (...args: string[]): Promise<Ran> => {
+      const into = await argvInto(id, at, found, ['git', '-C', tree, ...args], {});
+      return await ran(options, into.argv, undefined, into.env);
+    };
+    if ((await asked('cat-file', '-e', `${from}^{commit}`)).code === 0) return from;
+    const seed = await asked('rev-parse', '--verify', '--quiet', SEED_REF);
+    return seed.code === 0 ? seed.stdout.trim() : '';
+  };
+
+  /**
    * One branch of a machine's, brought back.
    *
    * `branch` is its name, or `''` for a machine on no branch, whose work is
@@ -2568,7 +2626,8 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     const scratch = mkdtempSync(join(tmpdir(), 'ahpd-bringback-'));
     const bundle = join(scratch, 'work.bundle');
     try {
-      const into = await argvInto(id, at, found, ['git', '-C', tree, 'bundle', 'create', '-', ref, '--not', from], {});
+      const since = await measuredFrom(id, at, found, tree, from);
+      const into = await argvInto(id, at, found, ['git', '-C', tree, 'bundle', 'create', '-', ref, ...(since === '' ? [] : ['--not', since])], {});
       const made = await poured(into, bundle);
       if (made.code !== 0) {
         /*
@@ -2760,8 +2819,8 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     }
     const branch = (await inMachine('symbolic-ref', '-q', '--short', 'HEAD')).stdout.trim();
     const hidden = `refs/ahpd/machines/${id}/${branch === '' ? 'HEAD' : branch}`;
-    const from = hostGit(tree, ['rev-parse', '--verify', '--quiet', hidden]).stdout.trim()
-      || hostGit(tree, ['rev-parse', '--verify', '--quiet', 'HEAD']).stdout.trim();
+    const from = await measuredFrom(id, at, found, tree, hostGit(tree, ['rev-parse', '--verify', '--quiet', hidden]).stdout.trim()
+      || hostGit(tree, ['rev-parse', '--verify', '--quiet', 'HEAD']).stdout.trim());
     const kept = `refs/ahpd/machines/${id}/uncommitted`;
     // The stash commit has to be named by a ref for a bundle to carry it, and
     // the ref is in the machine's own git directory, which goes with it.
@@ -3417,15 +3476,26 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
        * path in place of it, so the folder is not bound at all - the volume
        * holds the working tree and the machine's git directory together.
        */
-      const tree = spec.sessionTree ?? 'shared';
-      const guard = guardFor(spec.gitGuard, tree);
+      /*
+       * On another box's Docker neither the folder nor its git directory is a
+       * path there, so the machine works in a copy: its volume holds the tree
+       * and its own git directory, seeded from a bundle, and nothing of this
+       * host's is bound. A folder that is not a repository has no bundle to
+       * send, and is refused.
+       */
+      const remote = options.remote === true;
+      if (remote && spec.folder !== undefined && spec.gitDir === undefined) {
+        throw new Error(`${spec.name} is made on another box's Docker, and ${spec.repository ?? spec.folder} is not a repository it may be given, so its code cannot be sent there`);
+      }
+      const tree = remote ? 'copy' : spec.sessionTree ?? 'shared';
+      const guard = remote ? 'fetch' : guardFor(spec.gitGuard, tree);
       // The git mounts, every source made on the host first, so a refusal
       // leaves nothing made.
-      // Neither the folder nor its git directory is bound on another box's
-      // Docker, where neither path is.
-      const git = spec.gitDir === undefined || spec.folder === undefined || options.remote === true
+      const git = spec.gitDir === undefined || spec.folder === undefined
         ? undefined
-        : guardedMounts(spec.gitDir, spec.repository ?? spec.folder, stateDirOf(options), guard, tree);
+        : remote
+          ? { binds: [], volume: machinePathOf(spec.repository ?? spec.folder), copy: true }
+          : guardedMounts(spec.gitDir, spec.repository ?? spec.folder, stateDirOf(options), guard, tree);
       const flags = ['--name', spec.name, '--label', spec.label];
       if (spec.agents !== undefined && spec.agents.length > 0) {
         flags.push('--label', `${MACHINE_AGENTS}=${spec.agents.join(',')}`);
@@ -3493,7 +3563,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
         // the rest of it is not missing to git in there. Under `copy` the tree
         // is the machine's own and this is not bound at all: the volume below
         // lands at that path instead.
-        ...(spec.folder === undefined || tree === 'copy' || options.remote === true
+        ...(spec.folder === undefined || tree === 'copy'
           ? []
           : [`${spec.repository ?? spec.folder}:${machinePathOf(spec.repository ?? spec.folder)}`]),
         // Then the git mounts: the host's objects read-only, the file a linked

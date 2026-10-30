@@ -203,7 +203,12 @@ export const routed = (
     owner: (id) => about(id, (runtime, name) => runtime.owner(name)),
     how: (id, asked) => about(id, (runtime, name) => runtime.how(name, asked)),
     hostCommand: (id) => about(id, (runtime, name) => runtime.hostCommand(name)),
-    bringBack: (id) => about(id, (runtime, name) => runtime.bringBack(name)),
+    // Not bounded: it moves a machine's work, which takes what it takes over a
+    // network, and a bring-back cut off is a removal refused for good.
+    bringBack: (id) => {
+      const { runtime, name } = parseMachineId(id);
+      return runtimes[runtime]?.bringBack(name) ?? Promise.resolve(undefined);
+    },
     stats: (id) => about(id, (runtime, name) => runtime.stats(name)),
     check: (id) => about(id, (runtime, name) => runtime.check?.(name) ?? Promise.resolve(undefined)),
     checks: (id) => {

@@ -1891,14 +1891,16 @@ export const apply: Plugin['apply'] = (host, options) => {
       // this host holds.
       // The count and the create are one turn, so a second session starting
       // while this one is making its machine counts the machine being made.
-      await inTurn(made, async () => {
+      // The id the router spells, which names the runtime a machine made on a
+      // box's Docker is on: the name alone would be this host's Docker's.
+      const machine = await inTurn(made, async () => {
         const full = roomFor(await made.list(), max);
         if (full !== undefined) {
           throw new Error(`This host holds ${max} computers already, and ${id} would be one more`);
         }
         // The runtime's own sentence is kept: it is the only thing that says
         // what Docker refused, and the session reads it as its creation error.
-        await making(async () => made.run({
+        return making(async () => made.run({
           ...spec,
           label,
           // The repository the session's folder belongs to, behind a gate of
@@ -1915,8 +1917,8 @@ export const apply: Plugin['apply'] = (host, options) => {
       });
       // Watched before the host says the session entered, so a session that
       // never starts still leaves a machine that goes.
-      watch(id, key, delay);
-      return id;
+      watch(machine.id, key, delay);
+      return machine.id;
     },
     /*
      * The count, which only a session starting or a session gone moves.

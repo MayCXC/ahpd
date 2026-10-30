@@ -258,3 +258,12 @@ it('bounds a hung runtime\'s listing and reads by its own timeout, and tells wha
   expect(answered.sort()).toEqual([['docker', ['here']], ['docker-far', undefined]]);
   await expect(one.inspect('docker-far.box')).rejects.toThrow('the docker-far runtime did not answer within 20ms');
 });
+
+it('gives a bring-back on a box the time it takes, past the bound on its reads', async () => {
+  const far = faker('docker-far', {
+    bringBack: () => new Promise((resolve) => { setTimeout(() => { resolve({ moved: true }); }, 60); }),
+  });
+  const one = routed({ [BARE]: faker(BARE), 'docker-far': far }, BARE, { timeouts: { 'docker-far': 20 } });
+  expect(await one.bringBack('docker-far.box')).toEqual({ moved: true });
+  expect(await one.bringBack('nowhere.box')).toBeUndefined();
+});
