@@ -117,7 +117,7 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 ## Resume state
 
 - **Done so far:** nothing. These tasks were tasks 08 to 13 of p8 until 2026-10-30.
-- **Next action:** [task-02-an-address-is-reached-by-ssh.md](task-02-an-address-is-reached-by-ssh.md); task 01 waits on the server check's task 04 on dev02.
+- **Next action:** [task-02-an-address-is-reached-by-ssh.md](task-02-an-address-is-reached-by-ssh.md); task 01 waits on Softov's hand in [pending/vm-01-dev02-libvirt.md](../../../pending/vm-01-dev02-libvirt.md).
 - **Open questions:** none.
 - **Watch out for:** p3's `hashOf` is the tag, so a template built before p3 lands has no name. A libvirt on this host could share the folder by virtiofs instead of a clone, which is left open, see [deferred.md](deferred.md).
 

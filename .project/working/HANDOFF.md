@@ -47,6 +47,7 @@ Current progress and pending items only, as of 2026-10-30.
 - proxy/04: icon curation, and [pending/proxy-04-move-config-dev.md](../pending/proxy-04-move-config-dev.md).
 - plugin/58: task 05 waits for [pending/plugin-58-icon-curation.md](../pending/plugin-58-icon-curation.md).
 - plugin/50: [pending/plugin-50-first-pieces.md](../pending/plugin-50-first-pieces.md).
+- The VM plan, task 01: [pending/vm-01-dev02-libvirt.md](../pending/vm-01-dev02-libvirt.md).
 - The `active` plans with all tasks implemented wait for his review. Each stays `active` until he says his review is done.
 - Three `active` plans look ready to close on his word: host/83, host/99 and plugin/69. The plan host/83 has p1 to p5 built, and host/99 has every task done. PR #104 merged plugin/69 tasks 05 and 06, which are still `implemented`.
 - plugin/71 has no `implemented.md`, though its tasks are implemented.
