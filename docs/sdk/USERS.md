@@ -89,13 +89,13 @@ Every operation is in one of the two groups, with one exception: `plugin:install
 
 The host advertises every subject a grant may name in `_meta['ahpd.grants']` on
 the handshake and on the root state, so a client reads the operations from the
-wire rather than from this page. That map holds the fourteen the host decides and,
+wire rather than from this page. That map holds the fifteen the host decides and,
 beside them, every scheme this host serves - `user`, `team`, `project`, `role`,
 `policy`, `usage` and any plugin's - each under its own name, with the
 operations its provider implements and the groups those fall into. A client
 drawing a role editor reads that one key and has every subject there is.
 
-The subjects the host decides are these fourteen:
+The subjects the host decides are these fifteen:
 
 | Subject | Read group | Write group | What they cover |
 | --- | --- | --- | --- |
