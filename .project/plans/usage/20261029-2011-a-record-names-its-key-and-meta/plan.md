@@ -1,7 +1,7 @@
 ---
 title: A record names its key and its meta
 domain: usage
-status: planned
+status: implemented
 priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -77,7 +77,7 @@ pi -> /v1 with the key, X-AHP-Meta: client=pi -> callerOf: metaOf(header) -> cal
 | --- | --- | --- |
 | [01 - A proxy record names its key](task-01-a-proxy-record-names-its-key.md) | implemented | - |
 | [02 - A key is minted with meta](task-02-a-key-is-minted-with-meta.md) | implemented | - |
-| [03 - A call adds meta with a header](task-03-a-call-adds-meta-with-a-header.md) | todo | 01, 02 |
+| [03 - A call adds meta with a header](task-03-a-call-adds-meta-with-a-header.md) | implemented | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -86,14 +86,14 @@ pi -> /v1 with the key, X-AHP-Meta: client=pi -> callerOf: metaOf(header) -> cal
 
 ## Resume state
 
-- **Done so far:** tasks 01 and 02 are implemented: a proxy record names the key that made the call in `token`, and a key is minted with `meta`.
-- **Next action:** [task-03-a-call-adds-meta-with-a-header.md](task-03-a-call-adds-meta-with-a-header.md).
+- **Done so far:** all three tasks are implemented: a proxy record names the key that made the call in `token` and carries the key's `meta` and the call's `X-AHP-Meta` entries, and a key is minted with `meta`.
+- **Next action:** none; `implemented.md` records what was verified.
 - **Open questions:** none.
 - **Watch out for:** the plan `proxy/20261029-2010-a-key-carries-its-scope` also changes `TokenRecord`, `mintToken` and `ahpd token mint`. Rebase on it when it merges first.
 
 ## Final verification checklist
 
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
+- [x] `pnpm exec tsc -p tsconfig.json --noEmit` passes.
+- [x] The whole suite passes.
 - [ ] A key minted with `--meta env=prod` makes a call with `X-AHP-Meta: client=pi`, and the record holds `token` and both entries.
 - [ ] A call with `X-AHP-Meta: bad` is refused with 400.

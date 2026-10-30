@@ -450,6 +450,19 @@ describe('the call is recorded', () => {
     expect(entries[0]).not.toHaveProperty('meta');
   });
 
+  it('writes the key\'s meta under the call\'s, so a name the key holds keeps its value', async () => {
+    const { served, usage } = await setup();
+    const key = await who.users.mintToken!('ana', { meta: { env: 'prod' } });
+    const sent = await send(served.port, CHAT, {
+      headers: { 'x-api-key': key.secret, 'x-ahp-meta': 'env=dev,client=pi' },
+      body: { model: 'local/default' },
+    });
+    expect(sent.status).toBe(200);
+    const [entry] = await settled(usage, 1);
+    expect(entry?.token).toBe(key.id);
+    expect(entry?.meta).toEqual({ env: 'prod', client: 'pi' });
+  });
+
   it('keeps answering when the store fails, and says so in the log', async () => {
     const remote = await fakeProvider(answerJson(200, COMPLETION));
     fakes.push(remote);

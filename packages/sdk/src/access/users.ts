@@ -1129,6 +1129,18 @@ export function fileUsers(options: FileUserOptions): Users {
         return live === undefined || live.user !== record.id ? undefined : live.scope;
       },
       /*
+       * What the key they signed in with says about itself.
+       *
+       * Re-read as `keyScope` is, and for the same reason: a revoked record
+       * answers nothing, so a meta the file no longer holds is gone at the next
+       * call rather than at the next connection.
+       */
+      get keyMeta(): Record<string, string> | undefined {
+        if (minted === undefined) return undefined;
+        const live = readTokens().tokens.find((one) => one.id === minted.id);
+        return live === undefined || live.user !== record.id ? undefined : live.meta;
+      },
+      /*
        * The limits of the key they signed in with, re-read as `standing` reads
        * the record.
        *

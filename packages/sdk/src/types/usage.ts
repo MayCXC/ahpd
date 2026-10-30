@@ -63,6 +63,15 @@ export interface UsageBase {
    * full sign-in name no key.
    */
   token?: string;
+  /**
+   * What the key and the call said about themselves, as a map of names to values.
+   *
+   * A proxy call made with a key carries the key's `meta` and the entries of
+   * its `X-AHP-Meta` header together, and a name the key holds keeps the key's
+   * value. Absent when neither named anything, and on every record that is not
+   * a proxy call made with a key.
+   */
+  meta?: Record<string, string>;
   /** What its pools are charged, when that is known. */
   cost?: Cost;
   /** What the provider or the harness reported it cost, when it reported one. */

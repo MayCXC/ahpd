@@ -64,6 +64,8 @@ A person needs `proxy:call` to call and `proxy:models` to list the models. The `
 
 A person's call is charged to a team and project, named in an `X-AHP-Scope` header or a `?scope=` query (`backend` or `backend:billing`), and to their primary otherwise. Neither the header nor the query goes to the provider.
 
+A call adds meta to what its key holds with an `X-AHP-Meta` header, written `k=v,k=v` such as `env=dev,client=pi`. The record carries the key's meta and the header's entries together, and a name the key holds keeps the key's value. A header that does not parse is refused with 400, and the call is not sent. No `X-AHP-*` header goes to the provider.
+
 A key can carry its own scope, so a client that is handed nothing but a base URL and a key is charged where the key says. That is what pi needs:
 
 ```bash
@@ -211,7 +213,7 @@ A client reads one connector's list with `x-ahpd/connectors/models`, as [PLUGINS
 
 ## What is recorded
 
-Each answered call writes one usage record with `source: "proxy"`: the model name, the adapter that answered, the connector whose key paid, the tokens the answer reported, the owner (`user:<id>`, or `root:<host>` for the deployment token), the id of the key that made the call when there was one, the team and project, and the pools those give. A record is written when the stream ends, is cut, or fails. `ahpd usage` shows them.
+Each answered call writes one usage record with `source: "proxy"`: the model name, the adapter that answered, the connector whose key paid, the tokens the answer reported, the owner (`user:<id>`, or `root:<host>` for the deployment token), the id of the key that made the call when there was one, what the key and the call said about themselves in `meta`, the team and project, and the pools those give. A record is written when the stream ends, is cut, or fails. `ahpd usage` shows them.
 
 A record carries two costs. `providerCost` is what the provider reported, when it reported one: OpenRouter sends `usage.cost` with `cost_details`, which give the amount and what was sent and what came back. `cost` is what the pools are charged. A `price` on the entry, or a fetched `pricing` for a model the table does not hold, is the price of the call (`from: "price"`). Cache tokens are charged at the input price. A speech call is charged by `characters` and a transcription by `minutes`. Without a price, the cost is the provider's own figure (`from: "harness"`), so a call nobody priced is charged what it cost. A price that names one side and not the other gives no cost at all when the unnamed side has tokens, because an absent price is not a price of zero; a side priced at 0 is free.
 

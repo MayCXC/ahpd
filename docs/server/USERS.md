@@ -61,11 +61,13 @@ ahpd token mint --user ana --limit 5:usd:day --limit 100:calls:day --label lapto
 
 A proxy call made with the key is refused once one of its limits has no room, with the key's sentence rather than a row's: `token:<id> has no room: 2 / 2 calls this day`. A key's limits only narrow what the policies allow: they never allow a model no policy allows, they never stop the charge to a person's or a team's limits, and they hold for a person who holds `*:*`, and with `policies.check` off. They need a usage store to be counted, because the means of counting is the same one policy limits use.
 
+A token also carries meta of its own, written `--meta name=value` once per entry. A name is 1 to 64 characters of letters, digits, `_`, `.` and `-`, and a value is at most 256 characters with no comma and no line break. A call made with the key writes the key's entries on its usage record, and adds the entries of its `X-AHP-Meta` header: a name the key holds keeps the key's value.
+
 A minted token cannot mint, list or revoke tokens. Sign in with the person's full token for that. `ahpd user token <id>` still mints that one full token, and the tokens a person minted stay.
 
 At a terminal `--user <id>` names whose tokens they are. `token list` without one lists everybody's; `token mint` and `token rm` need one, because a terminal has nobody signed in. Over `/api` a person's token acts for that person, and `--user` needs `user:write` and is bounded by that person's grants. The host mints at most `tokensPerPerson` live tokens per person, ten unless configured otherwise; an expired token does not count.
 
-`ahpd token list` shows the id, the label, the grants, the scope, the creation date, the expiry and the limits of each token, and never a secret or a hash.
+`ahpd token list` shows the id, the label, the grants, the scope, the meta, the creation date, the expiry and the limits of each token, and never a secret or a hash.
 
 ## Roles
 

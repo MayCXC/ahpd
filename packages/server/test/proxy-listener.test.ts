@@ -266,6 +266,36 @@ describe('a caller is a person, root or a session, and may call', () => {
     for (const one of fake.received) expect(one.headers['x-ahp-scope']).toBeUndefined();
   });
 
+  it('reads meta from X-AHP-Meta, refuses one that is not name=value, and never sends it upstream', async () => {
+    const fake = await okProvider();
+    const usage = memoryUsage();
+    const served = await proxy({ ...table(fake.endpoint), usage: () => usage });
+    const key = { 'x-api-key': who.ana };
+
+    expect((await send(served.port, CHAT, { headers: { ...key, 'x-ahp-meta': 'a=1, b=2' }, body: CALL })).status).toBe(200);
+    await pause(20);
+    expect(usage.entries.map((entry) => entry.meta)).toEqual([{ a: '1', b: '2' }]);
+    // The header is this host's, not the provider's.
+    for (const one of fake.received) expect(one.headers['x-ahp-meta']).toBeUndefined();
+
+    const bad = await send(served.port, MESSAGES, { headers: { ...key, 'x-ahp-meta': 'bad' }, body: CALL });
+    expect(bad.status).toBe(400);
+    expect(isAnthropicError(bad.json)).toBe(true);
+    expect(bad.json).toMatchObject({
+      error: { type: 'invalid_request_error', message: 'bad is not a meta entry; write one as name=value' },
+    });
+
+    // A key at the bound and a call that adds one are over it, and refused
+    // rather than recorded with one entry too many.
+    const full = await who.users.mintToken!('ana', {
+      meta: Object.fromEntries(Array.from({ length: 32 }, (_one, at) => [`k${String(at)}`, 'v'])),
+    });
+    const over = await send(served.port, CHAT, { headers: { 'x-api-key': full.secret, 'x-ahp-meta': 'extra=1' }, body: CALL });
+    expect(over.status).toBe(400);
+    expect(over.json).toMatchObject({ error: { message: 'A meta names 32 entries at most, and that body names 33' } });
+    expect(fake.received).toHaveLength(1);
+  });
+
   it('charges a call with a key that carries a scope, and refuses a header that names another', async () => {
     const fake = await okProvider();
     const usage = memoryUsage();

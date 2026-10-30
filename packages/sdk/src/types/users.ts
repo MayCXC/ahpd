@@ -69,6 +69,15 @@ export interface Principal {
    */
   readonly keyScope?: string | undefined;
   /**
+   * What the key they signed in with says about itself, when it says anything.
+   *
+   * Read from the token record at each call, as `keyScope` is: a record that
+   * was revoked, or that names no `meta`, answers nothing here. A call made
+   * with the key writes these on its record and adds the entries of its own
+   * `X-AHP-Meta` header to them.
+   */
+  readonly keyMeta?: Record<string, string> | undefined;
+  /**
    * The limits of the key they signed in with, when it has any.
    *
    * Read from the token record on every question, as `can` reads the key's

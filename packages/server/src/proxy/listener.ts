@@ -462,6 +462,8 @@ interface Charged {
   scope?: Scope;
   /** The id of the key that made the call, when the person signed in with one. */
   token?: string;
+  /** What the key and the call said about themselves. */
+  meta?: Record<string, string>;
   /** Who it belongs to. */
   owner?: Owner;
   /** Whether a record is written. */
@@ -478,6 +480,7 @@ const chargedAs = (caller: ProxyCaller, options: ProxyOptions, proxy: ProxyConfi
       principal: caller.principal,
       ...(caller.scope === undefined ? {} : { scope: caller.scope }),
       ...(caller.principal.token === undefined ? {} : { token: caller.principal.token }),
+      ...(caller.meta === undefined ? {} : { meta: caller.meta }),
       owner: `user:${caller.principal.id}`,
       recorded: true,
     };
@@ -1137,6 +1140,7 @@ const record = (options: ProxyOptions, charged: Charged, call: Answered): void =
     source: 'proxy',
     ...(charged.owner === undefined ? {} : { owner: charged.owner }),
     ...(charged.token === undefined ? {} : { token: charged.token }),
+    ...(charged.meta === undefined ? {} : { meta: charged.meta }),
     ...(charged.scope === undefined ? {} : { team: charged.scope.team, ...(charged.scope.project === undefined ? {} : { project: charged.scope.project }) }),
     ...(session === undefined ? {} : {
       session: session.session,
