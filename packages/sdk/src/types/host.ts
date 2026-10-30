@@ -393,6 +393,15 @@ export interface HostOptions {
    */
   nodes?: NodeRegistry;
   /**
+   * What a session does when the node it runs on restarts its `ahpd join`.
+   *
+   * `end`, the default, ends the session where it ran, with a sentence naming
+   * the node, and the next turn resumes it by the inner host's id. `reconnect`
+   * keeps the session and opens it again on the socket the node dials when it
+   * comes back.
+   */
+  nodeRestart?: 'end' | 'reconnect';
+  /**
    * How this host runs another host inside a container, and carries its frames.
    *
    * Contributed by the plugin that can reach Docker and the Dev Container CLI.

@@ -1148,6 +1148,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     closedChats: options.closedChats,
     archiveDirtyWorktree: options.archiveDirtyWorktree,
     pullRequestLookup: options.pullRequestLookup,
+    // What a session on a joined node does when that node's join restarts.
+    nodeRestart: options.nodeRestart,
     /*
      * How long a session's client calls may wait, when this deployment said.
      *
