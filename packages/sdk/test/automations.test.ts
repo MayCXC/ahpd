@@ -8,6 +8,7 @@ import { memorySessions } from '../src/sessions/sessions.js';
 import { clientPluginsIn } from '../src/plugins/clientplugins.js';
 import { idOf } from '../src/sessions/catalog.js';
 import { localPath } from '../src/resources/fileuri.js';
+import { createPeer, receive } from '../src/rpc.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { Agent, Start } from '../src/types/agent.js';
@@ -1723,13 +1724,71 @@ it("refuses a signed-in client's patch that names another person's agent, on an 
 
   // The write is refused, so the client is answered with the sentence rather
   // than with a catalogue that dropped the change.
-  await expect(client.handle({
+  await client.handle({
     method: 'dispatchAction',
     params: {
       channel: AUTOMATIONS,
       action: { type: 'automation/updateRequested', resource: PLAIN, changes: { session: { provider: 'echo' } } },
     },
-  })).rejects.toThrow('session.provider names echo, which belongs to user:cy, so this automation cannot run on it');
+  });
+  expect(refusals(p, AUTOMATIONS)).toEqual(['session.provider names echo, which belongs to user:cy, so this automation cannot run on it']);
   // And the record keeps the template it had.
   expect(store.get(PLAIN)?.definition.session).not.toMatchObject({ provider: 'echo' });
+});
+
+/*
+ * A refusal, as a client on a socket hears it.
+ *
+ * A dispatch is a notification, and `receive` writes no reply to one, so the
+ * frame the host sends back is the only answer the client gets. The write goes
+ * through `receive` here, as every listener hands a frame on: a throw out of
+ * `handle` is a rejection an in-process caller sees and a socket never carries.
+ */
+it('refuses a write the store throws on, in a frame to the client that sent it', async () => {
+  const lines: string[] = [];
+  const store = memoryAutomations();
+  const host = createHost({
+    path: DIR,
+    agents: [echo({ path: DIR, pace: 0 })],
+    automations: store,
+    onEvent: (line) => { lines.push(line); },
+  });
+  const frames: Record<string, unknown>[] = [];
+  const socket = createPeer({
+    send: (text) => { frames.push(JSON.parse(text) as Record<string, unknown>); },
+    close: () => {},
+    isOpen: () => true,
+  });
+  const client = host.accept(socket);
+  await client.handle({
+    method: 'initialize',
+    params: { clientId: 'a', protocolVersions: ['0.9.0'], initialSubscriptions: ['ahp-root://'] },
+  });
+
+  // A pinned automation that would run two turns at once in its chat, which
+  // the store refuses by throwing before it keeps anything.
+  const action = {
+    type: 'automation/createRequested',
+    resource: ONE,
+    definition: { ...DEFINITION, _meta: { ahpd: { session: 'pinned', overlap: 'parallel' } } },
+  };
+  receive(JSON.stringify({
+    jsonrpc: '2.0', method: 'dispatchAction', params: { channel: AUTOMATIONS, clientSeq: 1, action },
+  }), socket, (request) => client.handle(request));
+  await settle();
+
+  const refused = frames
+    .filter((one) => one.method === 'action')
+    .map((one) => one.params as Record<string, unknown>)
+    .filter((one) => one.rejectionReason !== undefined);
+  expect(refused).toEqual([{
+    channel: AUTOMATIONS,
+    action,
+    serverSeq: expect.any(Number),
+    origin: { clientId: 'a', clientSeq: 1 },
+    rejectionReason: 'A pinned automation runs one turn at a time in its own chat, so overlap cannot be parallel',
+  }]);
+  // The store kept nothing, and the daemon's log says what was refused.
+  expect(store.list()).toEqual([]);
+  expect(lines).toContain('a dispatch from a failed: A pinned automation runs one turn at a time in its own chat, so overlap cannot be parallel');
 });
