@@ -4,12 +4,14 @@ status: todo
 depends: []
 layer: "computer"
 refs:
-  - "[code://packages/computer/src/plugin.ts#L142-L175](../../../../packages/computer/src/plugin.ts#L142-L175) - `profilesOf`"
-  - "[code://packages/computer/src/plugin.ts#L354-L360](../../../../packages/computer/src/plugin.ts#L354-L360) - the plugin's own runner"
-  - "[code://packages/computer/src/plugin.ts#L403-L412](../../../../packages/computer/src/plugin.ts#L403-L412) - `claimOf`, through `dockered`"
-  - "[code://packages/computer/src/runtime.ts#L325-L341](../../../../packages/computer/src/runtime.ts#L325-L341) - `ran`, which has no timeout"
-  - "[code://packages/computer/src/plugin.ts#L566-L580](../../../../packages/computer/src/plugin.ts#L566-L580) - the startup adoption, whose failure is swallowed by `.catch(() => {})`"
-  - "[code://packages/computer/src/runtime.ts#L602-L620](../../../../packages/computer/src/runtime.ts#L602-L620) - `list`, filtered by the label"
+  - "[code://packages/computer/src/plugin.ts#L99-L169](../../../../packages/computer/src/plugin.ts#L99-L169) - `profilesOf`"
+  - "[code://packages/computer/src/plugin.ts#L551-L567](../../../../packages/computer/src/plugin.ts#L551-L567) - the plugin's own runner"
+  - "[code://packages/computer/src/plugin.ts#L633-L644](../../../../packages/computer/src/plugin.ts#L633-L644) - `claimOf`, already through the router"
+  - "[code://packages/computer/src/runtime.ts#L885-L907](../../../../packages/computer/src/runtime.ts#L885-L907) - `ran`, which has no timeout"
+  - "[code://packages/computer/src/router.ts#L47-L55](../../../../packages/computer/src/router.ts#L47-L55) - the router's one `listTimeout`, which bounds only `list`"
+  - "[code://packages/computer/src/plugin.ts#L1113-L1175](../../../../packages/computer/src/plugin.ts#L1113-L1175) - the startup adoption, whose failure is swallowed by `.catch(() => {})`"
+  - "[code://packages/computer/src/runtime.ts#L3008-L3061](../../../../packages/computer/src/runtime.ts#L3008-L3061) - `list`, filtered by the plugin label only"
+  - "[code://packages/computer/src/runtime.ts#L1030](../../../../packages/computer/src/runtime.ts#L1030) - `ahpd.host`, the daemon's id on a machine made for a session"
 ---
 
 ## Objective
@@ -19,20 +21,19 @@ A profile with `dockerHost` has its own runner, registered with p9's router unde
 ## Files
 
 - `UPDATE: packages/computer/src/manifest.ts` - `Profile.dockerHost`.
-- `UPDATE: packages/computer/src/plugin.ts:142-175` - read `dockerHost`; a profile whose `dockerHost` equals the plugin's own Docker (its `env.DOCKER_HOST`, or none when that is unset) is skipped with a line, since its machines would be listed twice.
-- `UPDATE: packages/computer/src/plugin.ts:73` - the `profiles` description names `dockerHost`.
-- `UPDATE: packages/computer/src/plugin.ts:354-360` - one `dockerRuntime` per profile with `dockerHost`, `env: { ...env, DOCKER_HOST }`, `remote: true`, registered with the router.
-- `UPDATE: packages/computer/src/plugin.ts:403-412` - `claimOf` inspects through the routed runtime.
-- `UPDATE: packages/computer/src/plugin.ts:566-580` - the startup adoption logs one line naming each Docker that did not answer and tries that runner again at the next listing, rather than `.catch(() => {})`.
-- `UPDATE: packages/computer/src/runtime.ts` - `DockerOptions.profile`: the listing adds `--filter label=ahpd.profile=<key>` when set; every machine a remote runner makes also carries `ahpd.host=<this host's id>`, and its listing filters on it, so two hosts sharing one remote Docker do not list each other's machines.
-- `UPDATE: packages/computer/src/router.ts` (p9 task 01) - a per-runner timeout on every call it routes, so a hung `ssh://` Docker answers as a Docker that did not answer.
+- `UPDATE: packages/computer/src/plugin.ts:99-169` - read `dockerHost`; a profile whose `dockerHost` equals the plugin's own Docker (its `env.DOCKER_HOST`, or none when that is unset) is skipped with a line, since its machines would be listed twice.
+- `UPDATE: packages/computer/package.json:132-184` - `dockerHost` in the `profiles` schema, and the description names it.
+- `UPDATE: packages/computer/src/plugin.ts:551-567` - one `dockerRuntime` per profile with `dockerHost`, `env: { ...env, DOCKER_HOST }`, `remote: true`, registered with the router.
+- `UPDATE: packages/computer/src/plugin.ts:1113-1175` - the startup adoption logs one line naming each Docker that did not answer and tries that runner again at the next listing, rather than `.catch(() => {})`.
+- `UPDATE: packages/computer/src/runtime.ts` - `DockerOptions.profile`: the listing adds `--filter label=ahpd.profile=<key>` when set; every machine a remote runner makes carries the existing `ahpd.host` label, and its listing filters on it, so two hosts sharing one remote Docker do not list each other's machines.
+- `UPDATE: packages/computer/src/router.ts:47-55` - a per-runner timeout on every call it routes, in place of one `listTimeout` for `list` only, so a hung `ssh://` Docker answers as a Docker that did not answer.
 - `UPDATE: packages/computer/test/computer-disposable.test.ts`, `computer-uptime.test.ts`.
 
 ## Steps
 
 1. For now the id is `docker-<profile>.<name>`, written and read through p9 task 01's `spellMachineId` and `parseMachineId`, never by hand; a profile named like a served runtime value is refused at load.
 2. A machine made from such a profile is made by its runner, carries `ahpd.profile=<key>`, and is watched and metered by `made`.
-3. A runner whose Docker does not answer, or does not answer within the router's per-runner timeout, leaves its machines out of a listing and logs one line naming the Docker; the listing and the picker answer with the rest. `ran` itself has no timeout, so the bound is the router's, one value per runner.
+3. A runner whose Docker does not answer, or does not answer within the router's per-runner timeout, leaves its machines out of a listing and logs one line naming the Docker; the listing and the picker answer with the rest. `ran` itself has no timeout, so the bound is the router's, one value per runner, on every call.
 4. At startup, a runner whose listing fails is logged by name and its adoption is tried again at the next listing; the other runners' machines are adopted.
 
 ## Validation

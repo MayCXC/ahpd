@@ -5,7 +5,7 @@ depends: [task-04-the-hub-lists-a-node.md]
 layer: "sdk | server"
 refs:
   - "[code://.project/plans/daemon/13-ahpd-restart/plan.md](../../daemon/13-ahpd-restart/plan.md) - `ahpd restart`: quiesce, end agents, resume sessions from the store"
-  - "[code://packages/sdk/src/sessions/nested.ts#L232](../../../../packages/sdk/src/sessions/nested.ts#L232) - `innerSession`, which container/04 task 11 names by the outer id"
+  - "[code://packages/sdk/src/sessions/nested.ts#L404](../../../../packages/sdk/src/sessions/nested.ts#L404) - `innerSession`, which container/04 task 11 names by the outer id"
 ---
 
 ## Objective

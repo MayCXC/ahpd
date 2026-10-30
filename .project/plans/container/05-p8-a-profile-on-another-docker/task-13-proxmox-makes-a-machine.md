@@ -5,7 +5,7 @@ depends: [task-11-lifecycle-and-up-time.md, task-12-a-template-from-versions-jso
 layer: "computer"
 refs:
   - https://pve.proxmox.com/pve-docs/api-viewer/ - the API calls below
-  - "[code://packages/computer/src/plugin.ts#L61](../../../../packages/computer/src/plugin.ts#L61) - `needValue`, `secretAtUse`, the shape for the token secret"
+  - "[code://packages/computer/src/plugin.ts#L84-L91](../../../../packages/computer/src/plugin.ts#L84-L91) - `needValuesOf`; `secretAtUse` is in the schema, the shape for the token secret"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ refs:
 ## Files
 
 - `CREATE: packages/computer/src/proxmox.ts`.
-- `UPDATE: packages/computer/src/plugin.ts:70-108` - `proxmox: { url, tokenId, secret, node, storage, bridge, ca? }` and the `runtime` value; `secret` is `secretAtUse: true` and `writeOnly`, and `ca` is a path to a PEM file read when the runtime is built.
+- `UPDATE: packages/computer/package.json:90-222` - `proxmox: { url, tokenId, secret, node, storage, bridge, ca? }` and the `runtime` value; `secret` is `secretAtUse: true` and `writeOnly`, and `ca` is a path to a PEM file read when the runtime is built.
 - `CREATE: packages/computer/test/computer-proxmox.test.ts` - against a fake API on a local port.
 
 ## Steps

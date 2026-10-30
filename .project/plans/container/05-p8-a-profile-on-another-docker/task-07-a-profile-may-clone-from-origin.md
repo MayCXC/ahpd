@@ -4,8 +4,8 @@ status: todo
 depends: [task-03-the-code-arrives-by-clone.md]
 layer: "computer"
 refs:
-  - "[code://packages/computer/src/manifest.ts#L34-L100](../../../../packages/computer/src/manifest.ts#L34-L100) - `Profile`, which gains `code` and `gitCredential`"
-  - "[code://packages/computer/src/plugin.ts#L103-L141](../../../../packages/computer/src/plugin.ts#L103-L141) - `profilesOf`, where a profile's fields are read"
+  - "[code://packages/computer/src/manifest.ts#L36-L218](../../../../packages/computer/src/manifest.ts#L36-L218) - `Profile`, which gains `code` and `gitCredential`"
+  - "[code://packages/computer/src/plugin.ts#L99-L169](../../../../packages/computer/src/plugin.ts#L99-L169) - `profilesOf`, where a profile's fields are read"
   - "[code://.project/plans/vault/01-p1-the-vault-and-its-local-file/task-04-a-plugin-option-names-a-secret.md](../../vault/01-p1-the-vault-and-its-local-file/task-04-a-plugin-option-names-a-secret.md) - a plugin option written `{ \"$secret\" }` is the secret's value when `apply` runs"
 ---
 
@@ -13,12 +13,12 @@ refs:
 
 A profile on another Docker with `code: "clone"` has its machine clone the repository from its `origin` remote and check out the session's branch, using a git credential the profile names from the vault as `gitCredential: { "$secret": "<scope:name>" }`, read with `host.secret` when the machine is made, for the machine's owner.
 A credential that cannot be read fails only that create, with a sentence naming the profile and the secret; the plugin and every other profile load and work.
-The default stays `code: "bundle"` (task 03); the way back is task 03's bundle out, the same for both.
+The default stays `code: "bundle"` (task 03); the way back is host/67's bring-back, the same for both.
 
 ## Files
 
-- `UPDATE: packages/computer/src/manifest.ts:34-100` - `Profile.code?: 'bundle' | 'clone'` and `Profile.gitCredential?: string`, documented.
-- `UPDATE: packages/computer/src/plugin.ts:142-175` - read both; `gitCredential` is `secretAtUse: true` and `writeOnly` in the schema, as a need value is, so the loader passes the reference through and never reads it at load.
+- `UPDATE: packages/computer/src/manifest.ts:36-218` - `Profile.code?: 'bundle' | 'clone'` and `Profile.gitCredential?: string`, documented.
+- `UPDATE: packages/computer/src/plugin.ts:99-169` - read both; `gitCredential` is `secretAtUse: true` and `writeOnly` in the schema, as a need value is, so the loader passes the reference through and never reads it at load.
 - `UPDATE: packages/computer/src/clone.ts` - `bringIn` gains the `clone` route beside `bundle`: the machine runs `git clone` of the repository's `origin` URL with the session's branch, the credential given by name through p1's route and read by an inline credential helper from the environment, never in argv or in the clone's config.
 - `UPDATE: packages/computer/test/computer-disposable.test.ts` - the cases below.
 

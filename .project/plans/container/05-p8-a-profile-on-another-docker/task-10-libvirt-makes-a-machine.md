@@ -4,8 +4,8 @@ status: todo
 depends: [task-03-the-code-arrives-by-clone.md, task-08-dev02-runs-libvirt.md, task-09-an-address-is-reached-by-ssh.md]
 layer: "computer"
 refs:
-  - "[code://packages/computer/src/runtime.ts#L645-L746](../../../../packages/computer/src/runtime.ts#L645-L746) - docker's `run`, the spec it reads"
-  - "[code://packages/computer/src/runtime.ts#L602-L633](../../../../packages/computer/src/runtime.ts#L602-L633) - docker's `list` and `inspect`, the rows to answer"
+  - "[code://packages/computer/src/runtime.ts#L3174-L3498](../../../../packages/computer/src/runtime.ts#L3174-L3498) - docker's `run`, the spec it reads"
+  - "[code://packages/computer/src/runtime.ts#L3008-L3066](../../../../packages/computer/src/runtime.ts#L3008-L3066) - docker's `list` and `inspect`, the rows to answer"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ refs:
 ## Files
 
 - `CREATE: packages/computer/src/libvirt.ts`.
-- `UPDATE: packages/computer/src/plugin.ts:70-108` - `libvirt` options and `runtime` enum value; registered with the router.
+- `UPDATE: packages/computer/package.json:90-222` - `libvirt` options and `runtime` enum value; registered with the router.
 - `CREATE: packages/computer/test/fixtures/virsh.mjs` - a fake `virsh` and `virt-install` keeping domains in a JSON file.
 - `CREATE: packages/computer/test/computer-libvirt.test.ts`.
 
