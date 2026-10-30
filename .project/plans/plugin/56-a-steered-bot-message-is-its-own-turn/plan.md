@@ -69,7 +69,7 @@ client chat/pendingMessageSet steering -> bot chat steer -> end the open turn as
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A steer starts its own turn](task-01-a-steer-starts-its-own-turn.md) | implemented | - |
-| [02 - A steered turn carries its sender](task-02-a-steered-turn-carries-its-sender.md) | todo | 01 |
+| [02 - A steered turn carries its sender](task-02-a-steered-turn-carries-its-sender.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -78,8 +78,8 @@ client chat/pendingMessageSet steering -> bot chat steer -> end the open turn as
 
 ## Resume state
 
-- **Done so far:** task 01 is implemented. A steer ends the open turn and begins one of its own; a reload reads it, and the wake's answer follows the new turn.
-- **Next action:** task 02, then the Final verification checklist by hand.
+- **Done so far:** tasks 01 and 02 are implemented. A steer ends the open turn and begins one of its own; a reload reads it, and the wake's answer follows the new turn. The steered turn carries the sender of the steered message, through the optional `from` on `Session.steer`.
+- **Next action:** the Final verification checklist, by hand, in review.
 - **Open questions:** none.
 - **Watch out for:** `finish` calls `startNext`, so the split uses the new `next` parameter to leave the queue waiting.
 
