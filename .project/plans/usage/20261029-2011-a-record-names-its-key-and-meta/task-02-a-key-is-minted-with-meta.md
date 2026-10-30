@@ -19,11 +19,11 @@ One helper checks meta against the bounds, and task 03 uses the same helper for 
 
 - `CREATE: packages/sdk/src/access/meta.ts` - `checkMeta`, which checks a map against the bounds, and `parseMeta`, which reads `k=v,k=v`.
 - `UPDATE: packages/sdk/src/index.ts` - exports `checkMeta` and `parseMeta`.
-- `UPDATE: packages/sdk/src/types/users.ts:271-299` - adds `meta?: Record<string, string>` to `TokenRecord`, and the mint options type gets `meta`.
-- `UPDATE: packages/sdk/src/access/users.ts:905-940` - the tokens file reader accepts `meta` only when `checkMeta` accepts it.
-- `UPDATE: packages/sdk/src/access/users.ts:1512-1569` - `mintToken` checks `meta` and writes it.
-- `UPDATE: packages/sdk/src/access/tokens.ts:36-136` - `x-ahpd/tokens/mint` takes `meta` as an object of strings.
-- `UPDATE: packages/server/src/commands/token.ts:110-240` - `--meta <key=value>`, repeatable, on `token mint`, and the meta in each `token list` line.
+- `UPDATE: packages/sdk/src/types/users.ts:290-337` - adds `meta?: Record<string, string>` to `TokenRecord`, and the mint options type gets `meta`.
+- `UPDATE: packages/sdk/src/access/users.ts:907-967` - the tokens file reader accepts `meta` only when `checkMeta` accepts it.
+- `UPDATE: packages/sdk/src/access/users.ts:1566-1651` - `mintToken` checks `meta` and writes it.
+- `UPDATE: packages/sdk/src/access/tokens.ts:38-162` - `x-ahpd/tokens/mint` takes `meta` as an object of strings.
+- `UPDATE: packages/server/src/commands/token.ts:128-277` - `--meta <key=value>`, repeatable, on `token mint`, and the meta in each `token list` line.
 - `CREATE: packages/sdk/test/meta.test.ts` - the bounds and the parse.
 - `UPDATE: packages/sdk/test/users-tokens.test.ts` - the mint with meta.
 - `UPDATE: packages/server/test/token-command.test.ts` - the flag and the list line.

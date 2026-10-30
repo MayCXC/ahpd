@@ -16,10 +16,10 @@ A call made with the deployment token, a session token or a sign-in that is not 
 ## Files
 
 - `UPDATE: packages/sdk/src/types/usage.ts:36-63` - adds `token?: string` to `UsageBase`: the id of the key that made the call.
-- `UPDATE: packages/server/src/proxy/listener.ts:460-494` - `Charged` gets `token`, and `chargedAs` sets it from `principal.token` for a person.
-- `UPDATE: packages/server/src/proxy/listener.ts:1095-1131` - `record` writes `token` when `Charged` has one.
+- `UPDATE: packages/server/src/proxy/listener.ts:460-493` - `Charged` gets `token`, and `chargedAs` sets it from `principal.token` for a person.
+- `UPDATE: packages/server/src/proxy/listener.ts:1114-1152` - `record` writes `token` when `Charged` has one.
 - `UPDATE: packages/server/test/proxy-policy-usage.test.ts` - the record of a call made with a key.
-- `UPDATE: docs/server/PROXY.md:204-211` - "What is recorded" names `token`.
+- `UPDATE: docs/server/PROXY.md:212-219` - "What is recorded" names `token`.
 
 ## Steps
 

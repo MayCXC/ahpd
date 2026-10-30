@@ -7,15 +7,15 @@ created: 2026-10-29
 revalidated: 2026-10-29
 refs:
   - file:///github/ahpd/.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, parts 4 and 5
-  - git://5e2b7003 - the commit of `main` the facts were checked at
+  - git://2d21e7bd - the commit of `main` the facts were checked at
   - "[code://packages/sdk/src/types/usage.ts#L36-L63](../../../../packages/sdk/src/types/usage.ts#L36-L63) - `UsageBase`, which gets `token` and `meta`"
-  - "[code://packages/sdk/src/types/users.ts#L271-L299](../../../../packages/sdk/src/types/users.ts#L271-L299) - `TokenRecord`, which gets `meta`"
-  - "[code://packages/sdk/src/access/users.ts#L1512-L1569](../../../../packages/sdk/src/access/users.ts#L1512-L1569) - `mintToken`, which writes `meta`"
-  - "[code://packages/sdk/src/access/tokens.ts#L110-L136](../../../../packages/sdk/src/access/tokens.ts#L110-L136) - `x-ahpd/tokens/mint`, which takes `meta`"
-  - "[code://packages/server/src/commands/token.ts#L150-L240](../../../../packages/server/src/commands/token.ts#L150-L240) - `ahpd token mint` and `token list`"
+  - "[code://packages/sdk/src/types/users.ts#L290-L337](../../../../packages/sdk/src/types/users.ts#L290-L337) - `TokenRecord`, which gets `meta`"
+  - "[code://packages/sdk/src/access/users.ts#L1566-L1651](../../../../packages/sdk/src/access/users.ts#L1566-L1651) - `mintToken`, which writes `meta`"
+  - "[code://packages/sdk/src/access/tokens.ts#L130-L162](../../../../packages/sdk/src/access/tokens.ts#L130-L162) - `x-ahpd/tokens/mint`, which takes `meta`"
+  - "[code://packages/server/src/commands/token.ts#L180-L277](../../../../packages/server/src/commands/token.ts#L180-L277) - `ahpd token mint` and `token list`"
   - "[code://packages/server/src/proxy/caller.ts#L86-L112](../../../../packages/server/src/proxy/caller.ts#L86-L112) - `callerOf`, which reads `X-AHP-Scope` the way it will read `X-AHP-Meta`"
-  - "[code://packages/server/src/proxy/listener.ts#L472-L494](../../../../packages/server/src/proxy/listener.ts#L472-L494) - `chargedAs`, what a record is charged as"
-  - "[code://packages/server/src/proxy/listener.ts#L1095-L1131](../../../../packages/server/src/proxy/listener.ts#L1095-L1131) - `record`, which writes the proxy's `ModelUse`"
+  - "[code://packages/server/src/proxy/listener.ts#L472-L493](../../../../packages/server/src/proxy/listener.ts#L472-L493) - `chargedAs`, what a record is charged as"
+  - "[code://packages/server/src/proxy/listener.ts#L1114-L1152](../../../../packages/server/src/proxy/listener.ts#L1114-L1152) - `record`, which writes the proxy's `ModelUse`"
   - "[code://packages/server/src/proxy/listener.ts#L150-L156](../../../../packages/server/src/proxy/listener.ts#L150-L156) - every `x-ahp-*` header stays on the host and is not sent upstream"
 ---
 

@@ -19,15 +19,15 @@ A malformed header is refused with 400, and no `X-AHP-*` header goes upstream.
 ## Files
 
 - `UPDATE: packages/sdk/src/types/usage.ts:36-63` - adds `meta?: Record<string, string>` to `UsageBase`.
-- `UPDATE: packages/sdk/src/types/users.ts:40-130` - adds a `keyMeta` getter to `Principal`: the meta of the key it signed in with.
-- `UPDATE: packages/sdk/src/access/users.ts:992-1114` - `principalOf` defines `keyMeta` from the live token record.
+- `UPDATE: packages/sdk/src/types/users.ts:42-151` - adds a `keyMeta` getter to `Principal`: the meta of the key it signed in with.
+- `UPDATE: packages/sdk/src/access/users.ts:1019-1169` - `principalOf` defines `keyMeta` from the live token record.
 - `UPDATE: packages/server/src/proxy/caller.ts:42-112` - adds `META_HEADER`, parses it with `parseMeta`, and puts the merged meta on a person's caller.
-- `UPDATE: packages/server/src/proxy/listener.ts:460-494` - `Charged` gets `meta` from the caller.
-- `UPDATE: packages/server/src/proxy/listener.ts:1095-1131` - `record` writes `meta` when it has entries.
+- `UPDATE: packages/server/src/proxy/listener.ts:460-493` - `Charged` gets `meta` from the caller.
+- `UPDATE: packages/server/src/proxy/listener.ts:1114-1152` - `record` writes `meta` when it has entries.
 - `UPDATE: packages/server/test/proxy-listener.test.ts` - the header, the merge and the refusal.
 - `UPDATE: packages/server/test/proxy-policy-usage.test.ts` - the record with meta.
 - `UPDATE: docs/server/PROXY.md` - "Who may call" names the header, and "What is recorded" names `meta`.
-- `UPDATE: docs/server/USERS.md:37-59` - `token mint --meta`.
+- `UPDATE: docs/server/USERS.md:37-69` - `token mint --meta`.
 - `UPDATE: docs/sdk/USAGE.md:18-33` - "What a record is" names `token` and `meta`.
 
 ## Steps
