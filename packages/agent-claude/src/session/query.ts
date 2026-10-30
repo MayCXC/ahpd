@@ -940,6 +940,14 @@ export function createQuery(ctx: SessionContext): Query {
         if (type === 'assistant') {
           // A failure of the turn's login that the turn does not show.
           if (ctx.refused(message)) continue;
+          /*
+           * The CLI's own notice of a request it gave up on, which carries
+           * `error` and no model's words: the `result` after it says the same
+           * words, and the turn ends with them, so they are not an answer too.
+           * The reference draws a lead turn's text from the stream alone.
+           * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeMapSessionEvents.ts#L320-L347
+           */
+          if (str(message.error) !== undefined && (str(message.parent_tool_use_id) ?? '') === '') continue;
           ctx.assistant(bag(message.message), str(message.parent_tool_use_id) ?? '');
           continue;
         }
@@ -972,12 +980,19 @@ export function createQuery(ctx: SessionContext): Query {
           /*
            * Read before the turn is pushed, because the reason goes inside it.
            * A failure of the turn's login that it did not show says its own
-           * words. `is_error` carries the words; a subtype that is not
-           * `success` is a turn that ended badly with none, and saying which is
-           * better than an error part that says only that there was one.
+           * words. `is_error` carries the CLI's words: a `success` that failed
+           * holds them in `result`, as a request the CLI gave up on does, and
+           * an error subtype in `errors`, as the reference reads them. A
+           * subtype that is not `success` is a turn that ended badly with none,
+           * and saying which is better than an error part that says only that
+           * there was one.
+           * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeMapSessionEvents.ts#L567-L575
            */
+          const words = str(message.subtype) === 'success'
+            ? str(message.result)
+            : list(message.errors).map(String).join('\n');
           const wrong = ctx.failure() ?? (message.is_error === true
-            ? (list(message.errors).map(String).join('\n') || 'The turn failed')
+            ? (words || 'The turn failed')
             : str(message.subtype) !== 'success'
               ? `The turn ended ${str(message.subtype) ?? 'without succeeding'}`
               : undefined);
