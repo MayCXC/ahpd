@@ -38,7 +38,7 @@ The files read and the patterns to reuse are the `refs` in the frontmatter, each
 ```
 policy row or key: { amount: 60, measure: calls, period: minute }
 call -> chargeFor -> limitsOf: minute -> meter.sum(key, minute start) -> room?
-     -> allowed: meter.add(key/calls, 1) now
+     -> allowed: the caller's countCall adds 1 to key/calls, once per request or turn
 call ends -> usage.record(entry) -> meter.add(key/tokens, n), meter.add(key/usd, cost)
 ```
 
@@ -57,10 +57,12 @@ call ends -> usage.record(entry) -> meter.add(key/tokens, n), meter.add(key/usd,
 | The minute totals are in memory, and a restart clears them | (defaulted: a minute is lost at most) | 01 |
 | `calls` and `turns` are counted when the call is allowed | (defaulted: a call counted at its end lets a burst through) | 02 |
 | `tokens` and `usd` are counted when the record is kept | (defaulted: they are known only at the end of a call) | 01 |
+| One request is one call: the proxy counts once, on the candidate it sends to, and a fallback is the same call | Softov, 2026-10-29: fix both before the PR | 02 |
+| `policy://<id>/limits` and `usage://limits` answer a `minute` limit from the daemon's meter | Softov, 2026-10-29: fix both before the PR | 02 |
 
 ## Proposed architecture
 
-- **Data flow** - `createMinuteMeter` keeps a sum per key for the current and the last minute. The usage store adds `tokens`, `usd` and `hours` at record. `chargeFor` adds `calls` and `turns` when it allows. `limitsOf` reads a `minute` limit from the meter.
+- **Data flow** - `createMinuteMeter` keeps a sum per key for the current and the last minute. The usage store adds `tokens`, `usd` and `hours` at record. `chargeFor` reads a `minute` limit from the meter and counts nothing; the proxy and the turn check count `calls` and `turns` once each, through `countCall`.
 - **Event flow** - none.
 - **State flow** - the meter is in memory, one for each daemon, and the server gives the same one to the store and to every `chargeFor`.
 - **Layer responsibilities** - sdk: `Period`, `periodOf`, the meter, the store and `chargeFor` · server: one meter, passed through · docs.
