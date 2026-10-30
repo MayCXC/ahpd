@@ -1,6 +1,6 @@
 ---
 title: The host honours a token's target
-status: todo
+status: done
 depends: []
 layer: host
 refs:
@@ -54,3 +54,5 @@ A target that names nothing this host publishes, or a server that does not wait 
 
 ## Resume
 
+Done 2026-10-30.
+Every step is built, and the test files and the type check pass.

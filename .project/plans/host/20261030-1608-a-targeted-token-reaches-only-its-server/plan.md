@@ -1,7 +1,7 @@
 ---
 title: A targeted token reaches only its server
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -87,7 +87,7 @@ authenticate { resource, token, target } -> every chat of every session whose aw
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host honours a token's target](task-01-the-host-honours-a-tokens-target.md) | todo | - |
+| [01 - The host honours a token's target](task-01-the-host-honours-a-tokens-target.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -98,7 +98,7 @@ authenticate { resource, token, target } -> every chat of every session whose aw
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-30.
-- **Next action:** [task-01-the-host-honours-a-tokens-target.md](task-01-the-host-honours-a-tokens-target.md).
+- **Done so far:** planned and built 2026-10-30. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a session's servers come from its lead chat and from its clients' plugins, so the lookup reads both halves.
