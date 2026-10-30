@@ -19,7 +19,8 @@ import type { ComputerRuntime, DockerOptions, Machine, MachineSpec } from './run
 import { routed, parseMachineId, spellMachineId } from './router.js';
 import type { Routed } from './router.js';
 import { machinesOf, sshRuntime } from './ssh.js';
-import type { SshOptions } from './ssh.js';
+import type { SshMachine, SshOptions } from './ssh.js';
+import { serverGate } from './servercheck.js';
 import { NODE_RUNTIME, nodeRuntime } from './node.js';
 import { claimAdopted, claimOwned, forgetOwned, keepMadeNeeds, keepProbe, madeNeedsOf, ownedOf, probeOf } from './owners.js';
 import { computerTools } from './tools.js';
@@ -275,6 +276,13 @@ export const listingMeter = (
   reachable: (id) => { book.open(id); },
   unreachable: (id) => book.close(id, { owner: `root:${hostName}` }),
 });
+
+/**
+ * The Docker on a box, as `DOCKER_HOST` names it: `ssh://<destination>`, with
+ * the box's port when it sets one.
+ */
+export const dockerAddressOf = (box: SshMachine): string =>
+  `ssh://${box.destination}${box.port === undefined ? '' : `:${box.port}`}`;
 
 /**
  * Whether a runtime makes machines, from the actions it says it has.
@@ -593,6 +601,61 @@ export const apply: Plugin['apply'] = (host, options) => {
   const sshed = ssh === undefined ? undefined : sshRuntime({ ...ssh, ...(env === undefined ? {} : { env }) });
 
   /*
+   * One Docker for each profile that names a box, reached through Docker's own
+   * `ssh://` transport, by the value its machines' ids are spelled with.
+   *
+   * A box with an `identity` is left out with its profile: Docker's transport
+   * takes no key, so the key is named in ssh's own configuration instead. A
+   * box whose address is the plugin's own Docker gets no second runner, since
+   * its machines would be listed twice; the profile makes them on that one.
+   */
+  const farValues: Record<string, string> = {};
+  const farDockers: Record<string, ComputerRuntime> = {};
+  for (const [key, one] of Object.entries(profiles ?? {})) {
+    const box = one.server === undefined ? undefined : ssh?.machines[one.server];
+    if (box === undefined) continue;
+    if (key.includes('.')) {
+      host.log(`${name}: profiles.${key} names a server, and a dot in its name would read as part of its machines' ids, so the profile is left out`);
+      delete profiles?.[key];
+      continue;
+    }
+    if (box.identity !== undefined) {
+      host.log(`${name}: profiles.${key} names the server ${one.server}, whose identity Docker cannot be given; name the key for ${box.destination} in ssh's own configuration instead, so the profile is left out`);
+      delete profiles?.[key];
+      continue;
+    }
+    const address = dockerAddressOf(box);
+    if (address === (env?.DOCKER_HOST ?? '')) {
+      host.log(`${name}: profiles.${key} names the server ${one.server}, whose Docker is this plugin's own, so its machines are made on that one`);
+      continue;
+    }
+    const value = `${dockered.kind}-${key}`;
+    farValues[key] = value;
+    farDockers[value] = dockerRuntime({
+      ...dockeredOptions,
+      env: { ...env, DOCKER_HOST: address },
+      remote: true,
+      profile: key,
+      ...(host.hostId === undefined ? {} : { hostId: host.hostId }),
+    });
+  }
+  /*
+   * How long a box's Docker is given for a question about its machines: as
+   * long as `ssh` is given for one command to a box.
+   */
+  const farTimeout = (ssh?.connectTimeout ?? 10) * 1000 + 10_000;
+
+  /*
+   * The box a profile's machines are made on, checked for a Docker this
+   * account can reach before each one is made. The report is kept a minute.
+   */
+  const gate = sshed === undefined ? undefined : serverGate(async (server) => {
+    const report = await sshed.check?.(server);
+    if (report === undefined) throw new Error(`${server} is not a box this host reaches over ssh`);
+    return report;
+  });
+
+  /*
    * The hosts that joined this one, built only where this daemon has a join
    * path.
    *
@@ -617,8 +680,36 @@ export const apply: Plugin['apply'] = (host, options) => {
     [dockered.kind]: dockered,
     ...(sshed === undefined ? {} : { [sshed.kind]: sshed }),
     ...(noded === undefined ? {} : { [noded.kind]: noded }),
+    ...farDockers,
   };
-  const computerRouter = routed(runtimes, runtime, { log: noted });
+  /*
+   * The runners whose machines were never adopted, because their startup
+   * listing did not answer, and what adopts them once the startup is over.
+   */
+  const unadopted = new Set<string>();
+  let adoptLate: ((found: Machine[]) => Promise<void>) | undefined;
+  const computerRouter = routed(runtimes, runtime, {
+    log: noted,
+    timeouts: Object.fromEntries(Object.keys(farDockers).map((value) => [value, farTimeout])),
+    makerFor: (spec) => {
+      const key = spec.disposable?.profile ?? spec.profile;
+      return key === undefined ? undefined : farValues[key];
+    },
+    listed: (value, rows) => {
+      if (rows === undefined) {
+        if (adoptLate === undefined && !unadopted.has(value)) {
+          unadopted.add(value);
+          noted(`the ${value} runtime's machines are adopted at the next listing that reaches it`);
+        }
+        return;
+      }
+      if (adoptLate !== undefined && unadopted.delete(value)) {
+        void adoptLate(rows).catch((error: unknown) => {
+          noted(`the ${value} runtime's machines were not adopted: ${error instanceof Error ? error.message : String(error)}`);
+        });
+      }
+    },
+  });
 
   /*
    * Read one need's value when it names a secret.
@@ -832,6 +923,13 @@ export const apply: Plugin['apply'] = (host, options) => {
     ...computerRouter,
     list: async () => meterRows(await computerRouter.list()),
     run: async (asked: MachineSpec) => {
+      /*
+       * A machine made on a box's Docker waits for the box to have a Docker
+       * this account can reach, and is refused with the fix lines when not.
+       */
+      const key = asked.disposable?.profile ?? asked.profile;
+      const server = key === undefined || farValues[key] === undefined ? undefined : profiles?.[key]?.server;
+      if (server !== undefined && gate !== undefined) await gate.requireOn(server, ['docker', 'dockerAccess']);
       /*
        * The parts the machine asks for, built before it is made. One that will
        * not build is left out with a line naming it and the build's reason,
@@ -1157,7 +1255,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    * first would be dropped, and the machine armed by this listing would then
    * be removed out from under the session running in it.
    */
-  const listing = made.list().then(async (found) => {
+  const adopt = async (found: Machine[]): Promise<void> => {
     for (const one of found) {
       /*
        * A machine made under the guard this plan replaced, which `madeUnderBind`
@@ -1218,7 +1316,11 @@ export const apply: Plugin['apply'] = (host, options) => {
         ? `${name}: found the disposable machine ${one.id} left behind; it is held for ${one.session}`
         : `${name}: found the disposable machine ${one.id} left behind; it goes ${delay}ms from now`);
     }
-  }).catch(() => {}).then(() => catalogue.refresh());
+  };
+  const listing = made.list().then(adopt).catch(() => {}).then(() => {
+    adoptLate = adopt;
+    return catalogue.refresh();
+  });
 
   const scheme = computerProvider(made, {
     image,

@@ -1,7 +1,7 @@
 ---
 title: A profile's machines may live on another server's Docker
 domain: container
-status: planned
+status: active
 priority: medium
 created: 2026-09-26
 revalidated: 2026-10-30
@@ -117,7 +117,7 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A profile names its Docker, and its machines' ids say which](task-01-a-profile-names-its-docker.md) | todo | server check 03 |
+| [01 - A profile names its Docker, and its machines' ids say which](task-01-a-profile-names-its-docker.md) | done | server check 03 |
 | [02 - A machine on another Docker takes no bind mount](task-02-no-bind-mount-on-another-docker.md) | todo | 01 |
 | [03 - The session's code arrives by bundle and returns as a branch](task-03-the-code-arrives-by-clone.md) | todo | 02 |
 | [04 - Sessions in a machine on another Docker run nested](task-04-sessions-there-run-nested.md) | todo | 01 |
@@ -139,8 +139,8 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 
 ## Resume state
 
-- **Done so far:** no task; planned 2026-10-02. Main has parts of tasks 01, 03 and 04 from other plans, checked 2026-10-30. `claimOf` reads through the router, p9 spells the ids, and the router bounds `list`. The `ahpd.host` label exists, host/67 brings work back, and `spawnEnvOf` puts the runtime's `env` in the descriptor. Tasks 08 to 13 moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30.
-- **Next action:** [task-01-a-profile-names-its-docker.md](task-01-a-profile-names-its-docker.md), after the server check's task 03.
+- **Done so far:** no task; planned 2026-10-02. Main has parts of tasks 01, 03 and 04 from other plans, checked 2026-10-30. `claimOf` reads through the router, p9 spells the ids, and the router bounds `list`. The `ahpd.host` label exists, host/67 brings work back, and `spawnEnvOf` puts the runtime's `env` in the descriptor. Tasks 08 to 13 moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30. Task 01 is done (2026-10-30).
+- **Next action:** [task-02-no-bind-mount-on-another-docker.md](task-02-no-bind-mount-on-another-docker.md).
 - **Open questions:** none; the `isolation: folder` question is answered by host/67's rules (2026-10-30).
 - **Watch out for:** the `clone` route puts a git credential in the box for the clone command only.
 It needs the vault (vault/01-p1 task 04) to name it. The `bundle` route needs neither. A folder that is not a repository has no clone, and this plan refuses it.

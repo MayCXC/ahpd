@@ -15,7 +15,7 @@
  * `new URL`, which takes the colon for a port and refuses the URI.
  */
 
-import type { ComputerRuntime } from './runtime.js';
+import type { ComputerRuntime, Machine, MachineSpec } from './runtime.js';
 
 /** The runtime a machine with a bare name is on: the Docker on this host. */
 export const BARE = 'docker';
@@ -53,6 +53,27 @@ export interface RoutedOptions {
   log?: (line: string) => void;
   /** How long one runtime's listing is given before it is cut off, in milliseconds. */
   listTimeout?: number;
+  /**
+   * How long each of these runtimes is given for any question about its
+   * machines, by value, in milliseconds: its listing, and every read of one.
+   *
+   * A runtime named here is one reached over the network, whose program can
+   * hang on a box that is not there; the verbs that change a machine or run
+   * in one are not bounded, since a pull or a command takes what it takes.
+   */
+  timeouts?: Record<string, number>;
+  /**
+   * The value a create goes to, when it is not the fallback.
+   *
+   * Answered from the spec, so a machine made from a profile with its own
+   * runtime is made there.
+   */
+  makerFor?: (spec: MachineSpec) => string | undefined;
+  /**
+   * Told after each listing what each runtime answered: its rows under the
+   * ids this router spells, or nothing when it did not answer.
+   */
+  listed?: (value: string, rows: Machine[] | undefined) => void;
 }
 
 /** A runtime that serves several, picked by the id each call carries. */
@@ -97,6 +118,7 @@ export const routed = (
 ): Routed => {
   const timeout = options.listTimeout ?? LIST_TIMEOUT;
   const served = Object.keys(runtimes);
+  const timeoutOf = (value: string): number => options.timeouts?.[value] ?? timeout;
 
   /** The runtime and the name alone, or a refusal naming what this host serves. */
   const must = (id: string): { runtime: ComputerRuntime; name: string } => {
@@ -121,14 +143,16 @@ export const routed = (
   ): Promise<T | undefined> => {
     const { runtime, name } = parseMachineId(id);
     const held = runtimes[runtime];
-    return held === undefined ? Promise.resolve(undefined) : ask(held, name);
+    if (held === undefined) return Promise.resolve(undefined);
+    const ms = options.timeouts?.[runtime];
+    return ms === undefined ? ask(held, name) : bounded(ask(held, name), ms, runtime);
   };
 
   /** The runtime a create goes to, which is the value this host is configured with. */
-  const maker = (): ComputerRuntime => {
-    const held = runtimes[fallback];
+  const maker = (value = fallback): ComputerRuntime => {
+    const held = runtimes[value];
     if (held === undefined) {
-      throw new Error(`This host serves ${served.join(', ')} and no ${fallback}, so no machine is made`);
+      throw new Error(`This host serves ${served.join(', ')} and no ${value}, so no machine is made`);
     }
     return held;
   };
@@ -158,16 +182,18 @@ export const routed = (
     list: async () => {
       const answers = await Promise.all(Object.entries(runtimes).map(async ([value, runtime]) => {
         try {
-          return { value, rows: await bounded(runtime.list(), timeout, value) };
+          const rows = (await bounded(runtime.list(), timeoutOf(value), value))
+            .map((row) => ({ ...row, id: spellMachineId(value, row.id) }));
+          options.listed?.(value, rows);
+          return rows;
         }
         catch (error) {
           options.log?.(`the ${value} runtime did not list its machines, so they are left out: ${reasonOf(error)}`);
-          return undefined;
+          options.listed?.(value, undefined);
+          return [];
         }
       }));
-      return answers.flatMap((one) => (one === undefined
-        ? []
-        : one.rows.map((row) => ({ ...row, id: spellMachineId(one.value, row.id) }))));
+      return answers.flat();
     },
 
     inspect: (id) => about(id, (runtime, name) => runtime.inspect(name)),
@@ -186,8 +212,9 @@ export const routed = (
     },
 
     /*
-     * A machine is made on the runtime this host is configured with, under the
-     * id that runtime spells its name into.
+     * A machine is made on the runtime this host is configured with, or the
+     * one its spec names through `makerFor`, under the id that runtime spells
+     * its name into.
      *
      * A name on the bare runtime is the whole id, so a dot in it would be read
      * as another runtime's id - here, and by whatever a client hands back. It
@@ -195,12 +222,13 @@ export const routed = (
      * made into a machine no caller can address again.
      */
     run: async (spec) => {
-      const held = maker();
-      if (fallback === BARE && spec.name.includes('.')) {
+      const value = options.makerFor?.(spec) ?? fallback;
+      const held = maker(value);
+      if (value === BARE && spec.name.includes('.')) {
         throw new Error(`${spec.name} is not a name for a machine on this host: a dot in it reads as another runtime's, and these machines are addressed by their name alone`);
       }
       const made = await held.run(spec);
-      return { ...made, id: spellMachineId(fallback, made.id) };
+      return { ...made, id: spellMachineId(value, made.id) };
     },
 
     stop: async (id) => { const { runtime, name } = must(id); await runtime.stop(name); },

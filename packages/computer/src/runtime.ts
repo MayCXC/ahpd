@@ -856,6 +856,29 @@ export interface DockerOptions extends CommandOptions {
    * route a Docker that refuses image mounts takes anyway.
    */
   imageMounts?: boolean;
+  /**
+   * Whether this Docker is on another box, reached through `env.DOCKER_HOST`.
+   *
+   * Such a Docker is not this host's: its machines run every backend nested,
+   * and a dev container record kept beside this host's configuration names
+   * none of its containers.
+   */
+  remote?: boolean;
+  /**
+   * The profile every machine this runtime makes is made from, by key.
+   *
+   * Set for a profile's own Docker, so its listing is that profile's machines
+   * only: two profiles on one Docker list disjoint machines.
+   */
+  profile?: string;
+  /**
+   * This daemon's own id, which every machine a remote runtime makes carries
+   * as `ahpd.host`.
+   *
+   * A remote Docker may be another daemon's too, so its listing is the
+   * machines carrying this id only.
+   */
+  hostId?: string;
 }
 
 /** How a part reaches a machine: from its own image, or from a volume filled from it. */
@@ -2212,8 +2235,17 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
    * Read on every call rather than held, because the record is written by a
    * relay that runs after this runtime was made and a listing has to show it.
    */
+  /**
+   * The labels a listing filters on beside the plugin's own: a profile's own
+   * Docker lists that profile's machines, and a remote one this daemon's only.
+   */
+  const ownFilters = [
+    ...(options.profile === undefined ? [] : ['--filter', `label=${MACHINE_PROFILE}=${options.profile}`]),
+    ...(options.remote === true && options.hostId !== undefined ? ['--filter', `label=${MACHINE_HOST}=${options.hostId}`] : []),
+  ];
+
   const adoptedIds = (): string[] =>
-    options.configDir === undefined
+    options.configDir === undefined || options.remote === true
       ? []
       : adoptedOf(options.configDir, options.log ?? ((): void => { /* nothing is kept without one */ }));
 
@@ -2994,9 +3026,9 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
   return {
     kind: 'docker',
 
-    // A Docker machine is a container on this host, reached by a `docker exec`
-    // run here: nothing about it is off this host.
-    remote: false,
+    // A Docker machine is a container on the Docker this runtime was given:
+    // this host's own, or another box's when the options say so.
+    remote: options.remote === true,
 
     /*
      * A listing is two calls: `ps` for what is there, then one `inspect` for
@@ -3034,7 +3066,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
         return at === '' ? undefined : adopted.find((one) => one.startsWith(at) || at.startsWith(one));
       };
       const every = listed(await must([
-        'ps', '-a', '--filter', `label=${options.label}`, '--format', LISTED_FORMAT,
+        'ps', '-a', '--filter', `label=${options.label}`, ...ownFilters, '--format', LISTED_FORMAT,
       ]));
       const rest = adopted.length === 0
         ? []
@@ -3187,7 +3219,20 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
      * copy, then `start`. A machine without one stays a single `run`, which is
      * what every machine was before copy-ins existed.
      */
-    run: async (spec) => {
+    run: async (asked) => {
+      /*
+       * A profile's own Docker labels each machine with its profile, and a
+       * remote one with this daemon's id too, because those labels are what
+       * its listing reads its machines back by.
+       */
+      const spec: MachineSpec = {
+        ...asked,
+        ...(options.profile === undefined ? {} : { profile: options.profile }),
+        ...(options.remote === true && asked.host === undefined && options.hostId !== undefined ? { host: options.hostId } : {}),
+      };
+      if (options.remote === true && spec.devcontainer !== undefined) {
+        throw new Error(`${spec.name} is not made from a devcontainer.json on another box's Docker: the Dev Container CLI reads the folder on this host`);
+      }
       /*
        * A dev container: the folder's own file, by the CLI that reads it.
        *
