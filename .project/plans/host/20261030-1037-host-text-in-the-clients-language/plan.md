@@ -1,7 +1,7 @@
 ---
 title: The host's text comes in the client's language
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -98,8 +98,8 @@ x-ahpd-plugins send to a reader -> translate(record, locale of the client) -> th
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-host-keeps-each-clients-locale.md](task-01-the-host-keeps-each-clients-locale.md).
+- **Done so far:** tasks 01 to 05, recorded in [implemented.md](implemented.md).
+- **Next action:** the checks by hand in the final verification checklist.
 - **Open questions:** none.
 - **Watch out for:** `seeded` adds labels from answerers; translate the properties before `seeded` runs, never after.
 
