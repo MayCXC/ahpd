@@ -91,7 +91,7 @@ client opens a picker -> sessionConfigCompletions(property) -> answerer by name 
 
 ## Resume state
 
-- **Done so far:** all four tasks; a harness answers a key of its own schema, marked `enumDynamic`, seeded and asked by provider, the Bot chat offers its bots that way, an ACP harness lists the modes its agent's source names, replaced by the modes a session hears, and a session's settings come in the order computer, isolation and branch, then the rest.
+- **Done so far:** all four tasks. A harness answers a key of its own schema, and the Bot chat offers its bots that way. An ACP harness lists the modes its agent's source names, until a session hears others. A session's settings come in the order computer, isolation and branch, then the rest.
 - **Next action:** none - the plan is implemented, and `implemented.md` names what was verified.
 - **Open questions:** none.
 - **Watch out for:** VS Code draws its own Approvals picker only for Claude's five modes. An ACP harness gets the plain picker, as expected.

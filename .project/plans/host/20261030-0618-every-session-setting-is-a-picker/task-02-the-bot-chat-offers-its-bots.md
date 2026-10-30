@@ -39,7 +39,9 @@ The Bot chat harness answers `bot` with the bot records, so a person picks a bot
 ## Resume
 
 Implemented 2026-10-30.
-`botChatAgent` returns `completions.bot`, which waits for `store.ready()` and answers one item per bot, with the slug as the value and the name as the label, filtered by name or slug without regard to case.
+`botChatAgent` returns `completions.bot`, which waits for `store.ready()` and answers one item per bot.
+The slug is the value and the name is the label, and the filter matches either without regard to case.
 The key's description is "The bot this chat is with."
 `packages/bot/test/bot-chat.test.ts` covers the seed, the `enumDynamic` mark and a query.
-Plan `plugin/56` was not on this branch, which is cut at 3517c9a0, so the harness was edited without it; its hunk is at `steer` and this task's is at the schema, so the two do not overlap.
+Plan `plugin/56` was merged into this branch after the build.
+Its change is at `steer` and this task's is at the schema, so the two do not overlap.
