@@ -105,7 +105,7 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 | [01 - dev02's libvirt has a pool, a network and an image](task-01-dev02s-libvirt-has-a-pool.md) | todo | - |
 | [02 - A machine with an address is reached by ssh, with this host's own key](task-02-an-address-is-reached-by-ssh.md) | done | - |
 | [03 - libvirt makes a machine from a template, and destroys it](task-03-libvirt-makes-a-machine.md) | doing | 01, 02 |
-| [04 - A VM starts, stops, suspends and resumes, and its up time is metered](task-04-lifecycle-and-up-time.md) | todo | 03 |
+| [04 - A VM starts, stops, suspends and resumes, and its up time is metered](task-04-lifecycle-and-up-time.md) | done | 03 |
 | [05 - A template is built from versions.json](task-05-a-template-from-versions-json.md) | todo | 03 |
 | [06 - Proxmox makes a machine the same way](task-06-proxmox-makes-a-machine.md) | todo | 04, 05 |
 | [07 - Docs](task-07-docs.md) | todo | 03, 06 |
@@ -119,8 +119,8 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 
 ## Resume state
 
-- **Done so far:** task 02, and the code of task 03. These tasks were tasks 08 to 13 of p8 until 2026-10-30.
-- **Next action:** [task-04-lifecycle-and-up-time.md](task-04-lifecycle-and-up-time.md), with the scripted `virsh`. The check by hand of task 03 on dev02 waits on task 01, and task 01 waits on Softov's hand in [pending/vm-01-dev02-libvirt.md](../../../pending/vm-01-dev02-libvirt.md).
+- **Done so far:** tasks 02 and 04, and the code of task 03. These tasks were tasks 08 to 13 of p8 until 2026-10-30.
+- **Next action:** [task-05-a-template-from-versions-json.md](task-05-a-template-from-versions-json.md). The check by hand of task 03 on dev02 waits on task 01, and task 01 waits on Softov's hand in [pending/vm-01-dev02-libvirt.md](../../../pending/vm-01-dev02-libvirt.md).
 - **Open questions:** none.
 - **Watch out for:** p3's `hashOf` is the tag, so a template built before p3 lands has no name. A libvirt on this host could share the folder by virtiofs instead of a clone, which is left open, see [deferred.md](deferred.md).
 

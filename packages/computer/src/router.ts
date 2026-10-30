@@ -82,6 +82,11 @@ export interface Routed extends ComputerRuntime {
   readonly runtimes: Record<string, ComputerRuntime>;
   /** The runtime one id names, or nothing when this host serves no runtime of that value. */
   runtimeFor(id: string): ComputerRuntime | undefined;
+  /** Hold one, or refuse in a sentence when its runtime cannot. */
+  suspend(id: string): Promise<void>;
+  /** Let one held machine go on, or refuse in a sentence when its runtime cannot. */
+  resume(id: string): Promise<void>;
+  suspends(id: string): boolean;
 }
 
 const reasonOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
@@ -239,6 +244,20 @@ export const routed = (
     stop: async (id) => { const { runtime, name } = must(id); await runtime.stop(name); },
     start: async (id) => { const { runtime, name } = must(id); await runtime.start(name); },
     restart: async (id) => { const { runtime, name } = must(id); await runtime.restart(name); },
+    suspend: async (id) => {
+      const { runtime, name } = must(id);
+      if (runtime.suspend === undefined) throw new Error(`${id} cannot be suspended: its runtime cannot hold a machine`);
+      await runtime.suspend(name);
+    },
+    resume: async (id) => {
+      const { runtime, name } = must(id);
+      if (runtime.resume === undefined) throw new Error(`${id} cannot be resumed: its runtime cannot hold a machine`);
+      await runtime.resume(name);
+    },
+    suspends: (id) => {
+      const { runtime, name } = parseMachineId(id);
+      return runtimes[runtime]?.suspends?.(name) ?? false;
+    },
     remove: async (id) => { const { runtime, name } = must(id); await runtime.remove(name); },
     exec: async (id, command, env, provider) => {
       const { runtime, name } = must(id);

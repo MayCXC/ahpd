@@ -10,7 +10,8 @@
  * after `VIRSH_FAKE_ADDRESS_AFTER` asks: none when that is `never`.
  *
  * `VIRSH_FAKE_FAIL` names one verb that fails, as `virt-install`, `metadata`
- * or any other. Nothing here boots anything: the runtime is what is under
+ * or any other. `VIRSH_FAKE_SHUTDOWN=ignore` is a guest that never hears a
+ * `shutdown`. Nothing here boots anything: the runtime is what is under
  * test, and the VM it reaches is this host through the scripted `ssh`.
  */
 
@@ -107,13 +108,30 @@ switch (verb) {
     domainOf(rest[0]).state = 'running';
     keep();
     break;
-  case 'shutdown':
-    domainOf(rest[0]).state = 'shut off';
-    keep();
-    break;
-  case 'destroy': {
+  case 'shutdown': {
     const one = domainOf(rest[0]);
     if (one.state !== 'running') fail('Requested operation is not valid: domain is not running');
+    if (process.env.VIRSH_FAKE_SHUTDOWN !== 'ignore') one.state = 'shut off';
+    keep();
+    break;
+  }
+  case 'suspend': {
+    const one = domainOf(rest[0]);
+    if (one.state !== 'running') fail('Requested operation is not valid: domain is not running');
+    one.state = 'paused';
+    keep();
+    break;
+  }
+  case 'resume': {
+    const one = domainOf(rest[0]);
+    if (one.state !== 'paused') fail('Requested operation is not valid: domain is not paused');
+    one.state = 'running';
+    keep();
+    break;
+  }
+  case 'destroy': {
+    const one = domainOf(rest[0]);
+    if (one.state === 'shut off') fail('Requested operation is not valid: domain is not running');
     one.state = 'shut off';
     keep();
     break;

@@ -8,6 +8,7 @@ import { fileResources } from '../../sdk/src/resources/resources.js';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { closeAll, keeping } from './support/closing.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
+import type { Usage, UsageEntry, UsageTotal } from '../../sdk/src/types/usage.js';
 import { addressFrom, domainsFrom, labelsFrom, libvirtRuntime, metadataOf, userDataOf, VM_HOST } from '../src/libvirt.js';
 import type { LibvirtOptions } from '../src/libvirt.js';
 import { keygenWith } from '../src/keys.js';
@@ -79,7 +80,7 @@ const runtime = (more: Omit<Partial<LibvirtOptions>, 'template'> & { template?: 
     configDir: join(dir(), 'config'),
     keygen: keygenWith(process.execPath, [KEYGEN]),
     hostId: 'host-a',
-    waits: { boot: 2_000, ready: 2_000, every: 10 },
+    waits: { boot: 2_000, ready: 2_000, every: 10, shutdown: 200 },
     ...rest,
   });
 };
@@ -217,6 +218,38 @@ it.skipIf(!posix)('stops, starts and removes a VM, with its disk and its known h
   expect(await vms.list()).toEqual([]);
 });
 
+it.skipIf(!posix)('cuts off a VM that does not shut down within the bound', async () => {
+  const lines: string[] = [];
+  const vms = runtime({ log: (line) => { lines.push(line); } }, { VIRSH_FAKE_SHUTDOWN: 'ignore' });
+  await vms.run(spec());
+  await vms.stop('vm-1');
+  expect(await vms.state('vm-1')).toBe('stopped');
+  expect(calls(virshLog()).map((one) => one[3]).filter((verb) => verb === 'shutdown' || verb === 'destroy')).toEqual(['shutdown', 'destroy']);
+  expect(lines).toContainEqual('vm-1 did not shut down within 0 s, so it is cut off');
+  // One already off is left as it is.
+  await vms.stop('vm-1');
+});
+
+it.skipIf(!posix)('suspends and resumes a VM, and restarts a suspended one', async () => {
+  const vms = runtime();
+  await vms.run(spec());
+  expect(vms.suspends?.('vm-1')).toBe(true);
+  expect(vms.capabilities().actions).toEqual(expect.arrayContaining(['suspend', 'resume']));
+  await vms.suspend?.('vm-1');
+  expect(await vms.state('vm-1')).toBe('suspended');
+  await expect(vms.suspend?.('vm-1')).rejects.toThrow(/vm-1 is paused, so it cannot be suspended/);
+  await vms.resume?.('vm-1');
+  expect(await vms.state('vm-1')).toBe('running');
+  await expect(vms.resume?.('vm-1')).rejects.toThrow(/vm-1 is running, so there is nothing to resume/);
+  await vms.suspend?.('vm-1');
+  await vms.restart('vm-1');
+  expect(await vms.state('vm-1')).toBe('running');
+  // A held VM cannot hear a shutdown, so it is cut off.
+  await vms.suspend?.('vm-1');
+  await vms.stop('vm-1');
+  expect(await vms.state('vm-1')).toBe('stopped');
+});
+
 it.skipIf(!posix)('refuses a file put into a VM, which is not done yet', async () => {
   const vms = runtime();
   await vms.run(spec());
@@ -235,10 +268,16 @@ const checkFile = (kvm = 'yes'): string => {
 };
 
 /** The plugin, loaded with one box and the profiles given, over the fixtures. */
-const load = async (profiles: Record<string, unknown>, kvm = 'yes') => {
+const load = async (profiles: Record<string, unknown>, kvm = 'yes', usage?: Usage) => {
   writeFileSync(statePath(), JSON.stringify({ volumes: [TEMPLATE], domains: {} }));
   const lines: string[] = [];
-  const base: HostOptions = { path: '/tmp/computer-libvirt', hostName: 'box.local', agents: [], resources: fileResources() };
+  const base: HostOptions = {
+    path: '/tmp/computer-libvirt',
+    hostName: 'box.local',
+    agents: [],
+    resources: fileResources(),
+    ...(usage === undefined ? {} : { usage }),
+  };
   const result = await loadPlugins(
     [{
       name: './packages/computer/src/index.ts',
@@ -263,6 +302,7 @@ const load = async (profiles: Record<string, unknown>, kvm = 'yes') => {
   keeping(result.options);
   const provider = result.options.resourceProviders?.computer as {
     write(uri: string, content: { data: string; encoding: string }, owner?: string): Promise<void>;
+    read(uri: string): Promise<{ data: string }>;
     list(uri: string): Promise<{ name: string }[]>;
   };
   return { lines, provider };
@@ -287,4 +327,42 @@ it.skipIf(!posix)('refuses a VM on a server with no KVM, with the line that says
 it.skipIf(!posix)('leaves out a profile that makes VMs and names no server', async () => {
   const { lines } = await load({ vm: { runtime: 'libvirt' } });
   expect(lines).toContainEqual(expect.stringContaining('profiles.vm makes VMs and names no server to make them on, so the profile is left out'));
+});
+
+/** The up-time store in memory, so a test can read the stretches the plugin wrote. */
+const meter = (): Usage & { entries: UsageEntry[] } => {
+  const entries: UsageEntry[] = [];
+  return {
+    entries,
+    record: async (entry: UsageEntry) => { entries.push(entry); },
+    total: async (): Promise<UsageTotal> => ({}),
+    pools: async () => [],
+    records: async () => [],
+    groups: async () => [],
+  };
+};
+
+const text = (said: string) => ({ data: said, encoding: 'utf-8' });
+
+it.skipIf(!posix)('suspends and resumes a VM through its state, with a stretch closed at each hold', async () => {
+  const usage = meter();
+  const { provider } = await load({ vm: { server: 'dev02', runtime: 'libvirt' } }, 'yes', usage);
+  await provider.write('computer://box', body({ profile: 'vm' }), 'user:ana');
+
+  await provider.write('computer://libvirt.box/state', text('suspended'));
+  expect(box().domains.box?.state).toBe('paused');
+  expect((await provider.read('computer://libvirt.box/state')).data).toBe('suspended\n');
+  expect(usage.entries).toHaveLength(1);
+
+  await provider.write('computer://libvirt.box/state', text('running'));
+  expect(box().domains.box?.state).toBe('running');
+  await provider.write('computer://libvirt.box/state', text('stopped'));
+  expect(usage.entries.map((one) => [one.computer, one.owner])).toEqual([['libvirt.box', 'user:ana'], ['libvirt.box', 'user:ana']]);
+});
+
+it.skipIf(!posix)('refuses suspended for a machine whose runtime cannot hold it', async () => {
+  const { provider } = await load({ vm: { server: 'dev02', runtime: 'libvirt' } });
+  await provider.write('computer://dock', body({ image: 'node:22' }), 'user:ana');
+  await expect(provider.write('computer://dock/state', text('suspended'))).rejects.toThrow(/dock cannot be suspended: its runtime cannot hold a machine/);
+  await expect(provider.write('computer://dock/state', text('paused'))).rejects.toThrow(/A computer's state is one of running, stopped, restarted, and that body says paused/);
 });

@@ -564,9 +564,10 @@ export interface ComputerRuntime {
    * host made says it from its own record, and a machine off this host from one
    * reach over the network, and a caller that read either shape would have to
    * know which runtime it was asking. `undefined` for a machine that is not
-   * there, the same answer `inspect` gives.
+   * there, the same answer `inspect` gives. `suspended` comes only from a
+   * runtime that has `suspend`.
    */
-  state(id: string): Promise<'running' | 'stopped' | undefined>;
+  state(id: string): Promise<'running' | 'stopped' | 'suspended' | undefined>;
   /**
    * The agents one machine was prepared for, or nothing when it is not there.
    *
@@ -674,6 +675,21 @@ export interface ComputerRuntime {
   start(id: string): Promise<void>;
   /** Stop and start one, whichever it was. */
   restart(id: string): Promise<void>;
+  /**
+   * Hold one running machine where it is, with its memory kept and no CPU used.
+   *
+   * Only a runtime whose machines can be held has it, and `suspends` says
+   * which machines those are.
+   */
+  suspend?(id: string): Promise<void>;
+  /** Let one suspended machine run again from where it was held. */
+  resume?(id: string): Promise<void>;
+  /**
+   * Whether `suspend` and `resume` work on this machine, without reaching it.
+   *
+   * A runtime serving several asks the one the id names.
+   */
+  suspends?(id: string): boolean;
   /** What one machine is using right now, or nothing when it is not running. */
   stats(id: string): Promise<MachineStats | undefined>;
   /**

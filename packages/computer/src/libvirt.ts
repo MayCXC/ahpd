@@ -50,7 +50,7 @@ import type { SshMachine, SshProgram, SshReach } from './ssh.js';
 /** What `capabilities` reports for this runtime. */
 const CAPABILITIES: RuntimeCapabilities = {
   runtime: 'libvirt',
-  actions: ['create', 'destroy', 'exec', 'start', 'stop', 'restart'],
+  actions: ['create', 'destroy', 'exec', 'start', 'stop', 'restart', 'suspend', 'resume'],
   resources: ['status', 'capabilities', 'stats', 'state'],
 };
 
@@ -101,6 +101,8 @@ const INSTALL_MS = 5 * 60_000;
 const BOOT_MS = 3 * 60_000;
 const READY_MS = 3 * 60_000;
 const EVERY_MS = 2_000;
+/** How long a guest is given to shut down before it is cut off. */
+const SHUTDOWN_MS = 60_000;
 
 /** A name `virsh`, a disk file and a shell all take as it is. */
 const NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
@@ -147,8 +149,8 @@ export interface LibvirtOptions {
   hostId?: string;
   keygen?: Keygen;
   log?: (line: string) => void;
-  /** The bounds on a new VM's boot, in milliseconds, for a test. */
-  waits?: { boot?: number; ready?: number; every?: number };
+  /** The bounds on a VM's boot and shutdown, in milliseconds, for a test. */
+  waits?: { boot?: number; ready?: number; every?: number; shutdown?: number };
 }
 
 /** What one program printed, and how it ended. */
@@ -283,6 +285,7 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
   const boot = options.waits?.boot ?? BOOT_MS;
   const ready = options.waits?.ready ?? READY_MS;
   const every = options.waits?.every ?? EVERY_MS;
+  const shutdown = options.waits?.shutdown ?? SHUTDOWN_MS;
 
   /** Each box a profile names, by its name in `ssh.machines`. */
   const boxes = new Map(Object.values(options.profiles).map((one) => [one.server, one.box]));
@@ -550,6 +553,7 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
     state: async (name) => {
       const found = await look(name);
       if (found === undefined) return undefined;
+      if (found.state === 'paused') return 'suspended';
       return found.state === 'running' ? 'running' : 'stopped';
     },
 
@@ -686,10 +690,25 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
       return { id: spec.name, image: template, status: 'running', created: labels[MACHINE_CREATED] as string };
     },
 
+    /*
+     * Stop one: the guest is asked to shut down, and is cut off when it has
+     * not within the bound. A held VM cannot hear the ask, so it is cut off at
+     * once, and one already off is left as it is.
+     */
     stop: async (name) => {
       const found = await lookOrFail(name);
       addresses.delete(name);
-      await mustOn(found.server, ['shutdown', name]);
+      if (found.state === 'shut off') return;
+      if (found.state === 'running') {
+        await mustOn(found.server, ['shutdown', name]);
+        const off = await waited(shutdown, async () => {
+          const now = (await mustOn(found.server, ['domstate', name])).trim();
+          return { ...(now === 'shut off' ? { value: true } : {}), said: now };
+        });
+        if (off.value !== undefined) return;
+        options.log?.(`${name} did not shut down within ${Math.round(shutdown / 1000)} s, so it is cut off`);
+      }
+      await mustOn(found.server, ['destroy', name]);
     },
 
     start: async (name) => {
@@ -701,8 +720,23 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
     restart: async (name) => {
       const found = await lookOrFail(name);
       addresses.delete(name);
-      await mustOn(found.server, [found.state === 'running' ? 'reboot' : 'start', name]);
+      if (found.state === 'paused') await mustOn(found.server, ['resume', name]);
+      await mustOn(found.server, [found.state === 'shut off' ? 'start' : 'reboot', name]);
     },
+
+    suspend: async (name) => {
+      const found = await lookOrFail(name);
+      if (found.state !== 'running') throw new Error(`${name} is ${found.state}, so it cannot be suspended`);
+      await mustOn(found.server, ['suspend', name]);
+    },
+
+    resume: async (name) => {
+      const found = await lookOrFail(name);
+      if (found.state !== 'paused') throw new Error(`${name} is ${found.state}, so there is nothing to resume`);
+      await mustOn(found.server, ['resume', name]);
+    },
+
+    suspends: () => true,
 
     /*
      * Remove one, after what it committed and what it never committed are

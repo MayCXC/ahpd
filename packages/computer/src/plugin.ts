@@ -1113,6 +1113,18 @@ export const apply: Plugin['apply'] = (host, options) => {
       void catalogue.refresh();
       await close(id, await claimOf(id));
     },
+    // A suspended machine is not up: holding one closes its stretch, and
+    // letting it go on opens a new one.
+    suspend: async (id) => {
+      await computerRouter.suspend(id);
+      void catalogue.refresh();
+      await close(id, await claimOf(id));
+    },
+    resume: async (id) => {
+      await computerRouter.resume(id);
+      open(id);
+      void catalogue.refresh();
+    },
     // A command a tool runs is a command in the machine like any other, so it
     // is given the machine's vault-named variables too, under its own: the
     // calling session's agent's alone, and every agent's for a caller with none.
