@@ -78,6 +78,8 @@ export { fileSessions, memorySessions, migrateSessions } from './sessions/sessio
 export type { FileSessionOptions } from './sessions/sessions.js';
 export { fileUsage, usageMethods, usageProvider } from './usage/usage.js';
 export type { FileUsageOptions, UsageAnswers, UsageNamedGroup, UsagePeriods, UsagePool, UsageProvider, UsageProviderOptions } from './usage/usage.js';
+export { createMinuteMeter } from './usage/minute.js';
+export type { MinuteMeter } from './usage/minute.js';
 export { checkKeyLimits, checkPolicy, filePolicies, memoryPolicies } from './access/policies.js';
 export type { FilePoliciesOptions } from './access/policies.js';
 export { checkMeta, META_LIMIT, parseMeta } from './access/meta.js';

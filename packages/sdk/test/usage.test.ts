@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
 import { fileUsage } from '../src/usage/usage.js';
+import { createMinuteMeter } from '../src/usage/minute.js';
 import type { ComputerTime, ModelCall, ModelUse, UsageEntry } from '../src/types/usage.js';
 
 let root: string;
@@ -508,6 +509,22 @@ it('names a record\'s file by its UTC month, though it is kept under a local day
   // And a store built again over the folder keeps it under the same day.
   expect(await fileUsage({ folder, timezone: 'America/Campo_Grande' }).total('p', ...october))
     .toEqual({ tokens: 10, input: 10, calls: 1 });
+});
+
+it('feeds a minute meter the tokens, the cost and the hours of a record, and no call', async () => {
+  const meter = createMinuteMeter();
+  const usage = fileUsage({ folder, meter });
+  const noon = new Date('2026-10-04T10:00:30.000Z');
+  await usage.record(modelUse('2026-10-04T10:00:05.000Z', ['policy:a/tokens', 'policy:a/calls', 'policy:a/usd'], { input: 100, output: 20 }, {
+    cost: { amount: 0.5, currency: 'usd', from: 'price' },
+  }));
+  await usage.record(computerTime('2026-10-04T10:00:10.000Z', 3600, ['policy:a/hours', 'policy:a/calls']));
+
+  expect(meter.sum('policy:a/tokens', noon)).toBe(120);
+  expect(meter.sum('policy:a/usd', noon)).toBe(0.5);
+  expect(meter.sum('policy:a/hours', noon)).toBe(1);
+  // A call is counted when it is allowed, so a record adds nothing to it.
+  expect(meter.sum('policy:a/calls', noon)).toBe(0);
 });
 
 it('cuts its days in the system\'s own zone when it is given none', async () => {

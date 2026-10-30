@@ -43,7 +43,8 @@ export const MATCHES: Record<PolicyKind, readonly PolicyValueType[]> = {
 /** Every value type there is, in the order a refusal names them. */
 const VALUES = ['model', 'proxy', 'agent', 'computer'] as const;
 
-export const PERIODS = ['day', 'week', 'month', 'total'] as const;
+/** Every window a limit may name, the shortest first: a form offers them in this order. */
+export const PERIODS = ['minute', 'day', 'week', 'month', 'total'] as const;
 
 export const KINDS = ['model', 'agent', 'computer'] as const;
 

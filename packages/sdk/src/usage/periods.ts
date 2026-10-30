@@ -1,5 +1,8 @@
 /**
- * The day, week and month a total is cut over, in a named zone.
+ * The minute, day, week and month a total is cut over, in a named zone.
+ *
+ * The minute is the one window cut in UTC, because a minute of the clock is the
+ * same length everywhere and a zone would only move where it starts.
  *
  * A period begins at local midnight rather than at UTC midnight: a person whose
  * week starts on their Monday should not be handed a week that began the
@@ -73,6 +76,15 @@ export const zoneOf = (wanted: string | undefined, told: (message: string) => vo
 const earlier = (from: Date, back: number): Date =>
   new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate() - back));
 
+/** The length of a minute, which is the window a `minute` limit counts over. */
+const MINUTE_MS = 60_000;
+
+/** The minute of the clock `at` falls in, counted from the epoch. */
+export const minuteOf = (at: Date): number => Math.floor(at.getTime() / MINUTE_MS);
+
+/** The first instant of the minute of the clock `at` falls in. */
+const startOfMinute = (at: Date): Date => new Date(minuteOf(at) * MINUTE_MS);
+
 /** The Monday of the local week `local` falls in, which is the week already under way. */
 export const mondayOf = (local: Date): Date => earlier(local, (local.getUTCDay() + 6) % 7);
 
@@ -92,13 +104,19 @@ export interface PeriodStart {
  * Where `period` begins in `zone`, and when it resets.
  *
  * `day`, `week` and `month` begin at local midnight of today, of this Monday and
- * of the 1st, and reset at the local midnight after them. `total` begins at the
- * row's own `from`, because a total counts everything since then and never
- * resets; a row with no `from` begins at the epoch, which is behind every record
- * a store can hold.
+ * of the 1st, and reset at the local midnight after them. `minute` begins where
+ * the minute of the clock does, in UTC rather than in `zone`: a minute is the
+ * same length for everybody, and a zone would only move where it is cut. `total`
+ * begins at the row's own `from`, because a total counts everything since then
+ * and never resets; a row with no `from` begins at the epoch, which is behind
+ * every record a store can hold.
  */
 export const periodOf = (zone: string, period: Period, now: Date, from?: string): PeriodStart => {
   if (period === 'total') return from === undefined ? { from: EPOCH } : { from };
+  if (period === 'minute') {
+    const begin = startOfMinute(now);
+    return { from: begin.toISOString(), resets: new Date(begin.getTime() + MINUTE_MS).toISOString() };
+  }
   const local = shown(zone, now);
   const begin = period === 'day' ? local : period === 'week' ? mondayOf(local) : firstOf(local);
   const next = period === 'day'

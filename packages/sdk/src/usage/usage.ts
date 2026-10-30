@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { limitsOf } from './charge.js';
 import { refusalReason } from '../host.js';
 import { periodOf, shown, zoneOf } from './periods.js';
+import type { MinuteMeter } from './minute.js';
 import { absentResource, asFile, EPOCH, splitResource, type At as Split } from '../resources/records.js';
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { mayRead, membership } from './scopes.js';
@@ -25,6 +26,25 @@ import type { Cost, Usage, UsageEntry, UsageGroup, UsageKey, UsageTotal } from '
 
 /** An hour, which is what computer time is reported in. */
 const HOUR_S = 3_600;
+
+/** The measures a record hands to the minute meter: the ones it knows by the time it ends. */
+const METERED = ['usd', 'tokens', 'hours'] as const;
+
+type Metered = typeof METERED[number];
+
+/**
+ * The measure a pool key is counted in, read from the end of the key.
+ *
+ * `policy:A3/tokens` is counted in `tokens` and `policy:A3/calls` in `calls`,
+ * and only the first is a measure the meter keeps: a call is counted when it is
+ * allowed, because a call counted at its record lets a burst through.
+ */
+const meterKey = (pool: string): Metered | undefined => {
+  const slash = pool.lastIndexOf('/');
+  if (slash === -1) return undefined;
+  const last = pool.slice(slash + 1);
+  return METERED.find((one) => one === last);
+};
 
 /** What one record costs, in the measures the port reports. */
 interface Measured {
@@ -119,6 +139,16 @@ export interface FileUsageOptions {
    * same zone the `usage:` scheme cuts its periods in.
    */
   timezone?: string;
+  /**
+   * The meter a record feeds, so a `minute` limit reads what this minute used.
+   *
+   * Absent, no total finer than a day is kept, and a `minute` limit reads zero.
+   * The daemon builds one meter and gives it here and to every charge walk, so
+   * the store and the walk count the same minutes. Only `tokens`, `usd` and
+   * `hours` are added: a call is counted when it is allowed, not when its
+   * record is written.
+   */
+  meter?: MinuteMeter;
   /** Somewhere to say that a record could not be kept or a line could not be read. */
   onProblem?(message: string): void;
 }
@@ -240,6 +270,26 @@ export function fileUsage(options: FileUsageOptions): Usage {
   const poolsOf = (entry: UsageEntry): string[] =>
     Array.isArray(entry.pools) ? entry.pools.filter((one): one is string => typeof one === 'string') : [];
 
+  /**
+   * Add one record's amount to the meter, for each pool key that names a
+   * measure it counts.
+   *
+   * The meter is fed here rather than at `charge`, which is also the reading of
+   * the folder at construction: a total kept for the last two minutes from a
+   * previous run is a minute this daemon did not count.
+   */
+  const metered = (entry: UsageEntry): void => {
+    const meter = options.meter;
+    if (meter === undefined || typeof entry.at !== 'string') return;
+    const at = new Date(entry.at);
+    if (Number.isNaN(at.getTime())) return;
+    const what = measured(entry);
+    for (const pool of poolsOf(entry)) {
+      const measure = meterKey(pool);
+      if (measure !== undefined) meter.add(pool, what[measure], at);
+    }
+  };
+
   /** Add one record to every pool it names. */
   const charge = (entry: UsageEntry, day: string): void => {
     const pools = poolsOf(entry);
@@ -349,6 +399,7 @@ export function fileUsage(options: FileUsageOptions): Usage {
        * with a lock.
        */
       charge(entry, day);
+      metered(entry);
     }),
     total: async (pool, from, until) => {
       const days = held.get(pool);

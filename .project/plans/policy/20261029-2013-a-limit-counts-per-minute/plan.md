@@ -70,7 +70,7 @@ call ends -> usage.record(entry) -> meter.add(key/tokens, n), meter.add(key/usd,
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A minute is a period with a meter](task-01-a-minute-is-a-period-with-a-meter.md) | todo | - |
+| [01 - A minute is a period with a meter](task-01-a-minute-is-a-period-with-a-meter.md) | implemented | - |
 | [02 - A minute limit is checked and counted](task-02-a-minute-limit-is-checked-and-counted.md) | todo | 01 |
 
 ## Risks and tradeoffs
@@ -81,8 +81,8 @@ call ends -> usage.record(entry) -> meter.add(key/tokens, n), meter.add(key/usd,
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-minute-is-a-period-with-a-meter.md](task-01-a-minute-is-a-period-with-a-meter.md).
+- **Done so far:** task 01: `minute` is a `Period`, `periodOf` cuts it in UTC, `createMinuteMeter` keeps two buckets per key, and `fileUsage` feeds it `usd`, `tokens` and `hours`.
+- **Next action:** [task-02-a-minute-limit-is-checked-and-counted.md](task-02-a-minute-limit-is-checked-and-counted.md).
 - **Open questions:** none.
 - **Watch out for:** the plan `policy/20261029-2012-a-key-has-limits` also changes `chargeFor` and the policy checks. The key's limits take `minute` once both are merged.
 

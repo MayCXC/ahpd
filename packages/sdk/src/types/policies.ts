@@ -62,8 +62,15 @@ export interface PolicyMatch {
 /** What one limit is counted in. Which of them a row may name depends on its kind. */
 export type Measure = 'usd' | 'tokens' | 'calls' | 'turns' | 'hours' | 'sessions';
 
-/** The window a limit is counted over. `total` is one sum over the whole window. */
-export type Period = 'day' | 'week' | 'month' | 'total';
+/**
+ * The window a limit is counted over. `total` is one sum over the whole window.
+ *
+ * `minute` is the minute of the clock, which is the rpm and tpm of other
+ * proxies. Every other window begins in `usage.timezone`; a minute is UTC
+ * everywhere, because a clock an hour off the one next door would cut a minute
+ * where nobody expected.
+ */
+export type Period = 'minute' | 'day' | 'week' | 'month' | 'total';
 
 /** Whether a group shares one total or every member has their own. */
 export type LimitPool = 'shared' | 'each';
