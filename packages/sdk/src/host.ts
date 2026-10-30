@@ -716,12 +716,20 @@ export function createHost(options: HostOptions): Host {
     return { ...envelope, action: { ...action, config: { ...kept, ...own } } };
   };
   /**
-   * Whose dispatch is being applied right now.
+   * The dispatch being applied right now, and whether it has been said back.
    *
    * The protocol's write-ahead loop is: a client applies an action to its own
    * state, sends it with a `clientSeq`, and waits for this host to echo it
    * back carrying that number. Without the echo a client cannot tell its own
    * write from somebody else's, and cannot do the optimistic half at all.
+   *
+   * The echo is the one action that is the client's own: its type, and its
+   * turn when the client named one. Everything else the dispatch causes - the
+   * title a first turn gives a session, a chat's row, what the agent says - is
+   * this host's, and carries no origin: the protocol reads an origin as the
+   * client that produced the action, and a client that found its own on an
+   * action it never sent would take that action for its own.
+   * https://github.com/microsoft/agent-host-protocol/blob/v1.0.0/docs/guide/actions.md
    *
    * A variable rather than an argument threaded through everything, because
    * the echo is usually several layers down: a client's `chat/turnStarted`
@@ -731,12 +739,49 @@ export function createHost(options: HostOptions): Host {
    *
    * It is only ever held across *synchronous* work - `dispatchAction` sets it,
    * applies, and clears it in a `finally` with nothing awaited in between - so
-   * nothing else can run while it is set and no action can be attributed to a
-   * client that did not cause it. Anything that answers in a later turn of the
-   * event loop, like a config key the backend has to be asked about, reads
-   * nothing from here and is passed an origin of its own.
+   * nothing else can run while it is set. An echo said in a later turn of the
+   * event loop is found another way: a dispatch that waits goes back through
+   * `applyNow` once it is done waiting, a site that answers later passes the
+   * origin it was given, and a turn handed to a backend is in `owed`.
    */
-  let applying: Origin | undefined;
+  let applying: { origin: Origin; type: string; turnId: string; answered: boolean } | undefined;
+  /**
+   * The echoes a backend still owes, by the action and the turn it names.
+   *
+   * A turn begun or stopped is said back by the backend, and a backend says it
+   * when it is ready: once a policy check or a machine has answered, once
+   * Claude has switched models, once pi, cofold or ACP has let the cancelled
+   * prompt go, once the host inside a machine has answered the proxy. The turn
+   * id is the one thing that action carries that names the client's dispatch,
+   * the way `senders` follows a turn by its id. Let go of once said, once
+   * refused, and once the turn has ended.
+   */
+  const owed = new Map<string, Origin>();
+  const owedKey = (type: string, turnId: string): string => `${type}\n${turnId}`;
+  /**
+   * The origin an action goes out with when its caller named none: the
+   * dispatch's own, if this is its echo, or the one a backend owes for it.
+   */
+  const originOf = (action: Record<string, unknown>): Origin | undefined => {
+    const type = String(action.type ?? '');
+    const turnId = typeof action.turnId === 'string' ? action.turnId : '';
+    const key = owedKey(type, turnId);
+    if (applying !== undefined && !applying.answered && applying.type === type
+      && (applying.turnId === '' || applying.turnId === turnId)) {
+      applying.answered = true;
+      owed.delete(key);
+      return applying.origin;
+    }
+    const due = turnId === '' ? undefined : owed.get(key);
+    if (due !== undefined) owed.delete(key);
+    return due;
+  };
+  /** The dispatch being applied, answered by `origin` on a road that says so itself. */
+  const answeredBy = (origin: Origin | undefined, action: Record<string, unknown>): void => {
+    if (origin === undefined) return;
+    if (applying?.origin === origin) applying.answered = true;
+    if (typeof action.turnId === 'string') owed.delete(owedKey(String(action.type ?? ''), action.turnId));
+  };
   /**
    * One state action, to everyone watching that channel.
    *
@@ -801,8 +846,20 @@ export function createHost(options: HostOptions): Host {
    * other action flushes them and goes out itself, so nothing a client reads
    * against the text is sent ahead of it.
    */
-  const dispatch = (channel: string, given: Record<string, unknown>, origin = applying): void => {
+  const dispatch = (channel: string, given: Record<string, unknown>, named?: Origin): void => {
     const action = ctx.withWorkerUri(channel, given);
+    answeredBy(named, action);
+    const origin = named ?? originOf(action);
+    /*
+     * A turn that has ended owes nothing more: a stop the backend never said
+     * because the turn finished first, or a start a backend refused in a turn
+     * of its own, would otherwise wait here for an action that is not coming.
+     */
+    if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled' || action.type === 'chat/error') {
+      const turnId = String(action.turnId ?? '');
+      owed.delete(owedKey('chat/turnStarted', turnId));
+      owed.delete(owedKey('chat/turnCancelled', turnId));
+    }
     /*
      * A session's customizations are two halves, and one action carries both.
      *
@@ -923,6 +980,7 @@ export function createHost(options: HostOptions): Host {
     reason: string,
   ): void => {
     log(`${channel}: ${reason}`);
+    answeredBy(origin, action);
     peer.notify('action', { channel: watchedAs(peer, channel), action, serverSeq: ctx.serverSeq, origin, rejectionReason: reason });
   };
   /**
@@ -949,6 +1007,7 @@ export function createHost(options: HostOptions): Host {
     action: Record<string, unknown>,
     origin: Origin | undefined,
   ): void => {
+    answeredBy(origin, action);
     peer.notify('action', { channel: watchedAs(peer, channel), action, serverSeq: ctx.serverSeq, origin });
   };
   /**
@@ -1118,6 +1177,7 @@ export function createHost(options: HostOptions): Host {
       broadcast(ROOT, RESTART_NEEDED, { channel: ROOT });
     },
     dispatch,
+    owe: (type: string, turnId: string, origin: Origin) => { owed.set(owedKey(type, turnId), origin); },
     flushDeltas: deltas.flush,
   } as HostContext;
   // Before any area is built, because everything a person or a backend does
@@ -1702,7 +1762,13 @@ export function createHost(options: HostOptions): Host {
       });
       /** A dispatch applied now, as the one this host is applying. */
       const applyNow = (params: Record<string, unknown>, origin: Origin): Promise<void> | undefined => {
-        applying = origin;
+        const action = (typeof params.action === 'object' && params.action !== null ? params.action : {}) as Record<string, unknown>;
+        applying = {
+          origin,
+          type: String(action.type ?? ''),
+          turnId: typeof action.turnId === 'string' ? action.turnId : '',
+          answered: false,
+        };
         try { return applyDispatch(params, origin); }
         finally { applying = undefined; }
       };
@@ -1764,12 +1830,12 @@ export function createHost(options: HostOptions): Host {
          * What the client says happened.
          *
          * `applying` is held across the whole of `applyDispatch` and cleared
-         * after, so every action the dispatch causes - including the ones
-         * emitted from inside a session, several layers down - goes out
-         * carrying the `clientSeq` the client sent. Nothing in there is
-         * awaited, which is what makes that safe: no second dispatch can
-         * begin while this one is being applied. A dispatch that has to wait
-         * returns what it waits on instead, and this connection's later
+         * after, so the action's echo - emitted from inside a session several
+         * layers down as often as not - goes out carrying the `clientSeq` the
+         * client sent, and nothing else the dispatch causes does. Nothing in
+         * there is awaited, which is what makes that safe: no second dispatch
+         * can begin while this one is being applied. A dispatch that has to
+         * wait returns what it waits on instead, and this connection's later
          * dispatches go behind it in `waiting`.
          *
          * One whose apply throws is refused here, as a step of `waiting` that

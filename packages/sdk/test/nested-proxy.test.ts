@@ -625,6 +625,34 @@ it('a restart goes on when the host inside it stopped will not go', async () => 
   expect(lines.some((line) => line.includes('is still there'))).toBe(true);
 }, 30_000);
 
+/*
+ * A client of the host outside dispatches the turn, and the host inside says
+ * it back: the turn the proxy carries out is that client's own, under the
+ * clientSeq it sent, however late the host inside answers.
+ */
+it('gives a turn on a nested session the origin of the client outside that sent it', async () => {
+  const inner = innerHost(backend());
+  const agent = nestedAgent(backend(), { plugins: PLUGINS, start: async () => inner.proc, timeoutMs: 500 });
+  const host = createHost({ path: REPO_ROOT, agents: [agent] });
+  const peer = watching();
+  const client = host.accept(peer);
+  await client.handle({ method: 'initialize', params: { clientId: 'window', protocolVersions: ['1.0.0'] } });
+  await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/outer', provider: PROVIDER, config: { computer: 'computer://box' } } });
+  await client.handle({ method: 'subscribe', params: { channel: 'ahp-chat:/outer' } });
+  await client.handle({
+    method: 'dispatchAction',
+    params: { channel: 'ahp-chat:/outer', clientSeq: 3, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hello world' } } },
+  });
+  const said = (type: string): Bag | undefined =>
+    peer.seen.find(({ method, params }) => method === 'action' && params?.action?.type === type)?.params;
+  await until(() => said('chat/turnComplete') !== undefined || said('session/creationFailed') !== undefined);
+  expect(said('session/creationFailed')).toBeUndefined();
+  expect(said('chat/turnStarted')?.origin).toEqual({ clientId: 'window', clientSeq: 3 });
+  // What the agent inside said is the host's, whoever's turn it is.
+  expect(said('chat/responsePart')?.origin).toBeUndefined();
+  await host.close();
+});
+
 it('cancel stops the inner turn', async () => {
   const inner = innerHost(backend(30));
   const { seen, emit } = recorder();
