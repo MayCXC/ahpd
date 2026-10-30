@@ -82,14 +82,14 @@ call ends -> usage.record(entry) -> meter.add(key/tokens, n), meter.add(key/usd,
 ## Resume state
 
 - **Done so far:** every task. `minute` is a `Period`, `periodOf` cuts it in UTC, and `createMinuteMeter` keeps two buckets per key. `fileUsage` feeds it `usd`, `tokens` and `hours`, and an allowed `chargeFor` counts `calls` and `turns`. One meter in `run.ts` reaches the store, the host and the proxy.
-- **Next action:** none; the plan's final verification checklist is the last step.
+- **Next action:** none; every item of the final verification checklist passed.
 - **Open questions:** none.
 - **Watch out for:** the plan `policy/20261029-2012-a-key-has-limits` also changes `chargeFor` and the policy checks. The key's limits take `minute` once both are merged.
 
 ## Final verification checklist
 
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
-- [ ] A row with `2 calls a minute` allows two proxy calls and refuses the third in the same minute.
-- [ ] The next minute allows a call again.
-- [ ] A policy form in a client offers `minute` with no client change.
+- [x] `pnpm typecheck` passes.
+- [x] `pnpm test` passes, run as `pnpm exec vitest run --maxWorkers=3 --testTimeout=30000` after `pnpm -s schema`: 460 files and 7676 tests.
+- [x] A row with `2 calls a minute` allows two proxy calls and refuses the third in the same minute.
+- [x] The next minute allows a call again.
+- [x] A policy form in a client offers `minute` with no client change.
