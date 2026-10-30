@@ -104,8 +104,11 @@ const first = <T>(list: T[]): T => list[0] as T;
  * are reported back in the chat state beside the turn they belong to. A
  * backend that dropped them would leave a client with the message and no
  * picture, which is the thing this is here to make impossible.
+ *
+ * `held` keeps a turn running for `steer` from its `begin` on, whenever the
+ * echo ends it, so a case about order does not race the turn's own clock.
  */
-const scripted = (dir: string, said: Said, pace = 0): Agent => {
+const scripted = (dir: string, said: Said, pace = 0, held = false): Agent => {
   const base = echo({ path: dir, pace });
   return {
     ...base,
@@ -134,7 +137,8 @@ const scripted = (dir: string, said: Said, pace = 0): Agent => {
         // is not taken - which is also what makes the order two dispatches
         // were applied in something a case can see.
         steer: (id: string, text: string, attachments?: MessageAttachment[]) => {
-          if ((session.chatState() as Bag).activeTurn === undefined) return false;
+          const running = (session.chatState() as Bag).activeTurn !== undefined || (held && said.begun.length > 0);
+          if (!running) return false;
           said.steered.push({ id, text, ...(attachments === undefined ? {} : { attachments }) });
           return session.steer?.(id, text, attachments) ?? true;
         },
@@ -152,9 +156,9 @@ const scripted = (dir: string, said: Said, pace = 0): Agent => {
 };
 
 /** One client, one session, watching both its channels. */
-async function serving(said: Said, dir = temp(), store = true, pace = 0) {
+async function serving(said: Said, dir = temp(), store = true, pace = 0, held = false) {
   const sessions = store ? fileSessions({ dir }) : memorySessions();
-  const host = createHost({ path: dir, agents: [scripted(dir, said, pace)], sessions });
+  const host = createHost({ path: dir, agents: [scripted(dir, said, pace, held)], sessions });
   const p = peer();
   const client = host.accept(p);
   await client.handle({
@@ -380,7 +384,9 @@ it('hands a queued and a steering message their attachments', async () => {
 
 it('applies a message with attachments before what the client sent behind it', async () => {
   const said = saidNothing();
-  const { turn, peer: p } = await serving(said, temp(), true, 60);
+  // Held, because a slow file write can outlast a 60 ms turn, and then the
+  // steering would be refused for the turn's end rather than for its order.
+  const { turn, peer: p } = await serving(said, temp(), true, 60, true);
   // Sent without waiting in between, which is how a composer sends a message
   // and how a client corrects one - and neither is awaited, because the wait
   // is the thing being asked about.
