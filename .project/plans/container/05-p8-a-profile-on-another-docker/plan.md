@@ -1,7 +1,7 @@
 ---
 title: A profile's machines may live on another server's Docker
 domain: container
-status: active
+status: built
 priority: medium
 created: 2026-09-26
 revalidated: 2026-10-30
@@ -122,8 +122,8 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 | [02 - A machine on another Docker takes no bind mount](task-02-no-bind-mount-on-another-docker.md) | done | 01 |
 | [03 - The session's code arrives by bundle and returns as a branch](task-03-the-code-arrives-by-clone.md) | done | 02 |
 | [04 - Sessions in a machine on another Docker run nested](task-04-sessions-there-run-nested.md) | done | 01 |
-| [05 - dev02's Docker runs a session](task-05-dev02s-docker-runs-a-session.md) | todo | 03, 04, 07 |
-| [06 - Docs](task-06-docs.md) | todo | 05, 07 |
+| [05 - dev02's Docker runs a session](task-05-dev02s-docker-runs-a-session.md) | done | 03, 04, 07 |
+| [06 - Docs](task-06-docs.md) | done | 05, 07 |
 | [07 - A profile may have its machine clone from a public origin](task-07-a-profile-may-clone-from-origin.md) | done | 03 |
 | [08 - dev02 runs libvirt and qemu](task-08-dev02-runs-libvirt.md) | dropped | - |
 | [09 - A machine with an address is reached by ssh, with this host's own key](task-09-an-address-is-reached-by-ssh.md) | dropped | - |
@@ -140,17 +140,17 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 
 ## Resume state
 
-- **Done so far:** no task; planned 2026-10-02. Main has parts of tasks 01, 03 and 04 from other plans, checked 2026-10-30. `claimOf` reads through the router, p9 spells the ids, and the router bounds `list`. The `ahpd.host` label exists, host/67 brings work back, and `spawnEnvOf` puts the runtime's `env` in the descriptor. Tasks 08 to 13 moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30. Tasks 01 to 04 and 07 are done (2026-10-30).
-- **Next action:** [task-05-dev02s-docker-runs-a-session.md](task-05-dev02s-docker-runs-a-session.md), which needs Softov on dev02.
+- **Done so far:** every task is done or dropped (2026-10-30). Tasks 08 to 13 moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md). Task 05 ran on dev02 by both routes; its Resume has what was found.
+- **Next action:** none; see [implemented.md](implemented.md).
 - **Open questions:** none; the `isolation: folder` question is answered by host/67's rules (2026-10-30).
 - **Watch out for:** the `clone` route puts no credential in the box, so it fetches only a public repository. A folder that is not a repository has no clone, and this plan refuses it.
 Copying it in stays in [the idea](../../../ideas/more-computer-runtimes.md). p7's git directory mount does not apply on another Docker. Task 02 refuses a credential need from this host, so no key of this host reaches dev02.
 
 ## Final verification checklist
 
-- [ ] A disposable session on a profile with `server: "dev02"` answers a turn, and its commit reaches this host's repository as a branch, with `code: "bundle"` and with `code: "clone"`.
-- [ ] No git credential reaches the machine on either route.
-- [ ] A local profile and a dev02 profile list their machines side by side with distinct ids, and both are metered.
-- [ ] A profile on another Docker with a bind mount is refused with a sentence.
-- [ ] `pnpm test`, `pnpm typecheck` green.
-- [ ] `docs/plugins/COMPUTERS.md` updated.
+- [x] A disposable session on a profile with `server: "dev02"` answers a turn, and its commit reaches this host's repository as a branch, with `code: "bundle"` and with `code: "clone"`.
+- [x] No git credential reaches the machine on either route.
+- [x] A local profile and a dev02 profile list their machines side by side with distinct ids, and both are metered.
+- [x] A profile on another Docker with a bind mount is refused with a sentence.
+- [x] `pnpm test`, `pnpm typecheck` green.
+- [x] `docs/plugins/COMPUTERS.md` updated.
