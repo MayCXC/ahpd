@@ -102,7 +102,7 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 | --- | --- | --- |
 | [01 - `ahpd join` dials the hub and keeps the connection](task-01-ahpd-join-dials-the-hub.md) | todo | 03 |
 | [02 - A joined socket is a nested host the proxy talks to](task-02-a-joined-socket-is-a-nested-host.md) | todo | 01 |
-| [03 - A node has a token, and nodes are a grant subject](task-03-a-node-has-a-token.md) | todo | - |
+| [03 - A node has a token, and nodes are a grant subject](task-03-a-node-has-a-token.md) | implemented | - |
 | [04 - The hub lists a node as a computer](task-04-the-hub-lists-a-node.md) | todo | 02 |
 | [05 - A restart of the hub or the node leaves its sessions to resume](task-05-a-restart-leaves-node-sessions-to-resume.md) | todo | 04 |
 | [06 - Docs](task-06-docs.md) | todo | 05 |
@@ -115,8 +115,8 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 
 ## Resume state
 
-- **Done so far:** nothing; planned 2026-10-02.
-- **Next action:** [task-03-a-node-has-a-token.md](task-03-a-node-has-a-token.md), once p9 is built.
+- **Done so far:** task 03, 2026-10-30: a node's token is minted, shown once and kept as a hash beside the users file, and `node:read` and `node:write` gate `ahpd node list|add|rm`.
+- **Next action:** [task-01-ahpd-join-dials-the-hub.md](task-01-ahpd-join-dials-the-hub.md).
 - **Open questions:** none; the one asked before task 05 was answered 2026-10-13.
 - **Watch out for:** container/04 tasks 11 and 15 and p9 task 05 change how a nested session closes and resumes; a profile that names a node to make machines on is not planned, see [deferred.md](deferred.md).
 

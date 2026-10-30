@@ -16,6 +16,7 @@ import type { Options } from './options.js';
 import { declareAutomation } from './automation.js';
 import { declareConfig } from './config.js';
 import { declarePaths } from './paths.js';
+import { declareNodes } from './nodes.js';
 import { declarePlugin } from './plugin.js';
 import { declareProxy } from './proxy.js';
 import { declareRestart } from './restart.js';
@@ -116,6 +117,7 @@ export const servedRegistry = (facts: ServedFacts): Registry<object> => {
   declareToken(registry, facts);
   declareTeams(registry, facts);
   declarePaths(registry, facts);
+  declareNodes(registry, facts);
   declarePlugin(registry, facts);
   declareProxy(registry, facts);
   declareUsage(registry, facts);
