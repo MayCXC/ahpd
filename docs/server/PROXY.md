@@ -196,6 +196,7 @@ burst has no room: 60 / 60 calls this minute
 
 A minute limit is read from the daemon's own totals, kept in memory beside the usage store.
 A call is counted when it is allowed, so a burst of calls cannot pass one.
+A request is one call: it counts once, on the keys of the candidate it is sent to, so a model a proxy serves from two connectors is not two calls and a fallback to the next candidate is the same call.
 A restart starts every minute count at zero, which is the most a minute limit can lose.
 
 ## The models list

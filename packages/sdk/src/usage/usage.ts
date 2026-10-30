@@ -615,6 +615,15 @@ export interface UsageProviderOptions {
    * `policy:read` still reads every row through `policy://<id>/limits`.
    */
   ownLimits?: boolean;
+  /**
+   * What each key used in this minute, which a `minute` limit in this read
+   * answers.
+   *
+   * The store keeps no total finer than a day, so the read needs the daemon's
+   * meter to answer the same figure the walk checks against. Absent, a `minute`
+   * limit reads zero.
+   */
+  meter?: MinuteMeter;
   /** Somewhere to say that the zone or the titles could not be read. */
   onProblem?(message: string): void;
 }
@@ -825,9 +834,11 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
    * Each active row whose scope holds the reader, with its limits.
    *
    * The reader is the person an `each` limit answers, so a person reads their
-   * own figure and no other member's. A host with no person, which is the root
-   * connection or a host with no users directory, has no scope a row can hold,
-   * so it reads none. A host with `policies.ownLimits` off refuses the read.
+   * own figure and no other member's. A `minute` limit answers the meter's
+   * figure, which is the daemon's own, so the read and the walk agree. A host
+   * with no person, which is the root connection or a host with no users
+   * directory, has no scope a row can hold, so it reads none. A host with
+   * `policies.ownLimits` off refuses the read.
    */
   const limits = async (reader: Principal | undefined): Promise<PolicyLimits[]> => {
     if (options.ownLimits === false) {
@@ -843,7 +854,7 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
       id: row.id,
       kind: row.kind,
       scope: row.scope,
-      limits: await limitsOf(row, store, zone, now, reader),
+      limits: await limitsOf(row, store, zone, now, reader, options.meter),
     })));
   };
 

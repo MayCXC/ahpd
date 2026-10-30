@@ -7,6 +7,8 @@ import { createHost, ROOT } from '../src/host.js';
 import { fileResources } from '../src/resources/resources.js';
 import { EFFECTS, filePolicies, KINDS, LIMIT_POOLS, MATCHES, MEASURES, PERIODS } from '../src/access/policies.js';
 import { policyProviders } from '../src/access/policy.js';
+import { createMinuteMeter } from '../src/usage/minute.js';
+import type { MinuteMeter } from '../src/usage/minute.js';
 import { fileUsers } from '../src/access/users.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Peer } from '../src/types/rpc.js';
@@ -55,6 +57,20 @@ const totals = (byKey: Record<string, UsageTotal> = {}): Usage => ({
 /** One write, as a client sends it. */
 const body = (value: unknown, more: Partial<Write> = {}): Write =>
   ({ data: JSON.stringify(value), encoding: 'utf-8', ...more });
+
+/**
+ * A meter whose clock is one instant, so a figure is read where it was written.
+ *
+ * The leaf cuts a period at the real clock; the figure is what the meter holds,
+ * which is what a walk on the same daemon would check against.
+ */
+const pinnedMeter = (at: Date): MinuteMeter => {
+  const meter = createMinuteMeter();
+  return {
+    add: (key, amount) => { meter.add(key, amount, at); },
+    sum: (key) => meter.sum(key, at),
+  };
+};
 
 const row = (more: Partial<Policy> = {}): Policy => ({
   id: 'M1',
@@ -160,6 +176,25 @@ it('reads a row\'s limits with what is used and when they reset', async () => {
   expect((await policy.resolve('policy://A2/limits')).size)
     .toBe(Buffer.byteLength(JSON.stringify(answer, null, 2), 'utf8'));
   await expect(policyProviders(store).policy!.read('policy://A2/limits')).rejects.toMatchObject({ code: -32008 });
+});
+
+/*
+ * A `minute` limit is the one figure the store cannot answer, so the leaf takes
+ * the daemon's meter: what a client reads and what refuses the next call are the
+ * same number.
+ */
+it('answers a minute limit from the meter, as the walk reads it', async () => {
+  const store = filePolicies({ file });
+  const meter = pinnedMeter(new Date('2026-10-20T12:00:00.000Z'));
+  const policy = policyProviders(store, { usage: totals(), timezone: 'UTC', meter }).policy!;
+  await policy.write('policy://M1', body(row({
+    limits: [{ amount: 60, measure: 'calls', period: 'minute', pool: 'shared' }],
+  })));
+  meter.add('policy:M1/calls', 7);
+
+  const answer = JSON.parse((await policy.read('policy://M1/limits') as { data: string }).data) as
+    { limits: Record<string, any>[] };
+  expect(answer.limits[0]).toMatchObject({ amount: 60, measure: 'calls', period: 'minute', counted: true, used: 7 });
 });
 
 it('makes a row and a second write edits it', async () => {
