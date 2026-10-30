@@ -1,7 +1,7 @@
 ---
 title: An answer or a confirmation nothing waits on is refused
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -48,7 +48,7 @@ The files read are the `refs` in the frontmatter, each with its note.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host refuses a confirmation or an answer nothing waits on](task-01-the-host-refuses-a-confirmation-or-an-answer-nothing-waits-on.md) | pending | - |
+| [01 - The host refuses a confirmation or an answer nothing waits on](task-01-the-host-refuses-a-confirmation-or-an-answer-nothing-waits-on.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -58,13 +58,13 @@ The files read are the `refs` in the frontmatter, each with its note.
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-host-refuses-a-confirmation-or-an-answer-nothing-waits-on.md](task-01-the-host-refuses-a-confirmation-or-an-answer-nothing-waits-on.md).
+- **Done so far:** planned and built 2026-10-30. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the protocol's conformance cases that drive such an action through the host, which were no-ops and are refusals.
 
 ## Final verification checklist
 
-- [ ] A confirmation of a call that waits on none is refused to its sender.
-- [ ] An answer to a request nothing waits on is refused to its sender, and said to nobody else.
-- [ ] Every backend's `confirm` answers whether it took the confirmation.
+- [x] A confirmation of a call that waits on none is refused to its sender.
+- [x] An answer to a request nothing waits on is refused to its sender, and said to nobody else.
+- [x] Every backend's `confirm` answers whether it took the confirmation.
