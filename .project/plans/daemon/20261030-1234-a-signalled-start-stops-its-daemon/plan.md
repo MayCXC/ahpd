@@ -1,7 +1,7 @@
 ---
 title: A signalled start stops its daemon
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -50,7 +50,7 @@ signal during the poll -> the default action ends start -> the daemon runs on, n
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A start stops the daemon it made when it is signalled](task-01-a-start-stops-the-daemon-it-made-when-it-is-signalled.md) | pending | - |
+| [01 - A start stops the daemon it made when it is signalled](task-01-a-start-stops-the-daemon-it-made-when-it-is-signalled.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -59,12 +59,12 @@ signal during the poll -> the default action ends start -> the daemon runs on, n
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-start-stops-the-daemon-it-made-when-it-is-signalled.md](task-01-a-start-stops-the-daemon-it-made-when-it-is-signalled.md).
+- **Done so far:** planned and built 2026-10-30. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the restart cases, whose daemon runs `start` with its own SIGINT and SIGTERM handlers.
 
 ## Final verification checklist
 
-- [ ] A `start` signalled while its daemon starts ends by that signal, and the daemon is gone.
+- [x] A `start` signalled while its daemon starts ends by that signal, and the daemon is gone.
 - [ ] The server suite passes, and leaves no daemon running.
