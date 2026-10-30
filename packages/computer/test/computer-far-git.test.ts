@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
-import { originOf, SEED_BUNDLE } from '../src/clone.js';
+import { httpsOf, originOf, SEED_BUNDLE } from '../src/clone.js';
 import { dockerRuntime } from '../src/runtime.js';
 
 /*
@@ -81,6 +81,13 @@ it('names an origin without the user and password its address holds', () => {
   expect(originOf(repo)).toBe('git@git.example.com:team/repo.git');
   run('remote', 'remove', 'origin');
   expect(originOf(repo)).toBeUndefined();
+});
+
+it('names an ssh remote by its https form, and leaves any other address as it is', () => {
+  expect(httpsOf('git@github.com:softov/ahpd.git')).toBe('https://github.com/softov/ahpd.git');
+  expect(httpsOf('ssh://git@git.example.com:2222/team/repo.git')).toBe('https://git.example.com/team/repo.git');
+  expect(httpsOf('https://git.example.com/team/repo.git')).toBe('https://git.example.com/team/repo.git');
+  expect(httpsOf('/srv/git/repo.git')).toBe('/srv/git/repo.git');
 });
 
 it.skipIf(!DOCKER)('seeds a machine on another Docker from a bundle, binds nothing of this host\'s, and brings its commit back', async () => {

@@ -47,4 +47,5 @@ The default stays `code: "bundle"` (task 03); the way back is host/67's bring-ba
 - **Departure:** the credential goes to those two commands as `-e AHPD_GIT_CREDENTIAL`, read by an inline `-c credential.helper`. Nothing is written to the machine's git config.
 - **Departure:** only the disposable create reads `gitCredential`, because only a session's machine has a repository to seed.
 - **Departure:** `code` takes `bundle` or `clone`, and any other value fails the load, as `gitGuard` does.
+- **Added:** with a `gitCredential`, an ssh origin is fetched by its https form (`httpsOf`), which the checkout's `origin` names too. Softov chose this on 2026-10-30.
 - **Tests:** four in [`computer-disposable.test.ts`](../../../../packages/computer/test/computer-disposable.test.ts), and `EVERY_FIELD` in [`computer-options-schema.test.ts`](../../../../packages/computer/test/computer-options-schema.test.ts) has both fields. Task 03's bundle tests pass unchanged.

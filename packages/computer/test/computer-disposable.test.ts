@@ -2609,10 +2609,10 @@ const holding = (values: Record<string, string>): Vault => ({
 /** A cloning profile on `dev02`, with the credential `gitCredential` names. */
 const CLONING = { ...FAR_PROFILE, code: 'clone', gitCredential: { $secret: GIT_SECRET } };
 
-/** The repository `repositoryIn` makes, with an `origin` its machine can fetch from. */
+/** The repository `repositoryIn` makes, with an ssh `origin` its machine fetches by https. */
 const withOrigin = (dir: string) => {
   const made = repositoryIn(dir);
-  execFileSync('git', ['-C', made.repo, 'remote', 'add', 'origin', 'https://git.example.com/team/repo.git'], { stdio: 'pipe' });
+  execFileSync('git', ['-C', made.repo, 'remote', 'add', 'origin', 'git@git.example.com:team/repo.git'], { stdio: 'pipe' });
   return made;
 };
 
@@ -2642,7 +2642,7 @@ it('fetches the session\'s branch from origin where the profile says clone, with
     'fetch -q --no-tags origin +refs/heads/main:refs/ahpd/seed',
   ]);
   for (const one of toOrigin) expect(one.env.AHPD_GIT_CREDENTIAL).toBe(GIT_TOKEN);
-  // The origin the checkout names, and the value in no argv and in no other command's environment.
+  // The origin the checkout names, its https form for the token, and the value in no argv and in no other command's environment.
   expect(commands.some((one) => one.command.join(' ').includes('remote.origin.url https://git.example.com/team/repo.git'))).toBe(true);
   expect(JSON.stringify(far.calls)).not.toContain(GIT_TOKEN);
   expect(JSON.stringify(commands.map((one) => one.command))).not.toContain(GIT_TOKEN);

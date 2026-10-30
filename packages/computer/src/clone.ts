@@ -106,3 +106,22 @@ export const originOf = (root: string): string | undefined => {
   }
   catch { return undefined; }
 };
+
+/**
+ * The https address of a git remote written for ssh, or the address as given.
+ *
+ * A token is a password, which git sends over https alone, so a machine that
+ * fetches with one fetches an ssh origin by its https form: `git@host:path`
+ * and `ssh://git@host/path` both become `https://host/path`. Any other
+ * address is answered unchanged.
+ */
+export const httpsOf = (origin: string): string => {
+  const scp = /^[^@/:]+@([^:/]+):(?!\/)(.+)$/u.exec(origin);
+  if (scp !== null) return `https://${scp[1] as string}/${scp[2] as string}`;
+  if (!/^ssh:\/\//iu.test(origin)) return origin;
+  try {
+    const parsed = new URL(origin);
+    return `https://${parsed.hostname}${parsed.pathname}`;
+  }
+  catch { return origin; }
+};

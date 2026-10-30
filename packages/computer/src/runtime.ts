@@ -12,7 +12,7 @@ import { byName, DOCKER_OWN, DOCKER_OWN_PREFIX, dockerOwn } from './byname.js';
 import { sourceOnHost, spelledOnHost, windowsHost } from './hostpath.js';
 import { cliMountOf, cliVolumeOf, copyOf, gitVolumeOf, guardFor, guardedMounts, idsOfUser, MACHINE_GIT, MACHINE_USER, openReadingOf, seedOf, treeOf, userLabelOf, volumeFlagOf } from './gitdir.js';
 import type { GitGuard, GitMounts, SessionTree } from './gitdir.js';
-import { bundleOfTree, codeRouteOf, CREDENTIAL_ENV, credentialArgs, originOf, SEED_BUNDLE, SEED_REF } from './clone.js';
+import { bundleOfTree, codeRouteOf, CREDENTIAL_ENV, credentialArgs, httpsOf, originOf, SEED_BUNDLE, SEED_REF } from './clone.js';
 import type { CodeRoute } from './clone.js';
 import { absoluteOnHost, mountParts } from './manifest.js';
 import { archiveOf, FILLED_MARKER, firstFileOf, IMAGE_PATH, MACHINE_PARTS, once, partsLabel, partsSaid, pathWith, volumeOf } from './parts.js';
@@ -2173,7 +2173,8 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
    * the machine, and answer the commit it is at.
    *
    * The `clone` route: the box reaches the remote itself, so nothing of this
-   * host's history is sent. A branch `origin` does not have is refused, since
+   * host's history is sent. With a credential, an ssh origin is fetched by its
+   * https form, which is the address the checkout's `origin` names. A branch `origin` does not have is refused, since
    * the machine could only be seeded from a commit the session is not on. The
    * credential, where the profile names one, reaches the two commands that
    * talk to `origin`, by name in their environment and read by an inline
@@ -2187,10 +2188,12 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     branch: string | undefined,
     asUser: (args: string[]) => Promise<string>,
   ): Promise<string | undefined> => {
-    const origin = originOf(hostPathOf(root));
-    if (origin === undefined) {
+    const named = originOf(hostPathOf(root));
+    if (named === undefined) {
       throw new Error(`${spec.name} fetches its code from origin, and ${root} has no origin remote; code: "bundle" sends it from this host`);
     }
+    // A credential is a token, which git sends over https alone.
+    const origin = spec.gitCredential === undefined ? named : httpsOf(named);
     if (branch === undefined) {
       throw new Error(`${spec.name} fetches the session's branch from origin, and ${root} is on no branch; code: "bundle" sends the commit from this host`);
     }
