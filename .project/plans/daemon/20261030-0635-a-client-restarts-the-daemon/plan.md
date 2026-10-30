@@ -1,7 +1,7 @@
 ---
 title: A client restarts the daemon over AHP
 domain: daemon
-status: planned
+status: implemented
 priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -67,8 +67,8 @@ client -> x-ahpd/restart { force } -> owner check -> notRestartable -> busy unle
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The daemon restarts from a websocket command](task-01-the-daemon-restarts-from-a-websocket-command.md) | todo | - |
-| [02 - A refusal names the caller's way to force](task-02-a-refusal-names-the-callers-way-to-force.md) | todo | 01 |
+| [01 - The daemon restarts from a websocket command](task-01-the-daemon-restarts-from-a-websocket-command.md) | implemented | - |
+| [02 - A refusal names the caller's way to force](task-02-a-refusal-names-the-callers-way-to-force.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -77,10 +77,10 @@ client -> x-ahpd/restart { force } -> owner check -> notRestartable -> busy unle
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-daemon-restarts-from-a-websocket-command.md](task-01-the-daemon-restarts-from-a-websocket-command.md).
+- **Done so far:** both tasks are implemented. `x-ahpd/restart` restarts the daemon with the checks of `ahpd restart`. A refusal while a turn runs names `force: true` to every client of the API and of AHP. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** a daemon in the foreground refuses with `FOREGROUND`, as the HTTP surface does.
+- **Watch out for:** a daemon in the foreground refuses with `FOREGROUND`, as the HTTP surface does. The API's surface value is `remote`, not `http`, so `servedRestart` passes the AHP way to force without reading the surface.
 
 ## Final verification checklist
 

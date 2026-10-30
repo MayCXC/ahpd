@@ -47,6 +47,8 @@ The new daemon keeps the old one's environment variables and working folder. To 
 
 From another machine: `ahpd --remote <url> restart`. See [Remote access](REMOTE.md#run-commands-from-another-machine).
 
+A client of the daemon's AHP restarts it with the command `x-ahpd/restart`, which runs the same checks. It takes `config:write`, and only the host's own connection may send it. The answer is `{ "restarting": true, "pid": <pid> }`, and the daemon restarts once the answer has gone.
+
 ## Doctor
 
 `ahpd doctor` runs every check on this machine and prints one line for each, with the fix when something is wrong. It reads the configuration, the daemon's record, the service file and the plugins, and it starts nothing.

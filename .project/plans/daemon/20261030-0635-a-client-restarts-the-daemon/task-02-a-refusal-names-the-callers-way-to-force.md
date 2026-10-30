@@ -1,6 +1,6 @@
 ---
 title: A refusal names the caller's way to force
-status: todo
+status: implemented
 depends: [task-01-the-daemon-restarts-from-a-websocket-command.md]
 layer: server
 refs:
@@ -37,3 +37,9 @@ The terminal, the signals, the control pipe and `ahpd update` keep `--force`.
 
 ## Resume
 
+Implemented 2026-10-30.
+`busy` takes how the caller forces, with `--force` as the default. `servedRestart` passes `force: true`, so the refusal the API and AHP return names the request's own way. The terminal, the signals, the control pipe and `selfupdate.ts` call it with no second argument and keep `--force`.
+
+- `packages/server/src/commands/restart.ts` - `busy(turning, forces)`, and `force: true` in the served check.
+- `packages/server/test/host-restart-method.test.ts` - the websocket refusal says `force: true`.
+- `packages/server/test/server-restart.test.ts` - `POST /api/restart` refuses with the same words; the signal and pipe cases are unchanged.
