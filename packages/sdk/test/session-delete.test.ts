@@ -9,10 +9,10 @@
  * session the daemon is running and for one it is not.
  */
 
-import { mkdtempSync, rmSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createHost } from '../src/host.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent, Listed } from '../src/types/agent.js';
@@ -32,6 +32,10 @@ const peer = (): Peer & { notes: { method: string; params: unknown }[] } => {
     answered: () => {},
     close: () => {},
   };
+};
+
+const settle = async (times = 4): Promise<void> => {
+  for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 0); });
 };
 
 /** What one session was deleted as, in the order the host did it. */
@@ -106,6 +110,54 @@ it('asks the backend to delete a running session, once the chat has closed', asy
 
   expect(order).toEqual(['close ahp-session:/held', 'delete held']);
   expect(deleted).toEqual([{ id: 'held', directory: dir }]);
+  client.close();
+});
+
+it('deletes a running session\'s copy once its agent has stopped, so what the agent writes as it exits goes too', async () => {
+  // The backend's copy, as a Claude CLI keeps it: a transcript, which its
+  // delete removes and its process writes the last of as it exits.
+  const transcript = join(dir, 'held.jsonl');
+  let exit = (): void => {};
+  const exited = new Promise<void>((done) => { exit = done; });
+  let closing = false;
+  const base = echo({ path: dir, pace: 0 });
+  const agent: Agent = {
+    ...base,
+    delete: async () => { rmSync(transcript, { force: true }); },
+    create: (start) => {
+      const session = base.create(start);
+      return {
+        ...session,
+        // The close settles once the process has exited, and the lines a CLI
+        // 2.1.301 wrote as it exited are written before that.
+        close: async () => {
+          closing = true;
+          session.close();
+          await exited;
+          appendFileSync(transcript, [
+            { type: 'last-prompt', lastPrompt: 'Reply with the single word: ok', leafUuid: '0cfcd2c8-ef04-44fd-8314-1f1f03446f2d', sessionId: 'held' },
+            { type: 'atis-latch', atis: '', sessionId: 'held' },
+            {
+              type: 'cost-state', sessionId: 'held', totalCostUSD: 0, totalAPIDuration: 0, totalAPIDurationWithoutRetries: 0,
+              totalToolDuration: 0, totalLinesAdded: 0, totalLinesRemoved: 0, totalDuration: 270, startTime: 1793243412780,
+              modelUsage: {}, hasUnknownModelCost: false,
+            },
+          ].map((line) => `${JSON.stringify(line)}\n`).join(''));
+        },
+      };
+    },
+  };
+  const { client } = await serving(agent);
+  await open(client, 'ahp-session:/held');
+
+  // The process exits only once the host has gone as far as it goes without it.
+  const disposing = dispose(client, 'ahp-session:/held');
+  await vi.waitFor(() => { expect(closing).toBe(true); });
+  await settle();
+  exit();
+  await disposing;
+
+  expect(existsSync(transcript)).toBe(false);
   client.close();
 });
 

@@ -625,8 +625,10 @@ export function claude(options: ClaudeOptions): Agent {
        * The conversation the host asked to resume, where the CLI wrote one.
        *
        * Anything else is an id with no conversation behind it, a chat nobody
-       * spoke to or one whose CLI could not sign in, and the CLI ends at startup
-       * rather than resume it. So the id names a new conversation instead: the
+       * spoke to, one whose CLI could not sign in, or one whose CLI was closed
+       * after its prompt arrived and before it wrote the prompt's entry, and
+       * the CLI ends at startup rather than resume it. So the id names a new
+       * conversation instead, on a clean transcript (`namedUnder`): the
        * reference resumes only what the SDK holds and starts the rest under
        * their own ids. A session in a machine keeps its files there, so what it
        * asks for is resumed as it is.

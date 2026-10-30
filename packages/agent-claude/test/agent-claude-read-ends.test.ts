@@ -52,11 +52,20 @@ afterAll(() => {
   rmSync(home, { recursive: true, force: true });
 });
 
-/** The transcript the CLI writes for a conversation of `FOLDER`, which is what makes a start a resume. */
+/**
+ * The transcript the CLI writes for a conversation of `FOLDER`, which is what
+ * makes a start a resume: its first entry, the prompt, as CLI 2.1.301 wrote it.
+ */
 const written = (id: string): void => {
   const project = join(home, 'config', 'projects', FOLDER.replace(/[^A-Za-z0-9]/g, '-'));
   mkdirSync(project, { recursive: true });
-  writeFileSync(join(project, `${id}.jsonl`), '{}\n');
+  writeFileSync(join(project, `${id}.jsonl`), `${JSON.stringify({
+    parentUuid: null, isSidechain: false, promptId: 'f0829d44-61b9-476c-abb6-cb4427e28cb3', type: 'user',
+    message: { role: 'user', content: 'hi' }, uuid: '6f79faf7-646d-4773-b101-06232d161be1',
+    timestamp: '2026-10-29T22:14:15.249Z', permissionMode: 'auto', promptSource: 'sdk', turnOrigin: 'sdk',
+    turnPosition: { promptIndex: 0, turnIndex: 1 }, userType: 'external', entrypoint: 'sdk-cli',
+    cwd: FOLDER, sessionId: id, version: '2.1.301', gitBranch: 'master',
+  })}\n`);
 };
 
 const frame = (kind: 'user' | 'assistant', uuid: string, message: unknown): Record<string, unknown> => ({
