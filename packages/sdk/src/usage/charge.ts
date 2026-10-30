@@ -11,12 +11,14 @@
  *
  * The keys a paying row adds are how a limit finds its own usage: a record of
  * the work carries them in `pools`, and `limitsOf` reads the store's total for
- * a key as what the limit has used. Nothing here is wired into the host.
+ * a key as what the limit has used. A `minute` limit reads a meter instead,
+ * because the store keeps no total finer than a day.
  */
 
 import { scoped } from '../access/decide.js';
 import type { Decision } from '../access/decide.js';
 import { periodOf } from './periods.js';
+import type { MinuteMeter } from './minute.js';
 import type { Scope } from './scopes.js';
 import type { LimitPool, Measure, Period, Policy, PolicyKind } from '../types/policies.js';
 import type { Usage, UsageTotal } from '../types/usage.js';
@@ -35,6 +37,15 @@ export const COUNTED: Record<PolicyKind, readonly Measure[]> = {
 };
 
 /**
+ * The measures a piece of work raises by one when it is allowed.
+ *
+ * They are counted before the work runs rather than at its record, because a
+ * record is written after it ends: every call in a burst starts before any of
+ * them is recorded, so a count taken at the record lets the whole burst pass.
+ */
+const COUNTED_AT_CALL: readonly Measure[] = ['calls', 'turns'];
+
+/**
  * Which row of one scope pays first.
  *
  * `ending` puts the row that ends soonest first, so temporary credit is used
@@ -51,6 +62,14 @@ export interface ChargeOptions {
   payOrder?: PayOrder;
   /** The instant to read the totals at. Defaults to now. */
   at?: Date;
+  /**
+   * What each key used in this minute, which a `minute` limit reads.
+   *
+   * The store keeps no total finer than a day, so a limit on a minute reads its
+   * figure here. Absent, a `minute` limit reads zero. The walk never counts into
+   * the meter: the caller counts once, through `countCall`.
+   */
+  meter?: MinuteMeter;
 }
 
 /**
@@ -152,11 +171,13 @@ const usedIn = (total: UsageTotal, measure: Measure): number => {
  * resets.
  *
  * `used` is the store's total for the limit's key between the start of the
- * period and `now`, which is the record-tagging the policy plan is built on.
- * An `each` limit read without a person answers every member the store holds a
- * key for, because a member who used nothing has no key and used zero. A limit
- * in a measure this plan does not count answers `counted: false` and no
- * figure: nothing can say it is out.
+ * period and `now`, which is the record-tagging the policy plan is built on. A
+ * `minute` limit reads the meter's figure instead, because the store keeps no
+ * total finer than a day; with no meter its figure is zero. An `each` limit read
+ * without a person answers every member the store holds a key for, because a
+ * member who used nothing has no key and used zero. A limit in a measure this
+ * plan does not count answers `counted: false` and no figure: nothing can say it
+ * is out.
  */
 export async function limitsOf(
   row: Policy,
@@ -164,11 +185,15 @@ export async function limitsOf(
   zone: string,
   now: Date,
   person?: Principal,
+  meter?: MinuteMeter,
 ): Promise<LimitFigure[]> {
   const until = now.toISOString();
   const figures: LimitFigure[] = [];
   for (const limit of row.limits ?? []) {
     const { from, resets } = periodOf(zone, limit.period, now, row.from);
+    const usedAt = async (key: string): Promise<number> => (limit.period === 'minute'
+      ? meter?.sum(key, now) ?? 0
+      : usedIn(await usage.total(key, from, until), limit.measure));
     const counted = COUNTED[row.kind].includes(limit.measure);
     const figure: LimitFigure = {
       amount: limit.amount,
@@ -186,12 +211,12 @@ export async function limitsOf(
         const keys = (await usage.pools()).filter((key) => key.startsWith(prefix));
         figure.members = await Promise.all(keys.map(async (key) => ({
           user: key.slice(prefix.length),
-          used: usedIn(await usage.total(key, from, until), limit.measure),
+          used: await usedAt(key),
         })));
       }
       else {
         const key = keyOf(row, limit.measure, limit.pool, limit.pool === 'each' ? person?.id : undefined);
-        figure.used = usedIn(await usage.total(key, from, until), limit.measure);
+        figure.used = await usedAt(key);
       }
     }
     figures.push(figure);
@@ -278,7 +303,11 @@ const refusalOf = (row: Policy, limit: LimitFigure): ChargeRefusal => {
  * row that closed and the limit that closed it.
  *
  * The check is before the work and the record after it, so two pieces of work
- * that start together can both pass an amount.
+ * that start together can both pass an amount in `usd` or `tokens`. A `calls`
+ * or `turns` key is counted by the caller when the work is allowed, through
+ * `countCall`, so a burst cannot pass one of those. The walk itself counts
+ * nothing, because one piece of work may walk more than once: the proxy asks
+ * the policy of every entry a name is served by.
  */
 export async function chargeFor(
   decision: Extract<Decision, { allowed: true }>,
@@ -302,7 +331,7 @@ export async function chargeFor(
   const figuresFor = async (row: Policy): Promise<LimitFigure[]> => {
     const held = read.get(row.id);
     if (held !== undefined) return held;
-    const figures = await limitsOf(row, usage, options.zone, at, principal);
+    const figures = await limitsOf(row, usage, options.zone, at, principal, options.meter);
     read.set(row.id, figures);
     return figures;
   };
@@ -363,3 +392,27 @@ export async function chargeFor(
 
   return { allowed: true, pools };
 }
+
+/**
+ * Count one piece of work once, in the `calls` and `turns` keys it is charged.
+ *
+ * The walk counts nothing, because a caller may walk it more than once for one
+ * piece of work: the proxy asks the policy of every entry a name is served by,
+ * and falls back to the next candidate when the first does not answer. The
+ * caller counts the keys of the candidate it sends to, once, before it sends,
+ * so a fallback is not a second call and a turn is one turn.
+ *
+ * A minute limit on one of those keys reads the count at the next check, and
+ * work that has started but not ended is already in it. A key named twice is
+ * counted once.
+ */
+export const countCall = (keys: Iterable<string>, meter: MinuteMeter | undefined, at?: Date): void => {
+  if (meter === undefined) return;
+  const counted = new Set<string>();
+  for (const key of keys) {
+    if (counted.has(key)) continue;
+    if (!COUNTED_AT_CALL.some((measure) => key.endsWith(`/${measure}`))) continue;
+    counted.add(key);
+    meter.add(key, 1, at);
+  }
+};

@@ -519,6 +519,16 @@ describe('a key\'s limits', () => {
     ]);
   });
 
+  it('takes a minute, which is the window a rate limit counts over', () => {
+    expect(checkKeyLimits([
+      { amount: 60, measure: 'calls', period: 'minute', pool: 'shared' },
+      { amount: 100_000, measure: 'tokens', period: 'minute', pool: 'shared' },
+    ])).toEqual([
+      { amount: 60, measure: 'calls', period: 'minute', pool: 'shared' },
+      { amount: 100_000, measure: 'tokens', period: 'minute', pool: 'shared' },
+    ]);
+  });
+
   it('fills a pool that is not named with shared, because one key has one total', () => {
     expect(checkKeyLimits([{ amount: 5, measure: 'usd', period: 'day' }]))
       .toEqual([{ amount: 5, measure: 'usd', period: 'day', pool: 'shared' }]);

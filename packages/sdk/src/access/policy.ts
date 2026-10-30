@@ -18,6 +18,7 @@ import { zoneOf } from '../usage/periods.js';
 import { checkPolicy, EFFECTS, KINDS, LIMIT_POOLS, MATCHES, MEASURES, PERIODS } from './policies.js';
 import { absentResource, asFile, EPOCH, line, lines, recordsProvider, splitResource, type Records, type RecordsProvider } from '../resources/records.js';
 import { recordsDomain, type RecordsChannel } from '../resources/recordschannel.js';
+import type { MinuteMeter } from '../usage/minute.js';
 import type { PluginMethod } from '../types/plugin.js';
 import type { Policies, PolicyKind, PolicyScope } from '../types/policies.js';
 import type { Metadata, Read } from '../types/resources.js';
@@ -41,6 +42,14 @@ export interface PolicySchemeOptions {
   usage?: Usage;
   /** The zone the periods are cut in, as `usage.timezone` names it. */
   timezone?: string;
+  /**
+   * What each key used in this minute, which a `minute` limit answers.
+   *
+   * The store keeps no total finer than a day, so the leaf needs the daemon's
+   * meter to answer the same figure the walk checks against. Absent, a `minute`
+   * limit reads zero.
+   */
+  meter?: MinuteMeter;
   /** Where a zone that cannot be read is said. */
   onProblem?(message: string): void;
 }
@@ -190,9 +199,11 @@ const records = (store: Policies): Records => ({
  *
  * A row is a file whose bytes are its JSON, so a leaf under one is new here.
  * `policy://<id>/limits` answers the row's own limits, each with what the
- * period has used and when it resets, read by `limitsOf`. The reader holds
- * `policy:read`, which is what the scheme's gate has already said, so an `each`
- * limit answers every member rather than one person.
+ * period has used and when it resets, read by `limitsOf`. A `minute` limit
+ * answers the meter's figure, which is the daemon's own, so the leaf and the
+ * walk agree. The reader holds `policy:read`, which is what the scheme's gate
+ * has already said, so an `each` limit answers every member rather than one
+ * person.
  *
  * Every other leaf is the record provider's answer, which is the refusal it
  * always gave. A host with no usage store serves no leaf at all: a limit whose
@@ -211,7 +222,7 @@ const withLimits = (provider: RecordsProvider, store: Policies, options: PolicyS
       id: row.id,
       kind: row.kind,
       scope: row.scope,
-      limits: await limitsOf(row, usage, zone, new Date()),
+      limits: await limitsOf(row, usage, zone, new Date(), undefined, options.meter),
     };
     return JSON.stringify(answer, null, 2);
   };

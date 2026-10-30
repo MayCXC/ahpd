@@ -17,6 +17,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { fileUsage, usageProvider } from '../src/usage/usage.js';
+import { createMinuteMeter } from '../src/usage/minute.js';
 import { memoryPolicies } from '../src/access/policies.js';
 import { mayRead, poolsFor } from '../src/usage/scopes.js';
 import type { Policy } from '../src/types/policies.js';
@@ -561,4 +562,31 @@ it('answers each limit whose scope holds the reader, with their own each figure'
     .rejects.toMatchObject({ code: -32008, message: expect.stringContaining('policies.ownLimits') });
   await expect(usageProvider({ usage, timezone: 'UTC' }).read('usage://limits', undefined, alice))
     .rejects.toMatchObject({ code: -32008 });
+});
+
+/*
+ * A `minute` limit is the one figure the store cannot answer, so the read has
+ * to take the meter the walk checks against: what a person reads and what
+ * refuses their next call are the same number.
+ */
+it('answers a minute limit from the meter, as the walk reads it', async () => {
+  const usage = fileUsage({ folder, timezone: 'UTC' });
+  const policies = memoryPolicies();
+  await policies.put({
+    id: 'M1', scope: 'all', kind: 'model', effect: 'allow', match: { model: ['*'] },
+    limits: [{ amount: 60, measure: 'calls', period: 'minute', pool: 'shared' }],
+  });
+  const meter = createMinuteMeter();
+  meter.add('policy:M1/calls', 7);
+  const provider = usageProvider({ usage, timezone: 'UTC', policies, meter });
+  const alice = person('alice', [], ['backend:search']);
+
+  const shown = await json('usage://limits', alice, provider) as { id: string; limits: Record<string, any>[] }[];
+  expect(shown[0]?.limits[0]).toMatchObject({ amount: 60, measure: 'calls', period: 'minute', used: 7 });
+
+  // Without the meter the leaf answers zero, which is the one figure it cannot
+  // know, rather than a made-up day total.
+  const bare = usageProvider({ usage, timezone: 'UTC', policies });
+  const unmetered = await json('usage://limits', alice, bare) as { limits: Record<string, any>[] }[];
+  expect(unmetered[0]?.limits[0]).toMatchObject({ period: 'minute', used: 0 });
 });

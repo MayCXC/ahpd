@@ -8,8 +8,10 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { chargeFor, limitsOf } from '../src/usage/charge.js';
+import { chargeFor, countCall, limitsOf } from '../src/usage/charge.js';
 import type { Charge, PayOrder } from '../src/usage/charge.js';
+import { createMinuteMeter } from '../src/usage/minute.js';
+import type { MinuteMeter } from '../src/usage/minute.js';
 import { decide } from '../src/access/decide.js';
 import type { Asked } from '../src/access/decide.js';
 import { memoryPolicies } from '../src/access/policies.js';
@@ -95,7 +97,7 @@ const TODAY = new Date('2026-10-20T00:00:00.000Z');
 
 const at = (day: string): Date => new Date(`${day}T00:00:00.000Z`);
 
-/** `decide` then `chargeFor`, which is the pair the host runs for one piece of work. */
+/** `decide` then `chargeFor`, then the count a caller makes, which is the pair the host runs for one piece of work. */
 const charged = async (
   kind: PolicyKind,
   principal: Principal,
@@ -105,14 +107,18 @@ const charged = async (
   moment: Date = TODAY,
   payOrder?: PayOrder,
   store: Policies = policies,
+  meter?: MinuteMeter,
 ): Promise<Charge> => {
   const decision = await decide(store, principal, scope, kind, asked, moment);
   if (!decision.allowed) throw new Error(`the check refused it: ${decision.refusal.message}`);
-  return chargeFor(decision, kind, principal, scope, usage, {
+  const walked = await chargeFor(decision, kind, principal, scope, usage, {
     zone: 'UTC',
     at: moment,
     ...(payOrder === undefined ? {} : { payOrder }),
+    ...(meter === undefined ? {} : { meter }),
   });
+  if (walked.allowed) countCall(walked.pools, meter, moment);
+  return walked;
 };
 
 /** The keys of an answer the walk allowed. */
@@ -380,6 +386,86 @@ describe('a key\'s own row', () => {
     // With room it adds its key, and nothing else was asked of it.
     const answer = await charged('model', keyed(dave, 'k1', DAY(100, 'calls', 'day')), BILLING, { model: 'anthropic/fable-5' }, memoryUsage());
     expect(poolsOf(answer)).toEqual(['pool:token:k1/calls']);
+  });
+});
+
+describe('a minute limit', () => {
+  /** Alice's row with a limit of two calls a minute. */
+  const BURST = async (): Promise<Policies> => storeOf({
+    id: 'R1', scope: 'user:alice', kind: 'model', effect: 'allow', match: { model: ['anthropic/*'] },
+    limits: [{ amount: 2, measure: 'calls', period: 'minute', pool: 'shared' }],
+  });
+
+  const aMinuteLater = new Date(TODAY.getTime() + 60_000);
+
+  it('allows two calls and refuses the third with this minute', async () => {
+    const store = await BURST();
+    const meter = createMinuteMeter();
+    const call = async (): Promise<Charge> => charged('model', alice, undefined, { model: 'anthropic/sonnet-5' }, memoryUsage(), TODAY, undefined, store, meter);
+    expect(poolsOf(await call())).toEqual(['policy:R1/calls']);
+    expect(poolsOf(await call())).toEqual(['policy:R1/calls']);
+    const refusal = refusalOf(await call());
+    expect(refusal.period).toBe('minute');
+    expect(refusal.message).toBe('R1 has no room: 2 / 2 calls this minute');
+  });
+
+  it('allows a call in the next minute', async () => {
+    const store = await BURST();
+    const meter = createMinuteMeter();
+    for (let one = 0; one < 2; one += 1) {
+      await charged('model', alice, undefined, { model: 'anthropic/sonnet-5' }, memoryUsage(), TODAY, undefined, store, meter);
+    }
+    const answer = await charged('model', alice, undefined, { model: 'anthropic/sonnet-5' }, memoryUsage(), aMinuteLater, undefined, store, meter);
+    expect(poolsOf(answer)).toEqual(['policy:R1/calls']);
+  });
+
+  it('allows every call when the walk has no meter, because the store keeps no minute', async () => {
+    const store = await BURST();
+    for (let one = 0; one < 3; one += 1) {
+      const answer = await charged('model', alice, undefined, { model: 'anthropic/sonnet-5' }, memoryUsage(), TODAY, undefined, store);
+      expect(poolsOf(answer)).toEqual(['policy:R1/calls']);
+    }
+  });
+
+  it('reads a tokens limit from the meter rather than the day total', async () => {
+    const store = await storeOf({
+      id: 'T1', scope: 'user:alice', kind: 'model', effect: 'allow', match: { model: ['anthropic/*'] },
+      limits: [{ amount: 100, measure: 'tokens', period: 'minute', pool: 'shared' }],
+    });
+    const meter = createMinuteMeter();
+    // The store's day total would say this row is out; the minute says it is not.
+    const usage = memoryUsage({ 'policy:T1/tokens': { tokens: 5000 } });
+    expect(poolsOf(await charged('model', alice, undefined, { model: 'anthropic/sonnet-5' }, usage, TODAY, undefined, store, meter)))
+      .toEqual(['policy:T1/tokens']);
+    meter.add('policy:T1/tokens', 100, TODAY);
+    expect(refusalOf(await charged('model', alice, undefined, { model: 'anthropic/sonnet-5' }, usage, TODAY, undefined, store, meter)).message)
+      .toBe('T1 has no room: 100 / 100 tokens this minute');
+  });
+
+  it('does not count a walk, and counts a key named twice once', async () => {
+    const store = await BURST();
+    const meter = createMinuteMeter();
+    const decision = await decide(store, alice, undefined, 'model', { model: 'anthropic/sonnet-5' }, TODAY);
+    if (!decision.allowed) throw new Error(decision.refusal.message);
+    const walked = await chargeFor(decision, 'model', alice, undefined, memoryUsage(), { zone: 'UTC', at: TODAY, meter });
+    const pools = poolsOf(walked);
+    expect(pools).toEqual(['policy:R1/calls']);
+    // The walk only reads the minute: one piece of work may walk more than once.
+    expect(meter.sum('policy:R1/calls', TODAY)).toBe(0);
+    // One count, though the caller names the key twice.
+    countCall([...pools, ...pools], meter, TODAY);
+    expect(meter.sum('policy:R1/calls', TODAY)).toBe(1);
+  });
+
+  it('answers a minute figure with where it begins and resets, in UTC', async () => {
+    const store = await BURST();
+    const row = await store.get('R1') as Policy;
+    const figures = await limitsOf(row, memoryUsage(), 'America/Campo_Grande', TODAY);
+    expect(figures[0]).toMatchObject({
+      used: 0,
+      from: '2026-10-20T00:00:00.000Z',
+      resets: '2026-10-20T00:01:00.000Z',
+    });
   });
 });
 

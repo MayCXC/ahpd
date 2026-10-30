@@ -1,7 +1,7 @@
 ---
 title: A limit counts per minute
 domain: policy
-status: planned
+status: implemented
 priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -38,7 +38,7 @@ The files read and the patterns to reuse are the `refs` in the frontmatter, each
 ```
 policy row or key: { amount: 60, measure: calls, period: minute }
 call -> chargeFor -> limitsOf: minute -> meter.sum(key, minute start) -> room?
-     -> allowed: meter.add(key/calls, 1) now
+     -> allowed: the caller's countCall adds 1 to key/calls, once per request or turn
 call ends -> usage.record(entry) -> meter.add(key/tokens, n), meter.add(key/usd, cost)
 ```
 
@@ -57,10 +57,12 @@ call ends -> usage.record(entry) -> meter.add(key/tokens, n), meter.add(key/usd,
 | The minute totals are in memory, and a restart clears them | (defaulted: a minute is lost at most) | 01 |
 | `calls` and `turns` are counted when the call is allowed | (defaulted: a call counted at its end lets a burst through) | 02 |
 | `tokens` and `usd` are counted when the record is kept | (defaulted: they are known only at the end of a call) | 01 |
+| One request is one call: the proxy counts once, on the candidate it sends to, and a fallback is the same call | Softov, 2026-10-29: fix both before the PR | 02 |
+| `policy://<id>/limits` and `usage://limits` answer a `minute` limit from the daemon's meter | Softov, 2026-10-29: fix both before the PR | 02 |
 
 ## Proposed architecture
 
-- **Data flow** - `createMinuteMeter` keeps a sum per key for the current and the last minute. The usage store adds `tokens`, `usd` and `hours` at record. `chargeFor` adds `calls` and `turns` when it allows. `limitsOf` reads a `minute` limit from the meter.
+- **Data flow** - `createMinuteMeter` keeps a sum per key for the current and the last minute. The usage store adds `tokens`, `usd` and `hours` at record. `chargeFor` reads a `minute` limit from the meter and counts nothing; the proxy and the turn check count `calls` and `turns` once each, through `countCall`.
 - **Event flow** - none.
 - **State flow** - the meter is in memory, one for each daemon, and the server gives the same one to the store and to every `chargeFor`.
 - **Layer responsibilities** - sdk: `Period`, `periodOf`, the meter, the store and `chargeFor` · server: one meter, passed through · docs.
@@ -70,8 +72,8 @@ call ends -> usage.record(entry) -> meter.add(key/tokens, n), meter.add(key/usd,
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A minute is a period with a meter](task-01-a-minute-is-a-period-with-a-meter.md) | todo | - |
-| [02 - A minute limit is checked and counted](task-02-a-minute-limit-is-checked-and-counted.md) | todo | 01 |
+| [01 - A minute is a period with a meter](task-01-a-minute-is-a-period-with-a-meter.md) | implemented | - |
+| [02 - A minute limit is checked and counted](task-02-a-minute-limit-is-checked-and-counted.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -81,15 +83,15 @@ call ends -> usage.record(entry) -> meter.add(key/tokens, n), meter.add(key/usd,
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-minute-is-a-period-with-a-meter.md](task-01-a-minute-is-a-period-with-a-meter.md).
+- **Done so far:** every task. `minute` is a `Period`, `periodOf` cuts it in UTC, and `createMinuteMeter` keeps two buckets per key. `fileUsage` feeds it `usd`, `tokens` and `hours`, and an allowed `chargeFor` counts `calls` and `turns`. One meter in `run.ts` reaches the store, the host and the proxy.
+- **Next action:** none; every item of the final verification checklist passed.
 - **Open questions:** none.
 - **Watch out for:** the plan `policy/20261029-2012-a-key-has-limits` also changes `chargeFor` and the policy checks. The key's limits take `minute` once both are merged.
 
 ## Final verification checklist
 
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
-- [ ] A row with `2 calls a minute` allows two proxy calls and refuses the third in the same minute.
-- [ ] The next minute allows a call again.
-- [ ] A policy form in a client offers `minute` with no client change.
+- [x] `pnpm typecheck` passes.
+- [x] `pnpm test` passes, run as `pnpm exec vitest run --maxWorkers=3 --testTimeout=30000` after `pnpm -s schema`: 460 files and 7676 tests.
+- [x] A row with `2 calls a minute` allows two proxy calls and refuses the third in the same minute.
+- [x] The next minute allows a call again.
+- [x] A policy form in a client offers `minute` with no client change.

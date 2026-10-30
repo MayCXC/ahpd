@@ -41,7 +41,7 @@ A row whose `match` names no type is about nothing a request asks for, so it is 
 
 ### What a `limit` holds
 
-Each limit is an `amount`, a `measure`, a `period` (`day`, `week`, `month` or `total`) and a `pool` (`shared`, one total for the group, or `each`, every member has their own). A row has room only while every one of its counted limits has room, and whichever is reached first closes it whatever its unit - which is why several limits on one row, a day and a week and a month, are the ordinary case.
+Each limit is an `amount`, a `measure`, a `period` (`minute`, `day`, `week`, `month` or `total`) and a `pool` (`shared`, one total for the group, or `each`, every member has their own). A row has room only while every one of its counted limits has room, and whichever is reached first closes it whatever its unit - which is why several limits on one row, a day and a week and a month, are the ordinary case.
 
 Measures are chosen by the kind of the row, and only some of them are counted yet:
 
@@ -52,6 +52,8 @@ Measures are chosen by the kind of the row, and only some of them are counted ye
 | `computer` | `hours`, `sessions` | neither yet |
 
 A limit in a measure that is not counted yet is stored, never closes its row, and reads back as `counted: false`. `calls` counts the records a model row paid for, one per record; `turns` counts a turn once, by its first record. A period begins at 00:00 in `usage.timezone`: the day, the week on Monday and the month on the 1st, and it resets at the next one. A `total` limit counts from the row's `from`, or from the beginning of the store when it names none, and never resets. Unused room does not roll over.
+
+A `minute` limit is the rate limit of other proxies: so many calls or tokens a minute, the rpm and tpm of an OpenAI-compatible proxy. Its minute is the minute of the clock in UTC, and not a minute of `usage.timezone`, because a minute is the same length everywhere. Its totals are kept in memory rather than in the store, which keeps no total finer than a day. A `calls` or `turns` minute limit counts the work when it is allowed, so a burst of calls that start together cannot pass one. A request counts once, on the keys of the candidate it is sent to, so a name a proxy serves from two connectors is one call. A `tokens`, `usd` or `hours` minute limit counts a record when the store keeps it, because the amount is known only when the work ends. A restart clears the minute totals, so the most a minute limit loses is one minute.
 
 A row is refused, by name, for a measure its kind does not have, a limit with no `pool`, a `from` after its `until`, or a value type its kind does not take.
 
@@ -154,7 +156,7 @@ A turn and a proxy call walk their rows for room after the four steps allowed th
 
 A key minted with limits adds one row of its own, walked before every row about a person. It is a `cap` about every model, scoped to the key, so it adds its keys and never pays: the limits of a key narrow what a policy allows and never allow a model alone. The row is made from the token record rather than read from a store, so it holds for a `*:*` holder and with `policies.check` off too, as long as a usage store is there.
 
-A row has room only while every counted limit has room, so a row closed in one measure pays no other. The check is before the work and the record after it, so two turns that start together can both pass an amount.
+A row has room only while every counted limit has room, so a row closed in one measure pays no other. The check is before the work and the record after it, so two turns that start together can both pass an amount in `usd` or `tokens`. A `calls` or `turns` key is counted when the work is allowed, so a `minute` limit on one of them holds a burst.
 
 `policies.payOrder` decides among the rows of one scope only:
 
@@ -198,7 +200,7 @@ A `total` limit says `in total` rather than `this week`. The id is the first row
 
 ### Reading a limit
 
-Two reads answer a limit, both with the same figure: the amount, what the period has used, where the period began and when it resets. `from` is the first instant of the period in `usage.timezone`, and `resets` is the next one. A `total` limit has no `resets`, a row with an `until` says `ends`, and a measure that is not counted yet says `counted: false` and carries no figure.
+Two reads answer a limit, both with the same figure: the amount, what the period has used, where the period began and when it resets. `from` is the first instant of the period, in `usage.timezone` for a day, a week or a month and in UTC for a minute, and `resets` is the next one. Both read the daemon's own minute meter, so a `minute` limit answers the figure the next turn or call is checked against. A `total` limit has no `resets`, a row with an `until` says `ends`, and a measure that is not counted yet says `counted: false` and carries no figure.
 
 `policy://<id>/limits` answers one row to a reader holding `policy:read`. An `each` limit answers every member the store holds a key for, as `{ user, used }`, because the reader may see them all. A member who used nothing has no key and is not listed, and their figure is zero. A row that is not there is `-32008`, and a host with no usage store serves no leaf.
 

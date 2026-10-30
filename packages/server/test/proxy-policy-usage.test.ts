@@ -10,7 +10,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { memoryPolicies, type ModelUse, type Policies, type Policy, type PolicyLimit, type Usage, type UsageTotal } from '@ahpd/sdk';
+import { createMinuteMeter, memoryPolicies, type MinuteMeter, type ModelUse, type Policies, type Policy, type PolicyLimit, type Usage, type UsageTotal } from '@ahpd/sdk';
 import {
   answerJson, fakeProvider, isAnthropicError, isOpenAiError, MARKER, memoryUsage, pause, people, ROOT_TOKEN, send, serveProxy,
   type FakeProvider, type People, type ProviderFixture, type Served, type ServeOptions,
@@ -115,6 +115,32 @@ const REPORTED = { ...COMPLETION, usage: REPORTED_USAGE };
 /** What a record keeps of that report: the amount, and the split it came in. */
 const REPORTED_COST = { amount: 0.000204, currency: 'usd', from: 'harness', input: 0.000104, output: 0.0001 };
 
+/** A row of two calls a minute, which is the rate limit of a proxy. */
+const MINUTE_CALLS: Policy = {
+  id: 'burst',
+  scope: 'all',
+  kind: 'model',
+  effect: 'allow',
+  match: { model: ['*'] },
+  limits: [{ measure: 'calls', period: 'minute', amount: 2, pool: 'shared' }],
+};
+
+/**
+ * A meter whose clock does not move.
+ *
+ * The proxy reads the meter at the time of the call, so a test that ran across
+ * a minute boundary would see the count start again. One instant, so the three
+ * calls are always in one minute.
+ */
+const pinned = (): MinuteMeter => {
+  const at = new Date('2026-10-20T12:00:00.000Z');
+  const meter = createMinuteMeter();
+  return {
+    add: (key, amount) => { meter.add(key, amount, at); },
+    sum: (key) => meter.sum(key, at),
+  };
+};
+
 /** Two fakes answering a chat completion, and the proxy over them with Softov's table. */
 const setup = async (options: ServeOptions = {}, answer: unknown = COMPLETION) => {
   const remote = await fakeProvider(answerJson(200, answer));
@@ -208,6 +234,52 @@ describe('a call at a limit', () => {
     expect(listed.status).toBe(200);
     expect((listed.json as { data: { id: string }[] }).data.map((one) => one.id)).toContain('local/default');
     expect((await send(served.port, CHAT, { headers: { 'x-api-key': who.ana }, body: { model: 'local/default' } })).status).toBe(403);
+  });
+
+  it('allows two calls a minute and refuses the third in the same minute', async () => {
+    const { served } = await setup({ policies: await rows(MINUTE_CALLS), policiesCheck: true, meter: pinned() });
+    const headers = { 'x-api-key': who.ana };
+    const body = { model: 'local/default' };
+    expect((await send(served.port, CHAT, { headers, body })).status).toBe(200);
+    expect((await send(served.port, CHAT, { headers, body })).status).toBe(200);
+    const third = await send(served.port, CHAT, { headers, body });
+    expect(third.status).toBe(403);
+    expect(isOpenAiError(third.json)).toBe(true);
+    expect(third.json).toMatchObject({ error: { type: 'permission_error', message: 'burst has no room: 2 / 2 calls this minute' } });
+  });
+
+  it('counts one request once when a name is served by two connectors', async () => {
+    const remote = await fakeProvider(answerJson(200, COMPLETION));
+    fakes.push(remote);
+    const meter = pinned();
+    const served = await serveProxy({
+      users: who.users,
+      // One name, two connectors, so the policy walk judges two entries and the
+      // request sends to the first of them. That is still one call.
+      proxy: {
+        models: { 'local/twin': [{ provider: 'one', id: 'twin' }, { provider: 'two', id: 'twin' }] },
+      },
+      providers: [
+        { id: 'one', adapter: 'openai-compatible', endpoint: remote.endpoint, key: null },
+        { id: 'two', adapter: 'openai-compatible', endpoint: remote.endpoint, key: null },
+      ],
+      usage: () => memoryUsage(),
+      policies: await rows(MINUTE_CALLS),
+      policiesCheck: true,
+      meter,
+    });
+    open.push(served);
+    const headers = { 'x-api-key': who.ana };
+    const body = { model: 'local/twin' };
+    expect((await send(served.port, CHAT, { headers, body })).status).toBe(200);
+    // Two entries were walked and one candidate was sent to, so the count is 1.
+    expect(meter.sum('policy:burst/calls')).toBe(1);
+    expect((await send(served.port, CHAT, { headers, body })).status).toBe(200);
+    expect(meter.sum('policy:burst/calls')).toBe(2);
+    const third = await send(served.port, CHAT, { headers, body });
+    expect(third.status).toBe(403);
+    expect(isOpenAiError(third.json)).toBe(true);
+    expect(third.json).toMatchObject({ error: { type: 'permission_error', message: 'burst has no room: 2 / 2 calls this minute' } });
   });
 
   it('writes the check\'s key on an allowed call\'s record, beside the owner, team and project', async () => {

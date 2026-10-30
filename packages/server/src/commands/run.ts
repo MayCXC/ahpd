@@ -21,6 +21,7 @@ import {
   clientPluginsIn,
   connectorsChannel,
   createHost,
+  createMinuteMeter,
   doorOf,
   fileResources,
   fileSessions,
@@ -425,11 +426,21 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * `--stdio` daemon serves the protocol on stdout, so a problem line there is
    * a frame the client cannot parse.
    */
+  /*
+   * What each key used in this minute, which a `minute` limit reads.
+   *
+   * One meter, because three things ask for it: the store below adds each
+   * record's `usd`, `tokens` and `hours`, and the proxy and the turn check count
+   * a call as it is allowed. Two meters would let a call be counted in one and
+   * read in the other.
+   */
+  const meter = createMinuteMeter();
   const store = fileUsage({
     folder: join(configDir(), 'usage'),
     // The same zone the `usage:` scheme cuts its periods in, so the day a total
     // is kept under and the day it is read over are the same day.
     ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
+    meter,
     onProblem: (message) => process.stderr.write(`${message}\n`),
   });
   // This daemon's own once a plugin has folded in a store of its own; before
@@ -582,6 +593,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     policiesPayOrder: options.policiesPayOrder,
     ...(options.usageTimezone === undefined ? {} : { usageTimezone: options.usageTimezone }),
     usage: () => metered,
+    meter,
     hostName: hostname(),
     origins: () => apiOrigins(apiHost, options.resource, apiBoundPort, options.origins),
     // Asked only by the handler, which is built only when the API is.
@@ -682,8 +694,10 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const policyLists = policyChannels(policies, {
     onProblem: listProblem,
     // The limits of a row are read from the same usage store the scheme is, so
-    // `policy://<id>/limits` answers what a key has used in the same zone.
+    // `policy://<id>/limits` answers what a key has used in the same zone. The
+    // meter is the same one the walk reads, so a minute limit agrees with it.
     usage: store,
+    meter,
     ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
   });
   const peopleLists = users === undefined
@@ -1201,6 +1215,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // What this host's work cost, built above so the scheme and the command
     // read the same records this host charges to.
     usage: store,
+    // The minute totals a `minute` limit reads, which the store above fills and
+    // a turn counts itself in as it is allowed.
+    meter,
     // The secrets a plugin's options are resolved against, and what
     // `host.secret` reads. The file above, read on every call.
     vault,
@@ -1272,9 +1289,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     usage: store,
     ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
     // The rows `usage://limits` answers. A person reads the limits their scopes
-    // hold while `policies.ownLimits` is on, which is its default.
+    // hold while `policies.ownLimits` is on, which is its default. The meter is
+    // the same one the walk reads, so a minute limit agrees with it.
     policies,
     ownLimits: options.policiesOwnLimits,
+    meter,
     // The titles a pool is named with, read from the same directory the gate asks.
     ...(users === undefined ? {} : { titles: users }),
     onProblem: (message) => process.stderr.write(`${message}\n`),

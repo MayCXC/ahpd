@@ -1,6 +1,6 @@
 ---
 title: A minute is a period with a meter
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -48,4 +48,11 @@ The usage store adds the measures of each record it keeps to the meter.
 - Run `pnpm typecheck` and `pnpm test`.
 
 ## Resume
+
+- **Done so far:** `Period` and `PERIODS` take `minute`, and `PERIODS` lists it first. `periodOf` answers a minute from the UTC minute of `now`, with `resets` a minute later. `createMinuteMeter` in `packages/sdk/src/usage/minute.ts` keeps two buckets per key, `add` turns them and drops anything older than the minute before, and `sum` answers the bucket of the minute asked or 0. `fileUsage` takes an optional `meter`, and `record` adds the record's amount to each pool key that ends in `/usd`, `/tokens` or `/hours`.
+- **Next action:** [task-02-a-minute-limit-is-checked-and-counted.md](task-02-a-minute-limit-is-checked-and-counted.md).
+- **Files:** `packages/sdk/src/types/policies.ts`, `packages/sdk/src/access/policies.ts`, `packages/sdk/src/usage/periods.ts`, `packages/sdk/src/usage/minute.ts`, `packages/sdk/src/usage/usage.ts`, `packages/sdk/src/index.ts`, `packages/sdk/test/minute-meter.test.ts`, `packages/sdk/test/usage.test.ts`, `packages/sdk/test/policy-checks.test.ts`, this task file and the plan.
+- **Open questions:** none.
+- **Departures:** the meter is fed in `record` and not in `charge`, so the folder read at construction does not count the last minutes of a previous run.
+- **Watch out for:** `periodOf` cuts a minute in UTC and every other window in `usage.timezone`. `minuteOf` and `MINUTE_MS` live in `periods.ts`, and the meter imports `minuteOf` from there.
 
