@@ -733,6 +733,25 @@ export function createQuery(ctx: SessionContext): Query {
         const said = str(message.session_id);
         if (said) ctx.agentId = said;
 
+        /*
+         * A stop waiting to interrupt the CLI until it has recorded the
+         * answers the stop gave (`cancel`). Each result reported for one of
+         * them is one fewer to wait for; the CLI starting on anything else has
+         * moved past them, and a result ends the turn with no interrupt owed.
+         */
+        if (ctx.stopAnswers !== undefined) {
+          if (type === 'user') {
+            for (const block of list(bag(message.message).content) as Bag[]) {
+              if (block.type === 'tool_result') ctx.stopAnswers.delete(str(block.tool_use_id) ?? '');
+            }
+          }
+          if (type === 'result') ctx.stopAnswers = undefined;
+          else if (ctx.stopAnswers.size === 0 || type === 'assistant' || type === 'stream_event') {
+            ctx.stopAnswers = undefined;
+            void mine.interrupt().catch(() => {});
+          }
+        }
+
         // The message stream's own init. Capabilities come from the control
         // protocol instead (see `describe`), because those are needed before
         // a turn; what this adds is the model the turn actually ran on.
