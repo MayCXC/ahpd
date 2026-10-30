@@ -1058,6 +1058,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      */
     ...(users === undefined ? {} : { users }),
     /*
+     * The hosts that joined this one, handed to every plugin as `host.nodes`.
+     *
+     * The registry built above, so `@ahpd/computer` lists a node as a machine
+     * and starts a session in it without knowing it is a join, and every plugin
+     * reads the same one. Absent on a daemon with no users file, which has no
+     * join path and therefore no node.
+     */
+    ...(nodes === undefined ? {} : { nodes }),
+    /*
      * People, teams, projects and roles, as four resource schemes, and the
      * policies beside them as a fifth.
      *
