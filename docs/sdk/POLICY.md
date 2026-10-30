@@ -37,6 +37,8 @@ A type left out is unconstrained, so a `model` row naming no `proxy` allows any 
 
 A type the request did not ask for is skipped by an `allow` and fails the match by a `deny`. An allow is a candidate on what was asked; a deny binds only when everything it names was asked. So a session, which is created before anybody names a model, is checked on the harness and the machine, and a deny meant to refuse a session outright names only those two.
 
+A row whose `match` names no type is about nothing a request asks for, so it is never a candidate: an `agent` row of `model` values alone allows no harness, and a row with an empty `match` allows nothing. An allow meant to cover everything of its kind names `*` for the kind's own type, as `agent:*` covers every harness and `model:*` every model.
+
 ### What a `limit` holds
 
 Each limit is an `amount`, a `measure`, a `period` (`day`, `week`, `month` or `total`) and a `pool` (`shared`, one total for the group, or `each`, every member has their own). A row has room only while every one of its counted limits has room, and whichever is reached first closes it whatever its unit - which is why several limits on one row, a day and a week and a month, are the ordinary case.
