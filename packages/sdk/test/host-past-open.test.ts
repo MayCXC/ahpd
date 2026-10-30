@@ -265,6 +265,6 @@ describe('opening a past session', () => {
       const saved = JSON.parse(readFileSync(join(dir, 'made.json'), 'utf8')) as { workingDirectory?: string };
       expect(saved.workingDirectory).toBe(root);
     }
-    finally { rmSync(root, { recursive: true, force: true }); }
+    finally { rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }
   });
 });
