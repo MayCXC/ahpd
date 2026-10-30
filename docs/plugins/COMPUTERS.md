@@ -2,7 +2,7 @@
 
 `@ahpd/computer` lets a client make a `computer`, run a session inside it, and destroy it.
 
-Docker is the only runtime today.
+Three runtimes are listed today: Docker on this host, a box reached over ssh, and a node that joined this host.
 
 A machine is named `computer://<id>`, and it has two recipes: an image the host runs, or a folder's `devcontainer.json`, which the Dev Container CLI reads.
 Writing a manifest to that name makes one, deleting it destroys it, and a session whose `computer` setting names it runs its agent in there.
@@ -358,6 +358,70 @@ A restart of this host leaves the session on the box, and the next turn resumes 
 - It has no state to set: start, stop and restart are refused.
 - It takes no parts and no bind mounts, and a value named from the vault is refused in a command, since ssh carries a variable inside the remote command.
 - Its up time is charged to the host, `root:<host>`, as stretches that open when a listing finds it reachable and close when one finds it gone or the daemon stops.
+
+## Joined nodes
+
+A box behind NAT joins this host rather than being reached over ssh.
+The node dials out, so no port is opened on it, and no destination has to be reachable from here.
+
+```sh
+# on the hub: mint the node's token, which is shown once
+ahpd node add box
+# Shown once. Only its hash is stored, and adding the node again replaces it.
+# 7d1f...
+
+# on the box: dial the hub and keep the connection
+ahpd join ws://hub.example:7331 --token 7d1f... --workdir /srv/box
+```
+
+A client lists `node.box` while that node is connected.
+A session created with `computer: "computer://node.box"` runs on the node.
+
+| Command | What it does |
+| --- | --- |
+| `ahpd node add <name>` | Adds a node and mints its token, shown once. Adding it again replaces the token, and the old one stops working |
+| `ahpd node list` | The nodes in the file, one name per line |
+| `ahpd node rm <name>` | Removes a node. Its token is refused from its next connection on, and a joined one is dropped |
+| `ahpd join <url>` | Dials the hub at a `ws://` or `http://` address, with `--token`, `--token-file` or `AHPD_TOKEN`. `--workdir` names the folder a session there starts in, and the current one is the default |
+
+`node:read` lists the nodes, and `node:write` adds and removes them ([Users and grants](../sdk/USERS.md)).
+The nodes file sits beside the users file, so `--users` or the `users` key names both.
+A host with no users file has nowhere to keep a node.
+
+### What runs there
+
+Every session on a node runs nested, as on an ssh machine.
+The hub asks for one with `node/open`, and the node dials one more socket back for it.
+The node starts `ahpd --stdio --plugin <the agent's plugin>` in its own working directory.
+The hub reads that socket as a `NestedHost`, so a turn, a tool call and a stop are the proxy's own frames.
+The folder a session starts in is the one the node said in its `node/hello`, written as that box's own path.
+What serves the session is the node's ahpd, with the harness and the configuration installed on that box.
+This host's own agents and models are not the ones used.
+
+### What a node trusts the hub with
+
+A node's local `ahpd --stdio` admits the hub as itself, which is what joining means.
+The hub starts a session in the node's working directory, with the node's own harness and credentials.
+Each session is one more process on the node, and its log is the node's stderr.
+A node whose ahpd is older than 0.14.1 is refused on join, with a sentence that says to update it.
+An older ahpd cannot resume a session by id.
+
+### A restart of either side
+
+A control socket that drops is dialled again with a backoff of up to a minute.
+A session already open keeps its own data socket, so a hub that restarts is one the node waits out.
+The daemon option `nodeRestart` says what a session does when its node's join restarts.
+`end`, the default, shows the session failed with a sentence naming the node.
+The next turn resumes it at the same id against the node's store.
+`reconnect` keeps the session and opens it again on the socket the node dials when it comes back.
+A node asked for while it is not connected is given ten seconds to dial, and refused as `node <name> is not connected` when it does not.
+
+### What a node cannot do
+
+- It is never made: a create that names `"runtime": "node"` is refused.
+- It has no state to set: start, stop, restart and remove are refused.
+- It takes no parts, no bind mounts, and no file is written into it.
+- It is listed only while connected, and its up time is charged to the host as stretches.
 
 ## Profiles
 

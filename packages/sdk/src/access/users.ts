@@ -59,6 +59,9 @@ export const SUBJECTS = [
   // People, teams, projects and roles, one subject each, so somebody may be let
   // see a team's names without being let see who is on it.
   'user', 'team', 'project', 'role',
+  // The hosts that joined this one, which a person may list, add and take away
+  // without being let touch the people here.
+  'node',
   // What a pool has been charged and the records charged to it, which is a
   // question about cost and is nobody else's by default.
   'usage',
@@ -208,6 +211,12 @@ export const OPERATIONS: Record<string, SubjectOperations> = {
     description: 'Connecting to dev containers.',
     operations: ['connect', 'disconnect', 'relay', 'stop', 'remove'],
     groups: { read: [], write: ['connect', 'disconnect', 'relay', 'stop', 'remove'] },
+  },
+  node: {
+    title: 'Joined hosts',
+    description: 'The hosts that joined this one: listing them, adding one and taking one away.',
+    operations: ['list', 'add', 'remove'],
+    groups: { read: ['list'], write: ['add', 'remove'] },
   },
   // The three subjects the gate asks about through no method: a `workspaceTrust`
   // push on the root config, a model call or a model list on the proxy's

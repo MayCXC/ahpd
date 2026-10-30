@@ -29,7 +29,9 @@ import { declareAutomation } from './automation.js';
 import { declareConfig } from './config.js';
 import { declareConfigure } from './configure.js';
 import { declareDoctor } from './doctor.js';
+import { declareJoin } from './join.js';
 import { declarePaths } from './paths.js';
+import { declareNodes } from './nodes.js';
 import { declarePlugin } from './plugin.js';
 import { declareProxy } from './proxy.js';
 import { declareRun } from './run.js';
@@ -72,6 +74,8 @@ export const cliRegistry = (): Registry<object> => {
   declareToken(registry);
   declareTeams(registry);
   declarePaths(registry);
+  declareJoin(registry);
+  declareNodes(registry);
   declarePlugin(registry);
   declareProxy(registry);
   declareUsage(registry);

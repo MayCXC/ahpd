@@ -30,7 +30,7 @@ import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { checkIcons, foldHostOptions, frozenCopy, gapLine, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, schemaGaps, sdkVersion, secretRef } from '@ahpd/sdk';
-import type { Agent, AgentOwner, Alert, InstallAnswer, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, Plugin, PluginContext, PluginContracts, PluginHost, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, AgentOwner, Alert, InstallAnswer, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, NodeRegistry, Plugin, PluginContext, PluginContracts, PluginHost, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { fetchIcons, resolveIcons } from './icons.js';
 import { satisfies } from './compat.js';
 import { run as runProgram } from './install.js';
@@ -858,6 +858,15 @@ export interface LoadOneOptions {
    */
   vault?: () => Vault | undefined;
   /**
+   * The hosts that joined this daemon, handed to every plugin as `host.nodes`.
+   *
+   * A value rather than a function: the registry belongs to the daemon and is
+   * one object for its whole life, and a node joining or leaving is an event of
+   * its own rather than a port that is folded in after the plugins apply.
+   * Absent on a daemon started without a users file, which has no nodes.
+   */
+  nodes?: NodeRegistry;
+  /**
    * The sessions this daemon keeps, read when a plugin asks whether it keeps one.
    *
    * A function for the reason `agents` is one, and it may answer late: a
@@ -1441,6 +1450,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     ...(options.agentOwners === undefined ? {} : { agentOwners: options.agentOwners }),
     ...(options.usage === undefined ? {} : { usage: options.usage }),
     ...(options.vault === undefined ? {} : { vault: options.vault }),
+    ...(options.nodes === undefined ? {} : { nodes: options.nodes }),
     ...(options.alert === undefined ? {} : { alert: options.alert }),
     ...(options.clearAlert === undefined ? {} : { clearAlert: options.clearAlert }),
     ...(grants.length === 0 ? {} : { grants }),
@@ -1952,6 +1962,7 @@ export const pluginSet = (options: LoadOptions): PluginSet => {
       ...(options.base.users === undefined ? {} : { users: true }),
       usage: () => reached?.usage,
       vault: vaultInForce,
+      ...(options.base.nodes === undefined ? {} : { nodes: options.base.nodes }),
       sessions: () => hosted.then((host) => host.sessions),
       records: () => hosted.then((host) => host.records),
       collections,

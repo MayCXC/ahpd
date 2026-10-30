@@ -67,6 +67,15 @@ export interface Peer {
   /** Send a server-to-client notification, which carries no id and gets no reply. */
   notify(method: string, params: unknown): void;
   /**
+   * Send one frame already written, as the socket would carry it.
+   *
+   * What a connection that is its own wire needs: a relayed line is another
+   * host's frame and not this one's message, so reading it to write it back
+   * would put this host inside a conversation it is not part of. Absent on a
+   * peer built for a caller that has no such connection.
+   */
+  raw?(text: string): void;
+  /**
    * Ask the client something, and wait for what it says.
    *
    * Rejects with an `RpcError` the client sent, an `RpcTimeout` when nothing

@@ -8,6 +8,7 @@ import { computerId, computersFor } from '../machines/computers.js';
 import { localPath, uriOf } from '../resources/fileuri.js';
 import { deepFreeze, frozenCopy } from '../utils/frozen.js';
 import { nestedAgent } from '../sessions/nested.js';
+import type { NestedAsked } from '../sessions/nested.js';
 import { idOf, uriFor, Status } from '../sessions/catalog.js';
 import { meter } from '../usage/meter.js';
 import { linkIn } from '../automations/calllinks.js';
@@ -793,8 +794,25 @@ export function createSpawn(ctx: HostContext): Spawn {
     const plugin = options.agentPlugins?.[agent.provider];
     const machine = computerId(config.computer);
     const offHost = machine !== undefined && options.computers?.remote?.(machine) === true;
+    /*
+     * A machine whose port can hand over a socket, which is a node that dialled
+     * this host: the host inside it is reached over that socket instead of a
+     * command. The port is asked for every machine, so the answer for one it
+     * does not serve is nothing, and the proxy starts the host the old way.
+     */
+    const connect = options.computers?.connect?.bind(options.computers);
     const used = machine !== undefined && (agent.runsNested === true || offHost)
-      ? nestedAgent(agent, { plugins: plugin === undefined ? [] : [plugin], log })
+      ? nestedAgent(agent, {
+        plugins: plugin === undefined ? [] : [plugin],
+        log,
+        ...(connect === undefined ? {} : {
+          restart: options.nodeRestart ?? 'end',
+          start: (asked: NestedAsked) => connect(asked.id, {
+            plugins: asked.plugins,
+            ...(asked.cwd === undefined ? {} : { cwd: asked.cwd }),
+          }),
+        }),
+      })
       : agent;
     if (ctx.closed) throw new RpcError(INTERNAL_ERROR, CLOSING);
     if (resuming?.resume !== undefined) resumedSessions.add(uri);
