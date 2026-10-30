@@ -58,6 +58,7 @@ interface StoredToken {
   label?: string;
   grants?: string[];
   scope?: string;
+  limits?: { amount: number; measure: string; period: string; pool: string }[];
   created: number;
   expires?: number;
   token: string;
@@ -232,6 +233,38 @@ it('reads a tokens file whose scope is not a place as no tokens at all', async (
     expect(await users.tokens!(), String(scope)).toEqual([]);
     expect(said.some((one) => one.includes('has a scope that is not team or team:project')), String(scope)).toBe(true);
   }
+});
+
+it('mints a key with its limits, pooled shared, and reads them back', async () => {
+  const users = open();
+  await users.add('ana', ['member']);
+  const limits = [
+    { amount: 5, measure: 'usd', period: 'day', pool: 'shared' } as const,
+    { amount: 100, measure: 'calls', period: 'day', pool: 'shared' } as const,
+  ];
+  const minted = await users.mintToken!('ana', { limits });
+
+  expect(minted.limits).toEqual(limits);
+  expect((await users.tokens!('ana'))[0]?.limits).toEqual(limits);
+  expect(stored().tokens[0]?.limits).toEqual(limits);
+});
+
+it('reports a tokens file holding a limit that is not one as broken', async () => {
+  writeFileSync(path, JSON.stringify({ users: [{ id: 'ana', roles: ['member'] }] }));
+  writeFileSync(tokensPath, JSON.stringify({
+    tokens: [{
+      id: 'aaaa',
+      user: 'ana',
+      created: 1,
+      token: 'sha256:abc',
+      limits: [{ amount: 5, measure: 'turns', period: 'day', pool: 'shared' }],
+    }],
+  }));
+  const said: string[] = [];
+  const users = open({ onProblem: (one) => said.push(one) });
+
+  expect(await users.tokens!()).toEqual([]);
+  expect(said.some((one) => one.includes('limits that are not ones'))).toBe(true);
 });
 
 it('refuses an unknown person, and an expires that is not a future date', async () => {

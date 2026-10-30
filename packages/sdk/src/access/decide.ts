@@ -5,8 +5,9 @@
  * that grew a rule per kind would be four sets of steps. The `model` kind a
  * proxy call is checked against is decided here too.
  *
- * Nothing here reads `pool`, `cap` or `limits`, and nothing asks the `usage`
- * port anything.
+ * Nothing here reads a store's `pool` or `cap`, and nothing asks the `usage`
+ * port anything: the one row written here is the key's own, out of what the
+ * principal reads back, and `charge.ts` is what reads it.
  */
 
 import type { Policies, Policy, PolicyKind } from '../types/policies.js';
@@ -91,18 +92,48 @@ const askedFor = (kind: PolicyKind, asked: Asked): string => {
 };
 
 /**
+ * The one row a key's own limits make, or nothing when it has none.
+ *
+ * A key's limits are a fact about the credential rather than a store's row, so
+ * the row is made here from what the principal reads back. It is a `model` row
+ * about every model, scoped to the key and marked `cap`, so `chargeFor` counts
+ * it, adds its keys and never lets it pay: a call still needs a row that allows
+ * it, and the key's row only narrows what that row allowed. Its `pool` is the
+ * key's own name, because one key has one total of each measure.
+ */
+export const keyRowOf = (principal: Principal): Policy | undefined => {
+  const id = principal.token;
+  const limits = principal.keyLimits;
+  // An empty list is no limit at all: `chargeFor` reads a row with no limits as
+  // one that takes every measure, which is the opposite of what an empty key is.
+  if (id === undefined || limits === undefined || limits.length === 0) return undefined;
+  return {
+    id: `token:${id}`,
+    scope: `token:${id}`,
+    kind: 'model',
+    effect: 'allow',
+    match: { model: ['*'] },
+    limits: [...limits],
+    cap: true,
+    pool: `token:${id}`,
+  };
+};
+
+/**
  * Whether the row's scope holds this person doing this work.
  *
  * The request's own team and project are what it names or defaults to; a
  * request that names neither is held by `all` and by `user:` rows alone, which
  * is how somebody in no team is covered by a host-wide policy and by nothing
- * else.
+ * else. A `token:` row holds only the key it names, which is the key the call
+ * was made with.
  */
 export const scoped = (row: Policy, principal: Principal, scope: Scope | undefined): boolean => {
   if (row.scope === 'all') return true;
   const at = row.scope.indexOf(':');
   const what = row.scope.slice(0, at);
   const named = row.scope.slice(at + 1);
+  if (what === 'token') return named === principal.token;
   if (what === 'user') return named === principal.id;
   if (what === 'team') return scope !== undefined && scope.team === named;
   // `project:<team>:<project>`, so the second colon is what says which is which.
@@ -150,7 +181,10 @@ const matched = (row: Policy, asked: Asked): boolean => {
  * candidate at all is a refusal.
  *
  * The candidates come back either way, so a caller that charges the request
- * does not have to read the store a second time.
+ * does not have to read the store a second time. A key's own row is added to
+ * the candidates of an allowed `model` decision and never makes one: it is a
+ * `cap`, so it only narrows what a store's row allowed, and a `*:*` holder's
+ * key carries it alone.
  *
  * `at` is the instant the check compares against, and defaults to now.
  */
@@ -162,7 +196,10 @@ export async function decide(
   asked: Asked,
   at: Date = new Date(),
 ): Promise<Decision> {
-  if (principal.can('*:*')) return { allowed: true, candidates: [] };
+  // The key's limits are for the proxy, so they are the `model` kind's row and
+  // no other kind's: an agent or a machine is not what a key is spent on.
+  const key = kind === 'model' ? keyRowOf(principal) : undefined;
+  if (principal.can('*:*')) return { allowed: true, candidates: key === undefined ? [] : [key] };
 
   const moment = at.toISOString();
   const candidates = (await store.list()).filter((row) =>
@@ -197,5 +234,5 @@ export async function decide(
     };
   }
 
-  return { allowed: true, candidates };
+  return { allowed: true, candidates: key === undefined ? candidates : [...candidates, key] };
 }

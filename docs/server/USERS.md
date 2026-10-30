@@ -53,11 +53,19 @@ Without `--grant` the token holds every grant its person holds, now and later. A
 
 `--scope <team[:project]>` writes the team and project its calls are charged to, so a client given only the key and a base URL is charged where the operator said rather than where the person's primary is. The mint refuses a scope the person is not in now, and one written `team:*`. A call made with the key is charged to its scope when it names none, and refused with 403 when it names another; the scope is checked at every call, so a membership taken away stops the key without a revoke.
 
+A token also carries spend and call limits of its own, written `amount:measure:period`. The measures are a `model` policy's - `usd`, `tokens` and `calls` - and one key has one total, so every limit is `shared`:
+
+```bash
+ahpd token mint --user ana --limit 5:usd:day --limit 100:calls:day --label laptop
+```
+
+A proxy call made with the key is refused once one of its limits has no room, with the key's sentence rather than a row's: `token:<id> has no room: 2 / 2 calls this day`. A key's limits only narrow what the policies allow: they never allow a model no policy allows, they never stop the charge to a person's or a team's limits, and they hold for a person who holds `*:*`, and with `policies.check` off. They need a usage store to be counted, because the means of counting is the same one policy limits use.
+
 A minted token cannot mint, list or revoke tokens. Sign in with the person's full token for that. `ahpd user token <id>` still mints that one full token, and the tokens a person minted stay.
 
 At a terminal `--user <id>` names whose tokens they are. `token list` without one lists everybody's; `token mint` and `token rm` need one, because a terminal has nobody signed in. Over `/api` a person's token acts for that person, and `--user` needs `user:write` and is bounded by that person's grants. The host mints at most `tokensPerPerson` live tokens per person, ten unless configured otherwise; an expired token does not count.
 
-`ahpd token list` shows the id, the label, the grants, the scope, the creation date and the expiry of each token, and never a secret or a hash.
+`ahpd token list` shows the id, the label, the grants, the scope, the creation date, the expiry and the limits of each token, and never a secret or a hash.
 
 ## Roles
 

@@ -61,6 +61,7 @@ interface Shown {
   label?: string;
   grants?: string[];
   scope?: string;
+  limits?: { amount: number; measure: string; period: string; pool: string }[];
   created: number;
   expires?: number;
   secret: string;
@@ -187,6 +188,31 @@ describe('token at the terminal', () => {
       .rejects.toThrow('expires 2000-01-01T00:00:00.000Z is not in the future');
     await expect(run('token.mint', { user: 'ana', expires: 'the day after tomorrow' }))
       .rejects.toThrow('the day after tomorrow is not a date.');
+  });
+
+  it('writes each --limit on the record, and says it back in the listing', async () => {
+    const { directory } = await people();
+    const limits = [
+      { amount: 5, measure: 'usd', period: 'day', pool: 'shared' },
+      { amount: 100, measure: 'calls', period: 'day', pool: 'shared' },
+    ];
+
+    const one = minted(await run('token.mint', { user: 'ana', limits: ['5:usd:day', '100:calls:day'] }));
+    expect(one).toMatchObject({ limits });
+    expect((await directory.tokens!('ana'))[0]?.limits).toEqual(limits);
+
+    const listed = await run('token.list', { user: 'ana' });
+    expect(listed.plain).toContain('limit 5 usd/day');
+    expect(listed.plain).toContain('limit 100 calls/day');
+  });
+
+  it('refuses a --limit that is not amount:measure:period', async () => {
+    await people();
+
+    await expect(run('token.mint', { user: 'ana', limits: ['5:usd'] }))
+      .rejects.toThrow('5:usd is not a limit; write one as <amount>:<measure>:<period>, such as 5:usd:day.');
+    await expect(run('token.mint', { user: 'ana', limits: ['five:usd:day'] }))
+      .rejects.toThrow('five:usd:day is not a limit; write one as <amount>:<measure>:<period>, such as 5:usd:day.');
   });
 
   it('refuses the second mint when the configuration allows one per person', async () => {

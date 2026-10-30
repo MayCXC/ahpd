@@ -10,7 +10,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { memoryPolicies, type ModelUse, type Policies, type Policy, type Usage, type UsageTotal } from '@ahpd/sdk';
+import { memoryPolicies, type ModelUse, type Policies, type Policy, type PolicyLimit, type Usage, type UsageTotal } from '@ahpd/sdk';
 import {
   answerJson, fakeProvider, isAnthropicError, isOpenAiError, MARKER, memoryUsage, pause, people, ROOT_TOKEN, send, serveProxy,
   type FakeProvider, type People, type ProviderFixture, type Served, type ServeOptions,
@@ -220,6 +220,69 @@ describe('a call at a limit', () => {
       team: 'backend',
       project: 'billing',
       pools: ['user:ana', 'team:backend', 'project:backend:billing', 'policy:budget/usd'],
+    });
+  });
+});
+
+describe('a key\'s own limit', () => {
+  /**
+   * Ana's key with `limits`, and the proxy over two fakes.
+   *
+   * The totals are built from the key's id, because that is what the key's pool
+   * is named after: one key has one total of each measure.
+   */
+  const keyed = async (
+    limits: PolicyLimit[],
+    totals: (id: string) => Record<string, UsageTotal>,
+    options: ServeOptions = {},
+  ) => {
+    const minted = await who.users.mintToken!('ana', { limits });
+    const usage = keeping(totals(minted.id));
+    const remote = await fakeProvider(answerJson(200, COMPLETION));
+    const local = await fakeProvider(answerJson(200, COMPLETION));
+    fakes.push(remote, local);
+    const served = await serveProxy({
+      users: who.users, ...softov(remote.endpoint, local.endpoint),
+      usage: () => usage, ...options,
+    });
+    open.push(served);
+    return { remote, local, served, usage, secret: minted.secret, key: minted.id };
+  };
+
+  const TWO_CALLS: PolicyLimit[] = [{ amount: 2, measure: 'calls', period: 'day', pool: 'shared' }];
+
+  it('refuses a call of a key at its amount, without touching a provider', async () => {
+    const { served, secret, key, remote, local } = await keyed(
+      TWO_CALLS,
+      (id) => ({ [`pool:token:${id}/calls`]: { calls: 2 } }),
+      { policies: await rows(ALLOW_ALL), policiesCheck: true },
+    );
+    const got = await send(served.port, CHAT, { headers: { 'x-api-key': secret }, body: { model: 'local/default' } });
+    expect(got.status).toBe(403);
+    expect(isOpenAiError(got.json)).toBe(true);
+    expect(got.json).toMatchObject({ error: { type: 'permission_error', message: `token:${key} has no room: 2 / 2 calls this day` } });
+    expect(remote.received).toEqual([]);
+    expect(local.received).toEqual([]);
+  });
+
+  it('holds with the policy switch off, where no store is read', async () => {
+    const { served, secret, key } = await keyed(
+      TWO_CALLS,
+      (id) => ({ [`pool:token:${id}/calls`]: { calls: 2 } }),
+      { policiesCheck: false },
+    );
+    const got = await send(served.port, CHAT, { headers: { 'x-api-key': secret }, body: { model: 'local/default' } });
+    expect(got.status).toBe(403);
+    expect(got.json).toMatchObject({ error: { message: `token:${key} has no room: 2 / 2 calls this day` } });
+  });
+
+  it('writes the key\'s pool on an allowed call, beside the person\'s', async () => {
+    const { served, usage, secret, key } = await keyed(TWO_CALLS, () => ({}), { policies: await rows(ALLOW_ALL), policiesCheck: true });
+    expect((await send(served.port, CHAT, { headers: { 'x-api-key': secret }, body: { model: 'local/default' } })).status).toBe(200);
+    const [entry] = await settled(usage, 1);
+    expect(entry).toMatchObject({
+      owner: 'user:ana',
+      pools: ['user:ana', 'team:backend', 'project:backend:billing', `pool:token:${key}/calls`],
     });
   });
 });
