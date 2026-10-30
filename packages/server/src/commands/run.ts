@@ -527,6 +527,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     options,
     configFile: options.configFile ?? configPath(),
     ...(users === undefined ? {} : { users }),
+    ...(nodes === undefined ? {} : { nodes }),
     running: () => ({
       pid: process.pid,
       url: `ws://${urlHost(boundHost)}:${boundPort}`,

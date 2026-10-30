@@ -11,7 +11,7 @@
 
 import { createRegistry } from '@cofold/commands';
 import type { Registry } from '@cofold/commands';
-import type { AutomationStore, Usage, Users, Vault } from '@ahpd/sdk';
+import type { AutomationStore, LiveNodes, Usage, Users, Vault } from '@ahpd/sdk';
 import type { Options } from './options.js';
 import { declareAutomation } from './automation.js';
 import { declareConfig } from './config.js';
@@ -60,6 +60,8 @@ export interface ServedFacts {
   running(): ServedRunning;
   /** The sessions with a turn running, read per request because the host is built after this is. */
   turning(): string[];
+  /** The nodes that may join this daemon and the ones that have, when it has a users file. */
+  readonly nodes?: LiveNodes;
   /**
    * Where this host's usage records were written, read per request because a
    * plugin may have replaced the store the host was built over. Absent, this

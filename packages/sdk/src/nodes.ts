@@ -553,10 +553,31 @@ export function liveNodes(options: LiveOptions): LiveNodes {
     return arrived;
   };
 
+  /** Take a node's connection away, and fail the sessions it had not dialled yet. */
+  const drop = (id: string): void => {
+    const held = kept.get(id);
+    kept.delete(id);
+    held?.peer.close();
+    abandoned(id, `node ${id} was removed from this hub`);
+    // Said here as well as at the close, because a socket that is being
+    // closed may not have said it went yet.
+    if (announced.has(id)) announce({ id, joined: false });
+  };
+
   return {
     list: () => options.file.list(),
-    add: (id) => options.file.add(id),
-    remove: (id) => options.file.remove(id),
+    // A replaced token is refused from now on, so the connection it opened goes
+    // with it, and the node joins again with the new one.
+    add: async (id) => {
+      const token = await options.file.add(id);
+      drop(id);
+      return token;
+    },
+    remove: async (id) => {
+      const gone = await options.file.remove(id);
+      if (gone) drop(id);
+      return gone;
+    },
     verify: (token) => options.file.verify(token),
 
     joined: () => [...kept.values()].flatMap((one) => (one.workdir === undefined ? [] : [{ id: one.node, workdir: one.workdir }])),
@@ -578,14 +599,6 @@ export function liveNodes(options: LiveOptions): LiveNodes {
       return { close: () => { watchers.delete(onChange); } };
     },
 
-    drop: (id) => {
-      const held = kept.get(id);
-      kept.delete(id);
-      held?.peer.close();
-      abandoned(id, `node ${id} was removed from this hub`);
-      // Said here as well as at the close, because a socket that is being
-      // closed may not have said it went yet.
-      if (announced.has(id)) announce({ id, joined: false });
-    },
+    drop,
   };
 }

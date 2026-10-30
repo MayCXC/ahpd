@@ -12,7 +12,7 @@
 
 import { output } from '@cofold/commands';
 import type { Command, CommandContext, Registry } from '@cofold/commands';
-import { fileNodes, nodesFileOf } from '@ahpd/sdk';
+import { fileNodes, nodesFileOf, type Nodes } from '@ahpd/sdk';
 import { loadConfig } from '../config.js';
 import { conflict, stop, userAt } from './options.js';
 import type { ServedFacts } from './served.js';
@@ -30,12 +30,14 @@ const NO_USERS = 'No users file, so there is nowhere for the nodes file to sit. 
 const place = (
   context: { input: Readonly<Record<string, unknown>>; error(text: string): void },
   served?: ServedFacts,
-): { path: string; nodes: ReturnType<typeof fileNodes> } => {
+): { path: string; nodes: Nodes } => {
   if (served !== undefined) {
     const users = served.options.users;
     if (users === undefined) stop(NO_USERS);
     const path = nodesFileOf(users);
-    return { path, nodes: fileNodes({ path }) };
+    // The daemon's own registry, so a node taken out or given a new token loses
+    // the connection its old token opened.
+    return { path, nodes: served.nodes ?? fileNodes({ path }) };
   }
   const input = context.input;
   const named = typeof input['users'] === 'string' ? input['users'] : undefined;

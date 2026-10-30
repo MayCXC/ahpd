@@ -378,6 +378,21 @@ it('says when a node joins and when it goes, and tells a late watcher where it a
   expect(late).toHaveLength(2);
 });
 
+it('takes a node\'s connection away when it is removed or its token is replaced', async () => {
+  const hub = await hubOf();
+  joinNode(hub);
+  await until(() => hub.registry.joined().length === 1);
+  // A new token refuses the old one, so the connection the old one opened goes.
+  await hub.registry.add(NODE);
+  expect(hub.registry.joined()).toEqual([]);
+
+  const again = await hubOf();
+  joinNode(again);
+  await until(() => again.registry.joined().length === 1);
+  expect(await again.registry.remove(NODE)).toBe(true);
+  expect(again.registry.joined()).toEqual([]);
+});
+
 it('a hub started again resumes the session against the node store that kept it', async () => {
   const first = await hubOf();
   const node = joinNode(first);
