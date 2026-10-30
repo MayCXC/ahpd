@@ -1591,6 +1591,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       const contributed = await seeded(
         (typeof theirs.properties === 'object' && theirs.properties !== null ? theirs.properties : {}) as Bag,
         { provider, ...(asked === undefined ? {} : { workingDirectory: asked }), config: answered },
+        agent.completions,
       );
       const properties = {
         ...contributed,
@@ -1626,7 +1627,19 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * fold is what marks the property `enumDynamic`, so a client asking
        * is a client that was told to ask.
        */
-      const answerer = options.sessionConfigCompletions?.[property];
+      /*
+       * A key a backend answers for itself, then a contributed key, before the
+       * host's own.
+       *
+       * A backend's schema is its own account of its settings, and a key of it
+       * that names answers had nowhere to go: the plugin seam answers for a key
+       * a plugin declared, and a backend declares none of those. The ask names
+       * the provider, so the answerer is this backend's only when the client
+       * asked about this backend - a second harness offering the same key name
+       * is not asked what the first one would accept.
+       */
+      const named = typeof params.provider === 'string' ? agents.get(params.provider) : undefined;
+      const answerer = named?.completions?.[property] ?? options.sessionConfigCompletions?.[property];
       if (answerer !== undefined) {
         try {
           /*

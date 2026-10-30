@@ -15,6 +15,7 @@ import type { MayRunTool, RunClientTool, ToolsChanged, ToolsEndpoint } from '../
 import type { ComputerPort } from './computers.js';
 import type { MachineNeed } from './machine.js';
 import type { ShellEnv } from '../machines/shellenv.js';
+import type { SessionConfigAnswerer } from './completions.js';
 
 /**
  * An MCP server the host offers its agents, reached over stdio.
@@ -690,6 +691,22 @@ export interface Agent {
   schema(): Bag;
   /** What each schema key sits at when nothing has been chosen. */
   defaults(): Record<string, unknown>;
+
+  /**
+   * Answers for a key of this backend's own schema, by key.
+   *
+   * The keys are keys of `schema()`. A key answered here is marked
+   * `enumDynamic`, so a client draws a picker for it and asks
+   * `sessionConfigCompletions` what it holds. Only a key of this backend's own
+   * schema may be answered: a key another backend or a plugin declared is not
+   * this one's to fill in, and naming one is a line in the log.
+   *
+   * A contributed key has its own seam - a plugin answers for the key it
+   * registered - and a backend had none until this: its schema reached every
+   * client unasked, so a key whose values the backend knows arrived as a text
+   * box.
+   */
+  completions?: Record<string, SessionConfigAnswerer>;
 
   /**
    * What this agent needs from the host for a machine to run it.
