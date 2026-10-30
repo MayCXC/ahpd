@@ -1,6 +1,6 @@
 ---
 title: The host keeps each client's locale
-status: todo
+status: done
 depends: []
 layer: sdk
 refs:

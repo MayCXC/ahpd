@@ -93,6 +93,15 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
    * saying so is the point - see the refusal in `reconnect`.
    */
   known: Set<string>;
+  /**
+   * The last locale each client sent, by client id.
+   *
+   * Kept beside `known` and for the same span, because a records channel reads
+   * a reader by client id rather than by connection.
+   */
+  locales: Map<string, string>;
+  /** The last locale a client sent, or `undefined` when it sent none. */
+  localeOf: (clientId: string) => string | undefined;
   /** The last `REPLAY` action envelopes, oldest first. */
   replayable: { channel: string; action: Record<string, unknown>; serverSeq: number; origin: Origin | undefined; audience?: PublishOptions }[];
   /** Live sessions, by their own uri. */

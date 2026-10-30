@@ -1175,6 +1175,13 @@ export interface Connection {
    */
   protocolVersion?: string;
   /**
+   * The BCP 47 tag the client sent as `locale` at `initialize` or `reconnect`.
+   *
+   * What text answered for this client alone is translated into. Absent when
+   * the client sent none, and that client reads English.
+   */
+  locale?: string;
+  /**
    * Channel URIs this client subscribed to.
    *
    * Per connection: two clients can watch one channel, and dropping one must
@@ -1343,6 +1350,8 @@ export interface Host {
   };
   /** How many clients are currently connected. */
   connections(): number;
+  /** The last locale a client sent, by client id, or `undefined` when it sent none. */
+  localeOf(clientId: string): string | undefined;
   /**
    * The sessions with a turn running or waiting on a person, by URI.
    *

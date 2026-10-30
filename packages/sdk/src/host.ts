@@ -423,6 +423,8 @@ export function createHost(options: HostOptions): Host {
    * only one a `reconnect` under that id is answered for.
    */
   const holders = new Map<string, string>();
+  /** The last locale each client sent, by client id. */
+  const locales = new Map<string, string>();
   const learned = new Map<string, Learned>();
   const about = (provider: string): Learned => {
     const held = learned.get(provider);
@@ -1093,7 +1095,7 @@ export function createHost(options: HostOptions): Host {
    * and the helpers declared above it.
    */
   const ctx = {
-    options, dir, known, replayable, leaves, seenBy, claims, agents, first: options.agents[0], connections, relays: new Map(), holders, sessions, byChat, subagents, owners, names,
+    options, dir, known, locales, localeOf: (clientId: string) => locales.get(clientId), replayable, leaves, seenBy, claims, agents, first: options.agents[0], connections, relays: new Map(), holders, sessions, byChat, subagents, owners, names,
     leadOf, wheres, worktrees, worktreeOf, githubFacts, kept, offered, decided, about, terminals,
     madeFrom, origins, births, moves, listedMeta, browsable, broadcast, presence, beside, marks, lives, lifeOf, restarting, learned, starting,
     logs, detached, refuse, echoTo,
@@ -1491,6 +1493,7 @@ export function createHost(options: HostOptions): Host {
       }
     },
     connections: () => connections.size,
+    localeOf: ctx.localeOf,
     close: () => {
       closing ??= (async () => {
         // The window closes with the host: what it holds goes out now, and the

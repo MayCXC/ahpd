@@ -29,6 +29,9 @@ export interface Handshake {
  */
 const LEGACY_COMPATIBLE_VERSION = '0.10.0';
 
+/** The longest `locale` kept: a BCP 47 tag past this is not one a client sends. */
+const LOCALE_LIMIT = 35;
+
 /** Every version the host speaks, highest first: the package's baselines and the 1.141 alias. */
 const SPOKEN_VERSIONS = [...SUPPORTED_PROTOCOL_VERSIONS, LEGACY_COMPATIBLE_VERSION]
   .sort((a, b) => compareProtocolVersions(b, a));
@@ -37,7 +40,7 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
   const { connection } = conn;
   const {
     advertised, advertisedChannels, advertisedGrants, advertisedMethods, advertisedSchemes, agents, answeredAs, browsable, channelAwaiting, dir, fire, flushDeltas,
-    holders, known, leaves, loginId, log, LOGS, METRICS, metaMoved, metadataFor, meantBy, openedBy,
+    holders, known, leaves, locales, loginId, log, LOGS, METRICS, metaMoved, metadataFor, meantBy, openedBy,
     options, ownId, ownerFor, principals, refreshPullRequests, replayable, seenBy, sessions,
     snapshotOf, spellingOf, TRACES,
   } = ctx;
@@ -49,6 +52,24 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
    * not a token for another, and a backend has no business seeing a
    * credential meant for something it does not speak to.
    */
+  /**
+   * Keeps the locale this client sent, on the connection and by client id.
+   *
+   * A `locale` that is not a non-empty string of at most 35 characters is
+   * read as none sent. On `initialize` the client then has no locale; on
+   * `reconnect` it keeps the one it had.
+   */
+  const keepLocale = (locale: unknown, resuming: boolean): void => {
+    if (typeof locale === 'string' && locale.length > 0 && locale.length <= LOCALE_LIMIT) {
+      locales.set(connection.clientId, locale);
+    } else if (!resuming) {
+      locales.delete(connection.clientId);
+    }
+    const kept = locales.get(connection.clientId);
+    if (kept === undefined) delete connection.locale;
+    else connection.locale = kept;
+  };
+
   const tokensFor = (provider: string): Record<string, string> => {
     const agent = agents.get(provider);
     const out: Record<string, string> = {};
@@ -194,6 +215,7 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
       connection.protocolVersion = agreed;
       // Met, so a later `reconnect` under this id is answerable.
       known.add(connection.clientId);
+      keepLocale(params.locale, false);
       void fire({ type: 'client_connect', client: connection.clientId });
       // Introduced. Said after the version is agreed, so a client this
       // host cannot speak to is not one it has shaken hands with.
@@ -410,6 +432,9 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
         holders.set(clientId, connection.principal.id);
       }
       connection.clientId = clientId;
+      // An ahpd extension: `reconnect` takes `locale` as `initialize` does,
+      // and a client that sends none keeps the one it had.
+      keepLocale(params.locale, true);
       void fire({ type: 'client_connect', client: connection.clientId });
       // The other way in. A client that dropped resumes with this rather
       // than a fresh `initialize`, and it is as much an introduction.
