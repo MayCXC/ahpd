@@ -55,6 +55,14 @@ export interface UsageBase {
   agent?: string;
   /** The computer it ran on, as the `computers` port names it. */
   computer?: string;
+  /**
+   * The id of the key that made the call, when it was made with one.
+   *
+   * Only a proxy call carries it, and only when the person signed in with a
+   * token they minted: the deployment token, a session's token and a person's
+   * full sign-in name no key.
+   */
+  token?: string;
   /** What its pools are charged, when that is known. */
   cost?: Cost;
   /** What the provider or the harness reported it cost, when it reported one. */

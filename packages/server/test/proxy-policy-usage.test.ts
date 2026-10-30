@@ -438,6 +438,18 @@ describe('the call is recorded', () => {
     expect(entry?.pools).toEqual(['root:testbox']);
   });
 
+  it('names the key a call was made with, and names none for a deployment token or a full sign-in', async () => {
+    const { served, usage } = await setup();
+    const key = await who.users.mintToken!('ana');
+    expect((await send(served.port, CHAT, { headers: { 'x-api-key': key.secret }, body: { model: 'local/default' } })).status).toBe(200);
+    expect((await send(served.port, CHAT, { headers: { authorization: `Bearer ${ROOT_TOKEN}` }, body: { model: 'local/default' } })).status).toBe(200);
+    expect((await send(served.port, CHAT, { headers: { 'x-api-key': who.ana }, body: { model: 'local/default' } })).status).toBe(200);
+    const entries = await settled(usage, 3);
+    expect(entries.map((entry) => entry.token)).toEqual([key.id, undefined, undefined]);
+    // Nothing named a meta yet, so the record holds none.
+    expect(entries[0]).not.toHaveProperty('meta');
+  });
+
   it('keeps answering when the store fails, and says so in the log', async () => {
     const remote = await fakeProvider(answerJson(200, COMPLETION));
     fakes.push(remote);

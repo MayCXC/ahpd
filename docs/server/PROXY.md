@@ -211,7 +211,7 @@ A client reads one connector's list with `x-ahpd/connectors/models`, as [PLUGINS
 
 ## What is recorded
 
-Each answered call writes one usage record with `source: "proxy"`: the model name, the adapter that answered, the connector whose key paid, the tokens the answer reported, the owner (`user:<id>`, or `root:<host>` for the deployment token), the team and project, and the pools those give. A record is written when the stream ends, is cut, or fails. `ahpd usage` shows them.
+Each answered call writes one usage record with `source: "proxy"`: the model name, the adapter that answered, the connector whose key paid, the tokens the answer reported, the owner (`user:<id>`, or `root:<host>` for the deployment token), the id of the key that made the call when there was one, the team and project, and the pools those give. A record is written when the stream ends, is cut, or fails. `ahpd usage` shows them.
 
 A record carries two costs. `providerCost` is what the provider reported, when it reported one: OpenRouter sends `usage.cost` with `cost_details`, which give the amount and what was sent and what came back. `cost` is what the pools are charged. A `price` on the entry, or a fetched `pricing` for a model the table does not hold, is the price of the call (`from: "price"`). Cache tokens are charged at the input price. A speech call is charged by `characters` and a transcription by `minutes`. Without a price, the cost is the provider's own figure (`from: "harness"`), so a call nobody priced is charged what it cost. A price that names one side and not the other gives no cost at all when the unnamed side has tokens, because an absent price is not a price of zero; a side priced at 0 is free.
 
