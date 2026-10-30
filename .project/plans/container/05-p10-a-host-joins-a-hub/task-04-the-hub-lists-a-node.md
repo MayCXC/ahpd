@@ -4,8 +4,8 @@ status: todo
 depends: [task-02-a-joined-socket-is-a-nested-host.md]
 layer: "computer"
 refs:
-  - "[code://packages/sdk/src/plugins/plugins.ts#L393](../../../../packages/sdk/src/plugins/plugins.ts#L393) - one `computers` port"
-  - "[code://packages/computer/src/plugin.ts#L648-L662](../../../../packages/computer/src/plugin.ts#L648-L662) - the port the plugin registers"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L292-L295](../../../../packages/sdk/src/plugins/plugins.ts#L292-L295) - one `computers` port"
+  - "[code://packages/computer/src/plugin.ts#L1448-L1787](../../../../packages/computer/src/plugin.ts#L1448-L1787) - the port the plugin registers"
 ---
 
 ## Objective

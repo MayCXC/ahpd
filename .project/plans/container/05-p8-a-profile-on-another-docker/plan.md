@@ -4,7 +4,7 @@ domain: container
 status: planned
 priority: medium
 created: 2026-09-26
-revalidated: 2026-10-22
+revalidated: 2026-10-30
 requires:
   - plans/container/05-p3-parts-are-built-from-one-versions-file/plan.md
   - plans/container/05-p5-agents-run-from-their-parts/plan.md
@@ -14,23 +14,23 @@ changes: []
 creates: []
 decisions:
 refs:
-  - "[code://packages/computer/src/plugin.ts#L76](../../../../packages/computer/src/plugin.ts#L76) - the `env` option, which already sets `DOCKER_HOST` for the whole plugin"
-  - "[code://packages/computer/src/plugin.ts#L354-L360](../../../../packages/computer/src/plugin.ts#L354-L360) - the one `dockerRuntime`, given that `env`"
-  - "[code://packages/computer/src/plugin.ts#L410-L454](../../../../packages/computer/src/plugin.ts#L410-L454) - `made`, the single `dockered` that usage/03 wraps to meter up time"
-  - "[code://packages/computer/src/plugin.ts#L403-L412](../../../../packages/computer/src/plugin.ts#L403-L412) - `claimOf`, which reads the owner through `dockered.inspect`"
-  - "[code://packages/computer/src/plugin.ts#L142-L175](../../../../packages/computer/src/plugin.ts#L142-L175) - `profilesOf`, where a profile's keys are read"
-  - "[code://packages/computer/src/runtime.ts#L325-L341](../../../../packages/computer/src/runtime.ts#L325-L341) - `ran`, whose env carries `DOCKER_HOST`"
-  - "[code://packages/computer/src/runtime.ts#L98-L106](../../../../packages/computer/src/runtime.ts#L98-L106) - `MachineSpec.mounts`, host paths a remote Docker does not have"
-  - "[code://packages/computer/src/runtime.ts#L152-L159](../../../../packages/computer/src/runtime.ts#L152-L159) - `MachineSpec.folder`, mounted at the same path"
-  - "[code://packages/computer/src/runtime.ts#L726-L732](../../../../packages/computer/src/runtime.ts#L726-L732) - `-v` for mounts and the folder, `-e`, `-w`"
-  - "[code://packages/computer/src/runtime.ts#L123](../../../../packages/computer/src/runtime.ts#L123) - `MachineSpec.copies`"
-  - "[code://packages/computer/src/runtime.ts#L736-L744](../../../../packages/computer/src/runtime.ts#L736-L744) - a copy-in is `create`, `docker cp`, `start`, which works against a remote Docker"
-  - git://c81ebe0:.project/ideas/more-computer-runtimes.md - "Working without a mount, and syncing", the clone this plan takes
-  - "[code://packages/computer/src/runtime.ts#L194-L212](../../../../packages/computer/src/runtime.ts#L194-L212) - `ComputerRuntime`, which each VM maker implements"
-  - "[code://packages/computer/src/runtime.ts#L389-L423](../../../../packages/computer/src/runtime.ts#L389-L423) - the records a docker machine keeps as labels, which a VM keeps in its own metadata"
-  - "[code://packages/computer/src/plugin.ts#L70-L108](../../../../packages/computer/src/plugin.ts#L70-L108) - `optionsSchema`; a credential is `writeOnly` (daemon/11)"
-  - "[code://packages/computer/src/provider.ts#L156](../../../../packages/computer/src/provider.ts#L156) - `STATES`, the states a `state` write may ask for"
-  - "[code://packages/computer/src/provider.ts#L278-L288](../../../../packages/computer/src/provider.ts#L278-L288) - the `state` leaf"
+  - "[code://packages/computer/src/plugin.ts#L329](../../../../packages/computer/src/plugin.ts#L329) - the `env` option, which already sets `DOCKER_HOST` for the whole plugin"
+  - "[code://packages/computer/src/plugin.ts#L551-L567](../../../../packages/computer/src/plugin.ts#L551-L567) - the one `dockerRuntime`, given that `env`"
+  - "[code://packages/computer/src/plugin.ts#L785-L911](../../../../packages/computer/src/plugin.ts#L785-L911) - `made`, the router that usage/03 wraps to meter up time"
+  - "[code://packages/computer/src/plugin.ts#L633-L644](../../../../packages/computer/src/plugin.ts#L633-L644) - `claimOf`, which reads the owner through the router"
+  - "[code://packages/computer/src/plugin.ts#L99-L169](../../../../packages/computer/src/plugin.ts#L99-L169) - `profilesOf`, where a profile's keys are read"
+  - "[code://packages/computer/src/runtime.ts#L885-L907](../../../../packages/computer/src/runtime.ts#L885-L907) - `ran`, whose env carries `DOCKER_HOST`"
+  - "[code://packages/computer/src/runtime.ts#L318-L327](../../../../packages/computer/src/runtime.ts#L318-L327) - `MachineSpec.mounts`, host paths a remote Docker does not have"
+  - "[code://packages/computer/src/runtime.ts#L449-L457](../../../../packages/computer/src/runtime.ts#L449-L457) - `MachineSpec.folder`, mounted at the same path"
+  - "[code://packages/computer/src/runtime.ts#L3414-L3477](../../../../packages/computer/src/runtime.ts#L3414-L3477) - `-v` for mounts and the folder, `-e` by name, `-w`"
+  - "[code://packages/computer/src/runtime.ts#L347-L355](../../../../packages/computer/src/runtime.ts#L347-L355) - `MachineSpec.copies`"
+  - "[code://packages/computer/src/runtime.ts#L3486-L3493](../../../../packages/computer/src/runtime.ts#L3486-L3493) - a copy-in is `create`, `docker cp`, `start`, which works against a remote Docker"
+  - "[code://.project/ideas/more-computer-runtimes.md#L21](../../../ideas/more-computer-runtimes.md#L21) - \"Working without a mount, and syncing\", the clone this plan takes"
+  - "[code://packages/computer/src/runtime.ts#L531-L669](../../../../packages/computer/src/runtime.ts#L531-L669) - `ComputerRuntime`, which each VM maker implements"
+  - "[code://packages/computer/src/runtime.ts#L3358-L3393](../../../../packages/computer/src/runtime.ts#L3358-L3393) - the records a docker machine keeps as labels, which a VM keeps in its own metadata"
+  - "[code://packages/computer/package.json#L90-L222](../../../../packages/computer/package.json#L90-L222) - `optionsSchema`; a credential is `writeOnly` (daemon/11)"
+  - "[code://packages/computer/src/provider.ts#L207](../../../../packages/computer/src/provider.ts#L207) - `STATES`, the states a `state` write may ask for"
+  - "[code://packages/computer/src/provider.ts#L318-L328](../../../../packages/computer/src/provider.ts#L318-L328) - the `state` leaf"
   - "[code://.project/plans/container/05-p11-a-vm-is-made-for-a-machine/plan.md](../05-p11-a-vm-is-made-for-a-machine/plan.md) - dropped plan merged here: the VM runtimes"
   - https://docs.docker.com/engine/security/protect-access/ - `DOCKER_HOST=ssh://user@host`
   - https://libvirt.org/formatdomain.html#general-metadata - `<metadata>` in a domain, under a namespace of ours
@@ -106,11 +106,12 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 | --- | --- | --- |
 | One plan for another Docker and a VM | Softov, 2026-10-22, chose "proxyUrl in each runtime": "Merge p8 + p11" | - |
 | `dockerHost` is a profile option, not a runtime: the machine is still made by Docker | "One computer: provider, the runtime named for what makes the machine", the runtime names what makes the machine | 01 |
-| One Docker runner per profile that names `dockerHost`, beside the plugin's own | the single `dockered` at [`code://packages/computer/src/plugin.ts#L354-L360`](../../../../packages/computer/src/plugin.ts#L354-L360) | 01 |
-| A remote runner's machines carry a per-host label its listing filters on, and a `dockerHost` equal to the plugin's own Docker is skipped with a line | (defaulted: the plugin label is the same on every host, so two hosts on one Docker would list each other's machines, and one Docker reached twice lists each machine twice) | 01 |
-| Every call through the router has a per-runner timeout, and a startup adoption that fails is logged and tried again at the next listing | (defaulted: `ran` has no timeout, so a hung `ssh://` Docker would block the listing and the picker) | 01 |
-| A need marked `credential: true` is refused on a remote runner, never copied | (defaulted: a copy puts the host's keys on another box) | 02 |
-| The work comes back by a fetch into its own ref and a `merge --ff-only` in the worktree, and a disposable machine whose bring-back failed is kept | (defaulted: git refuses a fetch into a branch checked out in a worktree, and removing the machine would lose the work) | 03 |
+| One Docker runner per profile that names `dockerHost`, beside the plugin's own | the single `dockered` at [`code://packages/computer/src/plugin.ts#L551-L567`](../../../../packages/computer/src/plugin.ts#L551-L567) | 01 |
+| Every machine a remote runner makes carries the `ahpd.host` label with this host's id, and its listing filters on it; a `dockerHost` equal to the plugin's own Docker is skipped with a line | (defaulted: `ahpd.host` exists at [`code://packages/computer/src/runtime.ts#L1030`](../../../../packages/computer/src/runtime.ts#L1030) but the listing does not filter on it, so two hosts on one Docker would list each other's machines, and one Docker reached twice lists each machine twice) | 01 |
+| Every call through the router has a per-runner timeout, and a startup adoption that fails is logged and tried again at the next listing | (defaulted: the router bounds only `list`, with one value for every runtime, at [`code://packages/computer/src/router.ts#L47-L55`](../../../../packages/computer/src/router.ts#L47-L55), and `ran` has no timeout, so a hung `ssh://` Docker would block every other call) | 01 |
+| A need marked `credential: true`, a file or a volume seed, is refused on a remote runner, unless the profile gives that need its own value; cofold's `cofoldConfig` and `cofoldState` both carry the mark | Softov, 2026-10-30, chose "File and volume seeds"; `cofoldState` seeds a volume from the same config file at [`code://packages/agent-cofold/src/agent.ts#L785-L789`](../../../../packages/agent-cofold/src/agent.ts#L785-L789) | 02 |
+| The work comes back through host/67's bring-back: a bundle on `docker exec`'s stdout, fetched into `refs/ahpd/machines/<machine>/<branch>` and moved by its rules; a machine whose work did not come back is not removed | Softov, 2026-10-30, chose "Reuse host/67's"; [`code://packages/computer/src/runtime.ts#L2455-L2580`](../../../../packages/computer/src/runtime.ts#L2455-L2580) | 03 |
+| A session with `isolation: folder` on a remote profile is not refused: a branch the folder is not on moves as a ref, and work that is not a fast-forward waits under `refs/ahpd/machines/<machine>/<branch>` | follows host/67's rules, which Softov chose to reuse on 2026-10-30 | 03 |
 | `gitCredential` is `secretAtUse`, read with `host.secret` at create for the machine's owner, and a missing one fails only that create | Softov, 2026-10-03, asked "when a `$secret` in a plugin's options can't be read at load, what fails?": "Only its item" | 07 |
 | The plugin's `env.DOCKER_HOST` stays the whole plugin's Docker and is treated as this host's | it works today, and an operator who set it chose that | 01 |
 | A machine's id records which Docker made it | two Dockers can hold the same name | 01 |
@@ -119,7 +120,8 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 | Every session in such a machine runs nested | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 04 |
 | The test target is dev02's Docker | Softov, 2026-10-02, asked "Which box is the test target?": "ssh to softov@dev02.example.com worked." | 05 |
 | Both ways in exist, chosen per profile with `code` (for now the option's name and its two values): `bundle` (default), a git bundle of the session's branch made here, copied in with `docker cp` and cloned inside with `origin` set to the repository's remote, with no credential in the box; and `clone`, the machine cloning from `origin` with a git credential named from the vault as `gitCredential: { "$secret": ... }`; one function picks the route | Softov, 2026-10-03, asked "where does the clone come from and get its credentials?": "Both, a profile option"; "one or another is not a valid choise" | 03, 07 |
-| For now this host fetches the work back: a bundle made inside, copied out with `docker cp`, fetched into the session's worktree branch | Softov, 2026-10-03, asked "does the machine push the branch back, or does this host fetch it?": "as proposed" | 03 |
+| For now this host fetches the work back, and the machine never pushes | Softov, 2026-10-03, asked "does the machine push the branch back, or does this host fetch it?": "as proposed" | 03 |
+| A vault-named variable works on a remote Docker: p9's refusal applies only to a runtime that puts variables in a command line, as ssh does | Softov, 2026-10-30, chose "Allow on remote Docker"; `noVaultInline` at [`code://packages/computer/src/plugin.ts#L1296-L1300`](../../../../packages/computer/src/plugin.ts#L1296-L1300) | 04 |
 | For now a machine on a profile's Docker is `docker-<profile>.<name>`, spelled and parsed by p9 task 01's functions; a profile named like a runtime value is refused | Softov, 2026-10-03, answered in p9: "put runtime.name" | 01 |
 | The VM runtime values are `libvirt` and `proxmox` | Softov, 2026-10-02, asked "How is a hypervisor named in a computer profile?": "One runtime per maker" | 10, 13 |
 | libvirt first, on dev02; Proxmox second, on a Proxmox node named when tested | Softov, 2026-10-02, asked "Which VM maker comes first?": "libvirt first on dev02" | 08, 10, 13 |
@@ -142,7 +144,7 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 ## Proposed architecture
 
 - **Data flow** - `profiles.<key>.dockerHost` -> a `dockerRuntime` with `env.DOCKER_HOST` set -> registered with the router under `docker-<key>`; its listing filters by the plugin label and `ahpd.profile=<key>`, so two profiles on one Docker list disjoint machines.
-- **Code** - `codeRouteOf(profile)` picks `bundle` (default) or `clone`; both land the session's branch at the machine's `workdir`, and both come back as a bundle made inside, copied out and fetched into the session's worktree branch, when the session leaves the machine and before a disposable machine is removed.
+- **Code** - `codeRouteOf(profile)` picks `bundle` (default) or `clone`; both land the session's branch at the machine's `workdir`, and both come back through host/67's bring-back, when the session leaves the machine and before a disposable machine is removed.
 - **Metering** - `made` wraps the router, so each runner's machines are metered as the local ones; `claimOf` reads through the router.
 - **VM options** - `options.libvirt = { uri, pool, network, template?, jump?, user? }` and `options.proxmox = { url, tokenId, secret (writeOnly), node, storage, bridge, template? }`; a profile names `runtime`, `cpus`, `memory`.
 - **VM reach** - a VM is an ssh destination (`ahpd@<address>`), found by `virsh domifaddr` or the Proxmox guest agent. Where the VM's network is private, the reach jumps through the libvirt host. p9's ssh reach answers `how` and `nested`.
@@ -180,9 +182,10 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 
 ## Resume state
 
-- **Done so far:** nothing; planned 2026-10-02. p11's VM tasks were merged here on 2026-10-22 as tasks 08 to 13, and its docs into task 06.
+- **Done so far:** no task; planned 2026-10-02. p11's VM tasks were merged here on 2026-10-22 as tasks 08 to 13, and its docs into task 06.
+  Main has parts of tasks 01, 03 and 04 from other plans, checked 2026-10-30: `claimOf` reads through the router, p9 spells the ids, the router bounds `list`, the `ahpd.host` label exists, host/67 brings work back, and `spawnEnvOf` puts the runtime's `env` in the descriptor.
 - **Next action:** [task-01-a-profile-names-its-docker.md](task-01-a-profile-names-its-docker.md). Task 08 waits on Softov installing libvirt on dev02.
-- **Open question (ask before task 03):** a session with `isolation: folder` on a remote profile has no worktree branch of its own, and its folder may have another branch checked out - (a) refuse `isolation: folder` on a remote profile with a sentence, or (b) bring the work back to a side branch named for the session and leave merging to the person?
+- **Open questions:** none; the `isolation: folder` question is answered by host/67's rules (2026-10-30).
 - **Watch out for:** the `clone` route puts a git credential in the box for the clone command only, and needs the vault (vault/01-p1 task 04) to name it; the `bundle` route needs neither; a git credential helper that asks this host is needed only if an agent must reach the remote itself, and waits until one does; a folder that is not a repository has no clone; it is refused here, and copying it in stays in [the idea](../../../ideas/more-computer-runtimes.md); p7's git directory mount does not apply on another Docker; the box runs with its own harness and configuration, and task 02 refuses a credential need from this host, so no key of this host reaches dev02.
 dev02 has `/dev/kvm` and Docker but no libvirt yet.
 Softov installs libvirt there (task 08 step 1), before task 08's validation and before any check by hand.

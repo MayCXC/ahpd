@@ -54,6 +54,7 @@ client chat/pendingMessageSet steering -> bot chat steer -> end the open turn as
 | A queued message waits until the steered turn ends; the split never starts it | (defaulted: a steer is in front of the queue) | 01 |
 | The new turn shows the same back-session chat as a subagent call | (defaulted: the person still waits on the same chat) | 01 |
 | A log written before this plan keeps its `steering` lines, and a reload reads each one as a turn of its own | (defaulted: one reader for old and new logs) | 01 |
+| The steered turn carries the sender of the steered message, through an optional `from` on `steer` | Softov, 2026-10-30, chose "Add a task to 56" | 02 |
 
 ## Proposed architecture
 
@@ -68,6 +69,7 @@ client chat/pendingMessageSet steering -> bot chat steer -> end the open turn as
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A steer starts its own turn](task-01-a-steer-starts-its-own-turn.md) | implemented | - |
+| [02 - A steered turn carries its sender](task-02-a-steered-turn-carries-its-sender.md) | todo | 01 |
 
 ## Risks and tradeoffs
 
@@ -77,7 +79,7 @@ client chat/pendingMessageSet steering -> bot chat steer -> end the open turn as
 ## Resume state
 
 - **Done so far:** task 01 is implemented. A steer ends the open turn and begins one of its own; a reload reads it, and the wake's answer follows the new turn.
-- **Next action:** the Final verification checklist, by hand, before the plan is reviewed.
+- **Next action:** task 02, then the Final verification checklist by hand.
 - **Open questions:** none.
 - **Watch out for:** `finish` calls `startNext`, so the split uses the new `next` parameter to leave the queue waiting.
 

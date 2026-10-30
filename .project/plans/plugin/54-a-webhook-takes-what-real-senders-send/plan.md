@@ -1,7 +1,7 @@
 ---
 title: A webhook takes what real senders send
 domain: plugin
-status: planned
+status: implemented
 priority: high
 created: 2026-10-22
 revalidated: 2026-10-22

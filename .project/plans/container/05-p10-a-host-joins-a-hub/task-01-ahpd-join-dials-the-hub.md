@@ -5,7 +5,7 @@ depends: [task-03-a-node-has-a-token.md]
 layer: "server"
 refs:
   - "[code://packages/server/src/commands/registry.ts](../../../../packages/server/src/commands/registry.ts) - commands declared once"
-  - "[code://packages/server/src/commands/run.ts#L604-L615](../../../../packages/server/src/commands/run.ts#L604-L615) - the stdio host a session is served from"
+  - "[code://packages/server/src/commands/run.ts#L1678-L1689](../../../../packages/server/src/commands/run.ts#L1678-L1689) - the stdio host a session is served from"
 ---
 
 ## Objective
@@ -20,14 +20,18 @@ refs:
 
 ## Steps
 
-1. The control socket speaks JSON-RPC: `node/hello` from the node, `node/open { id, plugins, env? }` from the hub. There is no `cwd`: the node starts each session in its own `workdir` (a `--workdir` flag on `ahpd join`, default the directory it was started in). `env` carries only what p12 sends, and what that is waits on p12's open question.
-2. A dropped control socket reconnects with backoff up to a minute; a refused token stops with the hub's sentence.
-3. A data socket that closes ends its process; a process that exits closes its socket.
-4. One control socket per node and one data socket per session; each session is its own `ahpd --stdio` process, started by one function, `serveSession(open)`, so serving from a running daemon later changes that function only.
+1. Speak JSON-RPC on the control socket: `node/hello { versions, workdir }` from the node, `node/open { id, plugins, env? }` from the hub.
+2. Start each session in the node's `workdir`: the `--workdir` flag of `ahpd join`, or the start directory. `node/open` has no `cwd`.
+3. Put in `env` only what p12 sends; p12's open question decides it.
+4. Reconnect a dropped control socket with backoff up to a minute.
+5. Stop on a refused token or version, and show the hub's sentence.
+6. A data socket that closes ends its process; a process that exits closes its socket.
+7. One control socket per node and one data socket per session; each session is its own `ahpd --stdio` process, started by one function, `serveSession(open)`, so serving from a running daemon later changes that function only.
 
 ## Validation
 
 - `join.test.ts`: the fixture host is started in the node's `--workdir`, whatever the hub's own path is.
+- `join.test.ts`: `node/hello` carries the `--workdir`, and a hub that refuses the version stops `ahpd join` with its sentence.
 - `join.test.ts`: against a fake hub, `open` starts a fixture host, a frame crosses both ways, closing either end ends the other, and a dropped control socket reconnects.
 
 ## Resume

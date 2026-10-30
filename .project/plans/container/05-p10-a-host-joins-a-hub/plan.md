@@ -4,7 +4,7 @@ domain: container
 status: planned
 priority: medium
 created: 2026-09-26
-revalidated: 2026-10-04
+revalidated: 2026-10-30
 requires:
   - plans/container/05-p9-an-ssh-machine-runs-a-nested-host/plan.md
   - plans/daemon/13-ahpd-restart/plan.md
@@ -13,17 +13,17 @@ creates: []
 decisions:
   - decisions/a-nested-host-speaks-stdio.md
 refs:
-  - "[code://packages/sdk/src/sessions/nested.ts#L47](../../../../packages/sdk/src/sessions/nested.ts#L47) - `NestedHost`: stdin, stdout, stderr, `on` and `kill`, all a socket needs to stand in for a process"
-  - "[code://packages/sdk/src/sessions/nested.ts#L78](../../../../packages/sdk/src/sessions/nested.ts#L78) - `NestedOptions.start`, which returns a `NestedHost` instead of spawning"
-  - "[code://packages/sdk/src/sessions/nested.ts#L95-L103](../../../../packages/sdk/src/sessions/nested.ts#L95-L103) - `nestedAgent`, which takes those options"
-  - "[code://packages/sdk/src/sessions/nested.ts#L115-L129](../../../../packages/sdk/src/sessions/nested.ts#L115-L129) - `startInside`, the default `start` that spawns the port's descriptor"
-  - "[code://packages/sdk/src/sessions/nested.ts#L138-L203](../../../../packages/sdk/src/sessions/nested.ts#L138-L203) - `stdioTransport`, one frame per line over a `NestedHost`"
-  - "[code://packages/sdk/src/sessions/nested.ts#L340-L393](../../../../packages/sdk/src/sessions/nested.ts#L340-L393) - `bringUp`: the outer host is an `AhpClient` over that transport, then `createSession` and two subscriptions"
-  - "[code://packages/sdk/src/host/spawn.ts#L332-L334](../../../../packages/sdk/src/host/spawn.ts#L332-L334) - where the host builds `nestedAgent` for a session"
-  - "[code://packages/sdk/src/listen.ts#L84-L127](../../../../packages/sdk/src/listen.ts#L84-L127) - the door: the deployment token, then `identify` against the users directory"
-  - "[code://packages/server/src/commands/run.ts#L604-L615](../../../../packages/server/src/commands/run.ts#L604-L615) - a stdio connection is admitted as the host itself"
-  - "[code://packages/sdk/src/access/users.ts#L40-L54](../../../../packages/sdk/src/access/users.ts#L40-L54) - `SUBJECTS`, the grant subjects"
-  - "[code://packages/sdk/src/plugins/plugins.ts#L393](../../../../packages/sdk/src/plugins/plugins.ts#L393) - one `computers` port per host, so nodes are listed by `@ahpd/computer`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L112](../../../../packages/sdk/src/sessions/nested.ts#L112) - `NestedHost`: stdin, stdout, stderr, `on` and `kill`, all a socket needs to stand in for a process"
+  - "[code://packages/sdk/src/sessions/nested.ts#L156](../../../../packages/sdk/src/sessions/nested.ts#L156) - `NestedOptions.start`, which returns a `NestedHost` instead of spawning"
+  - "[code://packages/sdk/src/sessions/nested.ts#L173-L179](../../../../packages/sdk/src/sessions/nested.ts#L173-L179) - `nestedAgent`, which takes those options"
+  - "[code://packages/sdk/src/sessions/nested.ts#L192-L215](../../../../packages/sdk/src/sessions/nested.ts#L192-L215) - `startInside`, the default `start` that spawns the port's descriptor"
+  - "[code://packages/sdk/src/sessions/nested.ts#L279-L345](../../../../packages/sdk/src/sessions/nested.ts#L279-L345) - `stdioTransport`, one frame per line over a `NestedHost`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L846-L991](../../../../packages/sdk/src/sessions/nested.ts#L846-L991) - `bringUp`: the outer host is an `AhpClient` over that transport, then `createSession` and two subscriptions"
+  - "[code://packages/sdk/src/host/spawn.ts#L796-L798](../../../../packages/sdk/src/host/spawn.ts#L796-L798) - where the host builds `nestedAgent` for a session"
+  - "[code://packages/sdk/src/listen.ts#L97-L139](../../../../packages/sdk/src/listen.ts#L97-L139) - the door: the deployment token, then `identify` against the users directory"
+  - "[code://packages/server/src/commands/run.ts#L1678-L1689](../../../../packages/server/src/commands/run.ts#L1678-L1689) - a stdio connection is admitted as the host itself"
+  - "[code://packages/sdk/src/access/users.ts#L56-L79](../../../../packages/sdk/src/access/users.ts#L56-L79) - `SUBJECTS`, the grant subjects"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L292-L295](../../../../packages/sdk/src/plugins/plugins.ts#L292-L295) - one `computers` port per host, so nodes are listed by `@ahpd/computer`"
 ---
 
 ## Goal
@@ -72,7 +72,7 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 | What | Source | Task |
 | --- | --- | --- |
 | The hub owns the session and relays it, as it does for a nested host | (defaulted: the outer host already owns every nested session) | 02 |
-| The hub is an `AhpClient` to the node's host over a joined socket, through `NestedOptions.start`; the relay is not a raw pipe of a client's frames | the proxy at [`code://packages/sdk/src/sessions/nested.ts#L340-L393`](../../../../packages/sdk/src/sessions/nested.ts#L340-L393) already speaks AHP to the inner host | 02 |
+| The hub is an `AhpClient` to the node's host over a joined socket, through `NestedOptions.start`; the relay is not a raw pipe of a client's frames | the proxy at [`code://packages/sdk/src/sessions/nested.ts#L846-L991`](../../../../packages/sdk/src/sessions/nested.ts#L846-L991) already speaks AHP to the inner host | 02 |
 | A node is listed by `@ahpd/computer`, beside every other runtime | one `computers` port per host | 04 |
 | The node's sessions resume after a restart of either side, by the inner transcript id | [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md); daemon/13 | 05 |
 | A node's session uses the node's own harness and configuration; reaching models through the hub's proxy is a later option of p12 | Softov, 2026-10-18, "using the harness and configuration that are on the host first.. we see about proxy in another moment. since it can be like configurable" | 04 |
@@ -84,6 +84,8 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 | For now a node is owned by the host and its up time is metered while it is connected, from the registry's connect and drop events, through p9 task 01's metering function, which takes reachability events of which a listing is one source | follows p9's answer for an ssh machine, Softov, 2026-10-03: "host-owned and metered" | 04 |
 | A node is listed as `running` while connected | (defaulted: `isRunning` reads `running` or `Up ` with a trailing space) | 04 |
 | A node starts each session in its own workdir; `node/open` carries no `cwd` | (defaulted: a hub path is not a path on the node, as p9 says for an ssh machine) | 01 |
+| The node says its workdir in `node/hello`, and `connect` returns it as `NestedStarted.workingDirectory`, so the hub does not send its own folder | Softov, 2026-10-30, chose "Node says it on join"; p9's ssh machine at [`code://packages/computer/src/plugin.ts#L1370-L1376`](../../../../packages/computer/src/plugin.ts#L1370-L1376) | 01, 02 |
+| The hub refuses a node whose ahpd is older than 0.14.1 on join, with a sentence that says to update it, because an older node names its sessions `<provider>:/<id>` and cannot resume by id | Softov, 2026-10-30, chose "Refuse it on join" | 01, 02 |
 | The join path takes a node token alone, not the deployment token | (defaulted: a node token opens only that door, and asking for the deployment token too would hand every node the host's key) | 02, 03 |
 | A daemon option `nodeRestart` picks what a session does when its node's `ahpd join` restarts: `end` (the default) ends it with a sentence and the next turn resumes it by id; `reconnect` reopens it in place through a new data socket | Softov, 2026-10-13, asked "when a node's `ahpd join` restarts, what happens to the session?": "configurable"; then "which is the default?": "Ends, resumes by id". The option's name and that it is the hub's (defaulted: the hub holds the session) | 05 |
 

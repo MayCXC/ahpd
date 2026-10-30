@@ -1,7 +1,7 @@
 ---
 title: A secret field says secret
 domain: plugin
-status: planned
+status: implemented
 priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
