@@ -780,6 +780,14 @@ export function createTurns(ctx: SessionContext): Turns {
     },
 
     cancel: (turnId) => {
+      // Every call still open in the turn, before any of them is answered.
+      const open = (list(ctx.active?.responseParts) as Bag[])
+        .filter((part) => part.kind === 'toolCall')
+        .map((part) => bag(part.toolCall))
+        .filter((call) => call.status !== 'completed' && call.status !== 'cancelled')
+        .map((call) => str(call.toolCallId))
+        .filter((id): id is string => id !== undefined);
+      const answered = new Set<string>();
       // A turn blocked on a person is stopped by answering no, not by leaving
       // a promise nobody will settle - the subprocess would sit there for ever.
       // All of them, not the last one: a turn stopped while two questions
@@ -788,6 +796,7 @@ export function createTurns(ctx: SessionContext): Turns {
         ctx.pending.delete(one.id);
         one.settle({ behavior: 'deny', message: 'The turn was stopped' });
         ctx.inputNeededRemoved(one.id);
+        answered.add(one.id);
       }
       // And the previews those questions were carrying. A call that will never
       // run leaves no file to show, so the text the host was holding goes with
@@ -795,8 +804,23 @@ export function createTurns(ctx: SessionContext): Turns {
       ctx.settleEdits();
       // And the calls a client is running for us, for the same reason: a
       // promise settled by somebody else is one a stopped turn still waits on.
+      for (const id of open) if (ctx.calls.owner(id) !== undefined) answered.add(id);
       ctx.releaseCalls('The turn was stopped');
-      void ctx.handle.interrupt().catch(() => {});
+      /*
+       * The interrupt, once the CLI has recorded every answer above.
+       *
+       * The CLI keeps an answer only once it has recorded the call's result,
+       * and an interrupt that reaches it first has it write its own text for
+       * the call instead: "The user doesn't want to proceed with this tool use
+       * ... STOP what you are doing and wait for the user to tell you how to
+       * proceed". The model then takes a stop for a person refusing the call,
+       * where the protocol closes it as skipped. So the reader sends the
+       * interrupt once the CLI reports those results. A call the CLI runs
+       * itself is stopped only by the interrupt, and is told that text by
+       * whichever interrupt reaches it, so with one open the interrupt goes now.
+       */
+      if (answered.size === 0 || open.some((id) => !answered.has(id))) void ctx.handle.interrupt().catch(() => {});
+      else ctx.stopAnswers = answered;
       /*
        * And the workers that turn spawned, foreground or background.
        *

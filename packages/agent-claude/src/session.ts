@@ -75,6 +75,7 @@ export function createSession(options: ClaudeSessionOptions): Session {
     startedAt: 0,
     failed: undefined as string | undefined,
     interrupted: false,
+    stopAnswers: undefined as Set<string> | undefined,
     ran: undefined as string | undefined,
     streaming: undefined as string | undefined,
     wake: undefined as (() => void) | undefined,
