@@ -921,7 +921,18 @@ export function fileUsers(options: FileUserOptions): Users {
         if (typeof one !== 'object' || one === null || Array.isArray(one)) throw new Error('a token is not an object');
         const entry = one as Partial<TokenRecord>;
         if (typeof entry.id !== 'string' || entry.id === '') throw new Error('a token has no id');
-        if (typeof entry.user !== 'string' || entry.user === '') throw new Error(`token ${entry.id} names no user`);
+        // Exactly one of the two: a person's key names the person, and a team's
+        // key names the team. Two answers or none are a file to fix, not one to
+        // read with the wrong half dropped.
+        if ((entry.user === undefined) === (entry.team === undefined)) {
+          throw new Error(`token ${entry.id} names ${entry.user === undefined ? 'no user and no team' : 'both a user and a team'}`);
+        }
+        if (entry.user !== undefined && (typeof entry.user !== 'string' || entry.user === '')) {
+          throw new Error(`token ${entry.id} names no user`);
+        }
+        if (entry.team !== undefined && (typeof entry.team !== 'string' || entry.team === '')) {
+          throw new Error(`token ${entry.id} names no team`);
+        }
         if (typeof entry.token !== 'string' || entry.token === '') throw new Error(`token ${entry.id} holds no hash`);
         if (typeof entry.created !== 'number' || !Number.isFinite(entry.created)) throw new Error(`token ${entry.id} has no created time`);
         if (entry.label !== undefined && typeof entry.label !== 'string') throw new Error(`token ${entry.id} has a label that is not a string`);
@@ -973,7 +984,8 @@ export function fileUsers(options: FileUserOptions): Users {
         }
         return {
           id: entry.id,
-          user: entry.user,
+          ...(entry.user === undefined ? {} : { user: entry.user }),
+          ...(entry.team === undefined ? {} : { team: entry.team }),
           ...(entry.label === undefined ? {} : { label: entry.label }),
           ...(entry.grants === undefined ? {} : { grants: [...entry.grants] as Grant[] }),
           ...(entry.scope === undefined ? {} : { scope: entry.scope }),
@@ -1197,6 +1209,53 @@ export function fileUsers(options: FileUserOptions): Users {
   };
 
   /**
+   * The principal a team key answers for, re-read from both files at each question.
+   *
+   * The team is the principal, and no person is: its id is `team:<team>`, it
+   * holds no role, and it may hold `proxy:call` and `proxy:models` alone. Its
+   * memberships are its team and the key's own scope, so `scopeFor` resolves a
+   * call to the team or to one of that team's projects and refuses any other.
+   */
+  const teamPrincipalOf = (team: string, minted: TokenRecord): Principal => {
+    /**
+     * The key's record as it stands now, when the team is still named.
+     *
+     * Nothing for a team taken out of the users file, a key that is gone, and a
+     * key whose time is up: the same three answers `standing` refuses on.
+     */
+    const live = (): TokenRecord | undefined => {
+      if (!(read().file.teams ?? []).some((one) => one.id === team)) return undefined;
+      const one = readTokens().tokens.find((each) => each.id === minted.id);
+      if (one === undefined || one.team !== team) return undefined;
+      return one.expires !== undefined && one.expires <= Date.now() ? undefined : one;
+    };
+    const scopes = (one: TokenRecord | undefined): readonly string[] => {
+      const scope = one?.scope ?? team;
+      return scope === team ? [team] : [team, scope];
+    };
+    return Object.freeze({
+      id: `team:${team}`,
+      team,
+      // No role is a team's: what it may do is the two grants on its key.
+      roles: Object.freeze([]),
+      token: minted.id,
+      get memberships(): readonly string[] { return scopes(live()); },
+      get primary(): string | undefined { return team; },
+      get projects(): readonly Named[] { return read().file.projects ?? []; },
+      get teams(): readonly Named[] { return read().file.teams ?? []; },
+      get keyScope(): string | undefined { return live()?.scope; },
+      get keyMeta(): Record<string, string> | undefined { return live()?.meta; },
+      get keyLimits(): readonly PolicyLimit[] | undefined { return live()?.limits; },
+      standing: () => live() !== undefined,
+      can: (grant: Grant) => {
+        if (grant !== 'proxy:call' && grant !== 'proxy:models') return false;
+        const one = live();
+        return one !== undefined && (one.grants ?? []).some((held) => held === grant);
+      },
+    });
+  };
+
+  /**
    * The roles an issuer's answer carries in the claim a record names.
    *
    * A value is a role name this file defines or a built-in; one that names
@@ -1251,6 +1310,9 @@ export function fileUsers(options: FileUserOptions): Users {
        * credential, and a record that matched here is the one that says who.
        */
       if (minted !== undefined) {
+        // A team key belongs to no person, so this door answers nothing for it.
+        // `verifyTeamKey` is the one that does, and only the proxy asks it.
+        if (minted.team !== undefined) return undefined;
         const person = (file.users ?? []).find((one) => one.id === minted.user);
         if (person === undefined) return undefined;
         if (minted.expires !== undefined && minted.expires <= Date.now()) return undefined;
@@ -1367,6 +1429,27 @@ export function fileUsers(options: FileUserOptions): Users {
         }
       }
       return undefined;
+    },
+
+    /*
+     * A team key, checked the same way and answered only when it is one.
+     *
+     * Every hash is compared, as `verify` compares them, and a key that names a
+     * person is no team key: the two doors are disjoint, so a secret that
+     * reaches one is refused by the other.
+     */
+    verifyTeamKey: async (token) => {
+      if (token === '') return undefined;
+      const hash = hashOf(token);
+      let minted: TokenRecord | undefined;
+      for (const one of readTokens().tokens) {
+        if (same(one.token, hash) && one.team !== undefined) minted = one;
+      }
+      if (minted === undefined || minted.team === undefined) return undefined;
+      const { file } = read();
+      if (!(file.teams ?? []).some((one) => one.id === minted.team)) return undefined;
+      if (minted.expires !== undefined && minted.expires <= Date.now()) return undefined;
+      return teamPrincipalOf(minted.team, minted);
     },
 
     list: async () => {
@@ -1596,8 +1679,6 @@ export function fileUsers(options: FileUserOptions): Users {
       const { tokens, broken } = readTokens();
       if (broken) throw new Error(`${tokensFile} is not a tokens file; fix it before minting a token`);
       const { file } = read();
-      const held = (file.users ?? []).find((one) => one.id === user);
-      if (held === undefined) throw new Error(`no user called ${user}`);
       const now = Date.now();
       if (given.expires !== undefined) {
         if (typeof given.expires !== 'number' || !Number.isFinite(given.expires)) {
@@ -1607,6 +1688,92 @@ export function fileUsers(options: FileUserOptions): Users {
           throw new Error(`expires ${new Date(given.expires).toISOString()} is not in the future`);
         }
       }
+      /*
+       * The limits are checked as a `model` row's, and a key's pool is always
+       * `shared`. A missing pool is filled rather than refused, so a client may
+       * name an amount, a measure and a period alone.
+       */
+      const limits = given.limits === undefined ? undefined : checkKeyLimits(given.limits);
+      // The same bounds the reader and the proxy's header use, so a key can
+      // never hold a meta a call could not carry.
+      const meta = given.meta === undefined ? undefined : checkMeta(given.meta);
+      // Only the tokens still live hold a place: an expired one is a credential
+      // that no longer works, and it should not keep its owner from minting.
+      const limit = options.tokensPerPerson ?? 10;
+      /*
+       * An id that starts with `-` reads at a terminal as an option, so
+       * `token rm -abc` would be an unknown flag rather than a revoke. Base64url
+       * spells that one character in 64, so a mint makes another id for it.
+       */
+      let id = randomBytes(6).toString('base64url');
+      while (id.startsWith('-') || tokens.some((one) => one.id === id)) id = randomBytes(6).toString('base64url');
+      const secret = randomBytes(32).toString('base64url');
+
+      /*
+       * A team key: the team instead of a person, and the proxy's two grants.
+       *
+       * The team is named and the person is not, so a mint that carries both is
+       * a caller that did not say which it meant. A team has no roles, so there
+       * is no grant list to copy: what it may do is `proxy:call` and
+       * `proxy:models`, and those are the only two a key may carry.
+       */
+      if (given.team !== undefined) {
+        const team = given.team;
+        if (user !== undefined) throw new Error('a token names a user or a team, not both');
+        if (!(file.teams ?? []).some((one) => one.id === team)) throw new Error(`no team called ${team}`);
+        if (given.grants === undefined || given.grants.length === 0) {
+          throw new Error('a team key holds proxy:call or proxy:models, and names none');
+        }
+        for (const grant of given.grants) {
+          if (grant !== 'proxy:call' && grant !== 'proxy:models') {
+            throw new Error(`${grant} is not a grant a team key may hold; a team key holds proxy:call and proxy:models`);
+          }
+        }
+        /*
+         * The scope is the team, or a project the file names under it.
+         *
+         * A wide `team:*` is no place to charge a call, and another team is
+         * where calls made with this key would land without the key saying so.
+         */
+        let scope = team;
+        if (given.scope !== undefined) {
+          const parsed = typeof given.scope === 'string' ? membership(given.scope) : undefined;
+          if (parsed === undefined || parsed.project === '*') {
+            throw new Error(`${String(given.scope)} is not a scope: a scope is team or team:project`);
+          }
+          if (parsed.team !== team) {
+            throw new Error(`a team key is charged to ${team} or a project of it, and ${given.scope} names another team`);
+          }
+          if (parsed.project !== undefined && !(file.projects ?? []).some((one) => one.id === parsed.project)) {
+            throw new Error(`${given.scope} is not a project this host names`);
+          }
+          scope = parsed.written;
+        }
+        const live = tokens.filter((one) => one.team === team && (one.expires === undefined || one.expires > now));
+        if (live.length >= limit) {
+          throw new Error(`team ${team} may hold ${limit} tokens at most; revoke one before minting another`);
+        }
+        const record: TokenRecord = {
+          id,
+          team,
+          ...(given.label === undefined ? {} : { label: given.label }),
+          grants: [...given.grants],
+          scope,
+          ...(limits === undefined ? {} : { limits }),
+          ...(meta === undefined ? {} : { meta }),
+          created: now,
+          ...(given.expires === undefined ? {} : { expires: given.expires }),
+          // The secret is written here and nowhere, and only as its hash.
+          token: hashOf(secret),
+        };
+        writeTokens([...tokens, record]);
+        const { token: _hash, ...shown } = record;
+        return { ...shown, secret };
+      }
+
+      if (user === undefined) throw new Error('a token is minted for a user or a team');
+      const held = (file.users ?? []).find((one) => one.id === user);
+      if (held === undefined) throw new Error(`no user called ${user}`);
       /*
        * Every grant named is one the person holds now.
        *
@@ -1640,30 +1807,10 @@ export function fileUsers(options: FileUserOptions): Users {
         if (answer === undefined) throw new Error('this host names no team, so a key has no scope to carry');
         if (answer.refusal !== undefined) throw new Error(answer.refusal);
       }
-      /*
-       * The limits are checked as a `model` row's, and a key's pool is always
-       * `shared`. A missing pool is filled rather than refused, so a client may
-       * name an amount, a measure and a period alone.
-       */
-      const limits = given.limits === undefined ? undefined : checkKeyLimits(given.limits);
-      // The same bounds the reader and the proxy's header use, so a key can
-      // never hold a meta a call could not carry.
-      const meta = given.meta === undefined ? undefined : checkMeta(given.meta);
-      // Only the tokens still live hold a place: an expired one is a credential
-      // that no longer works, and it should not keep its person from minting.
-      const limit = options.tokensPerPerson ?? 10;
       const live = tokens.filter((one) => one.user === user && (one.expires === undefined || one.expires > now));
       if (live.length >= limit) {
         throw new Error(`user ${user} may hold ${limit} tokens at most; revoke one before minting another`);
       }
-      /*
-       * An id that starts with `-` reads at a terminal as an option, so
-       * `token rm -abc` would be an unknown flag rather than a revoke. Base64url
-       * spells that one character in 64, so a mint makes another id for it.
-       */
-      let id = randomBytes(6).toString('base64url');
-      while (id.startsWith('-') || tokens.some((one) => one.id === id)) id = randomBytes(6).toString('base64url');
-      const secret = randomBytes(32).toString('base64url');
       const record: TokenRecord = {
         id,
         user,

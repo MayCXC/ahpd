@@ -217,6 +217,64 @@ it('refuses the root connection, which has no reader, when it names nobody', asy
   expect(await ask('list', { user: 'ana' }, undefined)).toHaveLength(1);
 });
 
+it('lets a manager mint, list and revoke a team key, and refuses a reader who may not', async () => {
+  await people.addTeam('backend');
+  const boss = await person('boss');
+  const ana = await person('ana');
+
+  const minted = await ask('mint', { team: 'backend', grants: ['proxy:call'], label: 'ci' }, boss) as MintedToken;
+  expect(minted).toMatchObject({ team: 'backend', grants: ['proxy:call'], label: 'ci', scope: 'backend' });
+  expect(minted.user).toBeUndefined();
+
+  const listed = await ask('list', { team: 'backend' }, boss) as Record<string, unknown>[];
+  expect(listed.map((one) => one.id)).toEqual([minted.id]);
+  expect(listed[0]).toMatchObject({ team: 'backend', grants: ['proxy:call'] });
+  // Another team's keys are not in this listing.
+  expect(await ask('list', { team: 'sales' }, boss)).toEqual([]);
+
+  // A reader holds no `user:write`, so no team key is theirs.
+  for (const [name, params] of [
+    ['mint', { team: 'backend', grants: ['proxy:call'] }],
+    ['list', { team: 'backend' }],
+    ['revoke', { id: minted.id, team: 'backend' }],
+  ] as const) {
+    await expect(ask(name, params, ana)).rejects.toMatchObject({ code: -32009, message: 'ana may not user:write here' });
+  }
+  // The gate refuses the reader before the body does.
+  for (const name of ['mint', 'list', 'revoke']) {
+    expect(await methods[`x-ahpd/tokens/${name}`]!.authorize!({ team: 'backend' }, ana)).toBe(false);
+  }
+
+  // The root connection has no reader, and reaches a team as it reaches a person.
+  const byRoot = await ask('mint', { team: 'backend', grants: ['proxy:models'] }, undefined) as MintedToken;
+  expect(byRoot.team).toBe('backend');
+  expect(await ask('revoke', { id: byRoot.id, team: 'backend' }, undefined)).toEqual({});
+
+  expect(await ask('revoke', { id: minted.id, team: 'backend' }, boss)).toEqual({});
+  expect(await people.verifyTeamKey!(minted.secret)).toBeUndefined();
+  expect(await ask('list', { team: 'backend' }, boss)).toEqual([]);
+});
+
+it('refuses a team beside a user, and a team that is no name', async () => {
+  await people.addTeam('backend');
+  const boss = await person('boss');
+
+  for (const [name, params] of [
+    ['mint', { user: 'ana', team: 'backend', grants: ['proxy:call'] }],
+    ['list', { user: 'ana', team: 'backend' }],
+    ['revoke', { id: 'any', user: 'ana', team: 'backend' }],
+  ] as const) {
+    await expect(ask(name, params, boss)).rejects.toMatchObject({
+      code: -32602,
+      message: `x-ahpd/tokens/${name} takes user or team, not both`,
+    });
+  }
+  await expect(ask('mint', { team: '', grants: ['proxy:call'] }, boss)).rejects.toMatchObject({
+    code: -32602,
+    message: 'x-ahpd/tokens/mint takes team as a non-empty string',
+  });
+});
+
 it('the host gates a member\'s own tokens in and another person\'s out', async () => {
   const made = host({ users: people, methods: served() });
   const ana = made.accept(peer());

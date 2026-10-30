@@ -28,9 +28,9 @@ ahpd user token ana --url
 | `ahpd user member <id> <team[:project]>...` | Teams and projects their work may be charged to |
 | `ahpd user primary <id> [team[:project]]` | Where work that names none is charged |
 | `ahpd team add <id>`, `ahpd project add <id>` | Name a team or project |
-| `ahpd token mint [--user <id>] [--scope <team[:project]>]` | Mint a token of their own, shown once |
-| `ahpd token list [--user <id>]` | Show tokens, without any secret or hash |
-| `ahpd token rm <token id> [--user <id>]` | Revoke one token |
+| `ahpd token mint [--user <id>] [--team <team>] [--scope <team[:project]>]` | Mint a token of their own, shown once |
+| `ahpd token list [--user <id>] [--team <team>]` | Show tokens, without any secret or hash |
+| `ahpd token rm <token id> [--user <id>] [--team <team>]` | Revoke one token |
 
 `user add` also takes `--issuer <name>`, `--membership <team[:project]>` and `--primary <team[:project]>`.
 
@@ -65,9 +65,17 @@ A token also carries meta of its own, written `--meta name=value` once per entry
 
 A minted token cannot mint, list or revoke tokens. Sign in with the person's full token for that. `ahpd user token <id>` still mints that one full token, and the tokens a person minted stay.
 
-At a terminal `--user <id>` names whose tokens they are. `token list` without one lists everybody's; `token mint` and `token rm` need one, because a terminal has nobody signed in. Over `/api` a person's token acts for that person, and `--user` needs `user:write` and is bounded by that person's grants. The host mints at most `tokensPerPerson` live tokens per person, ten unless configured otherwise; an expired token does not count.
+A team holds a key of its own, minted with `--team` in place of `--user`. It belongs to no person, so no person's departure takes it away, and every call made with it is charged to `team:<team>`:
 
-`ahpd token list` shows the id, the label, the grants, the scope, the meta, the creation date, the expiry and the limits of each token, and never a secret or a hash.
+```bash
+ahpd token mint --team backend --grant proxy:call --label ci
+```
+
+A team key opens the proxy and no other door: the websocket, `/api` and the daemon's own port refuse it. It holds `proxy:call` or `proxy:models`, or both, and nothing else. Its scope is its team unless `--scope` names one of that team's projects. Each call is checked against the team, and a `user:` policy row never holds it. It works while its team is in the users file, and a team taken out stops every key of it. Root and a caller who holds `user:write` mint, list and revoke one, and `--team` with `--user` is refused.
+
+At a terminal `--user <id>` names whose tokens they are, and `--team <team>` names a team's keys instead. `token list` without either lists everybody's; `token mint` and `token rm` need one of them, because a terminal has nobody signed in. Over `/api` a person's token acts for that person, and `--user` needs `user:write` and is bounded by that person's grants; `--team` needs `user:write` too. The host mints at most `tokensPerPerson` live tokens per person or team, ten unless configured otherwise; an expired token does not count.
+
+`ahpd token list` shows the id, the label, the team for a team key, the grants, the scope, the meta, the creation date, the expiry and the limits of each token, and never a secret or a hash.
 
 ## Roles
 

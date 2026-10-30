@@ -210,6 +210,39 @@ describe('a caller is a person, root or a session, and may call', () => {
     expect((await send(served.port, CHAT, { headers: { 'x-api-key': ROOT_TOKEN }, body: CALL })).status).toBe(200);
   });
 
+  it('answers a team key, charging the call to the team and to no person', async () => {
+    const fake = await okProvider();
+    const usage = memoryUsage();
+    const served = await proxy({ ...table(fake.endpoint), usage: () => usage });
+    const key = await who.users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call'], label: 'ci' });
+    expect((await send(served.port, CHAT, { headers: { 'x-api-key': key.secret }, body: CALL })).status).toBe(200);
+    await pause(20);
+    expect(usage.entries).toHaveLength(1);
+    const [entry] = usage.entries;
+    expect(entry).toMatchObject({ owner: 'team:backend', team: 'backend', token: key.id });
+    // The owner is the team's pool, and a charge adds to every pool it is
+    // given, so the record names it once.
+    expect(entry?.pools).toEqual(['team:backend']);
+    // A grant the key does not hold is refused as a person's is.
+    const listed = await send(served.port, '/v1/models', { headers: { 'x-api-key': key.secret } });
+    expect(listed.status).toBe(403);
+    expect(listed.json).toMatchObject({ error: { message: 'team:backend may not proxy:models here' } });
+  });
+
+  it('lists for a team key what the team\'s policies allow, and no name a user: row denies', async () => {
+    const policies = memoryPolicies();
+    await policies.put({ id: 'team-models', scope: 'team:backend', kind: 'model', effect: 'allow', match: { model: ['fake/*'] } });
+    // Spelled as a person's id, which is the one a team principal carries: a
+    // `user:` row holds no team key.
+    await policies.put({ id: 'no-person', scope: 'user:team:backend', kind: 'model', effect: 'deny', match: { model: ['*'] } });
+    const fake = await okProvider();
+    const served = await proxy({ ...table(fake.endpoint), policies, policiesCheck: true });
+    const key = await who.users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call', 'proxy:models'] });
+    const listed = await send(served.port, '/v1/models', { headers: { authorization: `Bearer ${key.secret}` } });
+    expect(listed.status).toBe(200);
+    expect((listed.json as { data: { id: string }[] }).data.map((one) => one.id)).toEqual(['fake/model']);
+  });
+
   it('refuses a person without proxy:call with 403 naming the grant', async () => {
     const fake = await okProvider();
     const served = await proxy({ ...table(fake.endpoint) });

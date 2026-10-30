@@ -126,7 +126,8 @@ export const keyRowOf = (principal: Principal): Policy | undefined => {
  * request that names neither is held by `all` and by `user:` rows alone, which
  * is how somebody in no team is covered by a host-wide policy and by nothing
  * else. A `token:` row holds only the key it names, which is the key the call
- * was made with.
+ * was made with. A team key is no person, so no `user:` row holds it: the
+ * team's rows and the host-wide ones do.
  */
 export const scoped = (row: Policy, principal: Principal, scope: Scope | undefined): boolean => {
   if (row.scope === 'all') return true;
@@ -134,7 +135,7 @@ export const scoped = (row: Policy, principal: Principal, scope: Scope | undefin
   const what = row.scope.slice(0, at);
   const named = row.scope.slice(at + 1);
   if (what === 'token') return named === principal.token;
-  if (what === 'user') return named === principal.id;
+  if (what === 'user') return principal.team === undefined && named === principal.id;
   if (what === 'team') return scope !== undefined && scope.team === named;
   // `project:<team>:<project>`, so the second colon is what says which is which.
   const cut = named.indexOf(':');

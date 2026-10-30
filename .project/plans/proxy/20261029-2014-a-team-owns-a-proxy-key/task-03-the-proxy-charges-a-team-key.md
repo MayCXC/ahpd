@@ -1,6 +1,6 @@
 ---
 title: The proxy charges a team key to its team
-status: todo
+status: implemented
 depends: [task-01-a-token-record-can-name-a-team.md]
 layer: "sdk, server, docs"
 refs:

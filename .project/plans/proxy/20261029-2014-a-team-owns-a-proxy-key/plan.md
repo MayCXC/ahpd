@@ -1,7 +1,7 @@
 ---
 title: A team owns a proxy key
 domain: proxy
-status: planned
+status: implemented
 priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
@@ -79,9 +79,9 @@ the same key on /api or the websocket -> users.verify answers nothing -> 401
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A token record can name a team](task-01-a-token-record-can-name-a-team.md) | todo | - |
-| [02 - A team key is minted, listed and revoked](task-02-a-team-key-is-minted-listed-revoked.md) | todo | 01 |
-| [03 - The proxy charges a team key to its team](task-03-the-proxy-charges-a-team-key.md) | todo | 01 |
+| [01 - A token record can name a team](task-01-a-token-record-can-name-a-team.md) | implemented | - |
+| [02 - A team key is minted, listed and revoked](task-02-a-team-key-is-minted-listed-revoked.md) | implemented | 01 |
+| [03 - The proxy charges a team key to its team](task-03-the-proxy-charges-a-team-key.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -90,15 +90,18 @@ the same key on /api or the websocket -> users.verify answers nothing -> 401
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** wait until `proxy/20261029-2010-a-key-carries-its-scope` and `policy/20261029-2012-a-key-has-limits` are merged, then start [task-01-a-token-record-can-name-a-team.md](task-01-a-token-record-can-name-a-team.md).
+- **Done so far:** [task-01-a-token-record-can-name-a-team.md](task-01-a-token-record-can-name-a-team.md), [task-02-a-team-key-is-minted-listed-revoked.md](task-02-a-team-key-is-minted-listed-revoked.md) and [task-03-the-proxy-charges-a-team-key.md](task-03-the-proxy-charges-a-team-key.md) are implemented.
+  A record names a user or a team, `verify` refuses a team key, and `verifyTeamKey` answers its team.
+  The mint makes a team key, and the token commands and `--team` manage it.
+  The proxy answers it as `team:<team>`, and `user:` rows hold it never.
+- **Next action:** none. [implemented.md](implemented.md) says what exists and where it departed.
 - **Open questions:** none.
 - **Watch out for:** the plans of the scope, the meta and the limits change `TokenRecord` and `principalOf` first. A team principal reads `keyScope`, `keyMeta` and `keyLimits` the same way.
 
 ## Final verification checklist
 
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
-- [ ] `ahpd token mint --team backend --grant proxy:call` mints a key, and a proxy call with it is recorded as `team:backend`.
-- [ ] The same key is refused on `/api` and on the websocket.
-- [ ] A person with no `user:write` cannot mint a team key.
+- [x] `pnpm typecheck` passes.
+- [x] `pnpm test` passes.
+- [x] `ahpd token mint --team backend --grant proxy:call` mints a key, and a proxy call with it is recorded as `team:backend`.
+- [x] The same key is refused on `/api` and on the websocket.
+- [x] A person with no `user:write` cannot mint a team key.

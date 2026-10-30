@@ -359,6 +359,56 @@ describe('a key\'s own limit', () => {
   });
 });
 
+describe('a team key', () => {
+  /** A key of the team this host names, and the proxy over two fakes. */
+  const teamKey = async (policies?: Policies) => {
+    const minted = await who.users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call', 'proxy:models'], label: 'ci' });
+    const usage = keeping();
+    const remote = await fakeProvider(answerJson(200, COMPLETION));
+    const local = await fakeProvider(answerJson(200, COMPLETION));
+    fakes.push(remote, local);
+    const served = await serveProxy({
+      users: who.users, ...softov(remote.endpoint, local.endpoint), usage: () => usage,
+      ...(policies === undefined ? {} : { policies, policiesCheck: true }),
+    });
+    open.push(served);
+    return { remote, local, served, usage, secret: minted.secret, id: minted.id };
+  };
+
+  it('records a call as the team\'s, with one pool and no project', async () => {
+    const { served, usage, secret, id } = await teamKey();
+    expect((await send(served.port, CHAT, { headers: { 'x-api-key': secret }, body: { model: 'local/default' } })).status).toBe(200);
+    const [entry] = await settled(usage, 1);
+    expect(entry).toMatchObject({ owner: 'team:backend', team: 'backend', token: id, pools: ['team:backend'] });
+    expect(entry?.project).toBeUndefined();
+  });
+
+  it('holds a team key to the team\'s rows, and to no user: row', async () => {
+    const store = await rows(
+      { id: 'team-local', scope: 'team:backend', kind: 'model', effect: 'allow', match: { model: ['local/*'] } },
+      // Spelled as a person's id, which is the one a team principal carries: a
+      // `user:` row holds no team key, so this deny binds nobody here.
+      { id: 'person-only', scope: 'user:team:backend', kind: 'model', effect: 'deny', match: { model: ['local/default'] } },
+    );
+    const { served, secret, local } = await teamKey(store);
+    expect((await send(served.port, CHAT, { headers: { 'x-api-key': secret }, body: { model: 'local/default' } })).status).toBe(200);
+    expect(local.received).toHaveLength(1);
+  });
+
+  it('refuses a name a team:backend deny row names', async () => {
+    const store = await rows(
+      { id: 'team-all', scope: 'team:backend', kind: 'model', effect: 'allow', match: { model: ['*'] } },
+      { id: 'no-local', scope: 'team:backend', kind: 'model', effect: 'deny', match: { model: ['local/*'] } },
+    );
+    const { served, secret, local } = await teamKey(store);
+    const got = await send(served.port, CHAT, { headers: { 'x-api-key': secret }, body: { model: 'local/default' } });
+    expect(got.status).toBe(403);
+    expect(isOpenAiError(got.json)).toBe(true);
+    expect(got.json).toMatchObject({ error: { message: 'no-local refuses model local/default through proxy local' } });
+    expect(local.received).toEqual([]);
+  });
+});
+
 describe('the call is recorded', () => {
   it('writes one record for a JSON answer, with the tokens, the price cost and the person\'s pools', async () => {
     const { served, usage } = await setup();

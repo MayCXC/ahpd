@@ -7,6 +7,10 @@
  * `--user`. An operator with `user:write` does the same for another person,
  * bounded by that person's grants as `user token` is.
  *
+ * `--team` names a team instead of a person. A team key opens the proxy and no
+ * other door, so root and a caller who holds `user:write` are the only ones who
+ * mint, list or revoke one.
+ *
  * A minted token may not mint, list or revoke: it is a credential for one
  * computer, and managing tokens is the full sign-in's business. Every verb here
  * therefore asks the caller's principal, and the one carrying a `token` id is
@@ -50,6 +54,8 @@ interface Caller {
   actor?: Principal;
   /** The person named with `--user`, when one was. */
   named?: string;
+  /** The team named with `--team`, when one was. */
+  team?: string;
   /** The caller's own id, when the caller is a person rather than the deployment token or a terminal. */
   own?: string;
 }
@@ -62,14 +68,19 @@ interface Caller {
  * terminal have no id of their own, which is why the verbs that need a person
  * ask for `--user` when `own` is absent.
  */
-const callerOf = (context: Pick<CommandContext, 'request' | 'optional'>): Caller => {
+const callerOf = (context: Pick<CommandContext, 'request' | 'optional'>, command: string): Caller => {
   const actor = context.request?.actor as Principal | undefined;
   if (actor?.token !== undefined) throw new HttpError(403, MINTED);
   const named = context.optional<string>('user');
+  const team = context.optional<string>('team');
+  if (team !== undefined && team !== '' && named !== undefined && named !== '') {
+    stop(`token ${command} takes --user or --team, not both.`);
+  }
   const own = actor === undefined || isRoot(actor) ? undefined : actor.id;
   return {
     ...(actor === undefined ? {} : { actor }),
     ...(named === undefined || named === '' ? {} : { named }),
+    ...(team === undefined || team === '' ? {} : { team }),
     ...(own === undefined ? {} : { own }),
   };
 };
@@ -189,6 +200,13 @@ const userField = {
   cli: { value: 'ID' },
 } satisfies Field;
 
+/** The team that holds a key, when it is a team's rather than a person's. */
+const teamField = {
+  type: 'string',
+  description: 'The team that holds the key, instead of a person. Needs user:write, and the key opens the proxy alone.',
+  cli: { value: 'TEAM' },
+} satisfies Field;
+
 /** The whole URL a client can be given, rather than the bare secret. */
 const urlField = {
   type: 'boolean',
@@ -207,12 +225,12 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
   const mint = registry.action({
     id: 'token.mint',
     summary: 'Mint a token of your own',
-    description: 'Limited to grants you hold now, and shown once. --grant once per grant; without one it holds every grant its person does. --limit takes an amount:measure:period such as 5:usd:day, once per limit. --meta takes a name=value pair such as env=prod, once per entry. --expires takes a date such as 2026-12-31. --scope names the team and project its calls are charged to, and a call made with it may name no other. --url prints the whole ws:// URL a client can be given.',
+    description: 'Limited to grants you hold now, and shown once. --grant once per grant; without one it holds every grant its person does. --limit takes an amount:measure:period such as 5:usd:day, once per limit. --meta takes a name=value pair such as env=prod, once per entry. --expires takes a date such as 2026-12-31. --scope names the team and project its calls are charged to, and a call made with it may name no other. --team mints a team key instead, which needs user:write and opens the proxy alone. --url prints the whole ws:// URL a client can be given.',
     surfaces: { cli: { pattern: ['token', 'mint'] }, http: { method: 'POST', path: '/token/mint' } },
     // A create: the token does not exist yet, so this names no row.
     effect: 'add',
     resource: { kind: 'token' },
-    input: { ...at, user: userField, ...mintFields, url: urlField },
+    input: { ...at, user: userField, team: teamField, ...mintFields, url: urlField },
     /*
      * No grant of its own: whether this is the caller's own token or another
      * person's is a question about the body, and one's own needs no grant at
@@ -222,10 +240,22 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
     run: async (context) => {
       const { where, directory } = people(context, served);
       const { mintToken } = keeping(directory);
-      const caller = callerOf(context);
-      const target = caller.named ?? caller.own;
-      if (target === undefined) needsUser('mint');
-      await boundFor(context, directory, target, caller.own);
+      const caller = callerOf(context, 'mint');
+      const target = caller.team === undefined ? caller.named ?? caller.own : undefined;
+      if (caller.team !== undefined) {
+        // A team key opens the proxy alone, so root and `user:write` are the
+        // only callers that reach this.
+        bounded(context, ['user:write']);
+      }
+      else {
+        if (target === undefined) needsUser('mint');
+        await boundFor(context, directory, target, caller.own);
+      }
+      // A team key's URL is the proxy's, and `--url` names a websocket a person
+      // signs in on: printing one for a key that door refuses is a lie.
+      if (caller.team !== undefined && context.flag('url')) {
+        stop('token mint --url names a websocket a person signs in on; a team key opens the proxy alone.');
+      }
       const label = context.optional<string>('label');
       const grants = context.list<string>('grants');
       const scope = context.optional<string>('scope');
@@ -243,6 +273,7 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
       // and a mint past the limit; said here
       // so it reads as the verb's own refusal rather than a stack trace.
       const minted = await mintToken(target, {
+        ...(caller.team === undefined ? {} : { team: caller.team }),
         ...(label === undefined ? {} : { label }),
         ...(grants.length === 0 ? {} : { grants: grants as Grant[] }),
         ...(expires === undefined ? {} : { expires }),
@@ -265,34 +296,48 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
   const list = registry.action({
     id: 'token.list',
     summary: 'The tokens a person holds',
-    description: 'Each token\'s id, label, grants, scope, limits, meta, when it was made and when it expires. A hash and a secret are never answered.',
+    description: 'Each token\'s id, label, grants, scope, limits, meta, when it was made and when it expires. --team lists a team\'s keys, which needs user:write. A hash and a secret are never answered.',
     surfaces: { cli: { pattern: ['token', 'list'] }, http: { method: 'GET', path: '/token/list' } },
     // No key: this is the listing, and each row carries the `id` `token rm`
     // takes.
     effect: 'read',
     resource: { kind: 'token' },
-    input: { ...at, user: userField },
+    input: { ...at, user: userField, team: teamField },
     // No grant of its own: a person reads their own, and another's needs
     // `user:write` and is bounded by what that person holds.
     scopes: [],
     run: async (context) => {
       const { directory } = people(context, served);
       const { tokens } = keeping(directory);
-      const caller = callerOf(context);
+      const caller = callerOf(context, 'list');
       const target = caller.named ?? caller.own;
-      if (caller.named !== undefined) await boundFor(context, directory, caller.named, caller.own);
-      /*
-       * At a terminal with no --user this lists everybody, because the process
-       * owner already reads the file. Served there is no "everybody": the
-       * deployment token has no tokens of its own and has to name a person.
-       */
-      if (target === undefined && served !== undefined) needsUser('list');
-      const rows = await tokens(target);
+      let rows;
+      if (caller.team !== undefined) {
+        bounded(context, ['user:write']);
+        rows = (await tokens()).filter((one) => one.team === caller.team);
+      }
+      else {
+        if (caller.named !== undefined) await boundFor(context, directory, caller.named, caller.own);
+        /*
+         * At a terminal with no --user this lists everybody, because the process
+         * owner already reads the file. Served there is no "everybody": the
+         * deployment token has no tokens of its own and has to name a person.
+         */
+        if (target === undefined && served !== undefined) needsUser('list');
+        rows = await tokens(target);
+      }
+      const nothing = caller.team !== undefined
+        ? `no tokens for team ${caller.team}\n`
+        : target === undefined ? 'no tokens\n' : `no tokens for ${target}\n`;
       const text = rows.length === 0
-        ? (target === undefined ? 'no tokens\n' : `no tokens for ${target}\n`)
+        ? nothing
         : rows.map((one) => {
+          // A team key names its team where a person's line names its person,
+          // and its grants are its own rather than its person's.
+          const owner = one.team === undefined ? one.user : `team ${one.team}`;
+          const team = one.team === undefined ? '' : `  team ${one.team}`;
           const grants = one.grants === undefined
-            ? `every grant of ${one.user}`
+            ? `every grant of ${owner}`
             : one.grants.length === 0 ? 'no grants' : one.grants.join(' ');
           const expiry = one.expires === undefined ? 'no expiry' : `expires ${new Date(one.expires).toISOString()}`;
           const scope = one.scope === undefined ? '' : `  scope ${one.scope}`;
@@ -300,7 +345,7 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
             ? ''
             : `  meta ${Object.entries(one.meta).map(([name, value]) => `${name}=${value}`).join(',')}`;
           const limits = (one.limits ?? []).map((limit) => `limit ${limit.amount} ${limit.measure}/${limit.period}`);
-          return `${one.id}  ${one.label ?? '(no label)'}  ${grants}${scope}${meta}  created ${new Date(one.created).toISOString()}  ${expiry}${limits.length === 0 ? '' : `  ${limits.join('  ')}`}\n`;
+          return `${one.id}  ${one.label ?? '(no label)'}${team}  ${grants}${scope}${meta}  created ${new Date(one.created).toISOString()}  ${expiry}${limits.length === 0 ? '' : `  ${limits.join('  ')}`}\n`;
         }).join('');
       return output(rows, text);
     },
@@ -309,30 +354,40 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
   const rm = registry.action({
     id: 'token.rm',
     summary: 'Revoke a token',
-    description: 'The token id is what `token list` shows. A token of another person needs --user and user:write, and is bounded by what that person holds.',
+    description: 'The token id is what `token list` shows. A token of another person needs --user and user:write, and is bounded by what that person holds. --team removes a team key, which needs user:write.',
     surfaces: { cli: { pattern: ['token', 'rm', ':id'] }, http: { method: 'POST', path: '/token/rm/{id}' } },
     // The token id is what names the row, so the confirm a removal asks for can
     // say which token it is about to take away.
     effect: 'remove',
     resource: { kind: 'token', key: 'id' },
-    input: { ...at, user: userField, id: { type: 'string', description: 'The token to revoke, as `token list` answers it.' } },
+    input: { ...at, user: userField, team: teamField, id: { type: 'string', description: 'The token to revoke, as `token list` answers it.' } },
     // No grant of its own: the token's person decides whether this is the
     // caller's own or another's, and the body asks what the second needs.
     scopes: [],
     run: async (context) => {
       const { directory } = people(context, served);
       const { tokens, revokeToken } = keeping(directory);
-      const caller = callerOf(context);
-      if (caller.named === undefined && caller.own === undefined) needsUser('rm');
+      const caller = callerOf(context, 'rm');
+      if (caller.team === undefined && caller.named === undefined && caller.own === undefined) needsUser('rm');
       const id = idOf(context, 'token rm');
       const one = (await tokens()).find((each) => each.id === id);
       /*
        * A token of somebody else is "no such token" to a caller who may not
-       * manage them, and one an operator named another person for is not that
-       * person's either: the answer does not say a token exists that this
-       * caller was not asking about.
+       * manage them, and one an operator named another person or team for is
+       * not that owner's either: the answer does not say a token exists that
+       * this caller was not asking about.
        */
-      if (one === undefined || (caller.named !== undefined && caller.named !== one.user)) {
+      if (one === undefined) conflict(`No token called ${id}.`);
+      if (one.team !== undefined) {
+        if (caller.team !== one.team) conflict(`No token called ${id}.`);
+        bounded(context, ['user:write']);
+        if (!await revokeToken(id)) conflict(`No token called ${id}.`);
+        return output({ id, team: one.team }, `Revoked ${id}, a key of team ${one.team}.\n`);
+      }
+      // A record names one owner or the other, so a person's key names its
+      // person here; the type says otherwise because it cannot see the file.
+      if (one.user === undefined) conflict(`No token called ${id}.`);
+      if (caller.team !== undefined || (caller.named !== undefined && caller.named !== one.user)) {
         conflict(`No token called ${id}.`);
       }
       if (one.user !== caller.own) {

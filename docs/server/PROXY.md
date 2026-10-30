@@ -50,7 +50,7 @@ The `Host` may be one of the API's own names, or `127.0.0.1`, `localhost` or `[:
 
 ## Who may call
 
-The token is the deployment token, which is root, or a person's token from `ahpd user token` or `ahpd token mint`. `Authorization: Bearer` and `x-api-key` are both read; sending both with different values is refused.
+The token is the deployment token, which is root, a person's token from `ahpd user token` or `ahpd token mint`, or a team's key. `Authorization: Bearer` and `x-api-key` are both read; sending both with different values is refused.
 
 To call the proxy from another computer, sign in once and mint a token that holds nothing else:
 
@@ -60,7 +60,15 @@ ahpd token mint --user ana --grant proxy:write --label laptop
 
 It reaches `/v1`, and is refused at the rest of `/api`. See [Users](USERS.md#tokens-of-their-own).
 
-A person needs `proxy:call` to call and `proxy:models` to list the models. The `proxy:write` and `proxy:read` groups cover the two. The built-in `member` role holds both groups; `guest` holds neither. See [USERS.md](../sdk/USERS.md).
+A team's key opens the proxy and no other door:
+
+```bash
+ahpd token mint --team backend --grant proxy:call --grant proxy:models --label ci
+```
+
+A call made with it is charged to `team:<team>`, and to one of the team's projects when the key's scope names one. No person stands behind it, so no `user:` policy row holds it: the team's rows and the host-wide ones do. See [Users](USERS.md#tokens-of-their-own).
+
+A person needs `proxy:call` to call and `proxy:models` to list the models; a team key holds the same two and nothing else. The `proxy:write` and `proxy:read` groups cover the two. The built-in `member` role holds both groups; `guest` holds neither. See [USERS.md](../sdk/USERS.md).
 
 A person's call is charged to a team and project, named in an `X-AHP-Scope` header or a `?scope=` query (`backend` or `backend:billing`), and to their primary otherwise. Neither the header nor the query goes to the provider.
 

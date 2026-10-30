@@ -288,18 +288,18 @@ const NEVER_ARRIVED = new Set([
 /**
  * The pools one record is charged to: the owner, the team and the project,
  * each only when the record has it, then the keys the check chose. The same
- * spelling the agent meter charges under, and a key already named is added
- * once.
+ * spelling the agent meter charges under, and a name already given is added
+ * once: a team key's owner is `team:<team>`, which is the team pool too, and
+ * a charge adds to every pool it is given.
  */
-const poolsOf = (owner: Owner | undefined, scope: Scope | undefined, keys?: readonly string[]): string[] => {
-  const pools = [
+const poolsOf = (owner: Owner | undefined, scope: Scope | undefined, keys?: readonly string[]): string[] => [
+  ...new Set([
     ...(owner === undefined ? [] : [owner]),
     ...(scope === undefined ? [] : [`team:${scope.team}`]),
     ...(scope?.project === undefined ? [] : [`project:${scope.team}:${scope.project}`]),
-  ];
-  for (const key of keys ?? []) if (!pools.includes(key)) pools.push(key);
-  return pools;
-};
+    ...(keys ?? []),
+  ]),
+];
 
 /**
  * The zone `usage.timezone` names, or the system's own when it is absent or
@@ -487,7 +487,8 @@ const chargedAs = (caller: ProxyCaller, options: ProxyOptions, proxy: ProxyConfi
       ...(caller.scope === undefined ? {} : { scope: caller.scope }),
       ...(caller.principal.token === undefined ? {} : { token: caller.principal.token }),
       ...(caller.meta === undefined ? {} : { meta: caller.meta }),
-      owner: `user:${caller.principal.id}`,
+      // A team key is charged to the team it is, never to a person.
+      owner: caller.principal.team === undefined ? `user:${caller.principal.id}` : `team:${caller.principal.team}`,
       recorded: true,
     };
   }

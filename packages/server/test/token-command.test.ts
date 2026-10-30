@@ -57,7 +57,8 @@ const put = (held: unknown): void => { writeFileSync(config, `${JSON.stringify(h
 /** A token as a mint answers it, and as a listing answers one without its secret. */
 interface Shown {
   id: string;
-  user: string;
+  user?: string;
+  team?: string;
   label?: string;
   grants?: string[];
   scope?: string;
@@ -262,6 +263,42 @@ describe('token at the terminal', () => {
     expect(rows(listed)).toEqual([{ id: one.id, user: 'ana', label: 'pi', scope: 'backend:ahpd', created: one.created }]);
     expect(String(listed.plain)).toContain('scope backend:ahpd');
   });
+
+  it('mints, lists and revokes a team key with --team', async () => {
+    const { directory } = await people();
+
+    const one = minted(await run('token.mint', { team: 'backend', grants: ['proxy:call'], label: 'ci' }));
+    expect(one).toMatchObject({ team: 'backend', grants: ['proxy:call'], label: 'ci', scope: 'backend' });
+    expect(one.user).toBeUndefined();
+    expect(await directory.tokens!()).toEqual([
+      { id: one.id, team: 'backend', label: 'ci', grants: ['proxy:call'], scope: 'backend', created: one.created },
+    ]);
+
+    const listed = await run('token.list', { team: 'backend' });
+    expect(rows(listed)).toHaveLength(1);
+    expect(rows(listed)[0]).toMatchObject({ id: one.id, team: 'backend', grants: ['proxy:call'] });
+    expect(String(listed.plain)).toContain('team backend');
+    expect(String(listed.plain)).toContain('proxy:call');
+
+    const took = await run('token.rm', { team: 'backend', id: one.id });
+    expect(took.data).toEqual({ id: one.id, team: 'backend' });
+    expect(String(took.plain)).toContain('team backend');
+    expect(await directory.tokens!()).toEqual([]);
+  });
+
+  it('refuses --team beside --user, and --url for a team key', async () => {
+    await people();
+
+    for (const [id, input] of [
+      ['token.mint', { user: 'ana', team: 'backend', grants: ['proxy:call'] }],
+      ['token.list', { user: 'ana', team: 'backend' }],
+      ['token.rm', { user: 'ana', team: 'backend', id: 'any' }],
+    ] as const) {
+      await expect(run(id, input)).rejects.toThrow(`token ${id.slice('token.'.length)} takes --user or --team, not both.`);
+    }
+    await expect(run('token.mint', { team: 'backend', grants: ['proxy:call'], url: true }))
+      .rejects.toThrow('a team key opens the proxy alone');
+  });
 });
 
 describe('token, served', () => {
@@ -379,6 +416,43 @@ describe('token, served', () => {
     const took = await call(`/token/rm/${bobs.id}`, boss, directory, { user: 'bob' });
     expect(took.status).toBe(403);
     expect(await message(took)).toBe('boss may not proxy:write here');
+  });
+
+  it('lets a manager mint, list and revoke a team key, and refuses a member who names one', async () => {
+    const { directory, ana, boss } = await people();
+
+    const mine = await call('/token/mint', boss, directory, { team: 'backend', grants: ['proxy:call'], label: 'ci' });
+    expect(mine.status).toBe(200);
+    const one = await mine.json() as Shown;
+    expect(one).toMatchObject({ team: 'backend', grants: ['proxy:call'], scope: 'backend' });
+    expect(one.user).toBeUndefined();
+
+    const listed = await call('/token/list?team=backend', boss, directory);
+    expect(listed.status).toBe(200);
+    expect(await listed.json()).toMatchObject([{ id: one.id, team: 'backend', label: 'ci' }]);
+
+    // A member holds no `user:write`, so no team key is theirs to manage.
+    for (const [path, body] of [
+      ['/token/mint', { team: 'backend', grants: ['proxy:call'] }],
+      ['/token/list?team=backend', undefined],
+      [`/token/rm/${one.id}`, { team: 'backend' }],
+    ] as const) {
+      const refused = await call(path, ana, directory, body);
+      expect(refused.status).toBe(403);
+      expect(await message(refused)).toBe('ana may not user:write here');
+    }
+
+    // The deployment token reaches a team as it reaches a person.
+    const byRoot = await call('/token/mint', 'root-secret', directory, { team: 'backend', grants: ['proxy:models'] });
+    expect(byRoot.status).toBe(200);
+    expect(await byRoot.json()).toMatchObject({ team: 'backend' });
+
+    const took = await call(`/token/rm/${one.id}`, boss, directory, { team: 'backend' });
+    expect(took.status).toBe(200);
+    expect(await took.json()).toEqual({ id: one.id, team: 'backend' });
+    // The key is gone from the directory, and from the team's listing.
+    expect(await directory.tokens!()).toHaveLength(1);
+    expect(await call('/token/list?team=backend', boss, directory).then((said) => said.json())).toHaveLength(1);
   });
 
   it('refuses the deployment token a verb without --user, and lets it list a person with one', async () => {

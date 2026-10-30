@@ -792,6 +792,33 @@ describe('a request signs in', () => {
     expect((await get(`${base}/v1/models`, minted.secret)).status).toBe(401);
   }, 30000);
 
+  it('opens the proxy with a team key, and no other door', async () => {
+    const directory = fileUsers({ path: usersFile });
+    await directory.addTeam('backend');
+    const minted = await directory.mintToken!(undefined, { team: 'backend', grants: ['proxy:call', 'proxy:models'], label: 'ci' });
+    const one = await daemon(
+      { httpApi: true,plugins: [BACKEND] },
+      ['--connection-token', 'root-secret', '--users', usersFile],
+    );
+    const base = `http://127.0.0.1:${String(one.port)}`;
+
+    // The proxy asks `verifyTeamKey`, and its table is empty here, so the empty
+    // list is the proxy's own answer rather than a refusal.
+    const models = await get(`${base}/v1/models`, minted.secret);
+    expect(models.status).toBe(200);
+    expect(await models.json()).toMatchObject({ object: 'list', data: [] });
+
+    // `/api` signs in through `users.verify`, which never answers a team key.
+    const refused = await get(`${base}/api/user/list`, minted.secret);
+    expect(refused.status).toBe(401);
+    expect((await refused.json() as { message: string }).message).toBe('That credential is not one this host knows');
+
+    // The websocket's door asks the same question, so the key admits no socket.
+    const knocked = await fetch(`${base}/?tkn=${encodeURIComponent(minted.secret)}`);
+    expect(knocked.status).toBe(401);
+    expect(await knocked.text()).toBe('A connection token is required');
+  }, 30000);
+
   // On Windows the daemon runs the npm beside its own Node, never one off the
   // `PATH`, so the stand-in npm this case puts there is not the one that runs.
   it.skipIf(!posix)('answers while a served install is holding npm', async () => {
