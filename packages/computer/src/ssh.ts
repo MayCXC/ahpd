@@ -319,6 +319,9 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
     // so every backend of a session in one runs nested.
     remote: true,
 
+    // A command over ssh is one string the box's shell runs, variables and all.
+    envInCommand: true,
+
     /*
      * One row per configured box, each asked in parallel.
      *

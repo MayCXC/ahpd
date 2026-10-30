@@ -541,6 +541,14 @@ export interface ComputerRuntime {
    * machine.
    */
   readonly remote: boolean;
+  /**
+   * Whether a command into one of its machines carries its variables inside
+   * the command line, where the box's own process list reads them.
+   *
+   * Absent is no: Docker gives a variable to `docker exec` by name and its
+   * value through the API, whichever box the daemon is on.
+   */
+  readonly envInCommand?: boolean;
   list(): Promise<Machine[]>;
   /** The runtime's own record of one machine, or nothing when it is not there. */
   inspect(id: string): Promise<Record<string, unknown> | undefined>;
@@ -2428,7 +2436,9 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     // through the machine's mounts: covered by one, it is the same place under
     // another name; covered by none, there is no such directory in there and
     // the machine's own stands.
-    return (asked === undefined ? undefined : within(found, asked)) ?? own;
+    // A machine on another box mounts no path of this host's, so a path here
+    // names nothing in it.
+    return (asked === undefined || options.remote === true ? undefined : within(found, asked)) ?? own;
   };
 
   /** The command that starts a nested host inside a machine, as its recipe says. */

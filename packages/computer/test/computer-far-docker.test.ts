@@ -8,8 +8,10 @@ import { loadPlugins } from '../../server/src/plugins.js';
 import { dockerAddressOf } from '../src/plugin.js';
 import { closeAll, keeping } from './support/closing.js';
 import type { Agent } from '../../sdk/src/types/agent.js';
-import type { HostOptions } from '../../sdk/src/types/host.js';
+import type { HostOptions, HostTool } from '../../sdk/src/types/host.js';
 import type { MachineNeed } from '../../sdk/src/types/machine.js';
+
+import type { Vault } from '../../sdk/src/types/vault.js';
 import type { Usage, UsageEntry, UsageTotal } from '../../sdk/src/types/usage.js';
 
 /*
@@ -90,8 +92,8 @@ const files = () => {
 const load = async (
   at: ReturnType<typeof files>,
   profiles: Record<string, unknown>,
-  { box = {}, env = {}, hostId = 'host-a', usage, agents = [] }: {
-    box?: Record<string, unknown>; env?: Record<string, string>; hostId?: string; usage?: Usage; agents?: Agent[];
+  { box = {}, env = {}, hostId = 'host-a', usage, agents = [], vault }: {
+    box?: Record<string, unknown>; env?: Record<string, string>; hostId?: string; usage?: Usage; agents?: Agent[]; vault?: Vault;
   } = {},
 ) => {
   const lines: string[] = [];
@@ -101,6 +103,7 @@ const load = async (
     agents,
     resources: fileResources(),
     ...(usage === undefined ? {} : { usage }),
+    ...(vault === undefined ? {} : { vault }),
   };
   const result = await loadPlugins(
     [{
@@ -316,4 +319,48 @@ it('refuses a state need seeded from this host\'s credential on another box\'s D
   const far = held(farFile(at.local));
   expect(far.machines).toEqual([]);
   expect(far.calls.flat().some((one) => one.includes(own))).toBe(false);
+});
+
+/** The variable an agent needs, and the secret its value is read from. */
+const BOX_TOKEN = 'BOX_TOKEN';
+const HOST_TOKEN = 'host:box-token';
+const SECRET = 'sekrit-value';
+
+/** A vault holding `values` and nothing else. */
+const holding = (values: Record<string, string>): Vault => ({
+  get: async (name) => values[name],
+  set: async () => {},
+  delete: async () => false,
+  list: async () => Object.keys(values),
+});
+
+it('runs a session in a machine on a box\'s Docker nested, reached through that Docker with the vault\'s values by name', async () => {
+  const at = files();
+  const vaulted = agent('vaulted', { boxToken: { name: BOX_TOKEN, default: { $secret: HOST_TOKEN } } });
+  const { options, provider } = await load(
+    at,
+    { far: { server: 'dev02', agents: ['vaulted'] } },
+    { agents: [vaulted], vault: holding({ [HOST_TOKEN]: SECRET }) },
+  );
+  await provider.write('computer://box', said(JSON.stringify({ image: 'node:22', profile: 'far' })), 'user:ana');
+
+  expect(options.computers?.remote?.('docker-far.box')).toBe(true);
+  expect(options.computers?.remote?.('box')).toBe(false);
+
+  const spawn = await options.computers?.nested?.('docker-far.box', { plugins: ['@ahpd/agent-cofold'], cwd: at.dir, provider: 'vaulted' });
+  // The box's Docker, and the vault's value beside the command and never in it.
+  expect(spawn?.env?.DOCKER_HOST).toBe('ssh://dev02');
+  expect(spawn?.env?.[BOX_TOKEN]).toBe(SECRET);
+  expect(JSON.stringify(spawn?.args)).not.toContain(SECRET);
+  // A path on this host names nothing in a machine on another box.
+  expect(spawn?.args).not.toContain(at.dir);
+  expect(spawn?.workingDirectory).not.toBe(at.dir);
+
+  // And a command a tool runs there is given the value too.
+  const tool = (options.tools ?? []).find((one) => one.definition.name === 'computer_exec') as HostTool;
+  await tool.run({ id: 'docker-far.box', command: 'env' }, { provider: 'vaulted' } as never);
+  const far = held(farFile(at.local)) as Held & { commands?: { env: Record<string, string>; dockerEnv: string[] }[] };
+  expect(far.commands?.at(-1)?.env[BOX_TOKEN]).toBe(SECRET);
+  expect(far.commands?.at(-1)?.dockerEnv).toContain('DOCKER_HOST');
+  expect(JSON.stringify(far.calls)).not.toContain(SECRET);
 });

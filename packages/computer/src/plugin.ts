@@ -1424,6 +1424,9 @@ export const apply: Plugin['apply'] = (host, options) => {
    */
   const offHost = (id: string): boolean => made.runtimeFor(id)?.remote === true;
 
+  /** Whether a command into this machine carries its variables in its command line. */
+  const inCommand = (id: string): boolean => made.runtimeFor(id)?.envInCommand === true;
+
   /**
    * A value read from the vault, refused for a machine this host reaches over ssh.
    *
@@ -1443,7 +1446,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    */
   const noVaultInline = (id: string, named: Record<string, string>): void => {
     const variables = Object.keys(named);
-    if (variables.length === 0 || !offHost(id)) return;
+    if (variables.length === 0 || !inCommand(id)) return;
     throw new Error(`${id} is off this host, and ${variables.join(', ')} comes from the vault: a command over ssh carries its variables in the remote command, where the box reads them; give the box a value of its own, or run this command on the host`);
   };
 
@@ -1499,11 +1502,11 @@ export const apply: Plugin['apply'] = (host, options) => {
     if (held === undefined) return undefined;
     const host = await made.hostCommand(id) ?? hostDefault;
     const [program, ...before] = host;
-    const away = offHost(id);
+    const away = inCommand(id);
     /*
      * The record of an agent made from a record, which the host inside serves.
-     * It goes in the environment, which the runtime gives by name; a machine
-     * off this host gets the copy with no secret field, for the reason below.
+     * It goes in the environment, which the runtime gives by name; a box over
+     * ssh gets the copy with no secret field, for the reason below.
      */
     const record = asked.record === undefined ? undefined : away ? asked.record.bare : asked.record.whole;
     const startWith = {
@@ -1515,11 +1518,12 @@ export const apply: Plugin['apply'] = (host, options) => {
       ...(record === undefined ? {} : { env: { [AGENT_RECORD_VARIABLE]: JSON.stringify(record) } }),
     };
     /*
-     * A machine off this host is handed nothing of this host's vault: the ahpd
+     * A box reached over ssh is handed nothing of this host's vault: the ahpd
      * on the box holds what it was given by hand there, and a value read from
      * the vault would be written into the remote command that starts it, which
      * also keeps a session in such a machine clear of the refusal above, since
-     * it never reaches it.
+     * it never reaches it. A machine on another box's Docker is given its
+     * values by name, as one on this host's is.
      */
     const spawn = away ? await made.how(id, startWith) : await reach(id, startWith);
     if (spawn === undefined) return undefined;
@@ -1528,7 +1532,7 @@ export const apply: Plugin['apply'] = (host, options) => {
      * machine's mounts, as `-w` is, or the machine's own directory. The inner
      * session is created there, since the host inside knows only its own paths.
      */
-    const inside = (asked.cwd === undefined ? undefined : within(held, asked.cwd)) ?? machineDirectory(held);
+    const inside = (asked.cwd === undefined || offHost(id) ? undefined : within(held, asked.cwd)) ?? machineDirectory(held);
     return { ...spawn, ...(inside === undefined ? {} : { workingDirectory: inside }) };
   };
 
