@@ -187,6 +187,12 @@ export function createPeer(wire: Wire, bounding?: Bounding): Peer {
     notify: (method, params) => {
       peer.send({ jsonrpc: '2.0', method, params });
     },
+    // The same socket, without this host having anything to say about the
+    // frame: it was written by the host on the other end of a relayed one.
+    raw: (text) => {
+      if (!wire.isOpen()) return;
+      wire.send(text);
+    },
     request: (method, params, timeoutMs = ANSWER_TIMEOUT) => new Promise((resolve, reject) => {
       // Refused rather than sent into a closed socket, where it would sit
       // until the timeout to say what is already known.

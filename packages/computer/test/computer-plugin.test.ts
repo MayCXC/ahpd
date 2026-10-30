@@ -1,8 +1,10 @@
 import { machinePathOf } from '@ahpd/sdk';
+import { EventEmitter } from 'node:events';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { PassThrough } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
 import { createHost } from '../../sdk/src/host.js';
@@ -11,8 +13,10 @@ import { gitWorktrees } from '../../sdk/src/repo/worktrees.js';
 import { describePlugin, loadPlugins, pluginIdsOf } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { closeAll, keeping } from './support/closing.js';
-import type { HostOptions, HostTool, ToolCall } from '../../sdk/src/types/host.js';
+import type { NestedHost, NestedStart, NestedStarted } from '../../sdk/src/types/computers.js';
+import type { HostOptions, HostTool, NodeChange, NodeRegistry, ToolCall } from '../../sdk/src/types/host.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
+import type { Usage, UsageEntry, UsageTotal } from '../../sdk/src/types/usage.js';
 
 /*
  * The package as a plugin: the loader, the scheme and the tools.
@@ -966,4 +970,153 @@ it('starts a machine under the OCI runtime its profile names', async () => {
   // A profile that names none carries none.
   await put('computer://plain', { profile: 'plain' });
   expect(made().some((one) => one.startsWith('--runtime'))).toBe(false);
+});
+
+/*
+ * Plan container/05 task 04: a host that joined this one is a machine.
+ *
+ * The registry is the daemon's own object, so what is under test here is the
+ * two things `@ahpd/computer` does with it: it lists a connected node as
+ * `node.<name>` and asks the registry for the socket a session in one runs on,
+ * and it charges the node's up time to the host from the moments the node
+ * joined and left rather than from a listing.
+ */
+
+/** A `NestedHost` over streams, which is what a registry hands back. */
+const aSocketHost = (): NestedHost => {
+  const events = new EventEmitter();
+  return {
+    stdin: new PassThrough(),
+    stdout: new PassThrough(),
+    stderr: new PassThrough(),
+    on: events.on.bind(events),
+    kill: () => true,
+  } as unknown as NestedHost;
+};
+
+/** The registry of joined hosts, with the two moments a test needs. */
+interface FakeNodes extends NodeRegistry {
+  /** Every session asked for, as the registry's own `connect` was given it. */
+  asked: { id: string; plugins: string[] }[];
+  arrive(id: string, workdir: string): void;
+  leave(id: string): void;
+}
+
+const joinedHosts = (): FakeNodes => {
+  const here: { id: string; workdir: string }[] = [];
+  const watchers = new Set<(change: NodeChange) => void>();
+  const asked: { id: string; plugins: string[] }[] = [];
+  const tell = (change: NodeChange): void => { for (const one of [...watchers]) one(change); };
+  return {
+    asked,
+    joined: () => [...here],
+    connect: async (id: string, one: NestedStart): Promise<NestedStarted | undefined> => {
+      asked.push({ id, plugins: one.plugins });
+      const workdir = here.find((node) => node.id === id)?.workdir;
+      return workdir === undefined ? undefined : { host: aSocketHost(), workingDirectory: workdir };
+    },
+    watch: (onChange) => {
+      for (const one of here) onChange({ id: one.id, joined: true, workdir: one.workdir });
+      watchers.add(onChange);
+      return { close: () => { watchers.delete(onChange); } };
+    },
+    arrive: (id, workdir) => {
+      here.push({ id, workdir });
+      tell({ id, joined: true, workdir });
+    },
+    leave: (id) => {
+      const at = here.findIndex((node) => node.id === id);
+      if (at >= 0) here.splice(at, 1);
+      tell({ id, joined: false });
+    },
+  };
+};
+
+/** The store in memory, so a test can read what the plugin wrote. */
+const uptime = (): Usage & { entries: UsageEntry[] } => {
+  const entries: UsageEntry[] = [];
+  return {
+    entries,
+    record: async (entry: UsageEntry) => { entries.push(entry); },
+    total: async (): Promise<UsageTotal> => ({}),
+    pools: async () => [],
+    records: async () => [],
+    groups: async () => [],
+  };
+};
+
+/** Wait for something that happens asynchronously, without a fixed sleep. */
+const reached = async (check: () => boolean, times = 1000): Promise<void> => {
+  for (let i = 0; i < times; i++) {
+    if (check()) return;
+    await new Promise((resolve) => { setTimeout(resolve, 5); });
+  }
+  throw new Error(`still waiting after ${times} tries`);
+};
+
+it('lists a node that joined as node.<name>, and a session in it goes through the registry', async () => {
+  loose = mkdtempSync(join(tmpdir(), 'ahpd-computer-node-'));
+  const state = join(loose, 'docker.json');
+  const nodes = joinedHosts();
+  nodes.arrive('box', '/home/ana/work');
+  const { options, problems } = await load(
+    { command: process.execPath, args: [FIXTURE], env: { DOCKER_FAKE_STATE: state } },
+    { nodes },
+  );
+  expect(problems).toEqual([]);
+
+  // A node is another host, so every session in one runs nested.
+  expect(options.computers?.remote?.('node.box')).toBe(true);
+  // An id that is not a node's is no answer here: the proxy starts that host
+  // itself, as it always did.
+  expect(await options.computers?.connect?.('box', { plugins: [] })).toBeUndefined();
+  expect(await options.computers?.connect?.('ssh.dev02', { plugins: [] })).toBeUndefined();
+  // A node's is the registry's socket, asked for by the name alone.
+  const started = await options.computers?.connect?.('node.box', { plugins: ['@ahpd/echo'] });
+  expect(started?.workingDirectory).toBe('/home/ana/work');
+  expect(nodes.asked).toEqual([{ id: 'box', plugins: ['@ahpd/echo'] }]);
+
+  // And it is listed beside the machines docker has, under its own id.
+  const host = createHost(options);
+  keeping(options, host);
+  const client = host.accept(peer());
+  await client.handle({ method: 'initialize', params: { clientId: 'probe', protocolVersions: ['0.9.0'] } });
+  const listed = await client.handle({
+    method: 'resourceList', params: { channel: 'ahp-root://', uri: 'computer://' },
+  }) as { entries: { name: string }[] };
+  expect(listed.entries.map((one) => one.name)).toEqual(['node.box']);
+
+  // A node that left is no longer a machine here at all.
+  nodes.leave('box');
+  expect(await options.computers?.connect?.('node.box', { plugins: [] })).toBeUndefined();
+  const gone = await client.handle({
+    method: 'resourceList', params: { channel: 'ahp-root://', uri: 'computer://' },
+  }) as { entries: { name: string }[] };
+  expect(gone.entries).toEqual([]);
+});
+
+it('writes one stretch for a node, charged to the host, from the moments it joined and left', async () => {
+  loose = mkdtempSync(join(tmpdir(), 'ahpd-computer-nodemeter-'));
+  const state = join(loose, 'docker.json');
+  const usage = uptime();
+  const nodes = joinedHosts();
+  const { options } = await load(
+    { command: process.execPath, args: [FIXTURE], env: { DOCKER_FAKE_STATE: state } },
+    { nodes, usage, hostName: 'box.local' },
+  );
+  const host = createHost(options);
+  keeping(options, host);
+
+  // Nobody here made the node, so its time is the host's: no owner was
+  // recorded for it, and the meter's own answer for that is the host.
+  nodes.arrive('box', '/home/ana/work');
+  nodes.leave('box');
+  await reached(() => usage.entries.length > 0);
+  expect(usage.entries).toHaveLength(1);
+  expect(usage.entries[0]).toMatchObject({
+    kind: 'computer',
+    source: 'computer',
+    computer: 'node.box',
+    owner: 'root:box.local',
+  });
 });

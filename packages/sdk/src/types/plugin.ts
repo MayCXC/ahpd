@@ -20,7 +20,7 @@ import type { StartSession } from './automations.js';
 import type { SessionConfigAnswerer } from './completions.js';
 import type { Adapter, ConnectorOwner, ServedAdapter } from './connectors.js';
 import type { EventHandler, EventName, HostHandlers } from './events.js';
-import type { Host, HostOptions, HostTool } from './host.js';
+import type { Host, HostOptions, HostTool, NodeRegistry } from './host.js';
 import type { MachineNeed } from './machine.js';
 import type { CollectionOptions, RecordCollection } from './records.js';
 import type { ResourceProvider } from './resources.js';
@@ -909,6 +909,18 @@ export interface PluginHost extends PluginContext {
    * Empty on a host with no agents channel, where every agent is the daemon's.
    */
   agentOwners(): ReadonlyMap<string, AgentOwner | undefined>;
+  /**
+   * The hosts that joined this one, and the socket a session in one runs on.
+   *
+   * The daemon's own registry, read-only: which nodes exist is `ahpd node`'s
+   * to say, since a token is shown once and a name is not a plugin's to choose.
+   * A plugin that serves machines lists a connected node as one and starts a
+   * session in it through `connect`; it never adds or removes a node.
+   *
+   * Absent on a host no node joined, which is every host but a daemon started
+   * with a users file.
+   */
+  nodes?: NodeRegistry;
   /**
    * Keep one usage record, in the host's `usage` port.
    *

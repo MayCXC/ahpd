@@ -16,10 +16,11 @@ import { ensureParts, readParts, refusedWithout } from './parts.js';
 import type { FolderAnswer, Profile } from './manifest.js';
 import { adoptedDevContainer, disposableOf, dockerRuntime, hostOf, inTurn, isRunning, machineDirectory, madeUnderBind, profileOf, roomFor, sessionOf, stateVolumeOf, within } from './runtime.js';
 import type { ComputerRuntime, DockerOptions, Machine, MachineSpec } from './runtime.js';
-import { routed, spellMachineId } from './router.js';
+import { routed, parseMachineId, spellMachineId } from './router.js';
 import type { Routed } from './router.js';
 import { machinesOf, sshRuntime } from './ssh.js';
 import type { SshOptions } from './ssh.js';
+import { NODE_RUNTIME, nodeRuntime } from './node.js';
 import { claimAdopted, claimOwned, forgetOwned, keepMadeNeeds, keepProbe, madeNeedsOf, ownedOf, probeOf } from './owners.js';
 import { computerTools } from './tools.js';
 import { guardFor, hostUser, runsAsHost } from './gitdir.js';
@@ -579,18 +580,30 @@ export const apply: Plugin['apply'] = (host, options) => {
   const sshed = ssh === undefined ? undefined : sshRuntime({ ...ssh, ...(env === undefined ? {} : { env }) });
 
   /*
+   * The hosts that joined this one, built only where this daemon has a join
+   * path.
+   *
+   * Nothing is configured here and nothing can be: a node dialled this host, so
+   * the registry the daemon keeps is the whole of what this runtime knows. A
+   * host nobody joined has no runtime of that kind, and no listing either.
+   */
+  const joined = host.nodes;
+  const noded = joined === undefined ? undefined : nodeRuntime(joined);
+
+  /*
    * The runtimes this host serves, by the value that prefixes a machine's id.
    *
-   * One entry today, and this map is where a later runtime is added: the plugin
-   * holds one runtime per value, and every road into a machine - the provider,
-   * the tools, `reach` - goes through the router, so nothing outside it knows
-   * how many there are.
-   * The two differ in what they can be asked, not in how they are reached:
-   * docker makes machines and ssh only lists them.
+   * One entry for each kind this host was configured or joined with, and this
+   * map is where a later runtime is added: the plugin holds one runtime per
+   * value, and every road into a machine - the provider, the tools, `reach` -
+   * goes through the router, so nothing outside it knows how many there are.
+   * They differ in what they can be asked, not in how they are reached:
+   * docker makes machines, ssh and node only list them.
    */
   const runtimes: Record<string, ComputerRuntime> = {
     [dockered.kind]: dockered,
     ...(sshed === undefined ? {} : { [sshed.kind]: sshed }),
+    ...(noded === undefined ? {} : { [noded.kind]: noded }),
   };
   const computerRouter = routed(runtimes, runtime, { log: noted });
 
@@ -738,6 +751,26 @@ export const apply: Plugin['apply'] = (host, options) => {
    * made it and so no owner was recorded for it.
    */
   const metered = listingMeter({ open, close }, host.hostName);
+
+  /*
+   * A node's own moments, which are the ones no listing has to be asked for.
+   *
+   * A node is up from the hello it dialled this host with until the socket it
+   * is on closes, so those two moments are what a stretch is, and here they
+   * are rather than at a listing. What the watch says when it is taken is where
+   * each node already is, so a node that joined before this plugin applied is
+   * charged from now rather than not at all.
+   *
+   * The ids are spelled the way a listing spells them, because the book is
+   * keyed by what a caller holds: a node's row from its own runtime carries the
+   * name alone, and this is the one place the runtime key is written into it.
+   */
+  const watching = joined?.watch((change) => {
+    const id = spellMachineId(NODE_RUNTIME, change.id);
+    if (change.joined) metered.reachable(id);
+    else void metered.unreachable(id);
+  });
+  if (watching !== undefined) host.registerClose(() => { watching.close(); });
 
   /** The `x-ahpd-computers://` channel, refreshed after each change this plugin makes to a machine. */
   const catalogue = computerCatalogue(computerRouter, (line) => { host.log(`${name}: ${line}`); });
@@ -1447,6 +1480,20 @@ export const apply: Plugin['apply'] = (host, options) => {
 
   host.registerComputers({
     how: reach,
+    /*
+     * The socket a session in a node runs on, which the node dialled.
+     *
+     * Only a node's id is this port's to answer: a docker machine or an ssh box
+     * is one the proxy starts the old way, and `undefined` is the port's answer
+     * for a machine it does not serve - which is what falls back to that start.
+     * Nothing of this host's is handed over with it: the node runs its own ahpd
+     * and its own harness, in its own folder.
+     */
+    connect: async (id, asked) => {
+      const { runtime: which, name: box } = parseMachineId(id);
+      if (joined === undefined || which !== NODE_RUNTIME) return undefined;
+      return await joined.connect(box, asked);
+    },
     /*
      * Whether the machine is off this host, which its runtime's own answer is.
      *

@@ -413,6 +413,31 @@ it('turns a steer into a turn of its own', async () => {
   expect(read?.[1]?.responseParts).toEqual([{ id: `${steeredId}:reply`, kind: 'markdown', content: 'done' }]);
 });
 
+it('keeps the sender of a steered message on its turn', async () => {
+  const { host } = made();
+  const notes: Notes = [];
+  const client = await anyone(host, notes);
+  await talkTo(client);
+  const chat = turns(HELD);
+  chat.onMessage = () => {};
+  const outside = { origin: { kind: 'agent' }, _meta: { 'vscode.chat.delegation': 'other-session' } };
+
+  await said(client, 't1', 'hello');
+  await client.handle({
+    method: 'dispatchAction',
+    params: { channel: CHAT, action: { type: 'chat/pendingMessageSet', kind: 'steering', id: 's1', message: { text: 'stop that', ...outside } } },
+  });
+
+  /*
+   * The steered turn is the message's own, so it says who sent it rather than
+   * falling back to the person at the keyboard.
+   */
+  const started = actions(notes, CHAT).filter((one) => one['type'] === 'chat/turnStarted');
+  expect(started[1]).toMatchObject({ message: { text: 'stop that', ...outside } });
+  const state = await stateOf(client);
+  expect(state['activeTurn']).toMatchObject({ message: { text: 'stop that', ...outside } });
+});
+
 it('keeps a queued message behind a steered turn', async () => {
   const { host } = made();
   const notes: Notes = [];
