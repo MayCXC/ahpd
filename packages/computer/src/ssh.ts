@@ -15,6 +15,7 @@
 
 import { spawn } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
+import { Readable } from 'node:stream';
 import type { Spawn, SpawnOptions } from '@ahpd/sdk';
 import type { ComputerRuntime, ExecResult, Machine, MachineStats, RuntimeCapabilities } from './runtime.js';
 import { checkServer, SERVER_CHECK } from './servercheck.js';
@@ -188,7 +189,7 @@ const lastLine = (said: string): string => {
  * and a key of their own, so the daemon's environment is what an ssh already
  * works with, and the option is the one place an extra variable is said.
  */
-const ran = (options: SshProgram, args: string[], timeout: number, input?: string | Uint8Array): Promise<Ran> => new Promise((resolve, reject) => {
+const ran = (options: SshProgram, args: string[], timeout: number, input?: string | Uint8Array | Readable): Promise<Ran> => new Promise((resolve, reject) => {
   const child = spawn(options.command ?? 'ssh', [...(options.args ?? []), ...args], {
     // Stdin only for a script or a file sent to the box: anything else has
     // nothing to read, and an open pipe would be one it waits on.
@@ -215,7 +216,10 @@ const ran = (options: SshProgram, args: string[], timeout: number, input?: strin
     // A box that closed early is answered by the exit code below, not by a
     // write that failed on the way.
     child.stdin?.on('error', () => {});
-    child.stdin?.end(input);
+    if (input instanceof Readable) {
+      if (child.stdin !== null) input.pipe(child.stdin);
+    }
+    else child.stdin?.end(input);
   }
   child.on('close', (code) => {
     clearTimeout(timer);
@@ -288,7 +292,7 @@ export interface SshReach {
    * Given as long as a transfer, since it is what sends a bundle in and runs
    * the fetch that reads it.
    */
-  ran(command: string[], input?: Uint8Array): Promise<Ran>;
+  ran(command: string[], input?: Uint8Array | Readable): Promise<Ran>;
   /** One command, with its stdout landing in `path` byte for byte. */
   pour(command: string[], path: string): Promise<{ code: number; stderr: string }>;
   stats(): Promise<MachineStats | undefined>;

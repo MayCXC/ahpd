@@ -12,7 +12,7 @@ import { patternOf } from './reference.js';
 import { madeAgain, namedAgain, revealed, scopedTo, vaultNamed, withDefaults } from './secrets.js';
 import type { VaultRead } from './secrets.js';
 import { absoluteOnHost, manifestOf } from './manifest.js';
-import { ensureParts, readParts, refusedWithout } from './parts.js';
+import { ensureJoined, ensureParts, readParts, refusedWithout } from './parts.js';
 import type { FolderAnswer, Profile } from './manifest.js';
 import { adoptedDevContainer, disposableOf, dockerRuntime, hostOf, inTurn, isRunning, machineDirectory, madeUnderBind, profileOf, roomFor, sessionOf, stateVolumeOf, within } from './runtime.js';
 import type { ComputerRuntime, DockerOptions, Machine, MachineSpec } from './runtime.js';
@@ -21,6 +21,7 @@ import type { Routed } from './router.js';
 import { machinesOf, sshRuntime } from './ssh.js';
 import { libvirtRuntime } from './libvirt.js';
 import type { LibvirtOptions, LibvirtProfile } from './libvirt.js';
+import { partsFromDocker } from './template.js';
 import type { SshMachine, SshOptions } from './ssh.js';
 import { serverGate } from './servercheck.js';
 import { NODE_RUNTIME, nodeRuntime } from './node.js';
@@ -212,7 +213,7 @@ export const sshOptionsOf = (value: unknown): SshOptions | undefined => {
 };
 
 /** What the `libvirt` option says, without what the plugin gives every runtime. */
-export type LibvirtSaid = Pick<LibvirtOptions, 'uri' | 'pool' | 'network' | 'template' | 'user' | 'disk' | 'virsh' | 'virtInstall'>;
+export type LibvirtSaid = Pick<LibvirtOptions, 'uri' | 'pool' | 'network' | 'template' | 'image' | 'user' | 'disk' | 'virsh' | 'virtInstall'>;
 
 /**
  * The `libvirt` option, with anything unusable dropped.
@@ -230,6 +231,7 @@ export const libvirtOptionsOf = (value: unknown): LibvirtSaid => {
     network: text('network') ?? 'default',
     ...(text('uri') === undefined ? {} : { uri: text('uri') as string }),
     ...(text('template') === undefined ? {} : { template: text('template') as string }),
+    ...(text('image') === undefined ? {} : { image: text('image') as string }),
     ...(text('user') === undefined ? {} : { user: text('user') as string }),
     ...(text('disk') === undefined ? {} : { disk: text('disk') as string }),
     ...(words(said.virsh) === undefined ? {} : { virsh: words(said.virsh) as string[] }),
@@ -712,6 +714,11 @@ export const apply: Plugin['apply'] = (host, options) => {
     label,
     configDir: host.configDir,
     ...(host.hostId === undefined ? {} : { hostId: host.hostId }),
+    // A template's parts come out of the joined image on this host's Docker.
+    parts: partsFromDocker(
+      { command, ...(args === undefined ? {} : { args }), ...(env === undefined ? {} : { env }) },
+      async () => (await ensureJoined({ runtime: dockered })).tag,
+    ),
     log: noted,
   });
   for (const key of Object.keys(vmProfiles)) if (libvirted !== undefined) farValues[key] = libvirted.kind;

@@ -46,6 +46,8 @@ import {
 import type { ComputerRuntime, ExecResult, Machine, MachineSpec, RuntimeCapabilities } from './runtime.js';
 import { sshReach } from './ssh.js';
 import type { SshMachine, SshProgram, SshReach } from './ssh.js';
+import { TEMPLATE_PACKAGES, templateMaker } from './template.js';
+import type { TemplateParts, TemplateSteps } from './template.js';
 
 /** What `capabilities` reports for this runtime. */
 const CAPABILITIES: RuntimeCapabilities = {
@@ -133,8 +135,12 @@ export interface LibvirtOptions {
   pool: string;
   /** The libvirt network a VM is attached to. */
   network: string;
-  /** The template's volume in the pool, which every VM backs onto. */
+  /** A template's volume in the pool, which every VM backs onto in place of one built here. */
   template?: string;
+  /** The cloud image's volume in the pool, which a template is built from. */
+  image?: string;
+  /** Where a template built here gets its parts. */
+  parts?: TemplateParts;
   /** The login a VM is made with. `ahpd` when absent. */
   user?: string;
   /** The size of a VM's overlay, as `vol-create-as` reads one. `20G` when absent. */
@@ -212,6 +218,11 @@ export const labelsFrom = (said: string): Record<string, string> | undefined => 
   return held;
 };
 
+/** The names in `virsh vol-list <pool>`, which is a header, a rule and one row per volume. */
+export const volumesFrom = (said: string): string[] => said.split('\n').slice(2)
+  .map((line) => line.trim().split(/\s+/)[0] ?? '')
+  .filter((name) => name !== '');
+
 /** The rows of `virsh list --all`: each domain's name and its state in libvirt's words. */
 export const domainsFrom = (said: string): { name: string; state: string }[] => {
   const lines = said.split('\n');
@@ -246,7 +257,7 @@ export const uriOf = (box: SshMachine): string => `qemu+ssh://${hostPortOf(box)}
  * a key can be read as more YAML. No secret is ever in it: the box keeps the
  * file in the VM's seed disk, where its own operator can read it.
  */
-export const userDataOf = (user: string, key: string, tree: string | undefined): string => `#cloud-config\n${JSON.stringify({
+export const userDataOf = (user: string, key: string, tree: string | undefined, packages?: string[]): string => `#cloud-config\n${JSON.stringify({
   users: [{
     name: user,
     shell: '/bin/bash',
@@ -254,6 +265,7 @@ export const userDataOf = (user: string, key: string, tree: string | undefined):
     ssh_authorized_keys: [key.trim()],
   }],
   ...(tree === undefined ? {} : { runcmd: [['install', '-d', '-o', user, '-g', user, tree]] }),
+  ...(packages === undefined ? {} : { packages }),
 }, null, 2)}\n`;
 
 /** A spec's cores, as `--vcpus` takes a whole number. */
@@ -286,6 +298,7 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
   const ready = options.waits?.ready ?? READY_MS;
   const every = options.waits?.every ?? EVERY_MS;
   const shutdown = options.waits?.shutdown ?? SHUTDOWN_MS;
+  const makeTemplate = options.parts === undefined ? undefined : templateMaker(options.parts, options.log);
 
   /** Each box a profile names, by its name in `ssh.machines`. */
   const boxes = new Map(Object.values(options.profiles).map((one) => [one.server, one.box]));
@@ -491,6 +504,113 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
     await checkedOut(must, [`--git-dir=${at}`, `--work-tree=${root}`], seed, commit, true);
   };
 
+  /**
+   * Boot one VM on a volume already in the pool, with cloud-init. A
+   * `virt-install` that fails removes the volume, so nothing is left.
+   */
+  const installed = async (server: string, name: string, volume: string, userData: string, cpus: number, memory: number): Promise<void> => {
+    const seedDir = mkdtempSync(join(tmpdir(), 'ahpd-cloud-init-'));
+    try {
+      const userFile = join(seedDir, 'user-data');
+      const metaFile = join(seedDir, 'meta-data');
+      writeFileSync(userFile, userData, { mode: 0o600 });
+      writeFileSync(metaFile, `instance-id: ${name}\nlocal-hostname: ${name}\n`, { mode: 0o600 });
+      const ran = await ranWith(virtInstall, [
+        ...virtInstallArgs,
+        '--connect', uriFor(server),
+        '--name', name,
+        '--import',
+        '--disk', `vol=${options.pool}/${volume},bus=virtio`,
+        '--network', `network=${options.network},model=virtio`,
+        '--vcpus', String(cpus),
+        '--memory', String(memory),
+        '--osinfo', 'detect=on,require=off',
+        '--cloud-init', `user-data=${userFile},meta-data=${metaFile}`,
+        '--graphics', 'none',
+        '--noautoconsole',
+      ], options.env, INSTALL_MS);
+      if (ran.code !== 0) {
+        await virshOn(server, ['vol-delete', volume, '--pool', options.pool]);
+        throw new Error(`virt-install on ${server} exited ${String(ran.code)}: ${lastLine(ran.stderr) || lastLine(ran.stdout)}`);
+      }
+    }
+    finally {
+      rmSync(seedDir, { recursive: true, force: true });
+    }
+    where.set(name, server);
+  };
+
+  /** Wait for a booted VM's address, then its ssh, then its cloud-init, and answer its reach. */
+  const upOn = async (server: string, name: string, key: MachineKey, labels: Record<string, string>): Promise<SshReach> => {
+    const addressed = await waited(boot, async () => {
+      const said = await virshOn(server, ['domifaddr', name]);
+      const value = said.code === 0 ? addressFrom(said.stdout) : undefined;
+      return { ...(value === undefined ? {} : { value }), said: said.code === 0 ? 'no address yet' : lastLine(said.stderr) };
+    });
+    if (addressed.value === undefined) throw new Error(`${name} had no address within ${String(boot)}ms: ${addressed.said}`);
+    addresses.set(name, addressed.value);
+    const reach = reachTo(key, server, addressed.value, labels);
+    const reached = await waited(ready, async () => {
+      const said = await reach.reached();
+      return { ...(said.up ? { value: true } : {}), said: said.said };
+    });
+    if (reached.value === undefined) throw new Error(`${name} did not answer ssh within ${String(ready)}ms: ${reached.said}`);
+    // cloud-init exits 2 for a boot that finished with a warning, which is a booted VM.
+    const settled = await reach.ran(['cloud-init', 'status', '--wait']);
+    if (settled.code !== 0 && settled.code !== 2) {
+      throw new Error(`${name} did not finish cloud-init: ${lastLine(settled.stdout) || lastLine(settled.stderr)}`);
+    }
+    return reach;
+  };
+
+  /**
+   * A running VM shut down: the guest is asked, and is cut off when it has not
+   * within the bound.
+   */
+  const shutDown = async (server: string, name: string): Promise<void> => {
+    await mustOn(server, ['shutdown', name]);
+    const off = await waited(shutdown, async () => {
+      const now = (await mustOn(server, ['domstate', name])).trim();
+      return { ...(now === 'shut off' ? { value: true } : {}), said: now };
+    });
+    if (off.value !== undefined) return;
+    options.log?.(`${name} did not shut down within ${Math.round(shutdown / 1000)} s, so it is cut off`);
+    await mustOn(server, ['destroy', name]);
+  };
+
+  /** What a template is made with on one server: a helper VM on the cloud image, whose disk is kept. */
+  const stepsOn = (server: string): TemplateSteps => ({
+    templates: async () => volumesFrom(await mustOn(server, ['vol-list', options.pool])),
+    boot: async (name) => {
+      const key = await machineKey(options.configDir, keygen);
+      await mustOn(server, [
+        'vol-create-as', options.pool, name, options.disk ?? DEFAULT_DISK,
+        '--format', 'qcow2', '--backing-vol', options.image as string, '--backing-vol-format', 'qcow2',
+      ]);
+      const userData = userDataOf(user, readFileSync(key.public, 'utf8'), undefined, TEMPLATE_PACKAGES);
+      await installed(server, name, name, userData, DEFAULT_CPUS, DEFAULT_MEMORY_MIB);
+      return upOn(server, name, key, {});
+    },
+    // The domain goes and its disk stays: `undefine` without `--remove-all-storage`.
+    keep: async (name) => {
+      const address = addresses.get(name);
+      await shutDown(server, name);
+      await mustOn(server, ['undefine', name, '--nvram']);
+      where.delete(name);
+      addresses.delete(name);
+      if (address !== undefined) await forgetHost(options.configDir, address, keygen);
+    },
+    drop: async (name) => {
+      const address = addresses.get(name);
+      await virshOn(server, ['destroy', name]);
+      await virshOn(server, ['undefine', name, '--remove-all-storage', '--nvram']);
+      await virshOn(server, ['vol-delete', name, '--pool', options.pool]);
+      where.delete(name);
+      addresses.delete(name);
+      if (address !== undefined) await forgetHost(options.configDir, address, keygen);
+    },
+  });
+
   /** Why a spec cannot be made as a VM, or nothing when it can. */
   const refusalOf = (spec: MachineSpec): string | undefined => {
     if (!NAME.test(spec.name)) return `${spec.name} is not a name a VM can have: letters, digits, - and _ only`;
@@ -508,7 +628,9 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
     if (spec.folder !== undefined && spec.gitDir === undefined) {
       return `${spec.name} is made on another box, and ${spec.repository ?? spec.folder} is not a repository it may be given, so its code cannot be sent there`;
     }
-    if (options.template === undefined) return `${spec.name} is not made: the libvirt option names no template`;
+    if (options.template === undefined && (options.image === undefined || makeTemplate === undefined)) {
+      return `${spec.name} is not made: the libvirt option names no template, and no cloud image to build one from`;
+    }
     return undefined;
   };
 
@@ -593,7 +715,8 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
     },
 
     /*
-     * Make one: an overlay on the template, a VM booted from it with
+     * Make one: an overlay on the template, which is built first where the
+     * server has none for this host's parts, a VM booted from it with
      * cloud-init, the labels in its metadata, then a wait for its address and
      * its ssh. A VM that does not come up in time is removed with its disk,
      * and the last thing the wait heard is the sentence thrown.
@@ -605,7 +728,8 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
       const profile = key === undefined ? undefined : options.profiles[key];
       if (key === undefined || profile === undefined) throw new Error(`${spec.name} names no libvirt profile, so there is no box to make it on`);
       const server = profile.server;
-      const template = options.template as string;
+      // An operator's template as it is, or the one built here for this host's parts.
+      const template = options.template ?? await (makeTemplate as NonNullable<typeof makeTemplate>)(server, stepsOn(server));
       const tree = spec.folder === undefined ? undefined : machinePathOf(spec.repository ?? spec.folder);
       const workdir = spec.folder === undefined ? undefined : machinePathOf(spec.folder);
       const labels: Record<string, string> = {
@@ -630,55 +754,11 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
         'vol-create-as', options.pool, volume, options.disk ?? DEFAULT_DISK,
         '--format', 'qcow2', '--backing-vol', template, '--backing-vol-format', 'qcow2',
       ]);
-      const seedDir = mkdtempSync(join(tmpdir(), 'ahpd-cloud-init-'));
-      try {
-        const userData = join(seedDir, 'user-data');
-        const metaData = join(seedDir, 'meta-data');
-        writeFileSync(userData, userDataOf(user, readFileSync(machineKeyHeld.public, 'utf8'), tree), { mode: 0o600 });
-        writeFileSync(metaData, `instance-id: ${spec.name}\nlocal-hostname: ${spec.name}\n`, { mode: 0o600 });
-        const installed = await ranWith(virtInstall, [
-          ...virtInstallArgs,
-          '--connect', uriFor(server),
-          '--name', spec.name,
-          '--import',
-          '--disk', `vol=${options.pool}/${volume},bus=virtio`,
-          '--network', `network=${options.network},model=virtio`,
-          '--vcpus', String(cpusOf(spec.cpus)),
-          '--memory', String(memoryOf(spec.memory)),
-          '--osinfo', 'detect=on,require=off',
-          '--cloud-init', `user-data=${userData},meta-data=${metaData}`,
-          '--graphics', 'none',
-          '--noautoconsole',
-        ], options.env, INSTALL_MS);
-        if (installed.code !== 0) {
-          await virshOn(server, ['vol-delete', volume, '--pool', options.pool]);
-          throw new Error(`virt-install on ${server} exited ${String(installed.code)}: ${lastLine(installed.stderr) || lastLine(installed.stdout)}`);
-        }
-      }
-      finally {
-        rmSync(seedDir, { recursive: true, force: true });
-      }
-      where.set(spec.name, server);
+      const userData = userDataOf(user, readFileSync(machineKeyHeld.public, 'utf8'), tree);
+      await installed(server, spec.name, volume, userData, cpusOf(spec.cpus), memoryOf(spec.memory));
       try {
         await mustOn(server, ['metadata', spec.name, METADATA_NS, '--key', METADATA_KEY, '--set', metadataOf(labels), '--live', '--config']);
-        const addressed = await waited(boot, async () => {
-          const said = await virshOn(server, ['domifaddr', spec.name]);
-          const value = said.code === 0 ? addressFrom(said.stdout) : undefined;
-          return { ...(value === undefined ? {} : { value }), said: said.code === 0 ? 'no address yet' : lastLine(said.stderr) };
-        });
-        if (addressed.value === undefined) throw new Error(`${spec.name} had no address within ${String(boot)}ms: ${addressed.said}`);
-        addresses.set(spec.name, addressed.value);
-        const reach = reachTo(machineKeyHeld, server, addressed.value, labels);
-        const reached = await waited(ready, async () => {
-          const said = await reach.reached();
-          return { ...(said.up ? { value: true } : {}), said: said.said };
-        });
-        if (reached.value === undefined) throw new Error(`${spec.name} did not answer ssh within ${String(ready)}ms: ${reached.said}`);
-        // cloud-init exits 2 for a boot that finished with a warning, which is a booted VM.
-        const settled = await reach.ran(['cloud-init', 'status', '--wait']);
-        if (settled.code !== 0 && settled.code !== 2) {
-          throw new Error(`${spec.name} did not finish cloud-init: ${lastLine(settled.stdout) || lastLine(settled.stderr)}`);
-        }
+        const reach = await upOn(server, spec.name, machineKeyHeld, labels);
         if (tree !== undefined) await seeded(spec, reach, tree);
       }
       catch (error) {
@@ -699,16 +779,8 @@ export const libvirtRuntime = (options: LibvirtOptions): ComputerRuntime => {
       const found = await lookOrFail(name);
       addresses.delete(name);
       if (found.state === 'shut off') return;
-      if (found.state === 'running') {
-        await mustOn(found.server, ['shutdown', name]);
-        const off = await waited(shutdown, async () => {
-          const now = (await mustOn(found.server, ['domstate', name])).trim();
-          return { ...(now === 'shut off' ? { value: true } : {}), said: now };
-        });
-        if (off.value !== undefined) return;
-        options.log?.(`${name} did not shut down within ${Math.round(shutdown / 1000)} s, so it is cut off`);
-      }
-      await mustOn(found.server, ['destroy', name]);
+      if (found.state === 'running') await shutDown(found.server, name);
+      else await mustOn(found.server, ['destroy', name]);
     },
 
     start: async (name) => {

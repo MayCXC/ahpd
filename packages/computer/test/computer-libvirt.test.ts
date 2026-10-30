@@ -9,10 +9,13 @@ import { loadPlugins } from '../../server/src/plugins.js';
 import { closeAll, keeping } from './support/closing.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { Usage, UsageEntry, UsageTotal } from '../../sdk/src/types/usage.js';
-import { addressFrom, domainsFrom, labelsFrom, libvirtRuntime, metadataOf, userDataOf, VM_HOST } from '../src/libvirt.js';
+import { addressFrom, domainsFrom, labelsFrom, libvirtRuntime, metadataOf, userDataOf, VM_HOST, volumesFrom } from '../src/libvirt.js';
 import type { LibvirtOptions } from '../src/libvirt.js';
 import { keygenWith } from '../src/keys.js';
 import type { MachineSpec } from '../src/runtime.js';
+import type { SshReach } from '../src/ssh.js';
+import { partsFromDocker } from '../src/template.js';
+import type { TemplateParts } from '../src/template.js';
 
 /*
  * Virtual machines on a libvirt box, made through a scripted `virsh` and
@@ -59,6 +62,9 @@ const cloudInit = (code = 0): string => {
   mkdirSync(bin, { recursive: true });
   writeFileSync(join(bin, 'cloud-init'), `#!/bin/sh\necho "status: done"\nexit ${String(code)}\n`);
   chmodSync(join(bin, 'cloud-init'), 0o755);
+  // The VM's login has sudo without a password, and this host's user is the login here.
+  writeFileSync(join(bin, 'sudo'), '#!/bin/sh\nexec "$@"\n');
+  chmodSync(join(bin, 'sudo'), 0o755);
   return bin;
 };
 
@@ -95,6 +101,7 @@ it('reads what virsh prints: a listing, an address and a record', () => {
   const labels = { 'ahpd.owner': 'user:a&b', 'ahpd.project': '<x> "y"' };
   expect(labelsFrom(metadataOf(labels))).toEqual(labels);
   expect(labelsFrom('error: metadata not found')).toBeUndefined();
+  expect(volumesFrom(' Name   Path\n-----\n a.qcow2   /var/lib/libvirt/images/a.qcow2\n debian-13   /x\n\n')).toEqual(['a.qcow2', 'debian-13']);
 });
 
 it('gives the VM only its login and this host\'s key, as JSON a YAML reader takes', () => {
@@ -103,6 +110,9 @@ it('gives the VM only its login and this host\'s key, as JSON a YAML reader take
   const read = JSON.parse(said.slice('#cloud-config\n'.length)) as { users: { name: string; ssh_authorized_keys: string[] }[]; runcmd: string[][] };
   expect(read.users[0]).toMatchObject({ name: 'ahpd', ssh_authorized_keys: ['ssh-ed25519 AAAA key'] });
   expect(read.runcmd).toEqual([['install', '-d', '-o', 'ahpd', '-g', 'ahpd', '/work/repo']]);
+  const helper = JSON.parse(userDataOf('ahpd', 'k', undefined, ['git']).slice('#cloud-config\n'.length)) as Record<string, unknown>;
+  expect(helper.packages).toEqual(['git']);
+  expect(helper.runcmd).toBeUndefined();
 });
 
 it.skipIf(!posix)('makes a VM on the template, records it in its metadata, and lists it with its owner', async () => {
@@ -248,6 +258,91 @@ it.skipIf(!posix)('suspends and resumes a VM, and restarts a suspended one', asy
   await vms.suspend?.('vm-1');
   await vms.stop('vm-1');
   expect(await vms.state('vm-1')).toBe('stopped');
+});
+
+const IMAGE = 'debian-13-genericcloud-amd64.qcow2';
+
+/** Parts whose joined image has the tags given in turn, and that writes nothing into a VM but a mark of the tag. */
+const fakeParts = (tags: string[], fail?: string): TemplateParts & { into: TemplateParts['into']; copied: string[] } => {
+  const copied: string[] = [];
+  let at = 0;
+  return {
+    copied,
+    joined: async () => tags[Math.min(at++, tags.length - 1)] as string,
+    into: async (tag, reach) => {
+      if (fail !== undefined) throw new Error(fail);
+      expect((await reach.ran(['true'])).code).toBe(0);
+      copied.push(tag);
+    },
+  };
+};
+
+/** A runtime with no template of the operator's, and a box that holds only the cloud image. */
+const imaged = (parts: TemplateParts, lines: string[] = []) => {
+  const vms = runtime({ template: undefined, image: IMAGE, parts, log: (line) => { lines.push(line); } });
+  writeFileSync(statePath(), JSON.stringify({ volumes: [IMAGE], domains: {} }));
+  return vms;
+};
+
+it.skipIf(!posix)('builds a template from the cloud image once, for two VMs asked for at once', async () => {
+  const parts = fakeParts(['ahpd-agents:abc123def456']);
+  const vms = imaged(parts);
+  await Promise.all([vms.run(spec()), vms.run(spec({ name: 'vm-2' }))]);
+  expect(parts.copied).toEqual(['ahpd-agents:abc123def456']);
+  expect(box().volumes.sort()).toEqual(['ahpd-template-abc123def456', IMAGE, 'vm-1.qcow2', 'vm-2.qcow2']);
+  // The helper is gone and its disk is the template.
+  expect(Object.keys(box().domains).sort()).toEqual(['vm-1', 'vm-2']);
+  const made = calls(virshLog()).filter((one) => one.includes('vol-create-as'));
+  expect(made.map((one) => one[one.indexOf('--backing-vol') + 1])).toEqual([IMAGE, 'ahpd-template-abc123def456', 'ahpd-template-abc123def456']);
+  expect(made.filter((one) => one.includes(IMAGE))).toHaveLength(1);
+  expect(calls(virshLog()).filter((one) => one.includes('undefine'))).toEqual([expect.arrayContaining(['undefine', 'ahpd-template-abc123def456', '--nvram'])]);
+  expect(calls(sshLog()).some((one) => /cloud-init'? '?clean/.test(one.join(' ')))).toBe(true);
+  expect((await vms.inspect('vm-1'))?.Config).toMatchObject({ Image: 'ahpd-template-abc123def456' });
+  // A later VM backs onto the template that is there.
+  await vms.run(spec({ name: 'vm-3' }));
+  expect(parts.copied).toHaveLength(1);
+});
+
+it.skipIf(!posix)('builds a second template when the hash moves, and keeps the first', async () => {
+  const lines: string[] = [];
+  const parts = fakeParts(['ahpd-agents:aaaaaaaaaaaa', 'ahpd-agents:bbbbbbbbbbbb']);
+  const vms = imaged(parts, lines);
+  await vms.run(spec());
+  await vms.run(spec({ name: 'vm-2' }));
+  expect(parts.copied).toEqual(['ahpd-agents:aaaaaaaaaaaa', 'ahpd-agents:bbbbbbbbbbbb']);
+  expect(box().volumes).toEqual(expect.arrayContaining(['ahpd-template-aaaaaaaaaaaa', 'ahpd-template-bbbbbbbbbbbb']));
+  expect(lines).toContainEqual('kvm1 keeps the older templates ahpd-template-aaaaaaaaaaaa; remove one once no VM backs onto it');
+});
+
+it.skipIf(!posix)('removes the helper and its disk when the parts do not go in', async () => {
+  const vms = imaged(fakeParts(['ahpd-agents:abc123def456'], 'docker create ahpd-agents:abc123def456 exited 1: no such image'));
+  await expect(vms.run(spec())).rejects.toThrow('The template ahpd-template-abc123def456 was not made on kvm1: docker create ahpd-agents:abc123def456 exited 1: no such image');
+  expect(box()).toEqual({ volumes: [IMAGE], domains: {} });
+});
+
+it.skipIf(!posix)('streams the parts out of the joined image into the VM, and removes the container it read', async () => {
+  const docker = join(dir(), 'docker.mjs');
+  const log = join(dir(), 'docker.jsonl');
+  writeFileSync(docker, [
+    "import { appendFileSync } from 'node:fs';",
+    'const args = process.argv.slice(2);',
+    'appendFileSync(process.env.LOG, `${JSON.stringify(args)}\\n`);',
+    "if (args[0] === 'create') process.stdout.write('c0ffee\\n');",
+    "if (args[0] === 'cp') process.stdout.write('the tar of /opt/ahpd');",
+  ].join('\n'));
+  const got: { command: string[]; input: string }[] = [];
+  const reach = {
+    ran: async (command: string[], input?: NodeJS.ReadableStream) => {
+      let said = '';
+      for await (const chunk of input ?? []) said += String(chunk);
+      got.push({ command, input: said });
+      return { code: 0, stdout: '', stderr: '', timedOut: false };
+    },
+  } as unknown as SshReach;
+  const parts = partsFromDocker({ command: process.execPath, args: [docker], env: { LOG: log } }, async () => 'ahpd-agents:abc');
+  await parts.into('ahpd-agents:abc', reach);
+  expect(got).toEqual([{ command: ['sudo', 'tar', '-x', '-C', '/opt'], input: 'the tar of /opt/ahpd' }]);
+  expect(calls(log)).toEqual([['create', 'ahpd-agents:abc'], ['cp', 'c0ffee:/opt/ahpd', '-'], ['rm', '-f', 'c0ffee']]);
 });
 
 it.skipIf(!posix)('refuses a file put into a VM, which is not done yet', async () => {

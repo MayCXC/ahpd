@@ -15,7 +15,7 @@
  * test, and the VM it reaches is this host through the scripted `ssh`.
  */
 
-import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, writeFileSync } from 'node:fs';
 
 const [as, ...args] = process.argv.slice(2);
 const state = process.env.VIRSH_FAKE_STATE;
@@ -25,6 +25,15 @@ if (state === undefined) {
 }
 // A listing asks every domain's metadata at once, so calls are appended, never rewritten.
 if (process.env.VIRSH_FAKE_LOG) appendFileSync(process.env.VIRSH_FAKE_LOG, `${JSON.stringify([as, ...args])}\n`);
+
+// One call at a time: two VMs made at once are two calls that each read the
+// state and write it back, and the second would write over the first.
+const lock = `${state}.lock`;
+for (;;) {
+  try { mkdirSync(lock); break; }
+  catch { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5); }
+}
+process.on('exit', () => { rmdirSync(lock); });
 
 const held = existsSync(state) ? JSON.parse(readFileSync(state, 'utf8')) : { volumes: [], domains: {} };
 /** Written beside the state and renamed over it, so a reader never sees half a file. */
@@ -152,6 +161,9 @@ switch (verb) {
     keep();
     break;
   }
+  case 'vol-list':
+    process.stdout.write([' Name   Path', '-'.repeat(30), ...held.volumes.map((volume) => ` ${volume}   /var/lib/libvirt/images/${volume}`), ''].join('\n'));
+    break;
   case 'vol-delete':
     held.volumes = held.volumes.filter((volume) => volume !== rest[0]);
     keep();
