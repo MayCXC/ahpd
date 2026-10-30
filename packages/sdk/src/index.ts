@@ -31,6 +31,8 @@ export { readJson, readJsonObject, writeJsonAtomic } from './utils/jsonfile.js';
 export type { JsonRead, JsonObjectRead, JsonWriteOptions } from './utils/jsonfile.js';
 export type { EachPresetOptions, FoldedOptions, HostRecording, ServedRoute } from './plugins/plugins.js';
 export { sdkVersion } from './version.js';
+export { HOST_CATALOGS, localesOf, translated } from './i18n.js';
+export type { Catalog, Catalogs } from './i18n.js';
 export { installLine, knownAgents } from './machines/agents.js';
 export type { AgentVariable, KnownAgent } from './machines/agents.js';
 export { doorOf, listen, overStdio, plainAnswer, runtime, serveRequests } from './listen.js';

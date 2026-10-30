@@ -30,8 +30,9 @@ import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { checkIcons, foldHostOptions, frozenCopy, gapLine, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, schemaGaps, sdkVersion, secretRef } from '@ahpd/sdk';
-import type { Agent, AgentOwner, Alert, InstallAnswer, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, NodeRegistry, Plugin, PluginContext, PluginContracts, PluginHost, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, AgentOwner, Alert, Catalogs, InstallAnswer, Contribution, FoldedOptions, Grant, HostOptions, Icon, Loaded, NodeRegistry, Plugin, PluginContext, PluginContracts, PluginHost, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { fetchIcons, resolveIcons } from './icons.js';
+import { readCatalogs } from './i18n.js';
 import { satisfies } from './compat.js';
 import { run as runProgram } from './install.js';
 import type { Runner } from './install.js';
@@ -480,6 +481,10 @@ export interface Manifest {
   optionsSchema?: Record<string, unknown>;
   /** One line for each `ahpd.icons` entry that could not be read. */
   iconProblems?: string[];
+  /** `ahpd.i18n`, the catalogs read from that folder, by locale. */
+  i18n?: Catalogs;
+  /** One line for each `ahpd.i18n` catalog or folder that could not be read. */
+  i18nProblems?: string[];
   /** `peerDependencies["@ahpd/sdk"]`, the range compatibility is checked against. */
   sdkRange?: string;
   /** Set when the file could not be read or parsed, so nothing else is trustworthy. */
@@ -541,6 +546,7 @@ export const readManifest = (packageDir: string): Manifest => {
     manifest.icons = resolveIcons(inside.icons, packageDir, `plugin ${typeof value.name === 'string' ? value.name : packageDir}`, (line) => iconProblems.push(line));
     if (iconProblems.length > 0) manifest.iconProblems = iconProblems;
   }
+  readI18n(manifest, inside?.i18n, packageDir, `plugin ${typeof value.name === 'string' ? value.name : packageDir}`);
   if (typeof peer === 'string') manifest.sdkRange = peer;
   return manifest;
 };
@@ -594,7 +600,23 @@ const standaloneOf = (inside: Record<string, unknown>, path: string, base: strin
     manifest.icons = resolveIcons(inside.icons, base, `plugin ${typeof inside.id === 'string' ? inside.id : path}`, (line) => iconProblems.push(line));
     if (iconProblems.length > 0) manifest.iconProblems = iconProblems;
   }
+  if (base !== undefined) readI18n(manifest, inside.i18n, base, `plugin ${typeof inside.id === 'string' ? inside.id : path}`);
   return manifest;
+};
+
+/**
+ * Reads the catalogs `ahpd.i18n` names into `manifest.i18n`.
+ *
+ * A value that is not a string is the shape check's to refuse, and is read
+ * as nothing here. A catalog that could not be read is dropped and said, as
+ * an icon is.
+ */
+const readI18n = (manifest: Manifest, folder: unknown, base: string, by: string): void => {
+  if (typeof folder !== 'string') return;
+  const i18nProblems: string[] = [];
+  const catalogs = readCatalogs(folder, base, by, (line) => i18nProblems.push(line));
+  if (catalogs !== undefined) manifest.i18n = catalogs;
+  if (i18nProblems.length > 0) manifest.i18nProblems = i18nProblems;
 };
 
 /**
@@ -657,6 +679,7 @@ const checkField = (field: string, value: unknown, named: string): string | unde
   }
   if (field === 'links' && !isLinks(value)) return `${named} is not a list of links, each with a title and a url.`;
   if (field === 'contracts' && !areContracts(value)) return `${named} is not an object of lists of names.`;
+  if (field === 'i18n' && typeof value !== 'string') return `${named} is not a string naming a folder in the package.`;
   if (field === 'icons') {
     // The shape is the SDK's to say, so the two sources a manifest comes from
     // are held to one rule; here it is turned into the one line a reader of the
@@ -680,7 +703,7 @@ const checkField = (field: string, value: unknown, named: string): string | unde
  * form from them and a value of the wrong kind would be drawn as nothing.
  */
 const checkFields = (inside: Record<string, unknown>, named: (field: string) => string): string | undefined => {
-  for (const field of ['description', 'categories', 'links', 'contracts', 'icons']) {
+  for (const field of ['description', 'categories', 'links', 'contracts', 'icons', 'i18n']) {
     const wrong = checkField(field, inside[field], named(field));
     if (wrong !== undefined) return wrong;
   }
@@ -1305,6 +1328,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   // A manifest icon that could not be read was dropped and said, and the load
   // says the same line beside its own.
   if (manifest?.iconProblems !== undefined) problems.push(...manifest.iconProblems);
+  if (manifest?.i18nProblems !== undefined) problems.push(...manifest.i18nProblems);
 
   const provisional = ready.provisional;
   options.log(`plugin ${provisional} loading`);
