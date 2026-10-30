@@ -820,3 +820,57 @@ it('tells a resumed chat\'s messages to the agent\'s listener, as it does a new 
   expect(heard).toEqual([{ session: 'bot-chat:/again', turnId: 't1', text: 'hello' }]);
   expect(turns('bot-chat:/again').onMessage).toBeDefined();
 });
+
+/*
+ * The chat's one setting is a picker of the bots.
+ *
+ * A person asking for a chat with a bot names it, and the store is the only
+ * thing that knows which bots there are - so the answer comes from there rather
+ * than from a slug somebody has to spell.
+ */
+it('offers the bots as the answers to the chat setting', async () => {
+  const { host } = made();
+  const client = await anyone(host);
+  for (const [slug, name] of [['backer', 'Backer'], ['builder', 'Builder']] as const) {
+    await client.handle({
+      method: 'resourceWrite',
+      params: { uri: `bot://${slug}`, data: JSON.stringify({ name }), createOnly: true },
+    });
+  }
+
+  // Marked so a client asks, and seeded once with the whole list so a chip is
+  // labelled before the picker is opened.
+  const form = await client.handle({
+    method: 'resolveSessionConfig',
+    params: { channel: ROOT, provider: CHAT_PROVIDER },
+  }) as { schema: { properties: Record<string, Bag> } };
+  expect(form.schema.properties.bot).toMatchObject({
+    type: 'string',
+    enumDynamic: true,
+    enum: ['backer', 'builder'],
+    enumLabels: ['Backer', 'Builder'],
+  });
+});
+
+it('keeps the bots a query matches, by name or by slug', async () => {
+  const { host } = made();
+  const client = await anyone(host);
+  for (const [slug, name] of [['backer', 'Backer'], ['builder', 'Builder']] as const) {
+    await client.handle({
+      method: 'resourceWrite',
+      params: { uri: `bot://${slug}`, data: JSON.stringify({ name }), createOnly: true },
+    });
+  }
+
+  const asked = async (query: string): Promise<unknown> => client.handle({
+    method: 'sessionConfigCompletions',
+    params: { channel: ROOT, provider: CHAT_PROVIDER, property: 'bot', query },
+  });
+
+  // A name matches without regard to case, and a slug matches as itself.
+  expect(await asked('BUILD')).toEqual({ items: [{ value: 'builder', label: 'Builder' }] });
+  expect(await asked('back')).toEqual({ items: [{ value: 'backer', label: 'Backer' }] });
+  expect(await asked('')).toEqual({
+    items: [{ value: 'backer', label: 'Backer' }, { value: 'builder', label: 'Builder' }],
+  });
+});
