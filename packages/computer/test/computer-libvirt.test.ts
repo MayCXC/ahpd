@@ -105,14 +105,13 @@ it('reads what virsh prints: a listing, an address and a record', () => {
 });
 
 it('gives the VM only its login and this host\'s key, as JSON a YAML reader takes', () => {
-  const said = userDataOf('ahpd', 'ssh-ed25519 AAAA key\n', '/work/repo');
+  const said = userDataOf('ahpd', 'ssh-ed25519 AAAA key\n');
   expect(said.startsWith('#cloud-config\n')).toBe(true);
-  const read = JSON.parse(said.slice('#cloud-config\n'.length)) as { users: { name: string; ssh_authorized_keys: string[] }[]; runcmd: string[][] };
+  const read = JSON.parse(said.slice('#cloud-config\n'.length)) as { users: { name: string; ssh_authorized_keys: string[] }[]; packages?: string[] };
   expect(read.users[0]).toMatchObject({ name: 'ahpd', ssh_authorized_keys: ['ssh-ed25519 AAAA key'] });
-  expect(read.runcmd).toEqual([['install', '-d', '-o', 'ahpd', '-g', 'ahpd', '/work/repo']]);
-  const helper = JSON.parse(userDataOf('ahpd', 'k', undefined, ['git']).slice('#cloud-config\n'.length)) as Record<string, unknown>;
+  expect(read.packages).toBeUndefined();
+  const helper = JSON.parse(userDataOf('ahpd', 'k', ['git']).slice('#cloud-config\n'.length)) as Record<string, unknown>;
   expect(helper.packages).toEqual(['git']);
-  expect(helper.runcmd).toBeUndefined();
 });
 
 it.skipIf(!posix)('makes a VM on the template, records it in its metadata, and lists it with its owner', async () => {
