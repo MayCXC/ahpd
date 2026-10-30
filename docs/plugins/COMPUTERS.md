@@ -618,6 +618,82 @@ Either way the work comes back the same way, by the fetch [Disposable machines](
 
 A credential of this host's own never goes to another box. An agent need marked as a credential whose value is this host's, such as a cofold configuration seeded from `~/.config/cofold/config.json`, is refused at create with a sentence naming the need. Give the box its own value in the profile instead, best named from the vault as above: the value is passed by name on each `docker exec` and is never in the machine's `docker inspect`.
 
+### Profiles that make VMs
+
+`runtime` says what makes a profile's machines. `docker`, the default, makes a container. `libvirt` makes a VM on the libvirt of the profile's `server`, and `proxmox` makes a VM on the node that the `proxmox` option names. A VM is a linked clone of a template, so it is made in seconds and its disk holds only what it changed.
+
+A libvirt profile must name its `server`, and the box must be an entry of `ssh.machines`. Before a VM is made there, the box's `kvm`, `libvirt` and `libvirtAccess` items must be ok, as [What the box can run](#what-the-box-can-run) says:
+
+```json
+{ "plugins": [{ "name": "@ahpd/computer", "options": {
+  "ssh": { "machines": { "dev02": { "destination": "dev02" } } },
+  "libvirt": { "pool": "default", "network": "default", "image": "debian-13-genericcloud-amd64.qcow2" },
+  "profiles": {
+    "vm": { "title": "A VM on dev02", "runtime": "libvirt", "server": "dev02", "disposable": true, "sessionFolder": true }
+  }
+} }] }
+```
+
+| `libvirt` | What it says |
+| --- | --- |
+| `uri` | The libvirt connection for every server. `qemu+ssh://<destination>/system` when absent. |
+| `pool` | The storage pool that holds the template and every VM's disk. `default` when absent. |
+| `network` | The libvirt network a VM is on. `default` when absent. |
+| `template` | A template volume in the pool, which every VM's disk backs onto. It must already hold the parts at `/opt/ahpd`. |
+| `image` | A cloud image volume in the pool, a qcow2 with cloud-init, that a template is built from. |
+| `user` | The login a VM is made with. `ahpd` when absent. |
+| `disk` | The size of a VM's disk, as `virsh vol-create-as` reads it. `20G` when absent. |
+| `virsh`, `virtInstall` | The programs and the arguments they start with. `["virsh"]` and `["virt-install"]` when absent. |
+
+A Proxmox profile names no `server` to make its VMs on, because the node is in the `proxmox` option. Its `server` is optional, and names the box that a VM is reached through, for a node whose VM network this host has no route to. That box is not checked, because it runs nothing of the VM's:
+
+```json
+{ "plugins": [{ "name": "@ahpd/computer", "options": {
+  "ssh": { "machines": { "jump": { "destination": "ops@jump" } } },
+  "proxmox": {
+    "url": "https://pve.example.com:8006",
+    "tokenId": "ahpd@pve!ahpd",
+    "secret": { "$secret": "host:proxmox" },
+    "node": "pve",
+    "storage": "local-lvm",
+    "bridge": "vmbr0",
+    "image": "debian-13-cloud",
+    "ca": "/etc/ahpd/pve-root-ca.pem"
+  },
+  "profiles": {
+    "pve": { "title": "A VM on pve", "runtime": "proxmox", "server": "jump", "disposable": true, "sessionFolder": true }
+  }
+} }] }
+```
+
+| `proxmox` | What it says |
+| --- | --- |
+| `url` | The API's address, `https://<node>:8006`. |
+| `tokenId` | The API token's id, `<user>@<realm>!<name>`. |
+| `secret` | The token's secret, best named from the vault as `{ "$secret": "host:proxmox" }`. It is read at each call and never written to a log. |
+| `node` | The node every VM is made on. |
+| `storage` | The storage a template built here is copied onto. |
+| `bridge` | The bridge a VM's network card is on. |
+| `template` | A template VM on the node, with cloud-init and the QEMU guest agent, that every VM is a linked clone of. It must already hold the parts at `/opt/ahpd`. |
+| `image` | A cloud-init template VM on the node, with the QEMU guest agent, that a template is built from. |
+| `user` | The login a VM is made with. `ahpd` when absent. |
+| `ca` | A PEM file on this host that the node's certificate is checked against, for a node with its own certificate authority. |
+
+A Proxmox profile is left out, with a line in the log, when the option does not name `url`, `tokenId`, `secret`, `node`, `storage` and `bridge`. The token needs `PVEVMAdmin` on the node, `PVEDatastoreUser` on the storage and `PVESDNUser` on the bridge's zone. A VM gets its address from DHCP, and the guest agent reports it.
+
+Either runtime refuses a VM when its option names neither `template` nor `image`. With `image`, the runtime builds the template itself, from the parts in [The joined image](#the-joined-image):
+
+1. The template is named `ahpd-template-<hash>`, where the hash is the joined image's hash.
+2. A helper VM boots from the image with this host's key and the packages a container has.
+3. The parts are copied into the helper at `/opt/ahpd`, and cloud-init forgets the helper's instance.
+4. The helper's disk is kept as the template, and the helper is gone.
+
+A change to `versions.json` or to the ahpd part is a new hash, so the next VM builds a new template and backs onto it. Two VMs asked for at once build the template once. An older template is named in the log and kept, because a VM may still back onto it: remove it by hand once none does.
+
+A VM is another host, so every backend of a session in one runs nested, and its login is reached with this host's own key, through the box. A box with an `identity` is left out, as it is for Docker: name the key for its destination in ssh's own configuration instead. A VM takes no bind mount, no copied file, no variable and no state volume, so a profile that needs one of them is refused at create, with what it needs named. Use `state: "host"`, or a Docker profile.
+
+A VM can be held: writing `suspended` to its [state](#state) pauses it where it is, and `running` lets it go on. A suspended VM is not up, so its up-time stretch closes when it is held and a new one opens when it goes on. Its owner pays only for the time it runs. Stopping a VM asks the guest to shut down, and cuts it off when it has not within a minute. Removing one brings its work back first, as [Disposable machines](#disposable-machines) says, then removes the VM and its disk.
+
 ## Disposable machines
 
 A profile that sets `disposable: true` has no machine until a session starts. It is offered in the session's `computer` picker as `disposable:<profile>`, labelled with the profile's title, and the machine is made at session start from the profile, that session's harness needs and, where the profile says so, the session's folder mounted at the same path:
@@ -748,7 +824,7 @@ Sizes are bytes. `cpu.percent` is percent of one core, so it can exceed 100; `co
 
 ## State
 
-`computer://<id>/state` reads `running` or `stopped`. Writing `restarted` is `docker restart`, which also starts a stopped machine. The runtime's finer states (`exited`, `paused`, `created`) are in `status` under `State.Status`.
+`computer://<id>/state` reads `running` or `stopped`, and a VM can also read `suspended`. Writing `restarted` is `docker restart`, which also starts a stopped machine. A VM takes `suspended`, which holds it, and `running`, which lets a suspended VM go on; another machine refuses `suspended`. The runtime's finer states (`exited`, `paused`, `created`) are in `status` under `State.Status`.
 
 ## The channel and its commands
 

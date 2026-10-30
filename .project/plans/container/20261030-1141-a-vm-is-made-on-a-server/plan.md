@@ -118,7 +118,7 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 | [04 - A VM starts, stops, suspends and resumes, and its up time is metered](task-04-lifecycle-and-up-time.md) | done | 03 |
 | [05 - A template is built from versions.json](task-05-a-template-from-versions-json.md) | doing | 03 |
 | [06 - Proxmox makes a machine the same way](task-06-proxmox-makes-a-machine.md) | doing | 04, 05 |
-| [07 - Docs](task-07-docs.md) | todo | 03, 06 |
+| [07 - Docs](task-07-docs.md) | done | 03, 06 |
 
 ## Risks and tradeoffs
 
@@ -129,8 +129,8 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 
 ## Resume state
 
-- **Done so far:** tasks 02 and 04, and the code of tasks 03, 05 and 06. These tasks were tasks 08 to 13 of p8 until 2026-10-30.
-- **Next action:** [task-07-docs.md](task-07-docs.md). The checks by hand of tasks 03 and 05 on dev02 wait on task 01, and task 01 waits on Softov's hand in [pending/vm-01-dev02-libvirt.md](../../../pending/vm-01-dev02-libvirt.md). The check by hand of task 06 waits until Softov names a Proxmox node.
+- **Done so far:** tasks 02, 04 and 07, and the code of tasks 03, 05 and 06. These tasks were tasks 08 to 13 of p8 until 2026-10-30.
+- **Next action:** the PR for the code and the docs. The checks by hand of tasks 03 and 05 on dev02 wait on task 01, and task 01 waits on Softov's hand in [pending/vm-01-dev02-libvirt.md](../../../pending/vm-01-dev02-libvirt.md). The check by hand of task 06 waits until Softov names a Proxmox node.
 - **Open questions:** none.
 - **Watch out for:** p3's `hashOf` is the tag, so a template built before p3 lands has no name. A libvirt on this host could share the folder by virtiofs instead of a clone, which is left open, see [deferred.md](deferred.md).
 

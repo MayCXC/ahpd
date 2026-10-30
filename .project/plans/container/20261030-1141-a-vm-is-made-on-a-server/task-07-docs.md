@@ -1,6 +1,6 @@
 ---
 title: The docs say how a profile makes a VM
-status: todo
+status: done
 depends: [task-03-libvirt-makes-a-machine.md, task-06-proxmox-makes-a-machine.md]
 layer: "docs"
 refs:
@@ -27,3 +27,5 @@ It says how the template is made, and what a VM costs its owner.
 - Every VM option named exists in `optionsSchema`.
 
 ## Resume
+
+Done: the section is "Profiles that make VMs" under "Profiles", and "State" names `suspended`. Every VM option it names is in `optionsSchema`.
