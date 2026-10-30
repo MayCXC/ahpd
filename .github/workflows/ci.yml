@@ -53,12 +53,19 @@ jobs:
       - name: Pack each package
         run: pnpm -r exec pnpm pack --pack-destination ${{ runner.temp }}
 
-  # The same checks on Windows, and a failure here fails the run as one in
-  # `check` does. Every step runs under bash, so this is the same commands as
-  # `check` rather than a second version of them.
-  check-windows:
+  # The same checks on Windows. Every step runs under bash, so this is the same
+  # commands as `check` rather than a second version of them. The tests are split
+  # over three runners, because the whole run takes from 390 s to 590 s on one
+  # as runners vary, and a bound it runs into reports no failures at all.
+  windows:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
+    strategy:
+      # Every shard reports, so one red shard does not hide another.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    name: windows (${{ matrix.shard }}/3)
     steps:
       # Before the checkout: some paths under `.project/plans` are 185
       # characters long, and with the checkout folder in front they pass the 260
@@ -78,25 +85,36 @@ jobs:
       - run: pnpm install --frozen-lockfile
         shell: bash
 
+      # On one shard, because they do not depend on which tests it runs.
       - name: The packages import only what they declare
+        if: matrix.shard == 1
         run: pnpm boundary
         shell: bash
 
       - run: pnpm typecheck
+        if: matrix.shard == 1
         shell: bash
 
-      # Longer than `check`'s bound: the Windows run has never finished inside
-      # 300 s, takes from 390 s to 590 s on the same tree as runners vary, and a
-      # bound it runs into reports no failures at all.
       - name: Tests
-        run: timeout 900 pnpm test:unit
+        run: timeout 300 pnpm test:unit --shard=${{ matrix.shard }}/3
         shell: bash
 
       # Last, because it is the slowest and the only one that writes anything.
       # `check` packs each package after this step and this job does not: what a
       # package would publish is one answer, and Linux's is it.
       - run: pnpm build
+        if: matrix.shard == 1
         shell: bash
+
+  # The check the `main` ruleset requires by this name: green only when every
+  # Windows shard is, and red when one failed, was cancelled or never ran.
+  check-windows:
+    needs: windows
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: test "${{ needs.windows.result }}" = success
 
   # The cases that start real processes and Docker containers: the daemon's
   # command line, the HTTP server, the computer plugin and a nested host. They
