@@ -13,8 +13,11 @@
  * thing kept between turns.
  */
 
-import type { Bag, Connector, ConnectorOwner } from '@ahpd/sdk';
+import type { Bag, CallOutcome, Connector, ConnectorOwner } from '@ahpd/sdk';
 import { sameOwnerOrHost } from '@ahpd/sdk';
+
+/** One call of a login as its connector's health keeps it; the host stamps the time. */
+export type CallNote = Omit<CallOutcome, 'at'>;
 
 /** The adapter whose connectors are Claude logins. */
 export const LOGIN_ADAPTER = 'claude-login';
@@ -141,6 +144,9 @@ export class OpenLogins {
   /** What a failure of a login calls, with its id and the CLI's words. */
   onFailure: ((id: string, why: string) => void) | undefined;
 
+  /** What a call of a login calls, with its id and how the call went. */
+  onCall: ((id: string, outcome: CallNote) => void) | undefined;
+
   constructor(now: () => number = Date.now) {
     this.rests = new Rests(now);
   }
@@ -189,6 +195,17 @@ export class OpenLogins {
   /** Say a failure of a login, which the plugin logs and has the host check. */
   failed(id: string, why: string): void {
     this.onFailure?.(id, why);
+  }
+
+  /**
+   * Say how one call of an open login went, which the plugin has the host keep
+   * in the connector's health, as the model proxy keeps each call of an entry.
+   *
+   * A call of a token the login no longer holds was the old token's, as a rest
+   * for it is, and says nothing of the login.
+   */
+  called(id: string, token: string, outcome: CallNote): void {
+    if (this.open.get(id)?.token === token) this.onCall?.(id, outcome);
   }
 }
 
