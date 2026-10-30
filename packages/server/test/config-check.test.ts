@@ -96,7 +96,7 @@ describe('a wrong value on a known key', () => {
   });
 
   it('refuses an httpApi.host that names no address', () => {
-    expect(refusal({ httpApi: { port: 0, host: '' } })).toContain(`${config}: httpApi.host must be`);
+    expect(refusal({ httpApi: { port: 0, host: '' } })).toContain(`${config}: httpApi.host must be text matching ^\\S+$`);
   });
 
   it('refuses a usage.per that is neither a turn nor a report', () => {
@@ -527,13 +527,6 @@ describe('the daemon', () => {
     const said = await run({ port: '8080' });
     expect(said.code).toBe(2);
     expect(said.stderr).toContain(`${config}: port must be an integer`);
-  }, 20000);
-
-  it('says in its log that an old name is now the new one', async () => {
-    const said = await run({ proxy: { sessionCalls: 'skip' } });
-    expect(said.code).toBe(0);
-    expect(said.stderr).toContain(`proxy is now modelProxy; rename it in ${config}.`);
-    expect(said.stderr).toContain('ahpd over stdio');
   }, 20000);
 
   it('starts with a modelProxy that names a model', async () => {

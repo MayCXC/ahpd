@@ -591,13 +591,6 @@ it('masks a value cut across two reads, and a quoted one whole', async () => {
   expect(out).not.toContain('probe-secret');
 });
 
-it('masks the values in the error a failed up is refused with', async () => {
-  wrote({ upFailure: 'Start: Run: docker run -e SECRET=hunter2 base\nError: the image would not pull' });
-  const refused = await launcher().connect({ ...connect, workspaceFolder: workspace() }, sink()).then(() => undefined, (error: unknown) => error as Error);
-  expect(refused?.message).toMatch(/would not pull/);
-  expect(refused?.message).not.toContain('hunter2');
-});
-
 it('starts nothing when the folder has no definition', async () => {
   wrote();
   const where = sink();

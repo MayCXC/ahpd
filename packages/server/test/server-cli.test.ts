@@ -281,12 +281,6 @@ describe('the flags of a run', () => {
     expect(said.stderr).toContain('--resource must be an https URL');
   }, 20000);
 
-  it('refuses an httpApi.host that names no address', async () => {
-    const said = await cli(['--config-file', config, '--connection-token', 't'], { config: { httpApi: { port: 0, host: '' } } });
-    expect(said.code).toBe(2);
-    expect(said.stderr).toContain(`${config}: httpApi.host must be text matching ^\\S+$`);
-  }, 20000);
-
   it('refuses an httpApi.host with space around the address', async () => {
     const said = await cli(['--config-file', config, '--connection-token', 't'], { config: { httpApi: { port: 0, host: ' 127.0.0.1 ' } } });
     expect(said.code).toBe(2);

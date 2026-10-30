@@ -5,9 +5,11 @@ import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
 import { gitBranches } from '../src/repo/git.js';
+import { gitChanges } from '../src/sessions/changes.js';
 
 /*
- * The git that `gitBranches` runs in the background takes no optional lock.
+ * The git that `gitBranches` and `gitChanges` run in the background takes no
+ * optional lock.
  *
  * `git status` refreshes the index when it can, and doing so takes
  * `.git/index.lock`; a person's `git add` at that moment is then refused with
@@ -56,7 +58,14 @@ const recording = (): string => {
   return log;
 };
 
-// The `git` this case puts first on `PATH` is a `#!/bin/sh` script, and it is
+/** Each run the wrapper logged, which must have run `status` and given each one `0`. */
+const lockless = (log: string): void => {
+  const runs = readFileSync(log, 'utf8').trim().split('\n').filter((one) => one !== '');
+  expect(runs.some((one) => one.includes(' status '))).toBe(true);
+  expect(runs.filter((one) => !one.startsWith('0 '))).toEqual([]);
+};
+
+// The `git` these cases put first on `PATH` is a `#!/bin/sh` script, and it is
 // found with `sh -c`: a POSIX shell outside a terminal, which Windows has not.
 it.skipIf(!posix)('runs every git read of a directory with GIT_OPTIONAL_LOCKS=0', async () => {
   const dir = repository();
@@ -64,7 +73,18 @@ it.skipIf(!posix)('runs every git read of a directory with GIT_OPTIONAL_LOCKS=0'
 
   await gitBranches().refresh?.(dir);
 
-  const runs = readFileSync(log, 'utf8').trim().split('\n').filter((one) => one !== '');
-  expect(runs.some((one) => one.includes(' status '))).toBe(true);
-  expect(runs.filter((one) => !one.startsWith('0 '))).toEqual([]);
+  lockless(log);
+});
+
+it.skipIf(!posix)('runs every background git read of changes with GIT_OPTIONAL_LOCKS=0', async () => {
+  const dir = repository();
+  const log = recording();
+  const source = gitChanges();
+
+  await source.refresh?.(dir);
+  const stop = source.watch?.(dir, () => {});
+  await stop?.ready;
+  stop?.();
+
+  lockless(log);
 });

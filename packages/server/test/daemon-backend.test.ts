@@ -59,7 +59,7 @@ const run = async (config: Record<string, unknown>, named = true, written = true
   });
 };
 
-it('starts when nothing contributed a backend, and names the fix', async () => {
+it('starts when nothing contributed a backend, and names the fix with the file it was started with', async () => {
   const { code, said, path } = await run({});
   // Announced, then ended the way a host on stdio ends: the peer left.
   expect(said).toContain('ahpd over stdio');
@@ -74,7 +74,10 @@ it('starts when nothing contributed a backend, and names the fix', async () => {
   // one under the configuration directory.
   expect(said).toContain('"plugins"');
   expect(said).toContain(path);
-  expect(said).toContain('@ahpd/agent-claude');
+  // The command names the file the daemon was started with: without the flag
+  // it would name the plugin in a file this daemon does not read.
+  expect(said).toContain(`ahpd plugin install @ahpd/agent-claude --config-file ${path}`);
+  expect(said).toContain('npm i in');
 }, 60000);
 
 it('names the command that installs Claude Code, and npm i as the other way', async () => {
@@ -86,15 +89,6 @@ it('names the command that installs Claude Code, and npm i as the other way', as
   expect(said).toContain('"plugins"');
   expect(said).toContain(path);
   expect(said).toContain(`npm i in ${join(home, 'ahpd')}`);
-}, 60000);
-
-it('names the command with the file the daemon was started with', async () => {
-  const { code, said, path } = await run({});
-  expect(code).toBe(0);
-  // Without the flag the command would name the plugin in a file this daemon
-  // does not read.
-  expect(said).toContain(`ahpd plugin install @ahpd/agent-claude --config-file ${path}`);
-  expect(said).toContain('npm i in');
 }, 60000);
 
 it('asks nothing when there is no configuration file and no terminal, and starts', async () => {

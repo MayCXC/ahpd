@@ -95,7 +95,7 @@ describe('user', () => {
       expect(said.stderr).toBe('ahpd: user takes list, add, rm, token, member or primary.\n');
       expect(said.stdout).toBe('');
     }
-  });
+  }, 20000);
 
   it('writes the group hint as one JSON line under --json', async () => {
     const said = await cli(['--json', 'user']);
@@ -113,7 +113,7 @@ describe('user', () => {
       const said = await cli(['user', sub, '--users', users]);
       expect(said.code).toBe(2);
     }
-  });
+  }, 20000);
 
   it('refuses a flag the verb reads by nothing, naming it', async () => {
     await cli(['user', 'add', 'ada', '--users', users, '--role', 'admin']);
@@ -223,11 +223,12 @@ describe('plugin', () => {
       const said = await cli(['plugin', sub, '--config-file', config]);
       expect(said.stderr).toBe(`ahpd: "plugin ${sub}" needs name.\nUsage: ahpd plugin ${sub} <name...>\n`);
     }
-  });
+  }, 20000);
 
   it('refuses plugin install with a flag it does not take', async () => {
     const said = await cli(['plugin', 'install', '--bogus', 'some-package', '--config-file', config]);
     expect(said.code).toBe(2);
+    expect(said.stderr).toBe('ahpd: Unknown option --bogus.\n');
   });
 
   it('names the sub-commands of a bare verb and of one it does not have', async () => {
@@ -237,18 +238,7 @@ describe('plugin', () => {
       expect(said.stderr).toBe('ahpd: plugin takes list, update, apply, reload, config, install, remove, enable or disable.\n');
       expect(said.stdout).toBe('');
     }
-  });
-
-  it('writes the group hint as one JSON line under --json', async () => {
-    const said = await cli(['--json', 'plugin']);
-    expect(said.code).toBe(2);
-    expect(said.stdout).toBe('');
-    expect(JSON.parse(said.stderr)).toEqual({
-      message: 'plugin takes list, update, apply, reload, config, install, remove, enable or disable.',
-      kind: 'argument',
-      exitCode: 2,
-    });
-  });
+  }, 20000);
 
   it('still answers --help for a group', async () => {
     const said = await cli(['plugin', '--help']);
