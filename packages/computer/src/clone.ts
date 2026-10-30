@@ -110,8 +110,8 @@ export const originOf = (root: string): string | undefined => {
 /**
  * The https address of a git remote written for ssh, or the address as given.
  *
- * A token is a password, which git sends over https alone, so a machine that
- * fetches with one fetches an ssh origin by its https form: `git@host:path`
+ * A machine holds no ssh key, and a token is a password git sends over https
+ * alone, so a machine fetches an ssh origin by its https form: `git@host:path`
  * and `ssh://git@host/path` both become `https://host/path`. Any other
  * address is answered unchanged.
  */

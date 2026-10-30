@@ -2173,8 +2173,8 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
    * the machine, and answer the commit it is at.
    *
    * The `clone` route: the box reaches the remote itself, so nothing of this
-   * host's history is sent. With a credential, an ssh origin is fetched by its
-   * https form, which is the address the checkout's `origin` names. A branch `origin` does not have is refused, since
+   * host's history is sent. An ssh origin is fetched by its https form, since
+   * the machine holds no ssh key, and that is the address its `origin` names. A branch `origin` does not have is refused, since
    * the machine could only be seeded from a commit the session is not on. The
    * credential, where the profile names one, reaches the two commands that
    * talk to `origin`, by name in their environment and read by an inline
@@ -2192,8 +2192,8 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     if (named === undefined) {
       throw new Error(`${spec.name} fetches its code from origin, and ${root} has no origin remote; code: "bundle" sends it from this host`);
     }
-    // A credential is a token, which git sends over https alone.
-    const origin = spec.gitCredential === undefined ? named : httpsOf(named);
+    // The machine has no ssh key, so an ssh origin is fetched over https.
+    const origin = httpsOf(named);
     if (branch === undefined) {
       throw new Error(`${spec.name} fetches the session's branch from origin, and ${root} is on no branch; code: "bundle" sends the commit from this host`);
     }

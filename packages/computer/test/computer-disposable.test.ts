@@ -2678,6 +2678,22 @@ it('refuses a clone whose credential is not in the vault, naming it, and a bundl
   expect(held(farOf(state)).machines).toHaveLength(1);
 }, FAR_CASE);
 
+it('fetches an ssh origin by its https form with no credential, for a public remote', async () => {
+  const dir = realpathSync(temp());
+  const state = join(dir, 'docker.json');
+  const { repo } = withOrigin(dir);
+
+  const loaded = await withFarRepository(state, [], { claude: { ...FAR_PROFILE, code: 'clone' } });
+  const { open } = await room(loaded);
+  await open('ahp-session:/one', { computer: 'disposable:claude' }, repo);
+
+  const commands = held(farOf(state)).commands ?? [];
+  expect(commands.some((one) => one.command.join(' ').includes('remote.origin.url https://git.example.com/team/repo.git'))).toBe(true);
+  const fetch = commands.find((one) => one.command.includes('fetch') && one.command.includes('origin'));
+  expect(fetch?.command.some((word) => word.startsWith('credential.helper='))).toBe(false);
+  expect(fetch?.env.AHPD_GIT_CREDENTIAL).toBeUndefined();
+}, FAR_CASE);
+
 it('leaves out a profile whose gitCredential is written in clear, with a line, and loads the others', async () => {
   const dir = realpathSync(temp());
   const state = join(dir, 'docker.json');
