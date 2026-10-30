@@ -530,6 +530,25 @@ describe('the fields a client reads by name', () => {
     expect(part?.origin).toBeUndefined();
   });
 
+  it('echoes the clientSeq of a turn that switched the model before it began', async () => {
+    const { client, peer: p, uri, chatUri } = await running();
+    client.handle({
+      method: 'dispatchAction',
+      params: {
+        channel: uri,
+        clientSeq: 42,
+        action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi', model: { id: 'sonnet' } } },
+      },
+    });
+    await settle();
+
+    // The CLI is asked for the model first and the turn is said once it has
+    // it, after the dispatch was applied: still this client's own turn.
+    expect(sdk.modelsSet).toContain('sonnet');
+    const started = actions(p, chatUri).find((e) => e.action.type === 'chat/turnStarted');
+    expect(started?.origin).toEqual({ clientId: 'probe', clientSeq: 42 });
+  });
+
   it('refuses a dispatch out loud, to the client that sent it and nobody else', async () => {
     const host = serving('/home/softov');
     const mine = peer();

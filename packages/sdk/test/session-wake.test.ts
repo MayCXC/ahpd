@@ -209,6 +209,24 @@ it('wakes a sleeping session on a prompt and answers with the earlier conversati
   expect(turns.map((turn) => (turn.message as Bag).text)).toEqual(['hello one', 'again']);
 });
 
+it('gives the turn that woke a session the origin of the prompt that woke it', async () => {
+  const counts: Counts = { starts: [], closes: 0 };
+  const { open, sleep, prompt, read, active, turnsOf, peer: p } = await serving(counts);
+  const one = await open('one');
+  await sleep(one);
+  // Watched again before the prompt, so the echo has somewhere to go, and
+  // still asleep: reading a chat does not wake it.
+  await read(one.chat);
+  expect(await active()).toBe(0);
+  p.notes.length = 0;
+
+  await prompt(one.chat, 'again');
+  await until(async () => (await turnsOf(one.chat)).length === 2, 'the woken turn');
+  const started = p.notes.find((note) => note.method === 'action' && (note.action as Bag).type === 'chat/turnStarted');
+  expect((started?.action as Bag).turnId).toBe('t2');
+  expect(started?.origin).toEqual({ clientId: 'window', clientSeq: 2 });
+});
+
 it('wakes a pinned session for an automation run and makes no new session', async () => {
   const counts: Counts = { starts: [], closes: 0 };
   const store = memoryAutomations();

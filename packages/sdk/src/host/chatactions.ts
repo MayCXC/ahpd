@@ -1,11 +1,10 @@
 import { idOf, Status } from '../sessions/catalog.js';
 import { localPath } from '../resources/fileuri.js';
 import { filesOf, needsWriting, snapshot } from './attachments.js';
-import { chatIdFor, chatUriFor, isRootChannel, MARKS, ROOT, toolCallOfSubagentChat, WORKER_ACTIONS } from './channels.js';
+import { chatIdFor, isRootChannel, MARKS, ROOT, toolCallOfSubagentChat, WORKER_ACTIONS } from './channels.js';
 import { HOSTS_OWN } from './common.js';
 import { autoApproved, requireTrust } from './trust.js';
 import type { Bag } from '../types/common.js';
-import type { Session } from '../types/session.js';
 import type { ClientCallAnswer } from '../tools/clientcalls.js';
 import type { Origin } from './state.js';
 import type { ConnectionContext, HostContext } from './context.js';
@@ -276,8 +275,8 @@ export function chatAction(
    * connection's later dispatches wait behind it: a client that sends a
    * message and then a stop means that order. The settled action goes back
    * through `conn.applyNow`, which applies it as this client's own dispatch -
-   * so everything the turn causes still carries the `clientSeq` the client
-   * sent, exactly as if the message had arrived naming a file.
+   * so its echo carries the `clientSeq` the client sent, exactly as if the
+   * message had arrived naming a file.
    *
    * A message with nothing to write is applied here and now, in the tick it
    * arrived in, which is every message that carries no attachment.
@@ -379,57 +378,32 @@ export function chatAction(
    * from its transcript, and saying something is what makes it worth
    * a subprocess. Resumed rather than replayed - the agent gets the
    * context it built before, not a transcript it has been shown.
+   *
+   * Woken for it, and the turn applied again as this client's dispatch to
+   * the session that is live, the way any other action on a sleeping
+   * session is: the turn is begun on its chat by the road every turn takes,
+   * and its echo carries the `clientSeq` the client sent. Held awake from
+   * the wake until the turn has been applied. The wait is returned, so this
+   * connection's later dispatches go behind it.
    */
   if (!held && type === 'chat/turnStarted') {
     // The session the chat belongs to, which is not the chat's own name:
     // a chat URI carries its session rather than being derived from it.
     const uri = sessionFor(channel);
-    // Held awake from the wake until the turn has begun or been refused.
     const release = hold(uri);
-    void (async () => {
-      let woken: { uri: string; chat: Session };
-      try { woken = await wake(uri, channel, connection); }
-      catch (error) {
-        release();
-        refuse(connection.peer, channel, action, origin, error instanceof Error ? error.message : String(error));
-        return;
-      }
-      const named = woken.uri;
-      const provider = sessions.get(named)?.agent.provider ?? owners.get(named)?.provider ?? '';
-      // The chat the turn was sent to, which is the one it is answered on: a
-      // client talking to a session's second chat is not talking to its first.
-      const talking = woken.chat;
-      const answerOn = byChat.has(channel) ? channel : chatUriFor(named);
-      const message = (typeof action.message === 'object' && action.message !== null
-        ? action.message
-        : {}) as Record<string, unknown>;
-      void fire({
-        type: 'message',
-        session: named,
-        chat: answerOn,
-        turn: String(action.turnId ?? ''),
-        text: String(message.text ?? ''),
-      });
-      let refused: string | undefined;
-      // What the attachments became, before anything is started: a chat
-      // attachment whose transcript cannot be handed over refuses the message
-      // rather than reaching the backend as a promise this host cannot keep.
-      const attached = messageAttachments(message, connection);
-      if (attached.refusal !== undefined) {
-        refused = attached.refusal;
-        release();
-      } else {
-        try {
-          refused = await beginOrRun(talking, provider, String(action.turnId ?? ''), String(message.text ?? ''), modelIn(message.model), messageFrom(message), connection, undefined, attached.attachments);
-        } catch (error) {
-          refused = error instanceof Error ? error.message : String(error);
-        } finally {
-          release();
+    return conn.bounded(wake(uri, channel, connection), `${channel} waking`).then(
+      () => {
+        if (!connections.has(connection)) return;
+        if (!byChat.has(channel) && !sessions.has(channel)) {
+          no(`${channel} is not a chat of ${uri}`);
+          return;
         }
-      }
-      if (refused !== undefined) refuse(connection.peer, channel, action, origin, refused);
-    })();
-    return;
+        return conn.applyNow(params, origin);
+      },
+      (error: unknown) => {
+        refuse(connection.peer, channel, action, origin, error instanceof Error ? error.message : String(error));
+      },
+    ).finally(release);
   }
   const session = held;
   /*
@@ -551,6 +525,8 @@ export function chatAction(
         refuse(connection.peer, channel, action, origin, attached.refusal);
         break;
       }
+      // Said back by the backend, now or once it is ready to begin.
+      ctx.owe('chat/turnStarted', turnId, origin);
       beginTurn(
         beginOrRun(live, provider, turnId, text, modelIn(message.model), messageFrom(message), connection, undefined, attached.attachments),
         (why) => refuse(connection.peer, channel, action, origin, why),
@@ -1136,6 +1112,9 @@ export function chatAction(
           echoTo(connection.peer, channel, action, origin);
           break;
         }
+        // Said back by the backend once the turn has let go, under the turn
+        // it stopped whether or not the client named it.
+        ctx.owe('chat/turnCancelled', String(current.id ?? ''), origin);
         session.cancel(named);
         break;
       }
@@ -1149,6 +1128,7 @@ export function chatAction(
         no(`Nothing is running on ${session.chatUri} to stop`);
         break;
       }
+      ctx.owe('chat/turnCancelled', String(current.id ?? ''), origin);
       session.cancel(String(current.id ?? ''));
       break;
     }
@@ -1531,7 +1511,7 @@ export function chatAction(
           await session.close('stopping');
           const failed = own === undefined || own === '' ? undefined : await ctx.deletedChat(own, agent, ctx.dirOf(uri));
           if (failed === undefined) {
-            dispatch(chatUri, action);
+            dispatch(chatUri, action, origin);
             ctx.forgetTurnOutputs(uri, chatUri, all.slice(kept.length) as Bag[]);
             ctx.forgetLocalTurns(uri, chatUri, all.slice(kept.length) as Bag[]);
           }

@@ -391,7 +391,7 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
          * sent them, so a value the port holds back is not carried to the
          * second admin by the echo.
          */
-        dispatch(ROOT, { ...action, config: echoConfig });
+        dispatch(ROOT, { ...action, config: echoConfig }, origin);
       };
       /*
        * The daemon's keys, which are not this host's to keep.
