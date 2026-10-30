@@ -1,12 +1,14 @@
 ---
 title: Proxmox makes a machine the same way
-status: todo
+status: dropped
 depends: [task-11-lifecycle-and-up-time.md, task-12-a-template-from-versions-json.md]
 layer: "computer"
 refs:
   - https://pve.proxmox.com/pve-docs/api-viewer/ - the API calls below
   - "[code://packages/computer/src/plugin.ts#L84-L91](../../../../packages/computer/src/plugin.ts#L84-L91) - `needValuesOf`; `secretAtUse` is in the schema, the shape for the token secret"
 ---
+
+This task moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30.
 
 ## Objective
 

@@ -1,11 +1,13 @@
 ---
 title: A machine with an address is reached by ssh, with this host's own key
-status: todo
+status: dropped
 depends: []
 layer: "computer"
 refs:
   - "[code://packages/computer/src/owners.ts](../../../../packages/computer/src/owners.ts) - a file this plugin keeps in `host.configDir`, the place for the key"
 ---
+
+This task moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30.
 
 ## Objective
 

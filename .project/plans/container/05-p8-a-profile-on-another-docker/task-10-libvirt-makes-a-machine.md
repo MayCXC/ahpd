@@ -1,12 +1,14 @@
 ---
 title: libvirt makes a machine from a template, and destroys it
-status: todo
+status: dropped
 depends: [task-03-the-code-arrives-by-clone.md, task-08-dev02-runs-libvirt.md, task-09-an-address-is-reached-by-ssh.md]
 layer: "computer"
 refs:
   - "[code://packages/computer/src/runtime.ts#L3174-L3498](../../../../packages/computer/src/runtime.ts#L3174-L3498) - docker's `run`, the spec it reads"
   - "[code://packages/computer/src/runtime.ts#L3008-L3066](../../../../packages/computer/src/runtime.ts#L3008-L3066) - docker's `list` and `inspect`, the rows to answer"
 ---
+
+This task moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30.
 
 ## Objective
 

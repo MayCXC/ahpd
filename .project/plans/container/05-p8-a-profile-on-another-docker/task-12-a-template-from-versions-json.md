@@ -1,11 +1,13 @@
 ---
 title: A VM template is built from versions.json and rebuilt when it moves
-status: todo
+status: dropped
 depends: [task-10-libvirt-makes-a-machine.md]
 layer: "computer"
 refs:
   - "[code://.project/plans/container/05-p3-parts-are-built-from-one-versions-file/plan.md](../05-p3-parts-are-built-from-one-versions-file/plan.md) - `versions.json`, `hashOf` and `ahpd-agents:<hash>`"
 ---
+
+This task moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30.
 
 ## Objective
 

@@ -1,11 +1,13 @@
 ---
 title: dev02 runs libvirt and qemu
-status: todo
+status: dropped
 depends: []
 layer: "dev02 (by hand)"
 refs:
   - https://libvirt.org/manpages/virsh.html - the commands the runtime uses
 ---
+
+This task moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30.
 
 ## Objective
 

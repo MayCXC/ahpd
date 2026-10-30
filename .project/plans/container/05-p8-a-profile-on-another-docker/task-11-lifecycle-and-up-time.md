@@ -1,6 +1,6 @@
 ---
 title: A VM starts, stops, suspends and resumes, and its up time is metered
-status: todo
+status: dropped
 depends: [task-10-libvirt-makes-a-machine.md]
 layer: "computer"
 refs:
@@ -9,6 +9,8 @@ refs:
   - "[code://packages/computer/src/plugin.ts#L633-L644](../../../../packages/computer/src/plugin.ts#L633-L644) - `claimOf`, which must read a VM's owner from its metadata"
   - "[code://packages/computer/src/plugin.ts#L785-L911](../../../../packages/computer/src/plugin.ts#L785-L911) - `made`"
 ---
+
+This task moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30.
 
 ## Objective
 
