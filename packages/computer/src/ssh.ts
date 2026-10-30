@@ -14,6 +14,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
 import type { Spawn, SpawnOptions } from '@ahpd/sdk';
 import type { ComputerRuntime, ExecResult, Machine, MachineStats, RuntimeCapabilities } from './runtime.js';
 import { checkServer, SERVER_CHECK } from './servercheck.js';
@@ -147,7 +148,8 @@ export const machinesOf = (value: unknown): Record<string, SshMachine> | undefin
   return Object.keys(held).length === 0 ? undefined : held;
 };
 
-interface Ran {
+/** What one `ssh` process printed, and how it ended. */
+export interface Ran {
   code: number;
   stdout: string;
   stderr: string;
@@ -186,9 +188,9 @@ const lastLine = (said: string): string => {
  * and a key of their own, so the daemon's environment is what an ssh already
  * works with, and the option is the one place an extra variable is said.
  */
-const ran = (options: SshProgram, args: string[], timeout: number, input?: string): Promise<Ran> => new Promise((resolve, reject) => {
+const ran = (options: SshProgram, args: string[], timeout: number, input?: string | Uint8Array): Promise<Ran> => new Promise((resolve, reject) => {
   const child = spawn(options.command ?? 'ssh', [...(options.args ?? []), ...args], {
-    // Stdin only for a script sent to the box's `sh`: anything else has
+    // Stdin only for a script or a file sent to the box: anything else has
     // nothing to read, and an open pipe would be one it waits on.
     stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
     env: { ...process.env, ...(options.env ?? {}) },
@@ -221,6 +223,45 @@ const ran = (options: SshProgram, args: string[], timeout: number, input?: strin
   });
 });
 
+/**
+ * One `ssh` process whose stdout lands in a file, byte for byte.
+ *
+ * A bundle on a pipe is a pack, holding bytes that are not UTF-8, so it is
+ * never read as text: only stderr is. The write is waited for as well as the
+ * process, so the file is whole when this answers.
+ */
+const poured = (options: SshProgram, args: string[], timeout: number, path: string): Promise<{ code: number; stderr: string }> => new Promise((resolve, reject) => {
+  const child = spawn(options.command ?? 'ssh', [...(options.args ?? []), ...args], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, ...(options.env ?? {}) },
+    windowsHide: true,
+  });
+  let stderr = '';
+  const timer = setTimeout(() => { child.kill('SIGKILL'); }, timeout);
+  (timer as { unref?: () => void }).unref?.();
+  child.stderr?.setEncoding('utf8');
+  child.stderr?.on('data', (chunk: string) => { stderr += chunk; });
+  const out = createWriteStream(path, { mode: 0o600 });
+  if (child.stdout === null) out.end();
+  else child.stdout.pipe(out);
+  const ended = new Promise<number>((done, failed) => {
+    child.on('error', failed);
+    child.on('close', (code) => { clearTimeout(timer); done(code ?? 0); });
+  });
+  const written = new Promise<void>((done, failed) => {
+    out.on('error', failed);
+    out.on('close', () => { done(); });
+  });
+  Promise.all([ended, written]).then(([code]) => { resolve({ code, stderr }); }, reject);
+});
+
+/**
+ * How long a command that moves a repository is given: a bundle sent to a
+ * machine, or one read back from it. A connect timeout says nothing about how
+ * long a large history takes on the wire.
+ */
+const TRANSFER_MS = 10 * 60_000;
+
 /** How the `ssh` program is run, whichever box it reaches. */
 export type SshProgram = Pick<SshOptions, 'command' | 'args' | 'env' | 'connectTimeout'>;
 
@@ -241,6 +282,15 @@ export interface SshReach {
   /** The program and arguments that run one command there. */
   how(asked: SpawnOptions): Spawn;
   exec(command: string[], env?: Record<string, string>): Promise<ExecResult>;
+  /**
+   * One command, with its stdout and stderr apart and `input` on its stdin.
+   *
+   * Given as long as a transfer, since it is what sends a bundle in and runs
+   * the fetch that reads it.
+   */
+  ran(command: string[], input?: Uint8Array): Promise<Ran>;
+  /** One command, with its stdout landing in `path` byte for byte. */
+  pour(command: string[], path: string): Promise<{ code: number; stderr: string }>;
   stats(): Promise<MachineStats | undefined>;
   /** The server check, sent to the destination's `sh`; `id` names it in a refusal. */
   check(id: string): Promise<ServerReport>;
@@ -324,6 +374,10 @@ export const sshReach = (program: SshProgram, target: SshTarget): SshReach => {
       // working, and its exit code is what the caller asked for.
       return { output: `${held.stdout}${held.stderr}`.trim(), code: held.code };
     },
+
+    ran: (command, input) => ran(program, argv(remote(command)), TRANSFER_MS, input),
+
+    pour: (command, path) => poured(program, argv(remote(command)), TRANSFER_MS, path),
 
     /**
      * What the box itself is using, read from its own `/proc`.

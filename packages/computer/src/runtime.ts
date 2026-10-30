@@ -14,7 +14,7 @@ import { cliMountOf, cliVolumeOf, copyOf, gitVolumeOf, guardFor, guardedMounts, 
 import type { GitGuard, GitMounts, SessionTree } from './gitdir.js';
 import { codeRouteOf } from './clone.js';
 import type { CodeRoute } from './clone.js';
-import { bringBack, bundledInto, fetchedInto, followOfCopy, hostGit, keepUncommitted, movesOver } from './machinegit.js';
+import { bringBack, bundledInto, checkedOut, fetchedInto, followOfCopy, hostGit, keepUncommitted, movesOver } from './machinegit.js';
 import type { FarSeed, MachineGit, Ran } from './machinegit.js';
 import { absoluteOnHost, mountParts } from './manifest.js';
 import { archiveOf, FILLED_MARKER, firstFileOf, IMAGE_PATH, MACHINE_PARTS, once, partsLabel, partsSaid, pathWith, volumeOf } from './parts.js';
@@ -2201,31 +2201,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
         ? fetchedInto(reached, root, at, seed.branch)
         : bundledInto(reached, root, at));
       const commit = objects === undefined ? await far() : seed.commit;
-      // The identity a commit needs, and nothing else of the host's config.
-      if (seed.name !== undefined) await asUser(['git', ...own, 'config', 'user.name', seed.name]);
-      if (seed.email !== undefined) await asUser(['git', ...own, 'config', 'user.email', seed.email]);
-      // How the host's git reads the tree's files, so the same files are clean
-      // in here too: a Windows folder is `0777` in the machine and CRLF on disk.
-      // Before the index is made, which reads the files the way these say.
-      if (seed.filemode !== undefined) await asUser(['git', ...own, 'config', 'core.filemode', seed.filemode]);
-      if (seed.autocrlf !== undefined) await asUser(['git', ...own, 'config', 'core.autocrlf', seed.autocrlf]);
-      // The branch the tree is on, at the commit it is at; a tree on no branch
-      // gives a machine on none, whose work is fetched to the hidden ref only.
-      if (seed.branch !== undefined) await asUser(['git', ...own, 'symbolic-ref', 'HEAD', `refs/heads/${seed.branch}`]);
-      if (commit !== undefined) {
-        await asUser(seed.branch === undefined
-          ? ['git', ...own, 'update-ref', '--no-deref', 'HEAD', commit]
-          : ['git', ...own, 'update-ref', `refs/heads/${seed.branch}`, commit]);
-        /*
-         * The index that commit names, so git in the machine is clean before
-         * the agent has touched anything - and under `copy` the tree as well,
-         * since the working tree in there is the volume's own and holds
-         * nothing yet: the checkout is the seed. Nothing of the host's is
-         * written either way, because under `shared` the tree is the host's
-         * own and only the index moves.
-         */
-        await asUser(['git', ...own, 'reset', ...(git.copy === true ? ['--hard'] : []), '-q']);
-      }
+      await checkedOut(asUser, own, seed, commit, git.copy === true);
     }
     catch (error) {
       await ran(options, ['rm', '-f', container]);

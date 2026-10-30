@@ -1,6 +1,6 @@
 ---
 title: libvirt makes a machine from a template, and destroys it
-status: todo
+status: doing
 depends: [task-01-dev02s-libvirt-has-a-pool.md, task-02-an-address-is-reached-by-ssh.md]
 layer: "computer"
 refs:
@@ -38,3 +38,16 @@ refs:
 - By hand on dev02: a disposable session in a VM answers a turn.
 
 ## Resume
+
+- Code and tests done on 2026-10-30. The check by hand on dev02 waits on task 01.
+- `libvirt.ts` answers every verb of `ComputerRuntime`. A VM keeps the labels of a container in its `<metadata>`. `inspect` answers a record in Docker's shape, so each reader of a machine record reads a VM unchanged.
+- The plugin builds one `libvirt` runtime for all profiles with `runtime: "libvirt"`. A create checks `kvm`, `libvirt` and `libvirtAccess` first, and builds no parts: the template carries them.
+- A profile with `runtime: "libvirt"` and no `server` is left out with a line. So is one whose box has an `identity`, because `-J` reaches the box with the person's own ssh configuration.
+- The code comes in by the profile's `code` route, as on another Docker. `checkedOut` in `machinegit.ts` now does the checkout for Docker and for a VM.
+- The cloud-init `runcmd` makes the tree's folder and gives it to the VM's login, so the seed can write there.
+- Departure: a file goes into a VM on the stdin of `ssh` with `cat >`, not with `scp`. `SshReach` has `ran` with input and `pour` for this.
+- Departure: a VM that does not come up in time gives the last answer of the wait, not its console lines. See [deferred.md](deferred.md).
+- Departure: a spec with copies, env or attachments is refused on a VM with a line. See [deferred.md](deferred.md).
+- The ssh fixture runs commands on this host, so the git seed in a VM is not tested here. The run on dev02 checks it.
+- Not yet known: whether `virt-install --cloud-init` works over `qemu+ssh`. The run on dev02 checks it.
+

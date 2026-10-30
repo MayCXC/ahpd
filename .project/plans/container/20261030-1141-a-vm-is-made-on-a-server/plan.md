@@ -86,10 +86,13 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 | For now a template copies `/opt/ahpd` out of `ahpd-agents:<hash>` into a cloud image booted once with cloud-init, shuts it down and keeps its disk as `ahpd-template-<hash>`; `ensureTemplate` is the one place this is done | Softov, 2026-10-03, asked "how does a template get the parts?": "as proposed" | 05, 06 |
 | For now a suspended VM is not up: its stretch closes at suspend and a new one opens at resume | Softov, 2026-10-03, asked "does `suspend` keep the up-time stretch open?": "as proposed" | 04 |
 | For now a VM's id is `libvirt.<name>` (and `proxmox.<name>`), through p9 task 01's `spellMachineId` and `parseMachineId` | Softov, 2026-10-03, answered in p9: "put runtime.name" | 03, 06 |
+| For now a VM refuses a spec's copies, env and attachments, with a line | (defaulted: nothing writes a file or a variable of this host into a VM yet) | 03 |
+| The pool and the network are `default` when the `libvirt` option names none, and a VM's disk is `20G` | (defaulted: a box with libvirt installed has a `default` pool and network) | 03 |
+| `virsh` and `virt-install` are options that take a program and its first arguments | (defaulted: a test runs them as node scripts, and an operator may use a wrapper) | 03 |
 
 ## Proposed architecture
 
-- **VM options** - `options.libvirt = { uri?, pool, network, template?, user? }`, where `uri` is built from the profile's `server` when absent. `options.proxmox = { url, tokenId, secret (writeOnly), node, storage, bridge, template?, ca? }`. A profile names `runtime`, `server`, `cpus` and `memory`.
+- **VM options** - `options.libvirt = { uri?, pool, network, template?, user?, disk?, virsh?, virtInstall? }`, where `uri` is built from the profile's `server` when absent. `options.proxmox = { url, tokenId, secret (writeOnly), node, storage, bridge, template?, ca? }`. A profile names `runtime`, `server`, `cpus` and `memory`.
 - **VM reach** - a VM is an ssh destination (`ahpd@<address>`), found by `virsh domifaddr` or the Proxmox guest agent. Where the VM's network is private, the reach jumps through the server box. p9's ssh reach answers `how` and `nested`.
 - **VM key** - one key pair this host makes in its configuration directory for the VMs it makes; its public half goes in by cloud-init.
 - **Layer responsibilities** - `@ahpd/computer` only.
@@ -101,7 +104,7 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 | --- | --- | --- |
 | [01 - dev02's libvirt has a pool, a network and an image](task-01-dev02s-libvirt-has-a-pool.md) | todo | - |
 | [02 - A machine with an address is reached by ssh, with this host's own key](task-02-an-address-is-reached-by-ssh.md) | done | - |
-| [03 - libvirt makes a machine from a template, and destroys it](task-03-libvirt-makes-a-machine.md) | todo | 01, 02 |
+| [03 - libvirt makes a machine from a template, and destroys it](task-03-libvirt-makes-a-machine.md) | doing | 01, 02 |
 | [04 - A VM starts, stops, suspends and resumes, and its up time is metered](task-04-lifecycle-and-up-time.md) | todo | 03 |
 | [05 - A template is built from versions.json](task-05-a-template-from-versions-json.md) | todo | 03 |
 | [06 - Proxmox makes a machine the same way](task-06-proxmox-makes-a-machine.md) | todo | 04, 05 |
@@ -116,8 +119,8 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 
 ## Resume state
 
-- **Done so far:** task 02. These tasks were tasks 08 to 13 of p8 until 2026-10-30.
-- **Next action:** [task-03-libvirt-makes-a-machine.md](task-03-libvirt-makes-a-machine.md), with a scripted `virsh` until task 01 is done; task 01 waits on Softov's hand in [pending/vm-01-dev02-libvirt.md](../../../pending/vm-01-dev02-libvirt.md).
+- **Done so far:** task 02, and the code of task 03. These tasks were tasks 08 to 13 of p8 until 2026-10-30.
+- **Next action:** [task-04-lifecycle-and-up-time.md](task-04-lifecycle-and-up-time.md), with the scripted `virsh`. The check by hand of task 03 on dev02 waits on task 01, and task 01 waits on Softov's hand in [pending/vm-01-dev02-libvirt.md](../../../pending/vm-01-dev02-libvirt.md).
 - **Open questions:** none.
 - **Watch out for:** p3's `hashOf` is the tag, so a template built before p3 lands has no name. A libvirt on this host could share the folder by virtiofs instead of a clone, which is left open, see [deferred.md](deferred.md).
 

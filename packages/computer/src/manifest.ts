@@ -61,6 +61,12 @@ export interface Profile {
    */
   server?: string;
   /**
+   * What makes its machines on its `server`: `docker`, the default, a
+   * container on the box's Docker; `libvirt`, a VM on the box's libvirt, as
+   * the plugin's `libvirt` option says.
+   */
+  runtime?: 'docker' | 'libvirt';
+  /**
    * How a machine on another box's Docker is given the session's code:
    * `bundle`, the default, sends a bundle of the tree from this host; `clone`
    * has the machine fetch the session's branch from the tree's `origin`.

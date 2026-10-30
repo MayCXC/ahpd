@@ -19,6 +19,7 @@ import { gitArgv, hostPathOf } from '@ahpd/sdk';
 import type { BroughtBack } from '@ahpd/sdk';
 import { bundleOfTree, httpsOf, originOf, SEED_BUNDLE, SEED_REF } from './clone.js';
 import { seedOf } from './gitdir.js';
+import type { GitSeed } from './gitdir.js';
 
 /** What one command in a machine printed, and what it exited with. */
 export interface Ran {
@@ -109,6 +110,44 @@ export const bundledInto = async (far: FarSeed, root: string, at: string): Promi
     bundle.drop();
     await far.drop(SEED_BUNDLE);
   }
+};
+
+/**
+ * A seeded git directory set at the tree's commit, as the host's git reads it.
+ *
+ * `own` is the `--git-dir` and `--work-tree` pair, and `must` runs one command
+ * in the machine as its user. `hard` is a copy of the tree, whose working tree
+ * is the machine's own and holds nothing yet: the checkout is the seed.
+ */
+export const checkedOut = async (
+  must: (command: string[]) => Promise<string>,
+  own: string[],
+  seed: GitSeed,
+  commit: string | undefined,
+  hard: boolean,
+): Promise<void> => {
+  // The identity a commit needs, and nothing else of the host's config.
+  if (seed.name !== undefined) await must(['git', ...own, 'config', 'user.name', seed.name]);
+  if (seed.email !== undefined) await must(['git', ...own, 'config', 'user.email', seed.email]);
+  // How the host's git reads the tree's files, so the same files are clean
+  // in here too: a Windows folder is `0777` in the machine and CRLF on disk.
+  // Before the index is made, which reads the files the way these say.
+  if (seed.filemode !== undefined) await must(['git', ...own, 'config', 'core.filemode', seed.filemode]);
+  if (seed.autocrlf !== undefined) await must(['git', ...own, 'config', 'core.autocrlf', seed.autocrlf]);
+  // The branch the tree is on, at the commit it is at; a tree on no branch
+  // gives a machine on none, whose work is fetched to the hidden ref only.
+  if (seed.branch !== undefined) await must(['git', ...own, 'symbolic-ref', 'HEAD', `refs/heads/${seed.branch}`]);
+  if (commit === undefined) return;
+  await must(seed.branch === undefined
+    ? ['git', ...own, 'update-ref', '--no-deref', 'HEAD', commit]
+    : ['git', ...own, 'update-ref', `refs/heads/${seed.branch}`, commit]);
+  /*
+   * The index that commit names, so git in the machine is clean before the
+   * agent has touched anything - and under a copy the tree as well. Nothing of
+   * the host's is written either way, because a shared tree is the host's own
+   * and only the index moves.
+   */
+  await must(['git', ...own, 'reset', ...(hard ? ['--hard'] : []), '-q']);
 };
 
 /**

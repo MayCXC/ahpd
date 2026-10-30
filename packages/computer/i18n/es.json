@@ -16,6 +16,9 @@
     "ssh": {
       "description": "Máquinas a las que este host llega por ssh. Cada una se lista, no se crea: nada de este host está en ella, así que ninguna se puede crear, iniciar ni eliminar desde aquí."
     },
+    "libvirt": {
+      "description": "Cómo un perfil con runtime libvirt crea sus máquinas: cada una es una VM en el libvirt de su servidor, un clon enlazado de un disco plantilla, alcanzada por ssh a través de ese servidor."
+    },
     "env": {
       "description": "Variables de entorno combinadas sobre las del daemon. Una variable es una credencial dondequiera que la imagen guarde una, así que cada una aparece como <set>."
     },

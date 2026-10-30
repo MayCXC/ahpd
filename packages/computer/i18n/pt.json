@@ -16,6 +16,9 @@
     "ssh": {
       "description": "Máquinas que este host alcança por ssh. Cada uma é listada, não criada: nada deste host está nela, então nenhuma pode ser criada, iniciada ou removida daqui."
     },
+    "libvirt": {
+      "description": "Como um perfil com runtime libvirt cria suas máquinas: cada uma é uma VM no libvirt do seu servidor, um clone ligado de um disco modelo, alcançada por ssh através desse servidor."
+    },
     "env": {
       "description": "Variáveis de ambiente mescladas sobre as do daemon. Uma variável é uma credencial onde quer que a imagem guarde uma, então cada uma aparece como <set>."
     },
