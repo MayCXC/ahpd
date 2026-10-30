@@ -188,6 +188,16 @@ Every refusal is the dialect's own error body, so the tool shows the message. On
 | 503 | `api_error` | No open connector serves any entry for this caller; the message names each provider it looked for, never a value |
 | 504 | `timeout_error` | The provider sent no status in time; the next entry is not tried |
 
+A limit counted per minute refuses a call the same way, and its sentence says `this minute`:
+
+```
+burst has no room: 60 / 60 calls this minute
+```
+
+A minute limit is read from the daemon's own totals, kept in memory beside the usage store.
+A call is counted when it is allowed, so a burst of calls cannot pass one.
+A restart starts every minute count at zero, which is the most a minute limit can lose.
+
 ## The models list
 
 `GET /v1/models` and `GET /models` list the names you could call now. First each name in the table with at least one ready connector you may use and that a policy allows you. Then each model the ready connectors list, as `<provider>/<id>`. A fetched name is listed once, from the connector the call would go to, and a name the table holds is listed from the table. Never listed: a connector, its key, or a provider's own model id on its own.

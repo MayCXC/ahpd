@@ -21,6 +21,7 @@ import type { ComputerPort } from './computers.js';
 import type { ContainerPort } from './containers.js';
 import type { ClientPlugins } from './clientplugins.js';
 import type { Usage } from './usage.js';
+import type { MinuteMeter } from '../usage/minute.js';
 import type { Policies } from './policies.js';
 import type { PayOrder } from '../usage/charge.js';
 import type { RecordStore } from './records.js';
@@ -358,6 +359,15 @@ export interface HostOptions {
    * with this package and the daemon uses it.
    */
   usage?: Usage;
+  /**
+   * What each key used in this minute, which a `minute` limit reads.
+   *
+   * The same meter the usage store is given, made by the daemon, so the figures
+   * a turn is checked against are the ones its records fill. Absent, a `minute`
+   * limit reads zero and no turn is counted. It says nothing without a `usage`
+   * port.
+   */
+  meter?: MinuteMeter;
   /**
    * Whether a turn leaves one record, or each of its reports leaves one.
    *

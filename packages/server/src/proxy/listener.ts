@@ -19,7 +19,7 @@
 
 import type { RequestHandler } from '@cofold/remote';
 import {
-  chargeFor, decide, keyRowOf, type ConnectorModel, type ConnectorModels, type Cost, type ModelPricing, type ModelUse, type Owner, type PayOrder, type Policies, type ProviderConnector,
+  chargeFor, decide, keyRowOf, type ConnectorModel, type ConnectorModels, type Cost, type MinuteMeter, type ModelPricing, type ModelUse, type Owner, type PayOrder, type Policies, type ProviderConnector,
   type ProviderModel, type Scope, type Usage, type Users,
 } from '@ahpd/sdk';
 import { foreign, guarded, isUnder, json, originRefusal, PROXY_PREFIX, type ApiOrigins } from '../http.js';
@@ -66,6 +66,12 @@ export interface ProxyOptions {
   policiesPayOrder?: PayOrder;
   /** The zone the checked periods are cut in, which is the store's: `usage.timezone`. */
   usageTimezone?: string;
+  /**
+   * What each key used in this minute, the same one the store and the host were
+   * given, so a `minute` limit on a call is read from the totals the records
+   * fill and the calls count in.
+   */
+  meter?: MinuteMeter;
   /** Where a call is recorded, read per call because a plugin may replace the store. */
   usage?(): Usage | undefined;
   /** What this host is called, for the work root does: `root:<hostName>`. */
@@ -523,8 +529,10 @@ interface EntryCheck {
  * walk chose are kept for the entry, because the record is written for the
  * candidate that answered rather than for the name. With no usage store there
  * is no total to read, so no key is chosen and nothing is refused on a limit.
- * A listing passes `zone` as `undefined`: it asks only whether the policy
- * allows the name, so a model at its limit stays listed and its call is refused.
+ * An allowed entry's `calls` key is counted in this minute at once, so a burst
+ * of calls cannot pass one. A listing passes `zone` as `undefined`: it asks only
+ * whether the policy allows the name, so a model at its limit stays listed and
+ * its call is refused.
  */
 const policyFor = (options: ProxyOptions, charged: Charged, name: string, zone: string | undefined): EntryCheck | undefined => {
   const store = options.policies;
@@ -554,6 +562,7 @@ const policyFor = (options: ProxyOptions, charged: Charged, name: string, zone: 
       const walked = await chargeFor(decision, 'model', principal, charged.scope, usage, {
         zone,
         ...(options.policiesPayOrder === undefined ? {} : { payOrder: options.policiesPayOrder }),
+        ...(options.meter === undefined ? {} : { meter: options.meter }),
       });
       if (!walked.allowed) return walked.refusal.message;
       kept.set(entry, walked.pools);

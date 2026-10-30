@@ -247,6 +247,7 @@ export function createOwners(ctx: HostContext): Owners {
         const walked = await chargeFor(decision, one.kind, principal, scope, usage, {
           zone,
           ...(options.policiesPayOrder === undefined ? {} : { payOrder: options.policiesPayOrder }),
+          ...(options.meter === undefined ? {} : { meter: options.meter }),
         });
         if (!walked.allowed) return { refusal: walked.refusal.message };
         pools = [...(pools ?? []), ...walked.pools];
