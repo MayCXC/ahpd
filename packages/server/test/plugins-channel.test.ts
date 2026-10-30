@@ -275,20 +275,27 @@ const live = async ({ run, fetch, version }: { run?: Runner; fetch?: Fetch; vers
   return { host, users, close: async () => { await host.close(); } };
 };
 
-/** A client signed in as `id`, whose channel actions are kept. */
-const as = async (host: Host, users: Users, id: string) => {
+/** A client signed in as `id`, in `locale` when one is given, whose channel actions are kept. */
+const as = async (host: Host, users: Users, id: string, locale?: string) => {
   const token = await users.mint(id);
   const seen: { method: string; params: Bag }[] = [];
   const client = host.accept({
     send: () => {}, request: async () => ({}), answered: () => {}, close: () => {},
     notify: (method, params) => { seen.push({ method, params: params as Bag }); },
   });
-  await client.handle({ method: 'initialize', params: { clientId: id, protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
+  await client.handle({
+    method: 'initialize',
+    params: { clientId: id, protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT], ...(locale === undefined ? {} : { locale }) },
+  });
   await client.handle({ method: 'authenticate', params: { channel: ROOT, resource: users.resource.resource, token } });
   const call = async (method: string, params: Bag) => client.handle({ method, params }).then(
     (result) => ({ result: result as Bag }),
     (error: { code: number; message: string }) => error as Bag,
   );
+  /** Each action on `channel`, whole. */
+  const actions = (channel: string) => seen
+    .filter((one) => one.method === 'action' && one.params.channel === channel)
+    .map((one) => one.params.action as Bag);
   /** Each action on `channel`, as `type id`. */
   const heard = (channel: string) => seen
     .filter((one) => one.method === 'action' && one.params.channel === channel)
@@ -304,7 +311,7 @@ const as = async (host: Host, users: Users, id: string) => {
     const answer = await call('subscribe', { channel: ROOT });
     return (answer.result as Bag)['snapshot'].state as Bag;
   };
-  return { call, heard, rows, root, close: () => { client.close(); } };
+  return { call, actions, heard, rows, root, close: () => { client.close(); } };
 };
 
 /** The authority the served handler is asked at; nothing listens on it. */
@@ -409,6 +416,42 @@ it('turns a plugin off in the configuration file, and the row says so', async ()
     contracts: { agents: ['declared'] },
   });
   expect(declared['problem']).toBeUndefined();
+  await close();
+});
+
+it('lists a plugin with a pt catalog in each reader\'s locale, and sends each reader one diff', async () => {
+  writeFileSync(config, JSON.stringify({ plugins: ['./fixtures/plugin-spoken'] }));
+  const { host, users, close } = await served();
+  const ana = await as(host, users, 'ana', 'pt-BR');
+  const cy = await as(host, users, 'cy');
+
+  const pt = (await ana.rows())['spoken'] as Bag;
+  expect(pt['title']).toBe('Falado');
+  expect(pt['manifest']['description']).toBe('Traz um catálogo em português.');
+  // The catalog's own string where it has one, and English where it has none.
+  const tone = { type: 'string', title: 'Tom', description: 'How the plugin speaks.', enum: ['plain', 'warm'], enumLabels: ['Plain', 'Caloroso'] };
+  expect(pt['optionsSchema']['properties']['tone']).toEqual(tone);
+  expect(pt['manifest']['optionsSchema']['properties']['tone']).toEqual(tone);
+  // What is data and not text stays as it is.
+  expect(pt['name']).toBe('spoken');
+  expect(pt['state']).toBe('ready');
+
+  const en = (await cy.rows())['spoken'] as Bag;
+  expect(en['title']).toBe('Spoken');
+  expect(en['manifest']['description']).toBe('Ships a catalog in Portuguese.');
+  expect(en['optionsSchema']['properties']['tone']['title']).toBe('Tone');
+  expect(en['optionsSchema']['properties']['tone']['enumLabels']).toEqual(['Plain', 'Warm']);
+
+  expect(await cy.call('x-ahpd/plugins/disable', { id: 'spoken' })).toEqual({
+    result: { id: 'spoken', enabled: false, restart: true },
+  });
+  await wait(50);
+  // One diff each, though the two readers' copies of the row differ.
+  expect(ana.heard(URI)).toEqual(['changed spoken']);
+  expect(cy.heard(URI)).toEqual(['changed spoken']);
+  expect(ana.actions(URI)[0]?.['record']?.['title']).toBe('Falado');
+  expect(ana.actions(URI)[0]?.['record']?.['state']).toBe('disabled');
+  expect(cy.actions(URI)[0]?.['record']?.['title']).toBe('Spoken');
   await close();
 });
 

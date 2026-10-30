@@ -86,7 +86,7 @@ x-ahpd-plugins send to a reader -> translate(record, locale of the client) -> th
 | [01 - The host keeps each client's locale](task-01-the-host-keeps-each-clients-locale.md) | done | - |
 | [02 - The host and each plugin carry a catalog](task-02-the-host-and-each-plugin-carry-a-catalog.md) | done | 01 |
 | [03 - The new session form comes in the locale](task-03-the-new-session-form-comes-in-the-locale.md) | done | 02 |
-| [04 - The plugins screen comes in the locale](task-04-the-plugins-screen-comes-in-the-locale.md) | todo | 02 |
+| [04 - The plugins screen comes in the locale](task-04-the-plugins-screen-comes-in-the-locale.md) | done | 02 |
 | [05 - The first catalogs ship in pt and es](task-05-the-first-catalogs-ship-in-pt-and-es.md) | todo | 03, 04 |
 
 ## Risks and tradeoffs

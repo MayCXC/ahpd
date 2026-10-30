@@ -1,0 +1,26 @@
+{
+  "name": "plugin-spoken",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.ts" },
+  "peerDependencies": { "@ahpd/sdk": ">=0.10 <1" },
+  "ahpd": {
+    "entry": "./index.ts",
+    "title": "Spoken",
+    "description": "Ships a catalog in Portuguese.",
+    "i18n": "i18n",
+    "optionsSchema": {
+      "type": "object",
+      "properties": {
+        "tone": {
+          "type": "string",
+          "title": "Tone",
+          "description": "How the plugin speaks.",
+          "enum": ["plain", "warm"],
+          "enumLabels": ["Plain", "Warm"]
+        }
+      }
+    }
+  }
+}

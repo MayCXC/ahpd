@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "title": "Falado",
+    "description": "Traz um catálogo em português."
+  },
+  "options": {
+    "tone": {
+      "title": "Tom",
+      "enum": { "warm": "Caloroso" }
+    }
+  }
+}

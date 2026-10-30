@@ -370,6 +370,12 @@ export interface ChannelHandle {
    * over the plugin.
    */
   subscribers(uri: string): ChannelSubscriber[];
+  /**
+   * The last locale a client sent, or `undefined` when it sent none or no
+   * host is built over the plugin yet. What a channel translates one reader's
+   * records into.
+   */
+  localeOf?(client: string): string | undefined;
 }
 
 /**
@@ -391,6 +397,8 @@ export interface ServedChannel {
   publish?: (uri: string, action: Record<string, unknown>, options: PublishOptions) => void;
   /** Who is subscribed, set by the host once it exists. */
   subscribers?: (uri: string) => ChannelSubscriber[];
+  /** The last locale a client sent, set by the host once it exists. */
+  localeOf?: (client: string) => string | undefined;
 }
 
 /**
@@ -1668,6 +1676,8 @@ export interface Loaded {
   title?: string;
   /** What the plugin declares about itself, from its package.json or its module. */
   manifest?: PluginManifest;
+  /** The catalogs `ahpd.i18n` names, by locale. */
+  i18n?: Catalogs;
   /** The options `apply` is given. */
   options: Record<string, unknown>;
   /** The module's plugin object. */

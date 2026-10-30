@@ -524,3 +524,33 @@ it('refreshes the channel after a write through the domain\'s provider and its c
   await domain.methods['x-ahpd/teams/put']!.handle({ id: 'web', record: {} }, undefined, 'root');
   expect(of('root')).toEqual(['added backend', 'added web']);
 });
+
+it('sends each reader its record in the locale of its client, and diffs the stored record', async () => {
+  const teams = store({ backend: { id: 'backend', title: 'Back' } });
+  const words: Record<string, Record<string, string>> = { pt: { Back: 'Fundos', Front: 'Frente' } };
+  const list = recordsChannel(SCHEME, teams, {
+    grant: 'team:read',
+    translate: (record, locale) => ({ ...record, title: words[locale]?.[String(record.title)] ?? record.title }),
+  });
+  const ana = person('ana', ['team:read']);
+  const bia = person('bia', ['team:read']);
+  const locales: Record<string, string> = { ana: 'pt' };
+  const { handle, heard } = fakeHandle([{ client: 'ana', reader: ana }, { client: 'bia', reader: bia }]);
+  list.bind({ ...handle, localeOf: (client) => locales[client] });
+
+  expect(await list.channel.snapshot(URI, ana, 'ana')).toEqual({ records: [{ id: 'backend', record: { id: 'backend', title: 'Fundos' } }] });
+  // A client that sent no locale gets the record as the store holds it.
+  expect(await list.channel.snapshot(URI, bia, 'bia')).toEqual({ records: [{ id: 'backend', record: { id: 'backend', title: 'Back' } }] });
+
+  teams.rows.backend = { id: 'backend', title: 'Front' };
+  await list.refresh();
+  // One change each, and each in its own language.
+  expect(heard.map((one) => [one.client, one.action.type, (one.action.record as { title: string }).title])).toEqual([
+    ['ana', `${SCHEME}/changed`, 'Frente'],
+    ['bia', `${SCHEME}/changed`, 'Front'],
+  ]);
+
+  // Nothing changed in the store, so nothing is sent, though the two readers hold different text.
+  await list.refresh();
+  expect(heard).toHaveLength(2);
+});

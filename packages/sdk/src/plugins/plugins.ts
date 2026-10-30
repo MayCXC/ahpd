@@ -1482,6 +1482,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
           publish(uri, action, options);
         },
         subscribers: (uri) => served.subscribers?.(uri) ?? [],
+        localeOf: (client) => served.localeOf?.(client),
       };
     },
     registerMethod(name, method) {

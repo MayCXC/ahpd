@@ -1589,6 +1589,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     plugin,
     ...(title === undefined ? {} : { title }),
     ...(declared === undefined ? {} : { manifest: declared }),
+    ...(manifest?.i18n === undefined ? {} : { i18n: manifest.i18n }),
   };
   answered = true;
   return { loaded, contribution, problems: [...problems, ...told] };
@@ -2195,6 +2196,8 @@ export interface PluginRow {
    * a switched-off plugin is before anybody turns it on.
    */
   manifest?: PluginManifest;
+  /** The catalogs `ahpd.i18n` names, which the plugins channel translates a row with. */
+  i18n?: Catalogs;
   /** The one line explaining a state that is not `ready`. */
   problem?: string;
 }
@@ -2266,6 +2269,7 @@ export async function describePlugin(
   if (manifest.version !== undefined) row.version = manifest.version;
   const declared = manifestFields(manifest);
   if (declared !== undefined) row.manifest = declared;
+  if (manifest.i18n !== undefined) row.i18n = manifest.i18n;
 
   // Read, so the row is whole; the state is the one a switched-off entry has.
   if (disabled) return { ...row, state: 'disabled' };

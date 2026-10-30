@@ -1325,6 +1325,7 @@ export function createHost(options: HostOptions): Host {
         }
         return [...seen.values()];
       };
+      served.localeOf = (client) => locales.get(client);
     }
   };
   wireChannels();
