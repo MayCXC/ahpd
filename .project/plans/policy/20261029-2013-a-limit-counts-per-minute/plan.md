@@ -7,13 +7,13 @@ created: 2026-10-29
 revalidated: 2026-10-29
 refs:
   - file:///github/ahpd/.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, part 3, the rpm and tpm half
-  - git://5e2b7003 - the commit of `main` the facts were checked at
-  - "[code://packages/sdk/src/types/policies.ts#L58-L59](../../../../packages/sdk/src/types/policies.ts#L58-L59) - `Period`, which gets `minute`"
+  - git://3f4f6a02 - the commit of `main` the facts were checked at
+  - "[code://packages/sdk/src/types/policies.ts#L65-L66](../../../../packages/sdk/src/types/policies.ts#L65-L66) - `Period`, which gets `minute`"
   - "[code://packages/sdk/src/access/policies.ts#L44-L52](../../../../packages/sdk/src/access/policies.ts#L44-L52) - `PERIODS`, which the policy scheme lists to a client"
   - "[code://packages/sdk/src/usage/periods.ts#L90-L112](../../../../packages/sdk/src/usage/periods.ts#L90-L112) - `periodOf`, where a period begins and resets"
   - "[code://packages/sdk/src/usage/usage.ts#L155-L370](../../../../packages/sdk/src/usage/usage.ts#L155-L370) - `fileUsage`, whose totals are kept per day"
   - "[code://packages/sdk/src/usage/charge.ts#L161-L200](../../../../packages/sdk/src/usage/charge.ts#L161-L200) - `limitsOf`, which reads a total for each limit"
-  - "[code://packages/sdk/src/usage/charge.ts#L275-L355](../../../../packages/sdk/src/usage/charge.ts#L275-L355) - `chargeFor`, which answers the keys an allowed call is charged to"
+  - "[code://packages/sdk/src/usage/charge.ts#L283-L363](../../../../packages/sdk/src/usage/charge.ts#L283-L363) - `chargeFor`, which answers the keys an allowed call is charged to"
   - "[code://packages/sdk/src/access/policy.ts#L130-L145](../../../../packages/sdk/src/access/policy.ts#L130-L145) - the scheme a policy form is drawn from, which lists `PERIODS`"
 ---
 

@@ -17,10 +17,10 @@ An allowed call adds 1 to each `calls` and `turns` key it is charged to, before 
 
 - `UPDATE: packages/sdk/src/usage/charge.ts:47-60` - `ChargeOptions` gets `meter`.
 - `UPDATE: packages/sdk/src/usage/charge.ts:161-200` - `limitsOf` reads a `minute` limit from the meter, and answers `used: 0` when there is no meter.
-- `UPDATE: packages/sdk/src/usage/charge.ts:245-256` - `refusalOf` says `this minute` for a `minute` limit.
-- `UPDATE: packages/sdk/src/usage/charge.ts:275-355` - an allowed `chargeFor` adds 1 to the meter for each `calls` and `turns` key in its pools.
-- `UPDATE: packages/server/src/proxy/listener.ts:503-540` - `policyFor` passes the meter to `chargeFor`.
-- `UPDATE: packages/server/src/commands/run.ts:426` - the daemon makes one meter and gives it to the usage store, the proxy and the turn check.
+- `UPDATE: packages/sdk/src/usage/charge.ts:253-264` - `refusalOf` says `this minute` for a `minute` limit.
+- `UPDATE: packages/sdk/src/usage/charge.ts:283-363` - an allowed `chargeFor` adds 1 to the meter for each `calls` and `turns` key in its pools.
+- `UPDATE: packages/server/src/proxy/listener.ts:509-565` - `policyFor` passes the meter to `chargeFor`.
+- `UPDATE: packages/server/src/commands/run.ts:428` - the daemon makes one meter and gives it to the usage store, the proxy and the turn check.
 - `UPDATE: packages/sdk/src/host/owners.ts:247` - the turn check passes the meter to `chargeFor`.
 - `UPDATE: packages/sdk/test/charge.test.ts` - the minute limit.
 - `UPDATE: packages/server/test/proxy-policy-usage.test.ts` - two calls a minute.

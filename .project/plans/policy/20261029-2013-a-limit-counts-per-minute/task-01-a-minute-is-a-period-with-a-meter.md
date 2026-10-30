@@ -17,7 +17,7 @@ The usage store adds the measures of each record it keeps to the meter.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/types/policies.ts:58-59` - adds `minute` to `Period`.
+- `UPDATE: packages/sdk/src/types/policies.ts:65-66` - adds `minute` to `Period`.
 - `UPDATE: packages/sdk/src/access/policies.ts:44-52` - adds `minute` to `PERIODS`.
 - `UPDATE: packages/sdk/src/usage/periods.ts:90-112` - `periodOf` answers the start of the current minute and the start of the next one for `minute`.
 - `CREATE: packages/sdk/src/usage/minute.ts` - `createMinuteMeter`: `add(key, amount, at)` and `sum(key, at)`, which keep the current and the last minute of each key.
