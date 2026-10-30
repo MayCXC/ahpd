@@ -603,6 +603,10 @@ The names are published in the create schema as an `enum` with titles and descri
 
 The machine is made on the box's own Docker, which this host reaches as `DOCKER_HOST=ssh://<destination>`. The parts it mounts are built there too, because a part is mounted by its image and only the Docker that holds the image can mount it.
 
+This is one profile's Docker, not the plugin's. The plugin's `env.DOCKER_HOST` moves every machine to that Docker, and `server` moves only that profile's machines, which get ids such as `docker-<profile>.ahpd-computer-…`. A profile whose `server` is the plugin's own `env.DOCKER_HOST` makes its machines there, as any other profile does. Docker is given no key file, so a box with `identity` is left out: name the key for its destination in ssh's own configuration instead.
+
+A machine on another box mounts no path of this host's. A bind mount from the plugin options, the profile or the body is refused at create, with the mount named. A dev container is refused too, because the Dev Container CLI reads the folder on this host. With `sessionFolder`, the machine has a volume of its own at the folder's path, and `code` says how the session's code gets into it.
+
 The session's folder is on this host, so `code` says how the machine gets the session's code:
 
 | `code` | What happens |
