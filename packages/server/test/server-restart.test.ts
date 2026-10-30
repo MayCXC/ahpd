@@ -135,7 +135,8 @@ describe('POST /api/restart', () => {
     expect(refused.status).toBe(409);
     const message = (await refused.json() as { message: string }).message;
     expect(message).toContain('ahp-session:/a, ahp-session:/b');
-    expect(message).toContain('--force');
+    // A caller of the API forces it in the request, not on a command line.
+    expect(message).toBe('A turn is running in ahp-session:/a, ahp-session:/b; pass force: true to restart anyway.');
     expect(api.restarts).toEqual([]);
 
     const forced = await api.post({ force: true });

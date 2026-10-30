@@ -102,7 +102,12 @@ export const FOREGROUND = 'This daemon runs in the foreground, not from ahpd sta
 const notRecorded = (pid: number): string =>
   `The record names pid ${String(pid)}, not this daemon; restart this one where it runs.`;
 const OLDER = 'This daemon was started by an older ahpd, which did not record its line; run ahpd stop and ahpd start.';
-export const busy = (turning: readonly string[]): string => `A turn is running in ${turning.join(', ')}; pass --force to restart anyway.`;
+/**
+ * The refusal while a turn runs, naming how the caller forces the restart: the
+ * terminal's flag unless the caller is a client of the API or of AHP, which
+ * force it in the request.
+ */
+export const busy = (turning: readonly string[], forces = '--force'): string => `A turn is running in ${turning.join(', ')}; pass ${forces} to restart anyway.`;
 
 /**
  * Why the daemon `self`, with that record, is not one a restart may start
@@ -706,9 +711,11 @@ export interface ServedRestartAnswer {
  * The restart the daemon runs when the caller is the one that reaches it.
  *
  * The checks are `ahpd restart`'s own: the record must name this daemon, and a
- * turn running refuses the restart unless the caller forces it. The restart
- * itself is `served.restart`, which defers it until the answer in hand has
- * gone, as it does for an update.
+ * turn running refuses the restart unless the caller forces it. The refusal
+ * names `force: true`, because a client of the API or of AHP forces it in the
+ * request rather than on a command line. The restart itself is
+ * `served.restart`, which defers it until the answer in hand has gone, as it
+ * does for an update.
  */
 export const servedRestart = async (served: ServedFacts, force: boolean): Promise<ServedRestartAnswer> => {
   const self = served.running();
@@ -716,7 +723,7 @@ export const servedRestart = async (served: ServedFacts, force: boolean): Promis
   const refused = notRestartable(record, self.pid);
   if (refused !== undefined) conflict(refused);
   const turning = served.turning();
-  if (turning.length > 0 && !force) conflict(busy(turning));
+  if (turning.length > 0 && !force) conflict(busy(turning, 'force: true'));
   await served.restart((record as Running).argv as string[], force);
   return { restarting: true, pid: self.pid };
 };
