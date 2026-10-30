@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,7 +7,9 @@ import { fileResources } from '../../sdk/src/resources/resources.js';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { dockerAddressOf } from '../src/plugin.js';
 import { closeAll, keeping } from './support/closing.js';
+import type { Agent } from '../../sdk/src/types/agent.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
+import type { MachineNeed } from '../../sdk/src/types/machine.js';
 import type { Usage, UsageEntry, UsageTotal } from '../../sdk/src/types/usage.js';
 
 /*
@@ -45,7 +47,7 @@ const ready = [
 ].join('\n');
 
 interface Held {
-  machines: { name: string; image: string; labels?: Record<string, string>; state?: string }[];
+  machines: { name: string; image: string; mounts?: string[]; labels?: Record<string, string>; state?: string }[];
   calls: string[][];
   failPs?: boolean;
 }
@@ -88,15 +90,15 @@ const files = () => {
 const load = async (
   at: ReturnType<typeof files>,
   profiles: Record<string, unknown>,
-  { box = {}, env = {}, hostId = 'host-a', usage }: {
-    box?: Record<string, unknown>; env?: Record<string, string>; hostId?: string; usage?: Usage;
+  { box = {}, env = {}, hostId = 'host-a', usage, agents = [] }: {
+    box?: Record<string, unknown>; env?: Record<string, string>; hostId?: string; usage?: Usage; agents?: Agent[];
   } = {},
 ) => {
   const lines: string[] = [];
   const base: HostOptions = {
     path: '/tmp/computer-far-docker',
     hostName: 'box.local',
-    agents: [],
+    agents,
     resources: fileResources(),
     ...(usage === undefined ? {} : { usage }),
   };
@@ -238,4 +240,80 @@ it('adopts a box\'s disposable machines at the next listing that reaches it, whe
   writeFileSync(far, JSON.stringify({ ...held(far), failPs: false }));
   expect(await listed()).toEqual(['docker-far.left']);
   await until(() => lines.some((line) => line.includes('found the disposable machine docker-far.left left behind')));
+});
+
+/** The least an agent is, with the needs it declares. */
+const agent = (provider: string, needs: Record<string, MachineNeed>): Agent => ({
+  provider,
+  displayName: provider,
+  schema: () => ({}),
+  defaults: () => ({}),
+  machine: () => needs,
+  create: () => { throw new Error('not started in this test'); },
+} as unknown as Agent);
+
+it('refuses a profile mount of a path on this host, and copies a directory need in rather than mounting it', async () => {
+  const at = files();
+  const home = join(at.dir, 'tool-home');
+  mkdirSync(home);
+  writeFileSync(join(home, 'settings.json'), '{}');
+  const tool = agent('tool', { toolHome: { directory: home, target: '/ahpd/tool', required: true } });
+
+  const mounted = await load(at, { far: { server: 'dev02', agents: ['tool'], mounts: [`${at.dir}:/work`] } }, { agents: [tool] });
+  await expect(mounted.provider.write('computer://box', said(JSON.stringify({ image: 'node:22', profile: 'far' })), 'user:ana'))
+    .rejects.toThrow(`profile far makes its machines on dev02's Docker, and the profile's mount ${at.dir}:/work is a path on this host`);
+  expect(held(farFile(at.local)).machines).toEqual([]);
+
+  const { provider } = await load(at, { far: { server: 'dev02', agents: ['tool'] } }, { agents: [tool] });
+  await provider.write('computer://box', said(JSON.stringify({ image: 'node:22', profile: 'far' })), 'user:ana');
+  const far = held(farFile(at.local));
+  expect(far.machines.map((one) => one.name)).toEqual(['box']);
+  expect(far.machines[0]?.mounts ?? []).toEqual([]);
+  expect(far.calls.some((one) => one[0] === 'cp' && one[1] === home && one[2] === 'box:/ahpd/tool')).toBe(true);
+  expect(far.calls.flat().some((one) => one.includes(`${home}:`))).toBe(false);
+});
+
+/** An agent shaped like cofold: a configuration file holding keys, read from this host by default. */
+const cofoldLike = (config: string, seed: string): Agent => agent('cofold', {
+  cofoldState: { state: '/ahpd/cofold', seed: [{ source: seed, target: 'cofold/config.json' }], credential: true },
+  cofoldConfig: { file: config, target: '/ahpd/cofold/config.json', readOnly: true, required: true, when: 'host', credential: true },
+});
+
+it('refuses a host credential on another box\'s Docker naming the need, and copies a file the profile gives instead', async () => {
+  const at = files();
+  const own = join(at.dir, 'own.json');
+  const given = join(at.dir, 'for-dev02.json');
+  writeFileSync(own, '{"key":"this-host"}');
+  writeFileSync(given, '{"key":"dev02"}');
+  const cofold = cofoldLike(own, own);
+
+  const refused = await load(at, { far: { server: 'dev02', agents: ['cofold'], state: 'host' } }, { agents: [cofold] });
+  await expect(refused.provider.write('computer://box', said(JSON.stringify({ image: 'node:22', profile: 'far' })), 'user:ana'))
+    .rejects.toThrow('profile far makes its machines on dev02\'s Docker, and need cofoldConfig of cofold is this host\'s own credential');
+  expect(held(farFile(at.local)).calls.filter((one) => one[0] === 'cp')).toEqual([]);
+
+  const { provider } = await load(
+    at,
+    { far: { server: 'dev02', agents: ['cofold'], state: 'host', needs: { cofoldConfig: given } } },
+    { agents: [cofold] },
+  );
+  await provider.write('computer://box', said(JSON.stringify({ image: 'node:22', profile: 'far' })), 'user:ana');
+  const copied = held(farFile(at.local)).calls.filter((one) => one[0] === 'cp');
+  expect(copied).toEqual([['cp', given, 'box:/ahpd/cofold/config.json']]);
+});
+
+it('refuses a state need seeded from this host\'s credential on another box\'s Docker, copying no seed', async () => {
+  const at = files();
+  const own = join(at.dir, 'own.json');
+  writeFileSync(own, '{"key":"this-host"}');
+  const { provider } = await load(
+    at,
+    { far: { server: 'dev02', agents: ['cofold'], state: 'volume' } },
+    { agents: [cofoldLike(own, own)] },
+  );
+  await expect(provider.write('computer://box', said(JSON.stringify({ image: 'node:22', profile: 'far' })), 'user:ana'))
+    .rejects.toThrow('need cofoldState of cofold is this host\'s own credential');
+  const far = held(farFile(at.local));
+  expect(far.machines).toEqual([]);
+  expect(far.calls.flat().some((one) => one.includes(own))).toBe(false);
 });

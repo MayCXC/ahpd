@@ -12,7 +12,7 @@ import { byName, DOCKER_OWN, DOCKER_OWN_PREFIX, dockerOwn } from './byname.js';
 import { sourceOnHost, spelledOnHost, windowsHost } from './hostpath.js';
 import { cliMountOf, cliVolumeOf, copyOf, gitVolumeOf, guardFor, guardedMounts, idsOfUser, MACHINE_GIT, MACHINE_USER, openReadingOf, seedOf, treeOf, userLabelOf, volumeFlagOf } from './gitdir.js';
 import type { GitGuard, GitMounts, SessionTree } from './gitdir.js';
-import { mountParts } from './manifest.js';
+import { absoluteOnHost, mountParts } from './manifest.js';
 import { archiveOf, FILLED_MARKER, firstFileOf, IMAGE_PATH, MACHINE_PARTS, once, partsLabel, partsSaid, pathWith, volumeOf } from './parts.js';
 import type { ArchiveEntry, MadePart, Tarball } from './parts.js';
 import type { Cli, CliOptions, Reach } from './devcontainer.js';
@@ -3233,6 +3233,14 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
       if (options.remote === true && spec.devcontainer !== undefined) {
         throw new Error(`${spec.name} is not made from a devcontainer.json on another box's Docker: the Dev Container CLI reads the folder on this host`);
       }
+      // No path on this host is on another box: the manifest turns the needs
+      // into copies, and anything that still binds one is refused here.
+      const bound = options.remote === true
+        ? [...spec.mounts ?? [], ...(spec.partFallbacks ?? []).map((one) => one.mount)].find((one) => absoluteOnHost(mountParts(one).source))
+        : undefined;
+      if (bound !== undefined) {
+        throw new Error(`${spec.name} is made on another box's Docker, and the mount ${bound} is a path on this host`);
+      }
       /*
        * A dev container: the folder's own file, by the CLI that reads it.
        *
@@ -3413,7 +3421,9 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
       const guard = guardFor(spec.gitGuard, tree);
       // The git mounts, every source made on the host first, so a refusal
       // leaves nothing made.
-      const git = spec.gitDir === undefined || spec.folder === undefined
+      // Neither the folder nor its git directory is bound on another box's
+      // Docker, where neither path is.
+      const git = spec.gitDir === undefined || spec.folder === undefined || options.remote === true
         ? undefined
         : guardedMounts(spec.gitDir, spec.repository ?? spec.folder, stateDirOf(options), guard, tree);
       const flags = ['--name', spec.name, '--label', spec.label];
@@ -3483,7 +3493,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
         // the rest of it is not missing to git in there. Under `copy` the tree
         // is the machine's own and this is not bound at all: the volume below
         // lands at that path instead.
-        ...(spec.folder === undefined || tree === 'copy'
+        ...(spec.folder === undefined || tree === 'copy' || options.remote === true
           ? []
           : [`${spec.repository ?? spec.folder}:${machinePathOf(spec.repository ?? spec.folder)}`]),
         // Then the git mounts: the host's objects read-only, the file a linked

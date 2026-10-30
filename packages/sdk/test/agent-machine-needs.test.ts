@@ -81,6 +81,8 @@ it('cofold declares its harness configuration, wherever it is read from', () => 
     expect(needs.cofoldState).toEqual({
       state: '/ahpd/cofold',
       seed: [{ source: join('/srv/config', 'cofold', 'config.json'), target: 'cofold/config.json' }],
+      // The seed holds the provider keys, which never go to another box.
+      credential: true,
       description: expect.stringMatching(/provider/),
     });
     expect(needs.cofoldConfig).toMatchObject({
@@ -93,6 +95,7 @@ it('cofold declares its harness configuration, wherever it is read from', () => 
       readOnly: true,
       required: true,
       when: 'host',
+      credential: true,
     });
     expect(needs.cofoldConfig?.description).toMatch(/provider/);
     // The variable names the file, not a directory, and `XDG_CONFIG_HOME` is

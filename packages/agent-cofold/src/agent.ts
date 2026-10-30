@@ -785,6 +785,7 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
         cofoldState: {
           state: configDir,
           seed: [{ source: read, target: 'cofold/config.json' }],
+          credential: true,
           description: 'The cofold configuration, which holds the provider endpoints and their keys, kept in a volume.',
         },
         cofoldConfig: {
@@ -793,6 +794,7 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
           readOnly: true,
           required: true,
           when: 'host',
+          credential: true,
           description: 'The cofold configuration, which holds the provider endpoints and their keys.',
         },
         cofoldConfigPath: {

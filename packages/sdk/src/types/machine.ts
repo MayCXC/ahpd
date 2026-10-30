@@ -52,6 +52,15 @@ interface Need<D = string> {
    * picks the mode, and a need of the other mode is left out of the machine.
    */
   when?: StateMode;
+  /**
+   * Whether this need's source holds a credential: a sign-in, a key, a file
+   * with a token in it.
+   *
+   * Such a need is never copied to a machine on another box from this host's
+   * own default; a profile gives it a file written for that box instead. On a
+   * state need, its seed is what holds it.
+   */
+  credential?: boolean;
 }
 
 /**
@@ -211,4 +220,10 @@ export interface ResolvedNeed {
   named?: boolean;
   /** One line from the need. */
   description?: string;
+  /**
+   * A need marked `credential` whose source is the agent's own default on this
+   * host, rather than a value a profile or the plugin option gave it. On a
+   * state need, one with a seed, since a seed is always the agent's.
+   */
+  hostCredential?: boolean;
 }
