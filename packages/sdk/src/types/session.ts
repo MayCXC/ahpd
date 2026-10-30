@@ -560,10 +560,14 @@ export interface Session {
    * host wrote for whatever the client pasted, which is what the correction is
    * about as often as the words are.
    *
+   * `from` is the message's sender, as `begin` takes it: the turn a backend
+   * begins with the steered text keeps the origin and `_meta` of the message
+   * that was steered. Absent, the message is the user's.
+   *
    * Optional. A backend that cannot take a message mid-turn leaves it out,
    * and this host refuses steering for that backend with that as the reason.
    */
-  steer?(id: string, text: string, attachments?: MessageAttachment[]): boolean;
+  steer?(id: string, text: string, attachments?: MessageAttachment[], from?: MessageFrom): boolean;
 
   /**
    * Start a turn with what was said, optionally naming a model.
