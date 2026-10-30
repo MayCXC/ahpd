@@ -40,4 +40,3 @@ The terminal, the signals, the control pipe and `ahpd update` keep `--force`.
 ## Left for later
 
 - The plan's final checklist was not run on a daemon from `ahpd start`. The cases drive the same paths with a record this test writes and a restart that records what it was asked.
-- The plan folder and `packages/server/test/host-restart-method.test.ts` are untracked. `git add` is denied in this session, so run `git add .project/plans/daemon/20261030-0635-a-client-restarts-the-daemon packages/server/test/host-restart-method.test.ts` to commit them with task 01.
