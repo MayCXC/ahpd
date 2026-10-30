@@ -295,6 +295,28 @@ export const heldAgainst = (config: Record<string, unknown>, rules: SecretRules)
 };
 
 /**
+ * A stored config with every field that holds a reference left out: a
+ * `$secret` the vault keeps, or a `$env` this host reads.
+ *
+ * What a place handed nothing of this host's vault and environment is given,
+ * where `heldAgainst` would hand it a marker in the field's place.
+ */
+export const withoutSecrets = (config: Record<string, unknown>, rules: SecretRules): Record<string, unknown> => {
+  const held = (value: unknown): boolean => secretRef(value) !== undefined || fromEnvRef(value) !== undefined;
+  if (!rules.nested) return Object.fromEntries(Object.entries(config).filter(([, value]) => !held(value)));
+  const drop = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.filter((one) => !held(one)).map((one) => drop(one));
+    if (isRecord(value)) {
+      const out: Record<string, unknown> = {};
+      for (const [key, one] of Object.entries(value)) if (!held(one)) out[key] = drop(one);
+      return out;
+    }
+    return value;
+  };
+  return drop(config) as Record<string, unknown>;
+};
+
+/**
  * The config a put is checked against: each reference held, and an empty field
  * that keeps a secret held too.
  *

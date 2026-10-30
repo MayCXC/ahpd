@@ -752,6 +752,19 @@ it('starts a host in the box with the plugins it was asked for, and nothing of t
   expect(JSON.stringify(recorded())).not.toContain(SECRET);
 });
 
+it('hands a box the record of a record agent without its secret fields', async () => {
+  const { options } = await vaultedLoad();
+  const whole = { id: 'cofold', engine: 'cofold', owner: 'host' as const, name: 'Cofold', config: { endpoint: 'https://or.example', apiKey: SECRET } };
+  const bare = { ...whole, config: { endpoint: 'https://or.example' } };
+
+  const spawn = await options.computers?.nested?.('ssh.dev02', { plugins: ['@ahpd/agent-cofold'], record: { whole, bare } });
+  // The remote command is the box's whole environment, so it carries the
+  // copy with no secret field, and the box's ahpd holds its own key.
+  expect(spawn?.args.at(-1)).toContain(`'AHPD_AGENT_RECORD=${JSON.stringify(bare)}'`);
+  expect(spawn?.args.join(' ')).not.toContain(SECRET);
+  expect(JSON.stringify(spawn)).not.toContain('apiKey');
+});
+
 it('says which machines are off this host, so a session in one runs nested', async () => {
   const { options } = await load({ machines: { dev02: { destination: 'dev02' } } });
 

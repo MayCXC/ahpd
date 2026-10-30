@@ -781,8 +781,9 @@ export function createSpawn(ctx: HostContext): Spawn {
      * exactly as it was.
      *
      * The host inside loads the plugin that registered the agent here, as its
-     * spec was recorded, and an agent with no record ends its session saying
-     * so.
+     * spec was recorded. An agent made from a record has no such plugin: the
+     * host inside loads the plugin of the record's engine and is handed the
+     * record. An agent with neither ends its session saying so.
      *
      * A machine off this host is nested whatever the backend declared, because
      * one that moves its own process into a machine on this host still cannot
@@ -792,6 +793,7 @@ export function createSpawn(ctx: HostContext): Spawn {
      * one place.
      */
     const plugin = options.agentPlugins?.[agent.provider];
+    const handedAgent = plugin === undefined ? options.handedAgent?.bind(options) : undefined;
     const machine = computerId(config.computer);
     const offHost = machine !== undefined && options.computers?.remote?.(machine) === true;
     /*
@@ -804,12 +806,14 @@ export function createSpawn(ctx: HostContext): Spawn {
     const used = machine !== undefined && (agent.runsNested === true || offHost)
       ? nestedAgent(agent, {
         plugins: plugin === undefined ? [] : [plugin],
+        ...(handedAgent === undefined ? {} : { handed: () => handedAgent(agent.provider) }),
         log,
         ...(connect === undefined ? {} : {
           restart: options.nodeRestart ?? 'end',
           start: (asked: NestedAsked) => connect(asked.id, {
             plugins: asked.plugins,
             ...(asked.cwd === undefined ? {} : { cwd: asked.cwd }),
+            ...(asked.record === undefined ? {} : { record: asked.record }),
           }),
         }),
       })

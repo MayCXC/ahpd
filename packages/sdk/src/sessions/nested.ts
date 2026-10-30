@@ -51,7 +51,7 @@ import { computerId } from '../machines/computers.js';
 import type { Agent, Start } from '../types/agent.js';
 import type { BackgroundTask } from '../types/background.js';
 import type { Bag } from '../types/common.js';
-import type { ComputerPort, NestedHost, NestedStarted } from '../types/computers.js';
+import type { ComputerPort, HandedAgent, HandedRecord, NestedHost, NestedStarted } from '../types/computers.js';
 import type { Chosen, MessageFrom, Session, SubagentChat } from '../types/session.js';
 
 /** How many of the inner host's own lines are kept for a failure's sentence. */
@@ -116,6 +116,8 @@ export interface NestedAsked {
   plugins: string[];
   /** Where inside the machine it starts, when the session named a folder. */
   cwd?: string;
+  /** The record the host inside serves, for an agent made from a record. */
+  record?: HandedRecord;
   /** The session's port, which is where the default `start` asks. */
   computers?: ComputerPort;
 }
@@ -126,11 +128,16 @@ export interface NestedOptions {
    * The plugins the host inside loads: the one that registered this agent on
    * this host, as the host recorded its spec.
    *
-   * Empty when nothing is recorded, and then the session ends with a sentence
-   * saying the host does not know which plugin serves it, and nothing is
-   * started.
+   * Empty when nothing is recorded, and then `handed` is asked. When neither
+   * answers, the session ends with a sentence saying the host does not know
+   * which plugin serves it, and nothing is started.
    */
   plugins: string[];
+  /**
+   * The plugin and the record of an agent made from a record, asked at each
+   * start of the host inside when `plugins` is empty.
+   */
+  handed?: () => Promise<HandedAgent | undefined>;
   /** How long a question to the inner host waits. Default `ANSWER_TIMEOUT`. */
   timeoutMs?: number;
   /**
@@ -196,6 +203,7 @@ const startInside = async (asked: NestedAsked): Promise<NestedStarted> => {
   const spawn = await asked.computers.nested(asked.id, {
     plugins: asked.plugins,
     ...(asked.cwd === undefined ? {} : { cwd: asked.cwd }),
+    ...(asked.record === undefined ? {} : { record: asked.record }),
   });
   if (spawn === undefined) throw new Error(`There is no computer called computer://${asked.id}`);
   const host = startProcess(spawn.command, spawn.args, {
@@ -384,7 +392,8 @@ const fileUri = (path: string): string => (path.startsWith('/') ? posixUriOf(pat
 const nestedSession = (provider: string, variant: boolean, start: Start, options: NestedOptions): Session => {
   const log = options.log ?? ((): void => { /* nothing is kept without one */ });
   const timeoutMs = options.timeoutMs ?? ANSWER_TIMEOUT;
-  const plugins = options.plugins;
+  /** The plugins the host inside loads, which a record agent's start fills. */
+  let plugins = options.plugins;
   const restart = options.restart;
   const said = start.settings?.computer;
   const id = computerId(said);
@@ -954,11 +963,14 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
    * the session, then subscribe - and each failure names which one it was.
    */
   const bringUp = async (): Promise<void> => {
+    const handed = options.plugins.length === 0 ? await options.handed?.() : undefined;
+    if (handed !== undefined) plugins = [handed.plugin];
     if (plugins.length === 0) throw new Error(`this host does not know which plugin serves ${provider}, so it cannot start one there`);
     const asked: NestedAsked = {
       id,
       plugins,
       ...(start.workingDirectory === undefined ? {} : { cwd: start.workingDirectory }),
+      ...(handed === undefined ? {} : { record: handed.record }),
       ...(start.computers === undefined ? {} : { computers: start.computers }),
     };
     const offered = options.start === undefined ? undefined : await options.start(asked);
@@ -1427,6 +1439,8 @@ export interface NestedDeleteAsked {
   id: string;
   /** The plugins the host inside loads: the recorded plugin of the session's agent. */
   plugins: string[];
+  /** The record the host inside serves, for an agent made from a record. */
+  record?: HandedRecord;
   /** The id the inner host holds the session under, which is the outer one's. */
   sessionId: string;
   /** The session's port, which is where the host inside is started. */
@@ -1460,6 +1474,7 @@ export const deleteNested = async (asked: NestedDeleteAsked): Promise<void> => {
     started = await startInside({
       id: asked.id,
       plugins: asked.plugins,
+      ...(asked.record === undefined ? {} : { record: asked.record }),
       ...(asked.computers === undefined ? {} : { computers: asked.computers }),
     });
   }

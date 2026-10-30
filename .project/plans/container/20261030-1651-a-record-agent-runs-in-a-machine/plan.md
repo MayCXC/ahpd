@@ -1,7 +1,7 @@
 ---
 title: A record agent runs in a machine
 domain: container
-status: planned
+status: built
 priority: high
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -79,9 +79,9 @@ createSession(computer=...) -> spawn.ts agentPlugins[provider] -> nestedAgent pl
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - the host names a record agent's plugin](task-01-the-host-names-a-record-agents-plugin.md) | todo | - |
-| [02 - the record reaches the host inside](task-02-the-record-reaches-the-host-inside.md) | todo | 01 |
-| [03 - docs](task-03-docs.md) | todo | 02 |
+| [01 - the host names a record agent's plugin](task-01-the-host-names-a-record-agents-plugin.md) | done | - |
+| [02 - the record reaches the host inside](task-02-the-record-reaches-the-host-inside.md) | done | 01 |
+| [03 - docs](task-03-docs.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -90,8 +90,8 @@ createSession(computer=...) -> spawn.ts agentPlugins[provider] -> nestedAgent pl
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-host-names-a-record-agents-plugin.md](task-01-the-host-names-a-record-agents-plugin.md).
+- **Done so far:** tasks 01 to 03; see [implemented.md](implemented.md).
+- **Next action:** the runs by hand in the checklist, through container 05 p8 task 05.
 - **Open questions:** none.
 - **Watch out for:** the dialled-node path in `join.ts` and the delete path in `lifecycle.ts` are entry points too. A fix in `nestedHost` alone leaves them broken.
 
@@ -99,6 +99,6 @@ createSession(computer=...) -> spawn.ts agentPlugins[provider] -> nestedAgent pl
 
 - [ ] A cofold record session on a disposable machine on this host runs a turn.
 - [ ] The same on dev02 through p8's `far` profile.
-- [ ] No argv the fake Docker records holds the record's key.
-- [ ] A session over ssh gets the record without its secret fields.
-- [ ] A plugin-registered agent runs nested as before.
+- [x] No argv the fake Docker records holds the record's key.
+- [x] A session over ssh gets the record without its secret fields.
+- [x] A plugin-registered agent runs nested as before.

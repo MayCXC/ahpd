@@ -57,6 +57,7 @@ import {
   toolServers,
   usageMethods,
   usageProvider,
+  AGENT_RECORD_VARIABLE,
 } from '@ahpd/sdk';
 import { CONTROL_ENV, DETACHED_ENV, SERVICE_ENV, claim, forget, recordOf, running, serviceIn, start as startDaemon, sweepTemps } from '../daemon.js';
 import { controlIn, controlServer } from '../control.js';
@@ -75,6 +76,7 @@ import { applyPlugins, type Applied } from '../applyplugins.js';
 import { pluginsChannel } from '../pluginschannel.js';
 import { fileRecords } from '../records.js';
 import { applyPresets, planPresets, splitModels } from '../agents/migrate.js';
+import { handedAgent } from '../agents/handed.js';
 import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
 import { pty } from '../pty.js';
@@ -848,6 +850,12 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   let engines: Record<string, ServedEngine> = {};
   /** The agents of the records, as the last fold took them. */
   let recordAgents: Agent[] = [];
+  /**
+   * The agent of the record this host was handed in `AGENT_RECORD_VARIABLE`,
+   * when it is a host inside a machine. Folded in beside the records, and
+   * never written to their collection.
+   */
+  let handed: Agent[] = [];
   /*
    * The engines channel, beside the adapters one: both are built before the load
    * and answer from the fold as it stands when a listing arrives.
@@ -1020,6 +1028,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * plugin's, and takes `session:write`.
      */
     agentOwners: () => agentLists.owners(),
+    // The plugin and the record a host inside a machine serves a record agent with.
+    handedAgent: (provider) => agentLists.handed(provider),
     /*
      * What this daemon can do that the protocol cannot.
      *
@@ -1546,6 +1556,19 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * out, the same line a fold made later gives.
    */
   const agentProblems = new Set(problems);
+  /*
+   * The handed record, opened once the engines are known. The variable is
+   * taken out of this process's environment once read, so no program a session
+   * starts inherits the record's keys from it.
+   */
+  try {
+    const one = handedAgent(process.env[AGENT_RECORD_VARIABLE], engines);
+    if (one !== undefined) handed = [one];
+  }
+  catch (error) {
+    stamp(reason(error));
+  }
+  delete process.env[AGENT_RECORD_VARIABLE];
   let opened: Agent[] = [];
   try {
     opened = await agentLists.agents();
@@ -1553,7 +1576,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   catch (error) {
     stamp(`The agent records could not be served: ${reason(error)}`);
   }
-  const start = pluginHoldings.fold(opened);
+  const start = pluginHoldings.fold([...opened, ...handed]);
   for (const problem of start.problems) {
     if (agentProblems.has(problem)) continue;
     agentProblems.add(problem);
@@ -1673,7 +1696,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * one object, and `replace` refuses what moves a port or a scheme - so the
    * connectors port the host was built with is put back beside it.
    */
-  const refoldAgents = async (agents: Agent[]): Promise<ReadonlySet<string>> => {
+  const refoldAgents = async (records: Agent[]): Promise<ReadonlySet<string>> => {
+    const agents = [...records, ...handed];
     const next = pluginHoldings.fold(agents);
     for (const line of next.problems) {
       // The same clash comes back on every fold, and is the log's once.

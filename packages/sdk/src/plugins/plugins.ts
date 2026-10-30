@@ -1751,7 +1751,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
         throw new Error(miss(by, 'registerEngine', named, 'a name no other engine in this plugin uses'));
       }
       reportGaps(checked);
-      held[named] = { ...engine, by };
+      held[named] = { ...engine, by, ...(options.spec === undefined ? {} : { spec: options.spec }) };
     },
     on(event, handle) {
       // The context is captured, not rebuilt when the event fires: it is the

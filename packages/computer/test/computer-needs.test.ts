@@ -1002,6 +1002,29 @@ it('gives a vault-filled key only to the agent whose need declared it', async ()
    */
 }, 20_000);
 
+it('hands a machine on this host the whole record of a record agent, by name', async () => {
+  const state = join(temp(), 'docker.json');
+  const { options, problems } = await load({
+    command: process.execPath,
+    args: [FIXTURE],
+    env: { DOCKER_FAKE_STATE: state },
+    sessionSetting: false,
+  }, [agent('cofold')]);
+  expect(problems).toEqual([]);
+  expect(await written(options, 'box', {}, 'user:ada')).toBeUndefined();
+
+  const whole = { id: 'cofold', engine: 'cofold', owner: 'host' as const, name: 'Cofold', config: { apiKey: 'record-key' } };
+  const bare = { ...whole, config: {} };
+  const port = computersFor(options.computers as NonNullable<HostOptions['computers']>, 'cofold', 'cofold:/one');
+  const how = await port.nested?.('box', { plugins: ['@ahpd/agent-cofold'], record: { whole, bare } });
+  const args = how?.args ?? [];
+  // `docker exec -e NAME` takes the value from the environment it is run
+  // with, so the key is in that environment and in no argument.
+  expect(args.flatMap((one, at) => (args[at - 1] === '-e' ? [one] : []))).toContain('AHPD_AGENT_RECORD');
+  expect(JSON.parse(how?.env?.AHPD_AGENT_RECORD ?? '{}')).toEqual(whole);
+  expect(args.join(' ')).not.toContain('record-key');
+});
+
 it('gives computer_exec the calling session agent\'s vault-filled keys, and every one to a call with no agent', async () => {
   const state = join(temp(), 'docker.json');
   const store = holding({ 'user:ada/anthropic': 'pi-anthropic', 'user:ada/openai': 'pi-openai' });

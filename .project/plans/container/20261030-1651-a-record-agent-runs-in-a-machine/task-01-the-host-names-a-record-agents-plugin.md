@@ -1,6 +1,6 @@
 ---
 title: The host names a record agent's plugin and record
-status: todo
+status: done
 depends: []
 layer: "sdk"
 refs:
@@ -42,3 +42,5 @@ A nested session of it hands the host inside that plugin and the opened record.
 - `pnpm typecheck` passes.
 
 ## Resume
+
+- Done. The agents channel answers the plugin and the record through `handedAgent`, in place of steps 1 and 2; see [implemented.md](implemented.md).

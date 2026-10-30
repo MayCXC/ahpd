@@ -35,7 +35,7 @@ export type { Account, Offered } from './probe.js';
 export type { Agent, Listed, Start, BoundTool, Endpoint, ToolEffects, RestoredSubagent, SessionAt, McpServer, StdioMcpServer, HttpMcpServer } from './agent.js';
 export type { DirectoryNeed, FileNeed, EnvNeed, CopyNeed, PartNeed, StateNeed, Seed, ResolvedSeed, StateMode, MachineNeed, NeedKind, ResolvedNeed } from './machine.js';
 export type { Entry, Metadata, Read, ResourceChange, ResourceProvider, ResourceStore, SchemeDescription, Watcher, WatchOptions, Write } from './resources.js';
-export type { BroughtBack, ComputerPort, MachineSource, NestedSpawn, Spawn, SpawnOptions } from './computers.js';
+export type { BroughtBack, ComputerPort, HandedAgent, HandedRecord, MachineSource, NestedSpawn, Spawn, SpawnOptions } from './computers.js';
 export type { ContainerConnect, ContainerConnectResult, ContainerPort, ContainerSink } from './containers.js';
 export type { SessionConfigAnswerer, SessionConfigAsk } from './completions.js';
 export type { Claim, Terminal, TerminalOptions, SpawnPty, TerminalStore, OpenTerminal, OpenedTerminal, StartTerminals, OutputTerminal, OutputTerminals, TerminalOutputs } from './terminals.js';
