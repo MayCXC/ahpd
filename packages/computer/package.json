@@ -143,6 +143,8 @@
               "memory": { "type": "string", "description": "A memory limit for its machines, a string. The plugin's memory when absent." },
               "ociRuntime": { "type": "string", "description": "The OCI runtime Docker starts its machines under, a string. runsc is gVisor. Docker's own default when absent." },
               "server": { "type": "string", "description": "The box its machines are made on, by its name in ssh.machines. The box is checked before a machine is made there. This host when absent." },
+              "code": { "type": "string", "enum": ["bundle", "clone"], "description": "How a machine on a server is given the session's code: bundle sends the tree's commit from this host; clone has the machine fetch the session's branch from origin. bundle when absent." },
+              "gitCredential": { "type": "string", "secretAtUse": true, "writeOnly": true, "description": "The git credential a clone fetches from origin with, as { \"$secret\": \"<name>\" }. A credential written in clear leaves the profile out. None when absent, for a public remote." },
               "workdir": { "type": "string", "description": "Where commands start, a string. folder, or the image's own, when absent." },
               "mounts": { "type": "array", "items": { "type": "string" }, "description": "Mounts added after the plugin's own, a list of strings." },
               "agents": { "type": "array", "items": { "type": "string" }, "description": "The agents its machines are prepared for, a list of provider ids. A session of another agent is refused." },

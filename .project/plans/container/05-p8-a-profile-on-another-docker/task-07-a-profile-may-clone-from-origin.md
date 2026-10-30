@@ -1,6 +1,6 @@
 ---
 title: A profile may have its machine clone from origin, with a git credential named from the vault
-status: todo
+status: done
 depends: [task-03-the-code-arrives-by-clone.md]
 layer: "computer"
 refs:
@@ -41,3 +41,10 @@ The default stays `code: "bundle"` (task 03); the way back is host/67's bring-ba
 - By hand on dev02 in task 05, once each way.
 
 ## Resume
+
+- **Done:** 2026-10-30. `codeRouteOf` in [`clone.ts`](../../../../packages/computer/src/clone.ts) picks the route, and `seedGit` calls `bundledInto` or `fetchedInto`. The credential is read with `host.secret` in the disposable create, for the session's owner and team.
+- **Departure:** the `clone` route is a fetch, not `git clone`. It runs `git ls-remote --exit-code origin refs/heads/<branch>`, then `git fetch origin +refs/heads/<branch>:refs/ahpd/seed` in the machine's own git directory. The checkout and bring-back are then the bundle route's, unchanged.
+- **Departure:** the credential goes to those two commands as `-e AHPD_GIT_CREDENTIAL`, read by an inline `-c credential.helper`. Nothing is written to the machine's git config.
+- **Departure:** only the disposable create reads `gitCredential`, because only a session's machine has a repository to seed.
+- **Departure:** `code` takes `bundle` or `clone`, and any other value fails the load, as `gitGuard` does.
+- **Tests:** four in [`computer-disposable.test.ts`](../../../../packages/computer/test/computer-disposable.test.ts), and `EVERY_FIELD` in [`computer-options-schema.test.ts`](../../../../packages/computer/test/computer-options-schema.test.ts) has both fields. Task 03's bundle tests pass unchanged.

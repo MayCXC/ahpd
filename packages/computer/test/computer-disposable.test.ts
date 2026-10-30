@@ -18,6 +18,7 @@ import type { Agent } from '../../sdk/src/types/agent.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { MachineNeed } from '../../sdk/src/types/machine.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
+import type { Vault } from '../../sdk/src/types/vault.js';
 
 /*
  * A disposable machine: offered as a source, made when a session starts, and
@@ -2495,8 +2496,16 @@ const SSH = fileURLToPath(new URL('./fixtures/ssh.mjs', import.meta.url));
 /** The file the scripted Docker keeps for the box `dev02`. */
 const farOf = (state: string): string => `${state}.${encodeURIComponent('ssh://dev02')}`;
 
-/** A host with one disposable profile made on `dev02`'s Docker, and the plugin's log. */
-const withFarRepository = async (state: string, lines: string[]) => {
+/** The disposable profile on `dev02`'s Docker every far case starts from. */
+const FAR_PROFILE = { title: 'Claude', image: 'node:22', disposable: true, sessionFolder: true, disposableDelay: 1000, server: 'dev02' };
+
+/** A host with disposable profiles made on `dev02`'s Docker, `claude` alone by default, and the plugin's log. */
+const withFarRepository = async (
+  state: string,
+  lines: string[],
+  profiles: Record<string, unknown> = { claude: FAR_PROFILE },
+  vault?: Vault,
+) => {
   const check = `${state}.check`;
   writeFileSync(check, [
     'os_id=debian', 'arch=x86_64', 'cpus=6', 'memory_kb=11718656', 'home_free_kb=52428800',
@@ -2505,8 +2514,8 @@ const withFarRepository = async (state: string, lines: string[]) => {
   return (await load(options(state, {
     env: { DOCKER_FAKE_STATE: state, SSH_FAKE_LOG: `${state}.ssh.jsonl`, SSH_FAKE_CHECK: check },
     ssh: { command: process.execPath, args: [SSH], machines: { dev02: { destination: 'dev02' } } },
-    profiles: { claude: { title: 'Claude', image: 'node:22', disposable: true, sessionFolder: true, disposableDelay: 1000, server: 'dev02' } },
-  }), [agentWith()], (line) => { lines.push(line); }, { worktrees: gitWorktrees() }, undefined, dirname(state))).options;
+    profiles,
+  }), [agentWith()], (line) => { lines.push(line); }, { worktrees: gitWorktrees(), ...(vault === undefined ? {} : { vault }) }, undefined, dirname(state))).options;
 };
 
 it('seeds a machine on another box\'s Docker from a bundle copied in, with no path of this host\'s mounted', async () => {
@@ -2578,4 +2587,108 @@ it('keeps a machine on another box\'s Docker whose work cannot be brought back, 
   expect(refused().some((one) => one.includes(name))).toBe(true);
   expect(held(farOf(state)).machines.map((one) => one.name)).toEqual([name]);
   expect(held(farOf(state)).calls.some((one) => one[0] === 'rm')).toBe(false);
+}, FAR_CASE);
+
+/*
+ * A profile with `code: "clone"` has its machine fetch the session's branch
+ * from the tree's `origin`, with the git credential it names from the vault.
+ */
+
+/** The secret a cloning profile names, and its value. */
+const GIT_SECRET = 'host:git-token';
+const GIT_TOKEN = 'git-token-value';
+
+/** A vault holding `values` and nothing else. */
+const holding = (values: Record<string, string>): Vault => ({
+  get: async (name) => values[name],
+  set: async () => {},
+  delete: async () => false,
+  list: async () => Object.keys(values),
+});
+
+/** A cloning profile on `dev02`, with the credential `gitCredential` names. */
+const CLONING = { ...FAR_PROFILE, code: 'clone', gitCredential: { $secret: GIT_SECRET } };
+
+/** The repository `repositoryIn` makes, with an `origin` its machine can fetch from. */
+const withOrigin = (dir: string) => {
+  const made = repositoryIn(dir);
+  execFileSync('git', ['-C', made.repo, 'remote', 'add', 'origin', 'https://git.example.com/team/repo.git'], { stdio: 'pipe' });
+  return made;
+};
+
+it('fetches the session\'s branch from origin where the profile says clone, with the credential in that command\'s environment only', async () => {
+  const dir = realpathSync(temp());
+  const state = join(dir, 'docker.json');
+  const { repo } = withOrigin(dir);
+
+  const loaded = await withFarRepository(state, [], { claude: CLONING }, holding({ [GIT_SECRET]: GIT_TOKEN }));
+  const { open } = await room(loaded);
+  await open('ahp-session:/one', { computer: 'disposable:claude' }, repo);
+
+  const far = held(farOf(state));
+  const box = far.machines[0] as NonNullable<Held['machines'][number]>;
+  expect(box.mounts).toEqual([`ahpd-git-${box.name}:${machinePathOf(repo)}`]);
+  // No bundle is sent: the branch is asked of origin, then fetched into the seed ref.
+  expect(far.calls.some((one) => one[0] === 'cp' && String(one[2]).endsWith('/tmp/ahpd-seed.bundle'))).toBe(false);
+  const commands = far.commands ?? [];
+  // A command's git verb and what follows it.
+  const verbOf = (one: { command: string[] }): string => {
+    const at = one.command.findIndex((word) => word === 'ls-remote' || word === 'fetch');
+    return at < 0 ? '' : one.command.slice(at).join(' ');
+  };
+  const toOrigin = commands.filter((one) => verbOf(one) !== '');
+  expect(toOrigin.map(verbOf)).toEqual([
+    'ls-remote --exit-code origin refs/heads/main',
+    'fetch -q --no-tags origin +refs/heads/main:refs/ahpd/seed',
+  ]);
+  for (const one of toOrigin) expect(one.env.AHPD_GIT_CREDENTIAL).toBe(GIT_TOKEN);
+  // The origin the checkout names, and the value in no argv and in no other command's environment.
+  expect(commands.some((one) => one.command.join(' ').includes('remote.origin.url https://git.example.com/team/repo.git'))).toBe(true);
+  expect(JSON.stringify(far.calls)).not.toContain(GIT_TOKEN);
+  expect(JSON.stringify(commands.map((one) => one.command))).not.toContain(GIT_TOKEN);
+  expect(commands.filter((one) => !toOrigin.includes(one)).some((one) => JSON.stringify(one.env).includes(GIT_TOKEN))).toBe(false);
+}, FAR_CASE);
+
+it('refuses a clone of a branch origin does not have, and says bundle brings it without a push', async () => {
+  const dir = realpathSync(temp());
+  const state = join(dir, 'docker.json');
+  const { repo } = withOrigin(dir);
+  writeFileSync(farOf(state), JSON.stringify({ machines: [], calls: [], answers: [{ when: 'ls-remote', code: 2 }] }));
+
+  const loaded = await withFarRepository(state, [], { claude: CLONING }, holding({ [GIT_SECRET]: GIT_TOKEN }));
+  const { open } = await room(loaded);
+  await expect(open('ahp-session:/one', { computer: 'disposable:claude' }, repo))
+    .rejects.toThrow(/fetches branch main from origin, and origin has no main; push it, or use code: "bundle", which brings it without a push/);
+  // The machine that could not be seeded is not left on the box.
+  expect(held(farOf(state)).machines).toEqual([]);
+}, FAR_CASE);
+
+it('refuses a clone whose credential is not in the vault, naming it, and a bundle profile beside it still makes its machine', async () => {
+  const dir = realpathSync(temp());
+  const state = join(dir, 'docker.json');
+  const { repo } = withOrigin(dir);
+
+  const loaded = await withFarRepository(state, [], { cloning: CLONING, claude: FAR_PROFILE }, holding({}));
+  const { open } = await room(loaded);
+  await expect(open('ahp-session:/one', { computer: 'disposable:cloning' }, repo))
+    .rejects.toThrow(/profile cloning clones with the git credential host:git-token, which could not be read/);
+  expect(held(farOf(state)).machines).toEqual([]);
+
+  await open('ahp-session:/two', { computer: 'disposable:claude' }, repo);
+  expect(held(farOf(state)).machines).toHaveLength(1);
+}, FAR_CASE);
+
+it('leaves out a profile whose gitCredential is written in clear, with a line, and loads the others', async () => {
+  const dir = realpathSync(temp());
+  const state = join(dir, 'docker.json');
+  const { repo } = withOrigin(dir);
+
+  const lines: string[] = [];
+  const loaded = await withFarRepository(state, lines, { clear: { ...CLONING, gitCredential: GIT_TOKEN }, claude: FAR_PROFILE });
+  expect(lines.some((one) => one.includes('profiles.clear.gitCredential is not a { "$secret": "<name>" } reference, so the profile is left out'))).toBe(true);
+  expect(lines.some((one) => one.includes(GIT_TOKEN))).toBe(false);
+  const { open } = await room(loaded);
+  await expect(open('ahp-session:/one', { computer: 'disposable:clear' }, repo)).rejects.toThrow(/This host has no profile called clear/);
+  await open('ahp-session:/two', { computer: 'disposable:claude' }, repo);
+  expect(held(farOf(state)).machines).toHaveLength(1);
 }, FAR_CASE);

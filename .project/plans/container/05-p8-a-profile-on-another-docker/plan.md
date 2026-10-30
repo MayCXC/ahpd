@@ -123,7 +123,7 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 | [04 - Sessions in a machine on another Docker run nested](task-04-sessions-there-run-nested.md) | done | 01 |
 | [05 - dev02's Docker runs a session](task-05-dev02s-docker-runs-a-session.md) | todo | 03, 04, 07 |
 | [06 - Docs](task-06-docs.md) | todo | 05, 07 |
-| [07 - A profile may have its machine clone from origin](task-07-a-profile-may-clone-from-origin.md) | todo | 03, vault/01-p1 task 04 |
+| [07 - A profile may have its machine clone from origin](task-07-a-profile-may-clone-from-origin.md) | done | 03, vault/01-p1 task 04 |
 | [08 - dev02 runs libvirt and qemu](task-08-dev02-runs-libvirt.md) | dropped | - |
 | [09 - A machine with an address is reached by ssh, with this host's own key](task-09-an-address-is-reached-by-ssh.md) | dropped | - |
 | [10 - libvirt makes a machine from a template, and destroys it](task-10-libvirt-makes-a-machine.md) | dropped | 03, 08, 09 |
@@ -139,8 +139,8 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 
 ## Resume state
 
-- **Done so far:** no task; planned 2026-10-02. Main has parts of tasks 01, 03 and 04 from other plans, checked 2026-10-30. `claimOf` reads through the router, p9 spells the ids, and the router bounds `list`. The `ahpd.host` label exists, host/67 brings work back, and `spawnEnvOf` puts the runtime's `env` in the descriptor. Tasks 08 to 13 moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30. Tasks 01 to 04 are done (2026-10-30).
-- **Next action:** [task-07-a-profile-may-clone-from-origin.md](task-07-a-profile-may-clone-from-origin.md).
+- **Done so far:** no task; planned 2026-10-02. Main has parts of tasks 01, 03 and 04 from other plans, checked 2026-10-30. `claimOf` reads through the router, p9 spells the ids, and the router bounds `list`. The `ahpd.host` label exists, host/67 brings work back, and `spawnEnvOf` puts the runtime's `env` in the descriptor. Tasks 08 to 13 moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30. Tasks 01 to 04 and 07 are done (2026-10-30).
+- **Next action:** [task-05-dev02s-docker-runs-a-session.md](task-05-dev02s-docker-runs-a-session.md), which needs Softov on dev02.
 - **Open questions:** none; the `isolation: folder` question is answered by host/67's rules (2026-10-30).
 - **Watch out for:** the `clone` route puts a git credential in the box for the clone command only.
 It needs the vault (vault/01-p1 task 04) to name it. The `bundle` route needs neither. A folder that is not a repository has no clone, and this plan refuses it.

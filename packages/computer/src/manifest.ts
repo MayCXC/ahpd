@@ -4,6 +4,7 @@ import { RpcError } from '@ahpd/sdk';
 import { bodyText, machinePathOf, partTarget, resolveNeeds } from '@ahpd/sdk';
 import { hasDefinition } from './devcontainer.js';
 import { withRequires } from './parts.js';
+import type { CodeRoute } from './clone.js';
 import type { SessionTree } from './gitdir.js';
 import { allowedBy, patternOf } from './reference.js';
 import type { Reference } from './reference.js';
@@ -59,6 +60,21 @@ export interface Profile {
    * rather than failing later in the runtime's own words.
    */
   server?: string;
+  /**
+   * How a machine on another box's Docker is given the session's code:
+   * `bundle`, the default, sends a bundle of the tree from this host; `clone`
+   * has the machine fetch the session's branch from the tree's `origin`.
+   */
+  code?: CodeRoute;
+  /**
+   * The vault secret a `clone` machine's fetch from `origin` uses as its git
+   * credential, by name.
+   *
+   * Only ever a name: a profile that writes the credential itself is left out
+   * at load. It is read when a machine is made, for the machine's owner and
+   * team, and reaches only that fetch.
+   */
+  gitCredential?: string;
   mounts?: string[];
   workdir?: string;
   /**
@@ -1238,6 +1254,7 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
     ...(agents.length === 0 ? {} : { agents }),
     ...(folder === undefined ? {} : { folder }),
     ...(workdir === undefined ? {} : { workdir }),
+    ...(profile.code === undefined ? {} : { code: profile.code }),
     // Who the machine is, which nothing in the body can say: the host hands it
     // down and the machine keeps it.
     ...(defaults.owner === undefined ? {} : { owner: defaults.owner }),

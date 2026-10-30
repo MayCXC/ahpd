@@ -12,7 +12,8 @@ import { byName, DOCKER_OWN, DOCKER_OWN_PREFIX, dockerOwn } from './byname.js';
 import { sourceOnHost, spelledOnHost, windowsHost } from './hostpath.js';
 import { cliMountOf, cliVolumeOf, copyOf, gitVolumeOf, guardFor, guardedMounts, idsOfUser, MACHINE_GIT, MACHINE_USER, openReadingOf, seedOf, treeOf, userLabelOf, volumeFlagOf } from './gitdir.js';
 import type { GitGuard, GitMounts, SessionTree } from './gitdir.js';
-import { bundleOfTree, originOf, SEED_BUNDLE, SEED_REF } from './clone.js';
+import { bundleOfTree, codeRouteOf, CREDENTIAL_ENV, credentialArgs, originOf, SEED_BUNDLE, SEED_REF } from './clone.js';
+import type { CodeRoute } from './clone.js';
 import { absoluteOnHost, mountParts } from './manifest.js';
 import { archiveOf, FILLED_MARKER, firstFileOf, IMAGE_PATH, MACHINE_PARTS, once, partsLabel, partsSaid, pathWith, volumeOf } from './parts.js';
 import type { ArchiveEntry, MadePart, Tarball } from './parts.js';
@@ -469,6 +470,16 @@ export interface MachineSpec {
   repository?: string;
   /** How the git directory is guarded; `fetch` when absent. */
   gitGuard?: GitGuard;
+  /** How a machine on another box's Docker is given its code; `bundle` when absent. */
+  code?: CodeRoute;
+  /**
+   * The git credential a `clone` machine fetches from `origin` with: the
+   * value, read from the vault for this machine's owner when it was made.
+   *
+   * Given to that one fetch by name in its environment, and never written to
+   * a label, an argv or the machine's git config.
+   */
+  gitCredential?: string;
   /**
    * Whether the machine works in the host's tree or in a copy of it, at the
    * tree's own path in the volume it commits into; `shared` when absent.
@@ -2158,6 +2169,51 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
   };
 
   /**
+   * Fetch the session's branch from the tree's `origin` into the seed ref, in
+   * the machine, and answer the commit it is at.
+   *
+   * The `clone` route: the box reaches the remote itself, so nothing of this
+   * host's history is sent. A branch `origin` does not have is refused, since
+   * the machine could only be seeded from a commit the session is not on. The
+   * credential, where the profile names one, reaches the two commands that
+   * talk to `origin`, by name in their environment and read by an inline
+   * helper: it is in no argv, and nothing in the machine keeps it.
+   */
+  const fetchedInto = async (
+    container: string,
+    root: string,
+    at: string,
+    spec: MachineSpec,
+    branch: string | undefined,
+    asUser: (args: string[]) => Promise<string>,
+  ): Promise<string | undefined> => {
+    const origin = originOf(hostPathOf(root));
+    if (origin === undefined) {
+      throw new Error(`${spec.name} fetches its code from origin, and ${root} has no origin remote; code: "bundle" sends it from this host`);
+    }
+    if (branch === undefined) {
+      throw new Error(`${spec.name} fetches the session's branch from origin, and ${root} is on no branch; code: "bundle" sends the commit from this host`);
+    }
+    await asUser(['git', `--git-dir=${at}`, 'config', 'remote.origin.url', origin]);
+    const given = byName(spec.gitCredential === undefined ? {} : { [CREDENTIAL_ENV]: spec.gitCredential });
+    const helper = spec.gitCredential === undefined ? [] : credentialArgs();
+    const toOrigin = (args: string[]): string[] => [
+      'exec', ...given.flags, ...(spec.user === undefined ? [] : ['--user', spec.user]), container,
+      'git', `--git-dir=${at}`, ...helper, ...args,
+    ];
+    // `--exit-code` is 2 when origin answered and has no such branch.
+    const listed = await ran(options, toOrigin(['ls-remote', '--exit-code', 'origin', `refs/heads/${branch}`]), undefined, given.env);
+    if (listed.code === 2) {
+      throw new Error(`${spec.name} fetches branch ${branch} from origin, and origin has no ${branch}; push it, or use code: "bundle", which brings it without a push`);
+    }
+    if (listed.code !== 0) {
+      throw new Error(`git ls-remote origin in ${spec.name} exited ${String(listed.code)}: ${listed.stderr.trim() || listed.stdout.trim() || 'no output'}`);
+    }
+    await must(toOrigin(['fetch', '-q', '--no-tags', 'origin', `+refs/heads/${branch}:${SEED_REF}`]), given.env);
+    return (await asUser(['git', `--git-dir=${at}`, 'rev-parse', SEED_REF])).trim() || undefined;
+  };
+
+  /**
    * Seed a machine's own git directory, in the machine, from the tree it was given.
    *
    * The machine's git directory is a volume, which Docker made owned by root,
@@ -2241,10 +2297,14 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
       }
       /*
        * On another box's Docker, the history is a bundle of the tree's `HEAD`
-       * instead, fetched into the seed ref: the commit the checkout below is
-       * made at is the one the bundle carried, read back from that ref.
+       * instead, or the session's branch fetched from `origin` where the
+       * profile says `clone`, fetched into the seed ref either way: the commit
+       * the checkout below is made at is read back from that ref.
        */
-      const commit = objects === undefined ? await bundledInto(container, root, at, asUser) : seed.commit;
+      const far = (): Promise<string | undefined> => (codeRouteOf(spec) === 'clone'
+        ? fetchedInto(container, root, at, spec, seed.branch, asUser)
+        : bundledInto(container, root, at, asUser));
+      const commit = objects === undefined ? await far() : seed.commit;
       // The identity a commit needs, and nothing else of the host's config.
       if (seed.name !== undefined) await asUser(['git', ...own, 'config', 'user.name', seed.name]);
       if (seed.email !== undefined) await asUser(['git', ...own, 'config', 'user.email', seed.email]);

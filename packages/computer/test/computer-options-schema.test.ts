@@ -50,6 +50,8 @@ const EVERY_FIELD: Record<string, unknown> = {
   stateScope: 'shared',
   gitGuard: 'open',
   nestedDelete: 'record',
+  code: 'clone',
+  gitCredential: { $secret: 'host:git-token' },
 };
 
 /** The properties a profile declares. */
