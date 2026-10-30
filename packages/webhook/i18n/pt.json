@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "title": "Webhook",
+    "description": "Uma URL que conversa com um bot ou dispara uma automação, com um segredo por endpoint."
+  },
+  "options": {
+    "syncTimeoutSeconds": {
+      "description": "Quanto tempo uma chamada síncrona espera o fim do seu turno, em segundos."
+    },
+    "maxBodyBytes": {
+      "description": "O máximo do corpo de uma chamada que este plugin lê, em bytes. Um corpo maior recebe 413."
+    }
+  }
+}

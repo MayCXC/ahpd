@@ -46,6 +46,7 @@
   "files": [
     "dist",
     "src",
+    "i18n",
     "icon.svg",
     "README.md"
   ],
@@ -70,6 +71,7 @@
   },
   "ahpd": {
     "entry": "./dist/index.js",
+    "i18n": "i18n",
     "title": "Agent Claude",
     "description": "Claude Code as an agent backend, one record per configuration.",
     "categories": ["agent"],

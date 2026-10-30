@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "title": "Agente Cofold",
+    "description": "Roda o runtime de agentes Cofold, com acesso a endpoints de API compatíveis com a OpenAI."
+  },
+  "options": {
+    "model": {
+      "description": "O id do modelo usado por um registro que não indica nenhum."
+    },
+    "baseUrl": {
+      "description": "O endpoint compatível com a OpenAI usado por um registro que não indica nenhum."
+    },
+    "instructions": {
+      "description": "O prompt de sistema com que é criado um registro que não indica nenhum."
+    },
+    "computerConfigDir": {
+      "description": "A pasta de configuração que o harness lê dentro de uma máquina. Por padrão, /ahpd/cofold; false mantém a da própria imagem."
+    },
+    "store": {
+      "description": "A pasta onde fica o armazenamento de arquivos do cofold de cada registro, uma pasta por registro. Por padrão, a pasta de dados da própria ferramenta."
+    },
+    "memory": {
+      "description": "true para manter o armazenamento de cada registro em memória, para um teste."
+    },
+    "tools": {
+      "description": "Quais recursos uma sessão roda, de onde web_search tira seus provedores, e se uma escrita exige que o arquivo seja lido antes."
+    },
+    "strictTools": {
+      "description": "false aplica à opção tools a verificação flexível, e uma chave que o harness não conhece é descartada em vez de recusada."
+    },
+    "apiKey": {
+      "description": "A chave do próprio daemon, para um registro que não indica nenhuma."
+    },
+    "resource": {
+      "description": "O recurso protegido em que um cliente se autentica."
+    },
+    "autoCompactTokens": {
+      "description": "O tamanho estimado do histórico em que uma sessão é compactada, nunca acima de 80% do contexto informado do modelo, ou de 32000. Por padrão, esses 80%."
+    }
+  },
+  "session": {
+    "baseUrl": {
+      "title": "Endpoint",
+      "description": "Uma URL base compatível com a OpenAI, como https://api.deepseek.com/v1."
+    },
+    "instructions": {
+      "title": "Instruções",
+      "description": "O prompt de sistema com que este agente roda."
+    },
+    "permissionMode": {
+      "title": "Aprovações",
+      "description": "Como o agente lida com a aprovação de ferramentas.",
+      "enum": {
+        "default": "Perguntar antes de editar",
+        "acceptEdits": "Editar automaticamente",
+        "plan": "Modo plano",
+        "auto": "Modo automático",
+        "bypassPermissions": "Ignorar permissões",
+        "dontAsk": "Não perguntar"
+      }
+    },
+    "effortLevel": {
+      "title": "Esforço",
+      "description": "Quanto ele pensa antes de responder.",
+      "enum": {
+        "off": "Desligado",
+        "low": "Baixo",
+        "medium": "Médio",
+        "high": "Alto"
+      }
+    }
+  }
+}

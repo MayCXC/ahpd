@@ -42,6 +42,7 @@
   "files": [
     "dist",
     "src",
+    "i18n",
     "icon.svg",
     "README.md"
   ],
@@ -64,6 +65,7 @@
   },
   "ahpd": {
     "entry": "./dist/index.js",
+    "i18n": "i18n",
     "title": "Agent pi",
     "description": "Runs the Pi coding agent, embedded in process and served as an agent provider.",
     "categories": ["agent"],

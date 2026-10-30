@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "title": "Computadora",
+    "description": "Proporciona entornos aislados en Docker o contenedores para las sesiones de agente, con gestión del ciclo de vida y herramientas."
+  },
+  "options": {
+    "runtime": {
+      "description": "Qué runtime usar: docker, que crea máquinas, o ssh, que solo las lista."
+    },
+    "command": {
+      "description": "El programa que se ejecuta. docker."
+    },
+    "args": {
+      "description": "Argumentos que van antes de los suyos, para un wrapper o un contexto."
+    },
+    "ssh": {
+      "description": "Máquinas a las que este host llega por ssh. Cada una se lista, no se crea: nada de este host está en ella, así que ninguna se puede crear, iniciar ni eliminar desde aquí."
+    },
+    "env": {
+      "description": "Variables de entorno combinadas sobre las del daemon. Una variable es una credencial dondequiera que la imagen guarde una, así que cada una aparece como <set>."
+    },
+    "image": {
+      "description": "La imagen con la que se crea una máquina cuando una llamada no indica ninguna."
+    },
+    "cpus": {
+      "description": "Un límite de CPU para cada máquina que crea este host."
+    },
+    "memory": {
+      "description": "Un límite de memoria para cada máquina que crea este host."
+    },
+    "max": {
+      "description": "Cuántas pueden existir a la vez."
+    },
+    "label": {
+      "description": "La etiqueta que lleva cada máquina."
+    },
+    "prefix": {
+      "description": "Con qué empieza el nombre de cada máquina que crea este host."
+    },
+    "sessionSetting": {
+      "description": "Si un ajuste de sesión indica la máquina en la que se ejecuta una sesión."
+    },
+    "sessionDefault": {
+      "description": "El valor por defecto de ese ajuste."
+    },
+    "needs": {
+      "description": "Valores para las necesidades de máquina de cualquier agente, por nombre de necesidad."
+    },
+    "mounts": {
+      "description": "Lo que puede ver cada máquina que crea este plugin."
+    },
+    "profiles": {
+      "description": "Los conjuntos con nombre que una persona elige al crear una máquina."
+    },
+    "bodyMounts": {
+      "description": "Si quien crea una máquina puede indicar sus propios montajes."
+    },
+    "imageMounts": {
+      "description": "Si una part se puede montar desde su propia imagen. false monta cada part desde un volumen que se llena una vez a partir de ella."
+    },
+    "images": {
+      "description": "Los patrones de imagen con los que se puede crear una máquina."
+    },
+    "devcontainer": {
+      "description": "La CLI de Dev Container, como launcher y como creador de máquinas, y las carpetas desde las que puede crear una; false desactiva todas las rutas de dev container."
+    }
+  },
+  "session": {
+    "computer": {
+      "title": "Computadora",
+      "description": "El computer://<id> en el que se ejecuta esta sesión. Vacío la ejecuta en este host."
+    }
+  }
+}

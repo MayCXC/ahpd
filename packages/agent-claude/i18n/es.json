@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "title": "Agente Claude",
+    "description": "Claude Code como backend de agente, un registro por configuración."
+  },
+  "options": {
+    "paths": {
+      "description": "Las carpetas que cataloga, y dónde va una sesión por defecto. Por defecto, las del host."
+    },
+    "computerExecutable": {
+      "description": "Dónde está la CLI dentro de una máquina. Por defecto, claude en el PATH de la imagen."
+    },
+    "computerCli": {
+      "description": "De dónde viene la CLI que ejecuta una máquina: part, la part claude que construye este host, por defecto; host monta la CLI instalada en este host."
+    },
+    "computerCliFallback": {
+      "description": "Con computerCli part, qué recibe una máquina cuando la part claude no se puede construir: refuse, por defecto, rechaza la sesión de Claude y nombra la part; host monta en su lugar la CLI de este host y lo registra en el log."
+    },
+    "computerConfigDir": {
+      "description": "La carpeta de configuración que lee la CLI dentro de una máquina. Por defecto, /ahpd/<id>, y /ahpd/claude para el integrado; false deja la de la propia imagen."
+    },
+    "workerStop": {
+      "description": "Qué detiene un stop dado en el chat de un subagente. Por defecto, worker."
+    },
+    "handshakeTimeoutMs": {
+      "description": "Cuánto tiempo tiene la CLI para responder al handshake antes de que su sesión la trate como una CLI que murió. Por defecto 120000; una máquina más lenta lo sube."
+    }
+  },
+  "session": {
+    "permissionMode": {
+      "title": "Aprobaciones",
+      "description": "Cómo gestiona el agente la aprobación de herramientas.",
+      "enum": {
+        "default": "Preguntar antes de editar",
+        "acceptEdits": "Editar automáticamente",
+        "plan": "Modo plan",
+        "auto": "Modo automático",
+        "bypassPermissions": "Omitir permisos",
+        "dontAsk": "No preguntar"
+      }
+    },
+    "effortLevel": {
+      "title": "Esfuerzo",
+      "description": "Cuánto piensa antes de responder.",
+      "enum": {
+        "low": "Bajo",
+        "medium": "Medio",
+        "high": "Alto",
+        "xhigh": "Muy alto",
+        "max": "Máximo"
+      }
+    },
+    "shellInitScripts": {
+      "title": "Script de inicio del shell",
+      "description": "Un script que se carga antes de cada comando de la herramienta de shell integrada.",
+      "items": {
+        "title": "Script de inicio del shell"
+      }
+    },
+    "permissions": {
+      "title": "Permisos",
+      "description": "Permisos por herramienta en esta sesión. Se actualizan cuando se aprueba una herramienta para esta sesión."
+    }
+  }
+}

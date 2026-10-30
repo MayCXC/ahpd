@@ -44,6 +44,7 @@
   "files": [
     "dist",
     "src",
+    "i18n",
     "images",
     "icon.svg",
     "icon-dark.svg",
@@ -64,6 +65,7 @@
   },
   "ahpd": {
     "entry": "./dist/index.js",
+    "i18n": "i18n",
     "title": "Computer",
     "description": "Provides isolated Docker/Container environments for agent sessions, including lifecycle management and tools.",
     "categories": ["channel", "tool"],

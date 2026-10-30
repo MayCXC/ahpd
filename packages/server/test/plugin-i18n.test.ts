@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -108,5 +109,51 @@ describe('ahpd.i18n', () => {
     const { loaded, problems } = await load([dir]);
     expect(loaded).toEqual([]);
     expect(problems.join('\n')).toContain('ahpd.i18n');
+  });
+
+  it('reads the pt and es catalogs each first-party plugin ships', () => {
+    const packages = join(import.meta.dirname, '..', '..');
+    for (const name of ['activepieces', 'agent-acp', 'agent-claude', 'agent-cofold', 'agent-pi', 'bot', 'computer', 'push', 'tasks', 'tunnel-devtunnel', 'webhook']) {
+      const manifest = readManifest(join(packages, name));
+      expect(manifest.i18nProblems, name).toBeUndefined();
+      expect(Object.keys(manifest.i18n ?? {}).sort(), name).toEqual(['es', 'pt']);
+      expect(typeof (manifest.i18n?.pt?.meta as Record<string, unknown> | undefined)?.title, name).toBe('string');
+    }
+  });
+});
+
+describe('tools/i18n-check.mjs', () => {
+  const script = join(import.meta.dirname, '..', '..', '..', 'tools', 'i18n-check.mjs');
+  const run = (...dirs: string[]) => spawnSync(process.execPath, [script, ...dirs], { encoding: 'utf8' });
+
+  it('prints nothing on the shipped catalogs', () => {
+    const answer = run();
+    expect(answer.stdout).toBe('');
+    expect(answer.status).toBe(0);
+  });
+
+  it('prints each path that matches no field, and exits 1', () => {
+    write('i18n-stale/src/agent.ts', "const schema = { mode: { enum: ['fast', 'slow'] } };\n");
+    write('i18n-stale/i18n/pt.json', JSON.stringify({
+      meta: { title: 'Velho', subtitle: 'Nada' },
+      options: { region: { title: 'Região', enum: { eu: 'Europa', mars: 'Marte' } }, gone: { title: 'Sumiu' } },
+      session: { mode: { enum: { fast: 'Rápido', warp: 'Dobra' } }, lost: { title: 'Perdido' } },
+      labels: {},
+    }));
+    const dir = pkg('i18n-stale', {
+      i18n: 'i18n',
+      optionsSchema: { type: 'object', properties: { region: { type: 'string', enum: ['eu', 'us'] } } },
+    });
+
+    const answer = run(dir);
+    expect(answer.status).toBe(1);
+    expect(answer.stdout.trim().split('\n').map((line) => line.replace(/^.*pt\.json: /, ''))).toEqual([
+      'meta.subtitle matches no field',
+      'options.region.enum.mars matches no enum value',
+      'options.gone matches no field',
+      'session.mode.enum.warp matches no enum value',
+      'session.lost matches no field',
+      'labels is not a block a lookup reads',
+    ]);
   });
 });

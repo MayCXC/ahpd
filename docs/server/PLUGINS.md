@@ -114,6 +114,10 @@ ahpd --plugin-option agent-claude.workerStop=session
 
 A spec is a package name or a path. A path is tried from the working directory, then from the configuration directory.
 
+## Language
+
+A client that sends a `locale` reads the new session form and the plugins screen in that language. The host and each first-party plugin ship `pt` and `es`. A string with no translation shows in English. A client that changes its language connects again. See [Text in the client's language](../plugins/PLUGINS.md#text-in-the-client-s-language) to ship a catalog with a plugin.
+
 ## Where a plugin keeps its records
 
 Each record is one Markdown file: `~/.config/ahpd/<collection>/<id>.md`. You can edit, copy or delete it while the daemon runs, and the plugin sees the change.

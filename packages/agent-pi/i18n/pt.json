@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "title": "Agente pi",
+    "description": "Roda o agente de código Pi, embutido no processo e servido como provedor de agente."
+  },
+  "options": {
+    "model": {
+      "description": "O modelo usado por um registro que não indica nenhum, como provider/modelId."
+    },
+    "projectTrust": {
+      "description": "Se um registro que não indica nada carrega as extensões, skills e prompts do pi do próprio projeto. Por padrão, trust."
+    },
+    "sessionDir": {
+      "description": "A pasta onde um registro que não indica nenhuma guarda suas sessões do pi. Por padrão, a do próprio pi."
+    }
+  },
+  "session": {
+    "projectTrust": {
+      "title": "Recursos do projeto",
+      "description": "Se as extensões, skills e prompts do pi deste projeto são carregados.",
+      "enum": {
+        "trust": "Carregar",
+        "deny": "Não carregar"
+      }
+    },
+    "permissionMode": {
+      "title": "Aprovações",
+      "description": "Como o agente lida com a aprovação de ferramentas.",
+      "enum": {
+        "default": "Perguntar antes de editar",
+        "acceptEdits": "Editar automaticamente",
+        "plan": "Modo plano",
+        "auto": "Modo automático",
+        "bypassPermissions": "Ignorar permissões",
+        "dontAsk": "Não perguntar"
+      }
+    }
+  }
+}

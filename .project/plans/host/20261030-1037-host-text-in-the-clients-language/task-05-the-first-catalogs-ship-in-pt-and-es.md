@@ -1,6 +1,6 @@
 ---
 title: The first catalogs ship in pt and es
-status: todo
+status: done
 depends: [task-03-the-new-session-form-comes-in-the-locale.md, task-04-the-plugins-screen-comes-in-the-locale.md]
 layer: sdk, plugins, docs
 refs:

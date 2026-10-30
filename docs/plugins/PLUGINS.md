@@ -1312,6 +1312,42 @@ One icon is at most 32 KB, and a larger file, a larger fetched body or a larger 
 
 A client draws an icon as an image, an `<img>` or a native image view, and never inline in the document. The host does not sanitize one: an SVG can carry a script, and drawing it as an image runs none.
 
+### Text in the client's language
+
+A client sends a `locale`, a BCP 47 tag such as `pt-BR`, in `initialize`. The host answers the new session form and the plugins screen in that locale. A plugin ships the text for its own fields in `ahpd.i18n`:
+
+```json
+"i18n": "i18n"
+```
+
+The value names a folder in the package. Each `<locale>.json` in it is one catalog, such as `i18n/pt.json` or `i18n/pt-BR.json`. A catalog is keyed by field path:
+
+```json
+{
+  "meta": { "title": "Falado", "description": "Traz um catálogo em português." },
+  "options": {
+    "tone": { "title": "Tom", "description": "Como o plugin fala.", "enum": { "warm": "Caloroso" } }
+  },
+  "session": {
+    "files": { "title": "Arquivos", "items": { "title": "Padrão" } }
+  }
+}
+```
+
+| Block | What it translates |
+| --- | --- |
+| `meta` | The plugin's `title` and `description` on the plugins screen |
+| `options.<key>` | One property of the `optionsSchema` |
+| `session.<key>` | One key of the new session form that the plugin declares |
+
+Each key takes `title`, `description`, `enum.<value>` for the label of one value, and `items.title`. A key that sets `enumDynamic` keeps its labels, because its values are data.
+
+The host looks up each string on its own. It tries the catalogs of the plugin that declared the key, then the host's own catalogs. In each, it tries the tag as given and then its language alone, so `pt.json` answers `pt` and `pt-BR`. A string that no catalog has stays in English. English is never in a catalog: it is the text the manifest and the code hold.
+
+A catalog that does not parse costs that catalog and one line in the daemon's log. A folder outside the package is refused the same way, and the plugin still loads. `pnpm i18n` in this repository lists each catalog path that names no field.
+
+Text the model reads, and text a person wrote, are not translated.
+
 ### The contracts
 
 A contract key is the plural of a register method, and its entries are the names

@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "title": "Bot",
+    "description": "Crea bots de conversación con identidad, espacio de trabajo y sesiones persistentes propios."
+  },
+  "options": {
+    "root": {
+      "description": "La carpeta donde está el espacio de trabajo de cada bot, como <root>/<slug>."
+    },
+    "lastChats": {
+      "description": "Cuántos chats lista una plantilla en {{chats}}."
+    },
+    "mainTurnPostMessageAbsent": {
+      "description": "Qué hace un turno principal cuando el turno de la sesión de fondo termina sin post_message: post (por defecto), notice, silence o postNotice."
+    }
+  },
+  "session": {
+    "bot": {
+      "title": "Bot",
+      "description": "El bot con el que es este chat."
+    }
+  }
+}
