@@ -25,6 +25,7 @@ const until = async (check: () => boolean, times = 2000): Promise<void> => {
     if (check()) return;
     await new Promise((done) => { setTimeout(done, 0); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 it('sends calls as the protocol declares them, and a late client reads them the same way', async () => {

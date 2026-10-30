@@ -45,6 +45,7 @@ const until = async (done: () => boolean | Promise<boolean>, tries = 200): Promi
     if (await done()) return;
     await new Promise((r) => { setTimeout(r, 1); });
   }
+  throw new Error(`still waiting after ${tries} tries`);
 };
 
 async function connected(withStore = true, pace = 0, held = memoryAutomations()) {

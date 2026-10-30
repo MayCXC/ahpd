@@ -33,6 +33,7 @@ const until = async (check: () => boolean, times = 400): Promise<void> => {
     if (check()) return;
     await new Promise((done) => { setTimeout(done, 0); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 /** A pi that ends every turn at once and records the rewind it was asked for. */

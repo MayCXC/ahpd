@@ -123,6 +123,7 @@ const settle = async (times = 30): Promise<void> => {
 const until = async (done: () => boolean): Promise<void> => {
   for (let i = 0; i < 300 && !done(); i++) await new Promise((r) => { setTimeout(r, 10); });
   await settle();
+  if (!done()) throw new Error('still waiting');
 };
 
 beforeEach(() => {

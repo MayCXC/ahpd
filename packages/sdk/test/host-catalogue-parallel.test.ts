@@ -52,6 +52,7 @@ const slow = (provider: string, wait: number, rows: Listed[], together: ReturnTy
 /** Ticks until this is true, or long enough that it plainly is not. */
 const until = async (wanted: () => boolean): Promise<void> => {
   for (let i = 0; i < 400 && !wanted(); i++) await settle(2);
+  if (!wanted()) throw new Error('still waiting');
 };
 
 /**

@@ -89,6 +89,7 @@ const list = async (client: { handle(request: unknown): Promise<unknown> }) =>
 /** Ticks until this is true, or long enough that it plainly is not. */
 const until = async (wanted: () => boolean): Promise<void> => {
   for (let i = 0; i < 500 && !wanted(); i++) await settle(2);
+  if (!wanted()) throw new Error('still waiting');
 };
 
 /** A session recorded where it ran, as the store keeps it. */

@@ -77,6 +77,7 @@ const backend = (here: Store, provider = 'slow'): Agent => ({
 /** Ticks until this is true, or long enough that it plainly is not. */
 const until = async (wanted: () => boolean): Promise<void> => {
   for (let i = 0; i < 500 && !wanted(); i++) await settle(2);
+  if (!wanted()) throw new Error('still waiting');
 };
 
 const listed = async (client: { handle(request: unknown): Promise<unknown> }) =>

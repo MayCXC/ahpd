@@ -31,6 +31,7 @@ afterEach(async () => { await rm(folder, { recursive: true, force: true, maxRetr
 /** Ticks until this is true, or long enough that it plainly is not. */
 const until = async (wanted: () => boolean): Promise<void> => {
   for (let i = 0; i < 500 && !wanted(); i++) await settle(2);
+  if (!wanted()) throw new Error('still waiting');
 };
 
 it('keeps the record of a session a listing finds mid-restart', async () => {

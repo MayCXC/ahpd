@@ -38,6 +38,7 @@ const until = async (check: () => boolean, times = 3000): Promise<void> => {
     if (check()) return;
     await new Promise((resolve) => { setTimeout(resolve, 1); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 /** A folder of its own, with the file the fixture logs its requests to. */
