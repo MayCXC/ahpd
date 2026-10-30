@@ -1,6 +1,6 @@
 ---
 title: A start stops the daemon it made when it is signalled
-status: pending
+status: done
 depends: []
 layer: server
 refs:
@@ -39,4 +39,5 @@ command and no recorded daemon running.
 
 ## Resume
 
-Not started.
+Done 2026-10-30.
+The server suite runs once on the union.
