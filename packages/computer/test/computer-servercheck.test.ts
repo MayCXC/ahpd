@@ -1,6 +1,6 @@
 import { posix } from '../../../tools/posix.ts';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -122,6 +122,18 @@ it.skipIf(!posix)('runs its own script under sh, and reads what this host has', 
   expect(report.items.cpus.ok).toBe(true);
   expect(report.items.memory.ok).toBe(true);
   expect(report.user).not.toBe('');
+});
+
+it.skipIf(!posix)('finds an ahpd the install script put in ~/.local/node/bin, off the PATH', async () => {
+  const bin = join(temp(), '.local/node/bin');
+  mkdirSync(bin, { recursive: true });
+  writeFileSync(join(bin, 'ahpd'), '#!/bin/sh\necho 9.9.9\n', { mode: 0o755 });
+  const ran = spawnSync('/bin/sh', ['-s'], {
+    input: SERVER_CHECK.script,
+    encoding: 'utf8',
+    env: { HOME: temp(), PATH: '/usr/bin:/bin' },
+  });
+  expect(reportFrom(ran.stdout).items.ahpd).toMatchObject({ ok: true, found: '9.9.9' });
 });
 
 /** The ssh runtime over the scripted ssh, with one box that answers the check from a file. */

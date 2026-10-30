@@ -48,10 +48,15 @@ export interface ServerReport {
  * Alpine - and must not stop when a program is absent: every probe is guarded
  * by `command -v` or by its own `2>/dev/null`, and nothing here uses `set -e`.
  *
+ * `~/.local/node/bin` goes at the end of PATH, because the install script puts
+ * ahpd and its node there, and that folder is on the PATH of an interactive
+ * shell only: `ssh box cmd` is not one.
+ *
  * `sed` rather than `awk` or a sourced `/etc/os-release`, so a box needs only
  * what every system has and nothing of the box's own file is run as code.
  */
 const SCRIPT = `
+[ -d "$HOME/.local/node/bin" ] && PATH="$PATH:$HOME/.local/node/bin"
 first() { sed -n 1p; }
 osval() { sed -n "s/^$1=//p" /etc/os-release 2>/dev/null | tr -d '"' | first; }
 echo "os_id=$(osval ID)"
