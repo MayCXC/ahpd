@@ -270,12 +270,17 @@ A profile that names `cofold` carries the `ahpd` part its nested host runs from,
 | `cofoldState` | a state volume seeded with the harness's `config.json` | `/ahpd/cofold`, the file at `/ahpd/cofold/cofold/config.json` |
 | `cofoldConfig` | the harness's `config.json`, read-only, only in a profile with `state: "host"` | `/ahpd/cofold/cofold/config.json` |
 | `cofoldConfigPath` | - | `COFOLD_CONFIG=/ahpd/cofold/cofold/config.json` |
+| `cofoldBaseUrl` | - | `COFOLD_BASE_URL`, only when a profile names it |
+| `cofoldApiKey` | - | `COFOLD_API_KEY`, only when a profile names it |
+| `cofoldModel` | - | `COFOLD_MODEL`, only when a profile names it |
 
 `computerConfigDir` in the `@ahpd/agent-cofold` options names that directory, `/ahpd/cofold` by default, and `false` leaves the image's own configuration alone and declares only the part.
 
 The path inside the machine is fixed and `COFOLD_CONFIG` points at the file, so the configuration is found whichever user the image runs as - a container whose home is `/home/app` reads it the same as one running as root. A profile that mounts the configuration at some other path of its own gets a machine where the harness does not look.
 
 `XDG_CONFIG_HOME` is not touched, and that is the point: it is the nested `ahpd`'s own folder as well, and a machine's mount point is root-owned, so pointing it at `/ahpd/cofold` stops any image that does not run as root from starting at all - `EACCES: permission denied, mkdir '/ahpd/cofold/ahpd/usage'` on the way in. Every other program in the machine keeps its own XDG configuration.
+
+The three variables are read on top of the file, as cofold's own CLI reads them: `COFOLD_BASE_URL` adds or replaces a provider called `default` with `COFOLD_API_KEY` as its key, and a `COFOLD_MODEL` with no slash is a model of `default`. They have no default, so a machine gets them only from a profile, and a profile that names the key from the vault gives a machine a provider with no file holding the key. That is the way to run cofold on [another box](#profiles), where this host's own file is refused.
 
 **The configuration holds keys.** Unlike Claude's sign-in, cofold's keys are in the file it seeds, so anything running in a machine that carries it can read them. Use a profile to decide which machines get it, and treat the file as shared for now.
 
@@ -576,8 +581,38 @@ The names are published in the create schema as an `enum` with titles and descri
 `server` names the entry of `ssh.machines` that a profile's machines are made on, and that box's `server` leaf says what it can run. A profile whose `server` is not an entry there is left out, with a line in the log:
 
 ```json
-{ "profiles": { "remote": { "title": "On dev02", "server": "dev02" } } }
+{ "plugins": [{ "name": "@ahpd/computer", "options": {
+  "ssh": { "machines": { "dev02": { "destination": "dev02" } } },
+  "profiles": {
+    "remote": {
+      "title": "On dev02",
+      "server": "dev02",
+      "image": "node:22",
+      "disposable": true,
+      "sessionFolder": true,
+      "code": "bundle",
+      "needs": {
+        "cofoldBaseUrl": "https://openrouter.ai/api/v1",
+        "cofoldModel": "deepseek/deepseek-chat",
+        "cofoldApiKey": { "$secret": "host:openrouter" }
+      }
+    }
+  }
+} }] }
 ```
+
+The machine is made on the box's own Docker, which this host reaches as `DOCKER_HOST=ssh://<destination>`. The parts it mounts are built there too, because a part is mounted by its image and only the Docker that holds the image can mount it.
+
+The session's folder is on this host, so `code` says how the machine gets the session's code:
+
+| `code` | What happens |
+| --- | --- |
+| `bundle` | The default. This host makes a git bundle of the session's branch, copies it in with `docker cp`, and the machine clones it with `origin` set to the repository's remote. No credential goes into the box. |
+| `clone` | The machine fetches the session's branch from `origin` by its https form, so `git@github.com:acme/app.git` is fetched as `https://github.com/acme/app.git`. The machine holds no key and no token, so this works only for a public repository, and the branch has to be on `origin`. |
+
+Either way the work comes back the same way, by the fetch [Disposable machines](#disposable-machines) describes, and the machine never pushes.
+
+A credential of this host's own never goes to another box. An agent need marked as a credential whose value is this host's, such as a cofold configuration seeded from `~/.config/cofold/config.json`, is refused at create with a sentence naming the need. Give the box its own value in the profile instead, best named from the vault as above: the value is passed by name on each `docker exec` and is never in the machine's `docker inspect`.
 
 ## Disposable machines
 

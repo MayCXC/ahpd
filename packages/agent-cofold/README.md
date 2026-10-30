@@ -44,6 +44,8 @@ In the configuration file, with the plugin's own options as the defaults every r
 
 With no model named anywhere, the providers, keys and model come from cofold's own configuration file, `$COFOLD_CONFIG` or `$XDG_CONFIG_HOME/cofold/config.json` or `~/.config/cofold/config.json`. Inside a machine the first of those is what finds it.
 
+`COFOLD_BASE_URL`, `COFOLD_API_KEY` and `COFOLD_MODEL` are read on top of that file, as cofold's own CLI reads them: the URL adds or replaces a provider called `default` with the key as its key, and a model with no slash is a model of `default`. A machine profile names them as the needs `cofoldBaseUrl`, `cofoldApiKey` and `cofoldModel`, the key from the vault, so a machine on another box gets a provider with no file holding the key.
+
 Every provider in the cofold file is asked for its models, each with its own key. Each id is offered as `<provider id>/<model id>`, such as `open_router/moonshotai/kimi-k3.1-pro`. The backend's own id is the prefix only for an explicit `baseUrl` or for the local endpoint when the file names no provider.
 
 Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. An agent of the engine is a record on the agents channel: it sets any of these except `strictTools` and the keyed search providers, and wins over the plugin for the ones it sets. A record's id, name and description are the record's own, so this plugin has no option for them. There are two more options, `adapter` and `policy`, that only an embedder calling `apply` in code passes: a model adapter is an object of methods and a policy is a function, so neither is in the options schema and a configuration file cannot name them.
@@ -89,7 +91,7 @@ The providers `web_search` asks, in the order they are written. A failing one is
 
 An agent is a record on `x-ahpd-agents`: `{ id, engine, owner, name, description?, icon?, model?, config }`. The channel owns `name`, `description`, `icon` and `model`, so `config` holds the cofold fields above, and a new record starts from the engine's one template, which sets nothing and runs on cofold's own configuration file.
 
-`computerConfigDir`, `store` and `memory` are host-only: a team's or a person's record that sets one is refused. `strictTools` is not a field of a record at all, and neither is a keyed search provider, for the reason the `tools.web.search` table gives; `adapter` and `policy` are not options of the schema at all, only values an embedder passes in code. The engine names no key variable, because cofold's key is not an environment variable: a record's `apiKey` is a `secret` field of its own, so the channel keeps it in the vault under `host:agent/<id>/apiKey` for a host record, and no client, session or log gets the value.
+`computerConfigDir`, `store` and `memory` are host-only: a team's or a person's record that sets one is refused. `strictTools` is not a field of a record at all, and neither is a keyed search provider, for the reason the `tools.web.search` table gives; `adapter` and `policy` are not options of the schema at all, only values an embedder passes in code. The engine names no key variable: the daemon's own `COFOLD_API_KEY` is the harness's, read with its file, and a record's `apiKey` is a `secret` field of its own, so the channel keeps it in the vault under `host:agent/<id>/apiKey` for a host record, and no client, session or log gets the value.
 
 A record that names its own endpoint and key, with the model the channel owns:
 
