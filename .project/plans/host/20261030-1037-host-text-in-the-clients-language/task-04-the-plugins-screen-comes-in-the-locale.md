@@ -25,9 +25,10 @@ The `x-ahpd-plugins` rows come in that locale: the title, the manifest descripti
 1. Add `translate?: (record, locale) => record` to the records channel options.
 2. Call it with `localeOf(client)` in `send` and in the snapshot of each reader, and never on the stored record.
 3. Compare records for a diff before the translation, so a locale never makes a change on its own.
-4. In `pluginschannel.ts`, translate `title`, `manifest.description` and the options form with `formIn` from task 03.
-5. Leave `name`, `spec`, `state`, `version`, `problem` and `alerts` as they are.
-6. Write the tests.
+4. In `pluginschannel.ts`, translate `title` from `meta.title` and `manifest.description` from `meta.description`.
+5. Translate the options form with `formIn` from task 03, with the `options` block.
+6. Leave `name`, `spec`, `state`, `version`, `problem` and `alerts` as they are.
+7. Write the tests.
 
 ## Validation
 

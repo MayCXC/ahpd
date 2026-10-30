@@ -11,7 +11,7 @@ refs:
 ## Objective
 
 The host and each first-party plugin ship `pt` and `es` catalogs for the form and the plugins screen.
-A lint says which catalog entries no longer match any English text.
+A lint lists each catalog path that matches no field.
 
 ## Files
 
@@ -20,7 +20,7 @@ A lint says which catalog entries no longer match any English text.
 - `CREATE: packages/<plugin>/i18n/pt.json` - for each first-party plugin, its title, description, form keys and options form in Portuguese.
 - `CREATE: packages/<plugin>/i18n/es.json` - the same in Spanish.
 - `UPDATE: packages/<plugin>/package.json` - `"i18n": "i18n"` in the `ahpd` field, and `i18n` in `files`.
-- `CREATE: tools/i18n-check.mjs` - lists each catalog key that no source file or manifest holds as a string.
+- `CREATE: tools/i18n-check.mjs` - lists each catalog path that matches no field: an unknown `options` or `session` key, an unknown enum value, or an unknown block.
 - `UPDATE: docs/server/PLUGINS.md` - the `ahpd.i18n` field, the catalog shape and the lookup order.
 - `UPDATE: docs/updates/v0_14.md` - a line for the client's language.
 - `CREATE: .project/pending/the-pt-catalogs-read-right.md` - Softov reads each `pt.json` and says which entries to change.
@@ -38,7 +38,7 @@ A lint says which catalog entries no longer match any English text.
 ## Validation
 
 - `node tools/i18n-check.mjs` prints nothing on the shipped catalogs.
-- The script prints a key that no source holds, and exits 1.
+- The script prints a path whose key or enum value no form holds, and exits 1.
 - `pnpm -s typecheck` passes, and the touched tests pass.
 
 ## Resume

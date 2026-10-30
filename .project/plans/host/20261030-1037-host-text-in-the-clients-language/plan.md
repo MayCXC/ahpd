@@ -18,7 +18,7 @@ refs:
   - "[code://packages/server/src/plugins.ts#L471-L541](../../../../packages/server/src/plugins.ts#L471-L541) - `ahpd.icons`, read from the package beside the manifest, the pattern for `ahpd.i18n`"
   - "[code://packages/server/src/plugins.ts#L652-L686](../../../../packages/server/src/plugins.ts#L652-L686) - `checkField` and `checkFields`, which hold each manifest field to its shape"
   - "[code://packages/sdk/src/host/chatattachment.ts#L15-L22](../../../../packages/sdk/src/host/chatattachment.ts#L15-L22) - text the model reads stays English"
-  - npm://@activepieces/piece-resend@0.6.1 - a piece ships `src/i18n/<lang>.json`, keyed by the English text
+  - npm://@activepieces/piece-resend@0.6.1 - a piece ships `src/i18n/<lang>.json`, the folder layout for `ahpd.i18n`
 ---
 
 ## Goal
@@ -58,7 +58,7 @@ x-ahpd-plugins send to a reader -> translate(record, locale of the client) -> th
 
 | What | Source | Task |
 | --- | --- | --- |
-| A catalog is one JSON map from the English text to the translation | Softov, 2026-10-30: "English text" | 02 |
+| A catalog is keyed by field path: `meta`, `options.<key>` and `session.<key>`, each with `title`, `description` and `enum` | Softov, 2026-10-30: "Field path, like dsh" | 02 |
 | The host's catalogs are JSON too, in the same shape as a plugin's | Softov, 2026-10-30: "JSON, like plugins" | 02 |
 | A client that changes its language connects again, and the host reads `locale` then | Softov, 2026-10-30: "Client reconnects" | 01 |
 | Only an answer for one caller is translated; a state many clients share stays English | Softov, 2026-10-30: "Only per-caller replies" | 03, 04 |
@@ -74,7 +74,7 @@ x-ahpd-plugins send to a reader -> translate(record, locale of the client) -> th
 
 ## Proposed architecture
 
-- **Data flow** - `handshake.ts` keeps `locale` on the connection and in a map by client id. An sdk module `i18n.ts` holds the catalogs and `translated(text, locale, catalogs)`.
+- **Data flow** - `handshake.ts` keeps `locale` on the connection and in a map by client id. An sdk module `i18n.ts` holds the catalogs and `translated(path, english, locale, catalogs)`.
 - **Event flow** - A client that changes its language reconnects. The next `initialize` or `reconnect` replaces the locale, and the next answer uses it.
 - **Layer responsibilities** - sdk: the locale, the lookup, the form and the records channel hook. server: `ahpd.i18n` and the plugins row. Each first-party plugin: its own catalog.
 - **Source-of-truth files** - [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts), [`code://packages/server/src/plugins.ts`](../../../../packages/server/src/plugins.ts)
@@ -91,7 +91,8 @@ x-ahpd-plugins send to a reader -> translate(record, locale of the client) -> th
 
 ## Risks and tradeoffs
 
-- A changed English sentence loses its translations, because the sentence is the key. The lint in task 05 says which catalog entries no longer match any text.
+- A changed English text keeps its old translation, because the field path is the key. A change to English text updates the catalogs in the same commit.
+- A renamed or removed field leaves its catalog entry behind. The lint in task 05 lists each catalog path that matches no field.
 - Two connections on one client id with two locales share one locale for the records channels, because a reader is keyed by client id. The later connection wins.
 - An answerer's values, such as branch names, are data and must not be translated. The form is translated before the answerers fill it.
 
