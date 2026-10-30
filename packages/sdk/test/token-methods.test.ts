@@ -177,6 +177,15 @@ it('revokes by the token id, finds its person, and answers no token for an unkno
     .rejects.toMatchObject({ code: -32602, message: 'x-ahpd/tokens/revoke needs id, a token id' });
 });
 
+it('mints a key with meta, which its calls add to', async () => {
+  const ana = await person('ana');
+  const meta = { env: 'prod', client: 'pi' };
+  const minted = await ask('mint', { meta }, ana) as MintedToken;
+
+  expect(minted.meta).toEqual(meta);
+  expect((await ask('list', {}, ana) as Omit<MintedToken, 'secret'>[])[0]?.meta).toEqual(meta);
+});
+
 it('refuses a param of the wrong shape, and a directory refusal with its sentence', async () => {
   const ana = await person('ana');
   await expect(ask('mint', { user: 7 }, ana)).rejects.toMatchObject({ code: -32602, message: 'x-ahpd/tokens/mint takes user as a string' });
@@ -184,6 +193,9 @@ it('refuses a param of the wrong shape, and a directory refusal with its sentenc
   await expect(ask('mint', { grants: 'proxy:read' }, ana)).rejects.toMatchObject({ code: -32602, message: 'x-ahpd/tokens/mint takes grants as a list of grant strings' });
   await expect(ask('mint', { expires: 'tomorrow' }, ana)).rejects.toMatchObject({ code: -32602, message: 'x-ahpd/tokens/mint takes expires as epoch milliseconds' });
   await expect(ask('mint', { scope: 7 }, ana)).rejects.toMatchObject({ code: -32602, message: 'x-ahpd/tokens/mint takes scope as a string' });
+  await expect(ask('mint', { meta: 'env=prod' }, ana)).rejects.toMatchObject({ code: -32602, message: 'x-ahpd/tokens/mint takes meta as an object of names to values' });
+  // The bounds are the proxy header's, so a name it would refuse is refused here.
+  await expect(ask('mint', { meta: { 'a b': '1' } }, ana)).rejects.toMatchObject({ code: -32602, message: 'A meta\'s name a b is 1 to 64 characters of A to Z, a to z, 0 to 9, _, . and -' });
   // The directory refuses a grant the person does not hold and an expiry in the
   // past; its own sentence is the answer.
   await expect(ask('mint', { grants: ['proxy:write'] }, ana)).rejects.toMatchObject({

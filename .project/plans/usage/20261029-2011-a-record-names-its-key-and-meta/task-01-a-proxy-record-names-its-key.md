@@ -1,6 +1,6 @@
 ---
 title: A proxy record names its key
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server"
 refs:
@@ -37,4 +37,11 @@ A call made with the deployment token, a session token or a sign-in that is not 
 - Run `pnpm typecheck` and `pnpm test`.
 
 ## Resume
+
+- **Done so far:** `UsageBase.token?` is the id of the key that made a call. `Charged.token` takes `caller.principal.token` for a person in `chargedAs`, and `record` writes it when it has one.
+- **Next action:** [task-02-a-key-is-minted-with-meta.md](task-02-a-key-is-minted-with-meta.md).
+- **Open questions:** none.
+- **Watch out for:** the store appends each entry whole and reads it whole, so neither field needs a copy there. A session call and a root call write no `token`, because `chargedAs` sets it on the person branch alone.
+
+Files changed by this task: `docs/server/PROXY.md`, `packages/sdk/src/types/usage.ts`, `packages/server/src/proxy/listener.ts`, `packages/server/test/proxy-policy-usage.test.ts`.
 

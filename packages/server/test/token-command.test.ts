@@ -62,6 +62,7 @@ interface Shown {
   grants?: string[];
   scope?: string;
   limits?: { amount: number; measure: string; period: string; pool: string }[];
+  meta?: Record<string, string>;
   created: number;
   expires?: number;
   secret: string;
@@ -213,6 +214,27 @@ describe('token at the terminal', () => {
       .rejects.toThrow('5:usd is not a limit; write one as <amount>:<measure>:<period>, such as 5:usd:day.');
     await expect(run('token.mint', { user: 'ana', limits: ['five:usd:day'] }))
       .rejects.toThrow('five:usd:day is not a limit; write one as <amount>:<measure>:<period>, such as 5:usd:day.');
+  });
+
+  it('writes each --meta on the record, and says it back in the listing', async () => {
+    const { directory } = await people();
+    const meta = { env: 'prod', client: 'pi' };
+
+    const one = minted(await run('token.mint', { user: 'ana', meta: ['env=prod', 'client=pi'] }));
+    expect(one).toMatchObject({ meta });
+    expect((await directory.tokens!('ana'))[0]?.meta).toEqual(meta);
+
+    const listed = await run('token.list', { user: 'ana' });
+    expect(String(listed.plain)).toContain('meta env=prod,client=pi');
+  });
+
+  it('refuses a --meta with no =, and a name written twice', async () => {
+    await people();
+
+    await expect(run('token.mint', { user: 'ana', meta: ['env'] }))
+      .rejects.toThrow('env is not a meta entry; write one as name=value');
+    await expect(run('token.mint', { user: 'ana', meta: ['env=prod', 'env=dev'] }))
+      .rejects.toThrow('env is named twice in --meta.');
   });
 
   it('refuses the second mint when the configuration allows one per person', async () => {

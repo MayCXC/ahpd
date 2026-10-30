@@ -1,6 +1,6 @@
 ---
 title: A call adds meta with a header
-status: todo
+status: implemented
 depends: [task-01-a-proxy-record-names-its-key.md, task-02-a-key-is-minted-with-meta.md]
 layer: "sdk, server, docs"
 refs:
@@ -49,4 +49,11 @@ A malformed header is refused with 400, and no `X-AHP-*` header goes upstream.
 - Run `pnpm typecheck` and `pnpm test`.
 
 ## Resume
+
+- **Done so far:** `UsageBase.meta?` holds the names the key and the call named, and `Principal.keyMeta` reads the live token record in `principalOf`. `callerOf` reads `x-ahp-meta`, parses it with `parseMeta`, merges the header under the key's `keyMeta` so the key's value wins, and answers a 400 refusal with the sentence when the parse or the 32-entry bound refuses. `Charged.meta` carries it and `record` writes it when it has entries. Every `x-ahp-*` header still stays on the host.
+- **Next action:** none; the plan is implemented.
+- **Open questions:** none.
+- **Watch out for:** the header is read after the scope answer, so a refused scope stays 403 even when the header is also malformed. An empty `X-AHP-Meta` parses to `{}`, so it names no meta rather than a refusal. A session caller carries no `meta`, because only the person branch of `chargedAs` sets it.
+
+Files changed by this task: `packages/sdk/src/types/usage.ts`, `packages/sdk/src/types/users.ts`, `packages/sdk/src/access/users.ts`, `packages/server/src/proxy/caller.ts`, `packages/server/src/proxy/listener.ts`, `packages/server/test/proxy-listener.test.ts`, `packages/server/test/proxy-policy-usage.test.ts`, `docs/server/PROXY.md`, `docs/server/USERS.md`, `docs/sdk/USAGE.md`, `docs/sdk/USERS.md`, `.project/specs/usage.md`.
 

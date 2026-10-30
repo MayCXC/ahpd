@@ -38,8 +38,9 @@ Nothing here limits work: a pool is a key, and what a pool allows belongs to pol
 
 WHEN a writer records usage
 THEN the record is a model record with `kind: model`, or a computer record with `kind: computer`
-AND both have one base: `at`, `source`, `owner`, `team`, `project`, `session`, `chat`, `turn`, `agent`, `computer`, `cost`, `providerCost` and `pools`.
+AND both have one base: `at`, `source`, `owner`, `team`, `project`, `session`, `chat`, `turn`, `agent`, `computer`, `cost`, `providerCost`, `token`, `meta` and `pools`.
 A model record adds `model` with the name, provider and token counts, and a computer record adds `seconds`.
+A proxy call made with a key adds `token`, the id of the key, and `meta`, the map of names to values the key and the call named.
 This is so that a list by agent or by computer is a filter on one record, not a join.
 
 ### The pools a record is charged to

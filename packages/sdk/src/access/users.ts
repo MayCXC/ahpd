@@ -5,6 +5,7 @@ import { readJson, writeJsonAtomic } from '../utils/jsonfile.js';
 import { same } from '../listen.js';
 import { issuerFrom, jwtIssuer, sameIssuer } from './issuers.js';
 import { checkKeyLimits } from './policies.js';
+import { checkMeta } from './meta.js';
 import { covers, membership, scopeFor } from '../usage/scopes.js';
 import type { PolicyLimit } from '../types/policies.js';
 import type { Grant, Issuer, IssuerVerify, MintedToken, Named, Principal, TokenRecord, UserFile, UserRecord, Users } from '../types/users.js';
@@ -956,6 +957,20 @@ export function fileUsers(options: FileUserOptions): Users {
             throw new Error(`token ${entry.id} holds limits that are not ones: ${error instanceof Error ? error.message : String(error)}`);
           }
         }
+        /*
+         * The meta, read by the check the mint and the proxy header make.
+         *
+         * A file holding a name or a value no key may hold is one this host
+         * will not sign anybody in from, and it is reported as broken rather
+         * than read with the entry dropped.
+         */
+        let meta: Record<string, string> | undefined;
+        if (entry.meta !== undefined) {
+          try { meta = checkMeta(entry.meta); }
+          catch (error) {
+            throw new Error(`token ${entry.id} holds a meta that is not one: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
         return {
           id: entry.id,
           user: entry.user,
@@ -963,6 +978,7 @@ export function fileUsers(options: FileUserOptions): Users {
           ...(entry.grants === undefined ? {} : { grants: [...entry.grants] as Grant[] }),
           ...(entry.scope === undefined ? {} : { scope: entry.scope }),
           ...(limits === undefined ? {} : { limits }),
+          ...(meta === undefined ? {} : { meta }),
           created: entry.created,
           ...(entry.expires === undefined ? {} : { expires: entry.expires }),
           token: entry.token,
@@ -1111,6 +1127,18 @@ export function fileUsers(options: FileUserOptions): Users {
         if (minted === undefined) return undefined;
         const live = readTokens().tokens.find((one) => one.id === minted.id);
         return live === undefined || live.user !== record.id ? undefined : live.scope;
+      },
+      /*
+       * What the key they signed in with says about itself.
+       *
+       * Re-read as `keyScope` is, and for the same reason: a revoked record
+       * answers nothing, so a meta the file no longer holds is gone at the next
+       * call rather than at the next connection.
+       */
+      get keyMeta(): Record<string, string> | undefined {
+        if (minted === undefined) return undefined;
+        const live = readTokens().tokens.find((one) => one.id === minted.id);
+        return live === undefined || live.user !== record.id ? undefined : live.meta;
       },
       /*
        * The limits of the key they signed in with, re-read as `standing` reads
@@ -1618,6 +1646,9 @@ export function fileUsers(options: FileUserOptions): Users {
        * name an amount, a measure and a period alone.
        */
       const limits = given.limits === undefined ? undefined : checkKeyLimits(given.limits);
+      // The same bounds the reader and the proxy's header use, so a key can
+      // never hold a meta a call could not carry.
+      const meta = given.meta === undefined ? undefined : checkMeta(given.meta);
       // Only the tokens still live hold a place: an expired one is a credential
       // that no longer works, and it should not keep its person from minting.
       const limit = options.tokensPerPerson ?? 10;
@@ -1640,6 +1671,7 @@ export function fileUsers(options: FileUserOptions): Users {
         ...(given.grants === undefined ? {} : { grants: [...given.grants] }),
         ...(given.scope === undefined ? {} : { scope: given.scope }),
         ...(limits === undefined ? {} : { limits }),
+        ...(meta === undefined ? {} : { meta }),
         created: now,
         ...(given.expires === undefined ? {} : { expires: given.expires }),
         // The secret is written here and nowhere, and only as its hash.

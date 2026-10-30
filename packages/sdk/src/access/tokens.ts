@@ -3,7 +3,7 @@
  *
  * | Command | Params | Answers |
  * | --- | --- | --- |
- * | `x-ahpd/tokens/mint` | `user?`, `label?`, `grants?`, `expires?`, `scope?`, `limits?` | the `MintedToken`, with its `secret` |
+ * | `x-ahpd/tokens/mint` | `user?`, `label?`, `grants?`, `expires?`, `scope?`, `limits?`, `meta?` | the `MintedToken`, with its `secret` |
  * | `x-ahpd/tokens/list` | `user?` | the token records, without their hashes |
  * | `x-ahpd/tokens/revoke` | `id`, `user?` | `{}` |
  *
@@ -14,6 +14,7 @@
  */
 
 import { refusalReason } from '../host.js';
+import { checkMeta } from './meta.js';
 import { checkKeyLimits } from './policies.js';
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import type { PluginMethod } from '../types/plugin.js';
@@ -70,6 +71,23 @@ const limitsParam = (command: string, params: Record<string, unknown>): PolicyLi
     throw new RpcError(INVALID_PARAMS, `${command} takes limits as a list of amount, measure and period`);
   }
   return checkKeyLimits(value);
+};
+
+/**
+ * The meta a key carries, checked by the bounds the proxy's header is.
+ *
+ * `checkMeta` is the same check the mint and the tokens file make, and its
+ * sentence is the one a bad one is refused with: a name of 1 to 64 characters
+ * of `[A-Za-z0-9_.-]`, a value of at most 256 characters with no comma and no
+ * line break, and at most 32 entries.
+ */
+const metaParam = (command: string, params: Record<string, unknown>): Record<string, string> | undefined => {
+  const value = params['meta'];
+  if (value === undefined) return undefined;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new RpcError(INVALID_PARAMS, `${command} takes meta as an object of names to values`);
+  }
+  return checkMeta(value);
 };
 
 export const tokenMethods = (directory: Users): Record<string, PluginMethod> => {
@@ -145,16 +163,17 @@ export const tokenMethods = (directory: Users): Record<string, PluginMethod> => 
         const expires = expiresParam(mint, params);
         const scope = option(mint, params, 'scope');
         const limits = limitsParam(mint, params);
+        const meta = metaParam(mint, params);
         // The directory refuses a grant the person does not hold, a scope they
-        // are not in, an expiry in the past, a limit that is not one and a mint
-        // past the limit; its
-        // sentence is the answer.
+        // are not in, an expiry in the past, a limit or a meta that is not one,
+        // and a mint past the limit; its sentence is the answer.
         return await mintToken(target, {
           ...(label === undefined ? {} : { label }),
           ...(grants === undefined ? {} : { grants }),
           ...(expires === undefined ? {} : { expires }),
           ...(scope === undefined ? {} : { scope }),
           ...(limits === undefined ? {} : { limits }),
+          ...(meta === undefined ? {} : { meta }),
         }).catch((error: unknown) => {
           throw new RpcError(-32009, error instanceof Error ? error.message : String(error));
         });

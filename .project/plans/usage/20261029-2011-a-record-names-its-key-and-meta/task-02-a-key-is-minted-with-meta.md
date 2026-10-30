@@ -1,6 +1,6 @@
 ---
 title: A key is minted with meta
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server"
 refs:
@@ -50,4 +50,11 @@ One helper checks meta against the bounds, and task 03 uses the same helper for 
 - Run `pnpm typecheck` and `pnpm test`.
 
 ## Resume
+
+- **Done so far:** `checkMeta` and `parseMeta` are in `packages/sdk/src/access/meta.ts`, both throwing `-32602` with one sentence. `TokenRecord.meta?` and the mint options carry `meta`; the tokens file reader reports a bad one as a broken file, and `mintToken` checks it after the limits and before the per-person count. `x-ahpd/tokens/mint` takes `meta` as an object of names to values. `ahpd token mint` has a repeatable `--meta NAME=VALUE` and `token list` prints `meta k=v,k=v` on each line that has one.
+- **Next action:** [task-03-a-call-adds-meta-with-a-header.md](task-03-a-call-adds-meta-with-a-header.md).
+- **Open questions:** none.
+- **Watch out for:** an empty `parseMeta` text answers `{}` rather than a refusal, so an empty header names no meta. `parseMeta` refuses a name written twice, and the `--meta` flag refuses one written twice across two flags. `meta` is checked before the per-person token count, so a refused meta spends no slot.
+
+Files changed by this task: `packages/sdk/src/access/meta.ts`, `packages/sdk/src/index.ts`, `packages/sdk/src/types/users.ts`, `packages/sdk/src/access/users.ts`, `packages/sdk/src/access/tokens.ts`, `packages/server/src/commands/token.ts`, `packages/sdk/test/meta.test.ts`, `packages/sdk/test/users-tokens.test.ts`, `packages/sdk/test/token-methods.test.ts`, `packages/server/test/token-command.test.ts`.
 

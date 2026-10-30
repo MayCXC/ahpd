@@ -59,6 +59,7 @@ interface StoredToken {
   grants?: string[];
   scope?: string;
   limits?: { amount: number; measure: string; period: string; pool: string }[];
+  meta?: Record<string, string>;
   created: number;
   expires?: number;
   token: string;
@@ -247,6 +248,34 @@ it('mints a key with its limits, pooled shared, and reads them back', async () =
   expect(minted.limits).toEqual(limits);
   expect((await users.tokens!('ana'))[0]?.limits).toEqual(limits);
   expect(stored().tokens[0]?.limits).toEqual(limits);
+});
+
+it('mints a key with its meta, and refuses one that is not', async () => {
+  const users = open();
+  await users.add('ana', ['member']);
+  const meta = { env: 'prod', client: 'pi' };
+  const minted = await users.mintToken!('ana', { meta });
+
+  expect(minted.meta).toEqual(meta);
+  expect((await users.tokens!('ana'))[0]?.meta).toEqual(meta);
+  expect(stored().tokens[0]?.meta).toEqual(meta);
+
+  // A name outside the bounds is refused, and no token is written.
+  await expect(users.mintToken!('ana', { meta: { 'a b': '1' } }))
+    .rejects.toThrow('is 1 to 64 characters of A to Z');
+  expect(stored().tokens).toHaveLength(1);
+});
+
+it('reports a tokens file holding a meta that is not one as broken', async () => {
+  writeFileSync(path, JSON.stringify({ users: [{ id: 'ana', roles: ['member'] }] }));
+  writeFileSync(tokensPath, JSON.stringify({
+    tokens: [{ id: 'aaaa', user: 'ana', created: 1, token: 'sha256:abc', meta: { env: 1 } }],
+  }));
+  const said: string[] = [];
+  const users = open({ onProblem: (one) => said.push(one) });
+
+  expect(await users.tokens!()).toEqual([]);
+  expect(said.some((one) => one.includes('holds a meta that is not one'))).toBe(true);
 });
 
 it('reports a tokens file holding a limit that is not one as broken', async () => {

@@ -13,7 +13,7 @@
  * `?scope=` or else their primary, resolved by `scopeFor` as a session's is.
  */
 
-import { refusalReason, scopeFor, type Grant, type Owner, type Principal, type Scope, type Users } from '@ahpd/sdk';
+import { checkMeta, parseMeta, refusalReason, scopeFor, type Grant, type Owner, type Principal, type Scope, type Users } from '@ahpd/sdk';
 import { same } from '../commands/authorize.js';
 import type { Refusal } from './dialects.js';
 
@@ -42,7 +42,7 @@ export interface SessionCaller {
 /** Who a call is. */
 export type ProxyCaller =
   | { kind: 'root' }
-  | { kind: 'person'; principal: Principal; scope?: Scope }
+  | { kind: 'person'; principal: Principal; scope?: Scope; meta?: Record<string, string> }
   | ({ kind: 'session' } & SessionCaller);
 
 /** What a caller is checked against. */
@@ -60,6 +60,9 @@ export type Called = { caller: ProxyCaller } | { refusal: Refusal };
 
 /** The header a scope is named in. */
 export const SCOPE_HEADER = 'x-ahp-scope';
+
+/** The header a call adds meta to its key's in: `k=v,k=v`. */
+export const META_HEADER = 'x-ahp-meta';
 
 /** The credential a request presented, `Bearer` first; `false` when it presented two different ones. */
 const credentialOf = (headers: Headers): string | undefined | false => {
@@ -108,5 +111,29 @@ export async function callerOf(request: Request, options: CallerOptions, grant: 
   const named = request.headers.get(SCOPE_HEADER) ?? new URL(request.url).searchParams.get('scope') ?? undefined;
   const answer = scopeFor(who, named);
   if (answer?.refusal !== undefined) return { refusal: { status: 403, message: answer.refusal } };
-  return { caller: { kind: 'person', principal: who, ...(answer?.scope === undefined ? {} : { scope: answer.scope }) } };
+  /*
+   * What the call says about itself, under what its key says.
+   *
+   * The key's entries win, because an operator set them: a client that names
+   * `env=dev` on a key minted for `env=prod` is recorded as `prod`. A header
+   * that will not parse and a merge over the bound are 400 rather than dropped,
+   * because a dropped header is a charge the caller asked for.
+   */
+  let meta: Record<string, string> | undefined;
+  try {
+    const namedMeta = request.headers.get(META_HEADER);
+    const merged = checkMeta({ ...(namedMeta === null ? {} : parseMeta(namedMeta)), ...(who.keyMeta ?? {}) });
+    meta = Object.keys(merged).length === 0 ? undefined : merged;
+  }
+  catch (error) {
+    return { refusal: { status: 400, message: error instanceof Error ? error.message : String(error) } };
+  }
+  return {
+    caller: {
+      kind: 'person',
+      principal: who,
+      ...(answer?.scope === undefined ? {} : { scope: answer.scope }),
+      ...(meta === undefined ? {} : { meta }),
+    },
+  };
 }
