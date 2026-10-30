@@ -17,6 +17,7 @@ import { hostname } from 'node:os';
 import { output } from '@cofold/commands';
 import type { Command, CommandContext, Field, Registry } from '@cofold/commands';
 import { HttpError } from '@cofold/remote';
+import { parseMeta } from '@ahpd/sdk';
 import type { Grant, Measure, Period, PolicyLimit, Principal, Users } from '@ahpd/sdk';
 import { personalUrl } from '../config.js';
 import { isRoot } from './authorize.js';
@@ -108,6 +109,24 @@ const limitsOf = (values: readonly string[]): PolicyLimit[] => values.map((text)
 });
 
 /**
+ * The meta the `--meta` flags wrote, as one map.
+ *
+ * Each value is read as the header is, so a comma may name two entries in one
+ * flag and the bounds are the same. A name written twice across two flags is
+ * refused rather than kept, as it is inside one.
+ */
+const metaOf = (values: readonly string[]): Record<string, string> => {
+  const held = new Map<string, string>();
+  for (const text of values) {
+    for (const [name, value] of Object.entries(parseMeta(text))) {
+      if (held.has(name)) stop(`${name} is named twice in --meta.`);
+      held.set(name, value);
+    }
+  }
+  return Object.fromEntries(held);
+};
+
+/**
  * Hold a caller changing somebody else's tokens to what `user token` holds them to.
  *
  * `user:write` says a caller manages people; the grants of the person written
@@ -155,6 +174,12 @@ const mintFields = {
     description: 'A spend or call limit, written amount:measure:period such as 5:usd:day. Repeatable; without one the key has no limit of its own.',
     cli: { flag: '--limit', value: 'AMOUNT:MEASURE:PERIOD' },
   },
+  meta: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'A name=value pair the key keeps about itself, such as env=prod. Repeatable; a call made with the key adds its own entries, and the key\'s value wins for the same name.',
+    cli: { flag: '--meta', value: 'NAME=VALUE' },
+  },
 } satisfies Record<string, Field>;
 
 /** Whose tokens a verb is about, when it is not the caller's own. */
@@ -182,7 +207,7 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
   const mint = registry.action({
     id: 'token.mint',
     summary: 'Mint a token of your own',
-    description: 'Limited to grants you hold now, and shown once. --grant once per grant; without one it holds every grant its person does. --limit takes an amount:measure:period such as 5:usd:day, once per limit. --expires takes a date such as 2026-12-31. --scope names the team and project its calls are charged to, and a call made with it may name no other. --url prints the whole ws:// URL a client can be given.',
+    description: 'Limited to grants you hold now, and shown once. --grant once per grant; without one it holds every grant its person does. --limit takes an amount:measure:period such as 5:usd:day, once per limit. --meta takes a name=value pair such as env=prod, once per entry. --expires takes a date such as 2026-12-31. --scope names the team and project its calls are charged to, and a call made with it may name no other. --url prints the whole ws:// URL a client can be given.',
     surfaces: { cli: { pattern: ['token', 'mint'] }, http: { method: 'POST', path: '/token/mint' } },
     // A create: the token does not exist yet, so this names no row.
     effect: 'add',
@@ -205,6 +230,7 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
       const grants = context.list<string>('grants');
       const scope = context.optional<string>('scope');
       const limits = limitsOf(context.list<string>('limits'));
+      const meta = metaOf(context.list<string>('meta'));
       const specified = context.optional<string>('expires');
       let expires: number | undefined;
       if (specified !== undefined) {
@@ -213,8 +239,8 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
         expires = read;
       }
       // The directory refuses a grant the person does not hold, a scope they
-      // are not in, an expiry in the past, a limit that is not one and a mint
-      // past the limit; said here
+      // are not in, an expiry in the past, a limit or a meta that is not one,
+      // and a mint past the limit; said here
       // so it reads as the verb's own refusal rather than a stack trace.
       const minted = await mintToken(target, {
         ...(label === undefined ? {} : { label }),
@@ -222,6 +248,7 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
         ...(expires === undefined ? {} : { expires }),
         ...(scope === undefined ? {} : { scope }),
         ...(limits.length === 0 ? {} : { limits }),
+        ...(Object.keys(meta).length === 0 ? {} : { meta }),
       }).catch((error: unknown) => {
         stop(error instanceof Error ? error.message : String(error));
       });
@@ -238,7 +265,7 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
   const list = registry.action({
     id: 'token.list',
     summary: 'The tokens a person holds',
-    description: 'Each token\'s id, label, grants, scope, limits, when it was made and when it expires. A hash and a secret are never answered.',
+    description: 'Each token\'s id, label, grants, scope, limits, meta, when it was made and when it expires. A hash and a secret are never answered.',
     surfaces: { cli: { pattern: ['token', 'list'] }, http: { method: 'GET', path: '/token/list' } },
     // No key: this is the listing, and each row carries the `id` `token rm`
     // takes.
@@ -269,8 +296,11 @@ export const declareToken = (registry: Registry<object>, served?: ServedFacts): 
             : one.grants.length === 0 ? 'no grants' : one.grants.join(' ');
           const expiry = one.expires === undefined ? 'no expiry' : `expires ${new Date(one.expires).toISOString()}`;
           const scope = one.scope === undefined ? '' : `  scope ${one.scope}`;
+          const meta = one.meta === undefined
+            ? ''
+            : `  meta ${Object.entries(one.meta).map(([name, value]) => `${name}=${value}`).join(',')}`;
           const limits = (one.limits ?? []).map((limit) => `limit ${limit.amount} ${limit.measure}/${limit.period}`);
-          return `${one.id}  ${one.label ?? '(no label)'}  ${grants}${scope}  created ${new Date(one.created).toISOString()}  ${expiry}${limits.length === 0 ? '' : `  ${limits.join('  ')}`}\n`;
+          return `${one.id}  ${one.label ?? '(no label)'}  ${grants}${scope}${meta}  created ${new Date(one.created).toISOString()}  ${expiry}${limits.length === 0 ? '' : `  ${limits.join('  ')}`}\n`;
         }).join('');
       return output(rows, text);
     },

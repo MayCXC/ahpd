@@ -76,7 +76,7 @@ pi -> /v1 with the key, X-AHP-Meta: client=pi -> callerOf: metaOf(header) -> cal
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A proxy record names its key](task-01-a-proxy-record-names-its-key.md) | implemented | - |
-| [02 - A key is minted with meta](task-02-a-key-is-minted-with-meta.md) | todo | - |
+| [02 - A key is minted with meta](task-02-a-key-is-minted-with-meta.md) | implemented | - |
 | [03 - A call adds meta with a header](task-03-a-call-adds-meta-with-a-header.md) | todo | 01, 02 |
 
 ## Risks and tradeoffs
@@ -86,8 +86,8 @@ pi -> /v1 with the key, X-AHP-Meta: client=pi -> callerOf: metaOf(header) -> cal
 
 ## Resume state
 
-- **Done so far:** task 01 is implemented: a proxy record names the key that made the call in `token`.
-- **Next action:** [task-02-a-key-is-minted-with-meta.md](task-02-a-key-is-minted-with-meta.md).
+- **Done so far:** tasks 01 and 02 are implemented: a proxy record names the key that made the call in `token`, and a key is minted with `meta`.
+- **Next action:** [task-03-a-call-adds-meta-with-a-header.md](task-03-a-call-adds-meta-with-a-header.md).
 - **Open questions:** none.
 - **Watch out for:** the plan `proxy/20261029-2010-a-key-carries-its-scope` also changes `TokenRecord`, `mintToken` and `ahpd token mint`. Rebase on it when it merges first.
 

@@ -322,6 +322,16 @@ export interface TokenRecord {
    * because one key has one total. Absent means no limit of its own.
    */
   limits?: PolicyLimit[];
+  /**
+   * What the key says about itself, such as `env=prod` or `client=pi`.
+   *
+   * A call made with the key writes these on its record, and adds the entries
+   * of its own `X-AHP-Meta` header to them: a name the key holds is not changed
+   * by the call. Every name is 1 to 64 characters of `[A-Za-z0-9_.-]`, every
+   * value is at most 256 characters with no comma and no line break, and one
+   * key names at most 32 entries.
+   */
+  meta?: Record<string, string>;
   /** When it was minted, in epoch milliseconds. */
   created: number;
   /** When it stops working, in epoch milliseconds, when it does. */
@@ -528,12 +538,20 @@ export interface Users {
    * holding more than its person does; `expires` is epoch milliseconds and has
    * to be in the future. `scope` is a team or a team and project the person is
    * in now, and the token's calls are charged to it rather than to their
-   * primary. Optional, like `watch`, because a directory that is not a file may
-   * keep no tokens.
+   * primary. `meta` is what the key says about itself, and each call made with
+   * it adds its own entries to those. Optional, like `watch`, because a
+   * directory that is not a file may keep no tokens.
    */
   mintToken?(
     user: string,
-    options?: { label?: string; grants?: readonly Grant[]; expires?: number; scope?: string; limits?: readonly PolicyLimit[] },
+    options?: {
+      label?: string;
+      grants?: readonly Grant[];
+      expires?: number;
+      scope?: string;
+      limits?: readonly PolicyLimit[];
+      meta?: Record<string, string>;
+    },
   ): Promise<MintedToken>;
   /**
    * The tokens of one person, or of everybody, without their hashes.
