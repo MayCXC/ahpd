@@ -139,24 +139,26 @@ const engineOf = (paths: string[], shared: Shared, logins: OpenLogins): Engine =
 const CLIENT = 'agent-claude';
 
 /**
- * Log each failure of a login, and ask the host to check that connector, so
- * its row shows its health.
+ * Log each failure of a login and ask the host to check that connector, and
+ * have the host keep each call of a login in the connector's health, so its
+ * row shows both.
  *
  * The model proxy logs each failed attempt and notes its outcome on the
  * connector's health, in `packages/server/src/proxy/listener.ts`. A plugin
- * notes through the connectors channel's own command, as a client does: the
- * host runs the adapter's check and sends every reader the row. The connection
- * is opened by the first failure, as the bot plugin opens its own by the first
- * message, and one that failed is dropped so the next failure tries again.
+ * does both through the connectors channel's own commands, as a client does:
+ * the host runs the adapter's check, keeps a call `x-ahpd/connectors/note`
+ * names, and sends every reader the row. The connection is opened by the first
+ * of them, as the bot plugin opens its own by the first message, and one that
+ * failed is dropped so the next one tries again.
  *
  * The connection carries the grants the plugin's configuration gives it, as
  * `docs/plugins/PLUGINS.md` says under *A plugin is a client of its own host*.
- * A check of a host login takes `connector:put` and `connector:host`, and a
- * person's login is never a plugin's to check, as `ownerAllows` in
- * `packages/sdk/src/channels/owners.ts` holds. A check the host refuses is one
- * line in the log.
+ * A check or a note of a host login takes `connector:put` and
+ * `connector:host`, and a person's login is never a plugin's to check, as
+ * `ownerAllows` in `packages/sdk/src/channels/owners.ts` holds. A command the
+ * host refuses is one line in the log.
  */
-const checkOnFailure = (host: PluginHost): ((id: string, why: string) => void) => {
+const throughHost = (host: PluginHost): Pick<OpenLogins, 'onFailure' | 'onCall'> => {
   let opened: Promise<PluginPeer> | undefined;
   const connection = (): Promise<PluginPeer> => {
     opened ??= (async () => {
@@ -168,11 +170,18 @@ const checkOnFailure = (host: PluginHost): ((id: string, why: string) => void) =
     opened.catch(failed);
     return opened;
   };
-  return (id, why) => {
-    host.log(`${name}: login ${id} failed: ${why}`);
-    void connection()
-      .then((conn) => conn.request('x-ahpd/connectors/check', { id }))
-      .catch((error: unknown) => { host.log(`${name}: the host did not check login ${id}: ${reason(error)}`); });
+  return {
+    onFailure: (id, why) => {
+      host.log(`${name}: login ${id} failed: ${why}`);
+      void connection()
+        .then((conn) => conn.request('x-ahpd/connectors/check', { id }))
+        .catch((error: unknown) => { host.log(`${name}: the host did not check login ${id}: ${reason(error)}`); });
+    },
+    onCall: (id, outcome) => {
+      void connection()
+        .then((conn) => conn.request('x-ahpd/connectors/note', { id, ...outcome }))
+        .catch((error: unknown) => { host.log(`${name}: the host did not note a call of login ${id}: ${reason(error)}`); });
+    },
   };
 };
 
@@ -186,7 +195,7 @@ const checkOnFailure = (host: PluginHost): ((id: string, why: string) => void) =
 export const apply: Plugin['apply'] = (host, options) => {
   const { paths, shared } = defaultsOf(host, options);
   const logins = new OpenLogins();
-  logins.onFailure = checkOnFailure(host);
+  Object.assign(logins, throughHost(host));
   host.registerAdapter(loginAdapter(logins));
   host.registerEngine(engineOf(paths, shared, logins));
 };

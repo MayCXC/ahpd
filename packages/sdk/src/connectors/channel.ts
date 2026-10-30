@@ -42,6 +42,12 @@
  * used once. Neither answer, row, error nor log carries the code, the verifier
  * or the key.
  *
+ * `x-ahpd/connectors/note` takes `{ id, ok, status?, error? }`, one call an open
+ * connector made, and keeps it in the connector's health as a host part's
+ * outcome is kept. Only the plugin that registered the connector's adapter
+ * notes, since it makes the connector's calls outside `run`, and it needs what
+ * a check needs besides. It answers the row.
+ *
  * `x-ahpd/connectors/models` takes `{ id }` and answers the models one open
  * provider connector serves, as the model proxy's catalog last read them, with
  * the name a caller sends and whether this reader may call each one. It is
@@ -92,6 +98,7 @@ const CHECK = `${DOMAIN}/check`;
 const SIGNIN = `${DOMAIN}/signin`;
 const SIGNIN_FINISH = `${DOMAIN}/signin-finish`;
 const MODELS = `${DOMAIN}/models`;
+const NOTE = `${DOMAIN}/note`;
 
 /** How long one sign-in waits for the code a person pastes, in milliseconds. */
 const SIGNIN_LIMIT_MS = 10 * 60 * 1000;
@@ -204,7 +211,7 @@ interface Prepared {
 export interface ConnectorsChannel {
   /** What `servedRecords` takes. */
   channel: RecordsChannel;
-  /** `x-ahpd/connectors/put`, `remove`, `check`, `signin`, `signin-finish` and `models`, by name. */
+  /** `x-ahpd/connectors/put`, `remove`, `check`, `note`, `signin`, `signin-finish` and `models`, by name. */
   methods: Record<string, PluginMethod>;
   /**
    * Run one action on one open connector for one reader.
@@ -937,6 +944,52 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     },
   };
 
+  /*
+   * The note command keeps one call's outcome, as `note` keeps a host part's.
+   *
+   * Only the plugin whose adapter the connector is notes: it is the one that
+   * makes the connector's calls outside `run`, as the model proxy makes a
+   * provider's. A reader of nothing is the daemon itself. It takes what a check
+   * takes besides, because who may test a connector may say how its calls went.
+   */
+  const noteCall: PluginMethod = {
+    grant: 'connector:put' as Grant,
+    describe: () => ({ title: 'Note a call', description: 'Keeps one call\'s outcome in an open connector\'s health, for the plugin whose adapter it is.' }),
+    authorize: async (params, reader) => {
+      const id = params.id;
+      if (typeof id !== 'string') return false;
+      const before = await options.collection.get(id);
+      return before !== undefined && ownerAllows('connector', asOwner(before.owner), reader, 'put');
+    },
+    handle: async (params, reader) => {
+      const id = idParam(NOTE, params);
+      const { ok, status, error } = params;
+      if (typeof ok !== 'boolean') throw new RpcError(INVALID_PARAMS, `${NOTE} needs ok, whether the call worked`);
+      if (status !== undefined && !Number.isInteger(status)) {
+        throw new RpcError(INVALID_PARAMS, `${NOTE} takes status as the status the service answered, a whole number`);
+      }
+      if (error !== undefined && typeof error !== 'string') {
+        throw new RpcError(INVALID_PARAMS, `${NOTE} takes error as what went wrong, a string`);
+      }
+      const before = await options.collection.get(id);
+      if (before === undefined) throw new RpcError(INVALID_PARAMS, `${SCHEME} holds no ${id}`);
+      const owner = asOwner(before.owner);
+      if (owner !== undefined) refuseOwner('connector', 'note', owner, reader, 'put');
+      const entry = open.get(id);
+      if (entry === undefined) throw new RpcError(INVALID_PARAMS, `${id} is not an open connector`);
+      const by = options.adapters()[entry.connector.adapter]?.by;
+      if (reader !== undefined && (by === undefined || reader.plugin !== by)) {
+        throw new RpcError(DENIED, `${id}'s calls are noted by the plugin of ${entry.connector.adapter}, not ${reader.id}`);
+      }
+      note(id, {
+        ok,
+        ...(status === undefined ? {} : { status: status as number }),
+        ...(error === undefined ? {} : { error: error as string }),
+      });
+      return connectorRow(before);
+    },
+  };
+
   /** Every open connector whose adapter serves models, as `providers` answers them. */
   const providers = (): ProviderConnector[] => {
     const adapters = options.adapters();
@@ -1002,6 +1055,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     [PUT]: put,
     [REMOVE]: remove,
     [CHECK]: check,
+    [NOTE]: noteCall,
     [SIGNIN]: signin,
     [SIGNIN_FINISH]: signinFinish,
     ...(options.models === undefined ? {} : { [MODELS]: models }),
