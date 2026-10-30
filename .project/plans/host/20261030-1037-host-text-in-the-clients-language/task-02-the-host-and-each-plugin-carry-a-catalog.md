@@ -7,6 +7,7 @@ refs:
   - "[code://packages/server/src/plugins.ts#L471-L541](../../../../packages/server/src/plugins.ts#L471-L541) - `ahpd.icons`, read from the package at load"
   - "[code://packages/server/src/plugins.ts#L652-L686](../../../../packages/server/src/plugins.ts#L652-L686) - `checkField` and `checkFields`"
   - npm://@activepieces/piece-resend@0.6.1 - `src/i18n/<lang>.json`, keyed by the English text
+  - "[code://packages/agent-cofold/src/plugin.ts#L29](../../../../packages/agent-cofold/src/plugin.ts#L29) - a JSON import with `{ type: 'json' }`, the pattern for the host's catalogs"
 ---
 
 ## Objective
@@ -18,8 +19,8 @@ One lookup finds a string's translation for a locale, or answers the English tex
 ## Files
 
 - `CREATE: packages/sdk/src/i18n.ts` - the `Catalogs` type, `localesOf(locale)` and `translated(text, locale, ...catalogs)`.
-- `CREATE: packages/sdk/src/i18n/pt.ts` - the host's Portuguese catalog as one exported map, empty until task 05.
-- `CREATE: packages/sdk/src/i18n/es.ts` - the host's Spanish catalog as one exported map, empty until task 05.
+- `CREATE: packages/sdk/src/i18n/pt.json` - the host's Portuguese catalog, empty until task 05.
+- `CREATE: packages/sdk/src/i18n/es.json` - the host's Spanish catalog, empty until task 05.
 - `UPDATE: packages/sdk/src/index.ts` - export the lookup and the type.
 - `UPDATE: packages/server/src/plugins.ts:471-541` - read `ahpd.i18n` into `manifest.i18n`, one catalog for each `<locale>.json` in the folder.
 - `UPDATE: packages/server/src/plugins.ts:652-686` - `checkField` holds `i18n` to a relative folder path.
@@ -31,7 +32,7 @@ One lookup finds a string's translation for a locale, or answers the English tex
 1. Write `localesOf(locale)`, which answers the tag, then its language subtag, without repeats.
 2. Write `translated(text, locale, ...catalogs)`, which tries each locale in each catalog in order.
 3. Answer `text` itself when no catalog has a translation, or when `locale` is `undefined`.
-4. Import the host's catalogs from `packages/sdk/src/i18n/`, so `tsc` builds them with the rest.
+4. Import the host's catalogs with `{ type: 'json' }`, as `agent-cofold` imports its `package.json`.
 5. In `plugins.ts`, read `ahpd.i18n` as a folder inside the package, and refuse a path that leaves the package.
 6. Read each `<locale>.json` in it, and keep only string values.
 7. Say one load problem for a file that does not parse.

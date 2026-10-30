@@ -59,6 +59,7 @@ x-ahpd-plugins send to a reader -> translate(record, locale of the client) -> th
 | What | Source | Task |
 | --- | --- | --- |
 | A catalog is one JSON map from the English text to the translation | Softov, 2026-10-30: "English text" | 02 |
+| The host's catalogs are JSON too, in the same shape as a plugin's | Softov, 2026-10-30: "JSON, like plugins" | 02 |
 | A client that changes its language connects again, and the host reads `locale` then | Softov, 2026-10-30: "Client reconnects" | 01 |
 | Only an answer for one caller is translated; a state many clients share stays English | Softov, 2026-10-30: "Only per-caller replies" | 03, 04 |
 | The first slice is the new session form and the plugins screen | Softov, 2026-10-30: "Form and plugins" | 03, 04 |

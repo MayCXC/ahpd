@@ -15,8 +15,8 @@ A lint says which catalog entries no longer match any English text.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/i18n/pt.ts` - the host's form text in Portuguese.
-- `UPDATE: packages/sdk/src/i18n/es.ts` - the host's form text in Spanish.
+- `UPDATE: packages/sdk/src/i18n/pt.json` - the host's form text in Portuguese.
+- `UPDATE: packages/sdk/src/i18n/es.json` - the host's form text in Spanish.
 - `CREATE: packages/<plugin>/i18n/pt.json` - for each first-party plugin, its title, description, form keys and options form in Portuguese.
 - `CREATE: packages/<plugin>/i18n/es.json` - the same in Spanish.
 - `UPDATE: packages/<plugin>/package.json` - `"i18n": "i18n"` in the `ahpd` field, and `i18n` in `files`.
