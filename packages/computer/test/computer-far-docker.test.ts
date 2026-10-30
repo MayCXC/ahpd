@@ -376,3 +376,18 @@ it('runs a session in a machine on a box\'s Docker nested, reached through that 
   expect(far.commands?.at(-1)?.dockerEnv).toContain('DOCKER_HOST');
   expect(JSON.stringify(far.calls)).not.toContain(SECRET);
 });
+
+it('hands a machine on a box\'s Docker the whole record of a record agent, by name', async () => {
+  const at = files();
+  const { options, provider } = await load(at, { far: { server: 'dev02' } });
+  await provider.write('computer://box', said(JSON.stringify({ image: 'node:22', profile: 'far' })), 'user:ana');
+
+  const whole = { id: 'cofold', engine: 'cofold', owner: 'host' as const, name: 'Cofold', config: { apiKey: SECRET } };
+  const bare = { ...whole, config: {} };
+  const spawn = await options.computers?.nested?.('docker-far.box', { plugins: ['@ahpd/agent-cofold'], record: { whole, bare } });
+  // The box's Docker takes the value from the environment it is run with, as
+  // a vault value is, so the key is never in an argument.
+  expect(JSON.parse(spawn?.env?.AHPD_AGENT_RECORD ?? '{}')).toEqual(whole);
+  expect(spawn?.args).toContain('AHPD_AGENT_RECORD');
+  expect(JSON.stringify(spawn?.args)).not.toContain(SECRET);
+});

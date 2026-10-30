@@ -162,7 +162,7 @@ A plugin loaded from a path names a file on this host, so the machine has to hav
 A cofold or pi agent is a record of its engine, so the inner host is started with the plugin that registered that engine.
 The record goes in `AHPD_AGENT_RECORD`, as JSON, in the environment of the command that starts the inner host.
 The inner host serves it under the record's id, from memory, and never writes it to its own agent records.
-A machine on this host gets the whole record, keys included, by name: `docker exec -e AHPD_AGENT_RECORD`, never its value in an argument.
+A machine on this host or on another box's Docker gets the whole record, keys included, by name: `docker exec -e AHPD_AGENT_RECORD`, never its value in an argument.
 An ssh box and a dialled node get the record without its secret fields.
 The `ahpd` there needs the key set up by hand, as it does for its own configuration.
 A record of an engine the inner host did not load is refused at its start, and the line names the engine.
