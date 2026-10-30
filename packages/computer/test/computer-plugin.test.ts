@@ -185,7 +185,14 @@ it('refuses a session default that is not a computer URI, and can leave the key 
   expect(bad.loaded).toEqual([]);
   expect(bad.problems[0]).toContain('computer://<id>');
 
-  const none = await load({ sessionSetting: false });
+  // The scripted `docker`, because a loaded plugin lists its machines at start.
+  loose = mkdtempSync(join(tmpdir(), 'ahpd-computer-none-'));
+  const none = await load({
+    command: process.execPath,
+    args: [FIXTURE],
+    env: { DOCKER_FAKE_STATE: join(loose, 'docker.json') },
+    sessionSetting: false,
+  });
   expect(none.options.sessionConfig ?? {}).toEqual({});
 });
 
