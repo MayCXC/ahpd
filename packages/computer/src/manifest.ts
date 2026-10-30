@@ -51,6 +51,14 @@ export interface Profile {
    * no such runtime refuses the create with its own message.
    */
   ociRuntime?: string;
+  /**
+   * The box its machines are made on, by its name in `ssh.machines`.
+   *
+   * The box is checked before the first machine is made there, so a box that
+   * lacks what the profile needs is refused with the commands that fix it
+   * rather than failing later in the runtime's own words.
+   */
+  server?: string;
   mounts?: string[];
   workdir?: string;
   /**

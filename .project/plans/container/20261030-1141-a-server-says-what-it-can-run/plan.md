@@ -1,7 +1,7 @@
 ---
 title: A server says what it can run
 domain: container
-status: planned
+status: active
 priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -67,7 +67,7 @@ profile.server = <name> -> [new] requireOn(box, needs) before the first create o
 
 ## Proposed architecture
 
-- **Data flow** - `servercheck.ts` holds the script, `checkServer(run)`, `ServerReport` and `fixesOf(report, user)`. The ssh runtime gives it a function that runs the script on one box.
+- **Data flow** - `servercheck.ts` holds the script, `checkServer(run)`, `ServerReport`, `fixesOf(report, os, user)` and `serverGate(check)`. The ssh runtime gives it a function that runs the script on one box.
 - **Report items** - `os`, `arch`, `cpus`, `memory`, `disk`, `docker`, `dockerAccess`, `kvm`, `libvirt`, `libvirtAccess`, `ahpd`. Each item has `ok`, what was found, and `fix`, a list of command lines.
 - **Layer responsibilities** - `@ahpd/computer` only.
 - **Source-of-truth files** - [`code://packages/computer/src/ssh.ts`](../../../../packages/computer/src/ssh.ts), `CREATE: packages/computer/src/servercheck.ts`.
@@ -76,9 +76,9 @@ profile.server = <name> -> [new] requireOn(box, needs) before the first create o
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The check runs on a box and says each fix](task-01-the-check-runs-on-a-box.md) | todo | - |
-| [02 - The report is a leaf of the ssh machine](task-02-the-report-is-a-leaf.md) | todo | 01 |
-| [03 - A profile names its server and is checked first](task-03-a-profile-names-its-server.md) | todo | 01 |
+| [01 - The check runs on a box and says each fix](task-01-the-check-runs-on-a-box.md) | done | - |
+| [02 - The report is a leaf of the ssh machine](task-02-the-report-is-a-leaf.md) | done | 01 |
+| [03 - A profile names its server and is checked first](task-03-a-profile-names-its-server.md) | done | 01 |
 | [04 - dev02 is checked and fixed by hand](task-04-dev02-is-checked-by-hand.md) | todo | 02 |
 | [05 - Docs](task-05-docs.md) | todo | 03, 04 |
 
@@ -90,8 +90,8 @@ profile.server = <name> -> [new] requireOn(box, needs) before the first create o
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-check-runs-on-a-box.md](task-01-the-check-runs-on-a-box.md).
+- **Done so far:** tasks 01 to 03.
+- **Next action:** [task-04-dev02-is-checked-by-hand.md](task-04-dev02-is-checked-by-hand.md).
 - **Open questions:** none.
 - **Watch out for:** the script must run under `sh`, not `bash`, and every probe must not fail the script when a program is absent.
 

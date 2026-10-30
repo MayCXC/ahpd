@@ -1,6 +1,6 @@
 ---
 title: The check runs on a box and says each fix
-status: todo
+status: done
 depends: []
 layer: "computer"
 refs:
@@ -49,3 +49,8 @@ refs:
 - `pnpm -s typecheck` passes, and the touched tests pass.
 
 ## Resume
+
+- Done on 2026-10-30.
+- `fixesOf` takes the system as a second parameter, `fixesOf(report, os, user)`, and `osOf(text)` reads it from the answer.
+- `ssh.ts` answers `check(id)` and `checks(id)`; stdin is a pipe only when a script is sent.
+- A group fix ends with a note to log in again.

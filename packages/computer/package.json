@@ -142,6 +142,7 @@
               "cpus": { "type": "string", "description": "A CPU limit for its machines, a string. The plugin's cpus when absent." },
               "memory": { "type": "string", "description": "A memory limit for its machines, a string. The plugin's memory when absent." },
               "ociRuntime": { "type": "string", "description": "The OCI runtime Docker starts its machines under, a string. runsc is gVisor. Docker's own default when absent." },
+              "server": { "type": "string", "description": "The box its machines are made on, by its name in ssh.machines. The box is checked before a machine is made there. This host when absent." },
               "workdir": { "type": "string", "description": "Where commands start, a string. folder, or the image's own, when absent." },
               "mounts": { "type": "array", "items": { "type": "string" }, "description": "Mounts added after the plugin's own, a list of strings." },
               "agents": { "type": "array", "items": { "type": "string" }, "description": "The agents its machines are prepared for, a list of provider ids. A session of another agent is refused." },

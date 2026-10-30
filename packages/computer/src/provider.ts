@@ -174,13 +174,32 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
     }),
   }, null, 2);
 
-  /** One machine's files, as listing entries. */
-  const leaves = (): Entry[] => [
+  /**
+   * One machine's files, as listing entries.
+   *
+   * `server` only for a machine that is a box an operator set up, which is the
+   * one kind there is anything to check on: what a machine this host made can
+   * run is the image it was made from.
+   */
+  const leaves = (id: string): Entry[] => [
     { name: 'status', type: 'file' },
     { name: 'capabilities', type: 'file' },
     { name: 'stats', type: 'file' },
     { name: 'state', type: 'file' },
+    ...(runtime.checks?.(id) === true ? [{ name: 'server', type: 'file' } as const] : []),
   ];
+
+  /**
+   * What the box can run, with the fixes for what it lacks, as JSON.
+   *
+   * Run fresh on every read: what a box has is what its operator just
+   * installed, and a report kept here would hide the fix they ran.
+   */
+  const serverOf = async (id: string): Promise<string> => {
+    const report = await runtime.check?.(id);
+    if (report === undefined) throw new Error(`${id} is not a box this host can check`);
+    return JSON.stringify(report, null, 2);
+  };
 
   /**
    * What a machine is using, with the cores it was limited to.
@@ -376,7 +395,7 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
       }
       // A machine that is not there is not a directory either.
       if (await runtime.inspect(held.id) === undefined) throw absentResource('computer', uri);
-      return leaves();
+      return leaves(held.id);
     },
 
     resolve: async (uri) => {
@@ -390,11 +409,12 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
       if (isDirectory(held)) {
         return { uri, type: 'directory', mtime: created, ctime: created };
       }
-      if (!leaves().some((one) => one.name === held.leaf)) throw absentResource('computer', uri);
+      if (!leaves(held.id).some((one) => one.name === held.leaf)) throw absentResource('computer', uri);
       const body = held.leaf === 'status' ? JSON.stringify(found, null, 2)
         : held.leaf === 'stats' ? await statsOf(held.id, found)
           : held.leaf === 'state' ? stateLine(await runtime.state(held.id))
-            : capabilities();
+            : held.leaf === 'server' ? await serverOf(held.id)
+              : capabilities();
       return {
         uri,
         type: 'file',
@@ -414,6 +434,7 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
       if (held.leaf === 'status') return asFile(JSON.stringify(found, null, 2));
       if (held.leaf === 'capabilities') return asFile(capabilities());
       if (held.leaf === 'stats') return asFile(await statsOf(held.id, found));
+      if (held.leaf === 'server' && runtime.checks?.(held.id) === true) return asFile(await serverOf(held.id));
       if (held.leaf === 'state') {
         return { data: stateLine(await runtime.state(held.id)), encoding: 'utf-8', contentType: 'text/plain' };
       }

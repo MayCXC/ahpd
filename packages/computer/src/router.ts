@@ -179,6 +179,11 @@ export const routed = (
     hostCommand: (id) => about(id, (runtime, name) => runtime.hostCommand(name)),
     bringBack: (id) => about(id, (runtime, name) => runtime.bringBack(name)),
     stats: (id) => about(id, (runtime, name) => runtime.stats(name)),
+    check: (id) => about(id, (runtime, name) => runtime.check?.(name) ?? Promise.resolve(undefined)),
+    checks: (id) => {
+      const { runtime, name } = parseMachineId(id);
+      return runtimes[runtime]?.checks?.(name) ?? false;
+    },
 
     /*
      * A machine is made on the runtime this host is configured with, under the

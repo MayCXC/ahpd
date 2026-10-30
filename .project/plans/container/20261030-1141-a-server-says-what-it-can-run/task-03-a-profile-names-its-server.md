@@ -1,6 +1,6 @@
 ---
 title: A profile names its server and is checked first
-status: todo
+status: done
 depends: [task-01-the-check-runs-on-a-box.md]
 layer: "computer"
 refs:
@@ -43,3 +43,7 @@ The Docker plan asks for `docker` and `dockerAccess`, and the VM plan asks for `
 - `pnpm -s typecheck` passes, and the touched tests pass.
 
 ## Resume
+
+- Done on 2026-10-30.
+- The gate is `serverGate(check).requireOn(server, needs)`.
+- A failed check is not kept, so the next create asks again.
