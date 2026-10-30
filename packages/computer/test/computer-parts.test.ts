@@ -226,7 +226,9 @@ it('builds the node part as a download, with no launcher of its own', () => {
   expect(file).toContain('node-x64.tar.xz');
   expect(file).toContain('node-arm64.tar.xz');
   expect(file).toContain('sha256sum --check --strict');
-  expect(file).toContain('tar "${how}" part -C /opt/ahpd/node');
+  // The tarball's one wrapping directory goes, so Node is at `/opt/ahpd/node/bin`,
+  // where every part that copies it in puts it on the PATH.
+  expect(file).toContain('tar "${how}" part -C /opt/ahpd/node --strip-components=1;');
   // A launcher for `node` would be a file that runs itself, so there is none.
   expect(file).not.toContain('bin/node');
   expect(file).toMatch(/FROM scratch\nCOPY --from=fetch \/opt\/ahpd\/node \/opt\/ahpd\/node$/);

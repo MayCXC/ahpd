@@ -528,8 +528,13 @@ const launchers = (
   return [`RUN ${steps[0]}`, ...steps.slice(1).map((one) => ` && ${one}`)].join(' \\\n');
 };
 
-/** The `case`, `curl` and `tar` a part installed by download runs, as one `RUN`. */
-const download = (part: Part, after: string[]): string => [
+/**
+ * The `case`, `curl` and `tar` a part installed by download runs, as one `RUN`.
+ *
+ * `strip` drops the archive's one wrapping directory, for a part that other
+ * parts name by path rather than find.
+ */
+const download = (part: Part, after: string[], strip = false): string => [
   'RUN set -eu; \\',
   byPlatform(part),
   ' curl --fail --silent --show-error --location --output part "${url}"; \\',
@@ -541,7 +546,7 @@ const download = (part: Part, after: string[]): string => [
   // executable at the root, where stripping a component leaves nothing at all.
   // Nothing here needs the depth, because the launcher below finds the
   // executable rather than naming a path.
-  ` tar "${'${how}'}" part -C /opt/ahpd/${part.id}; \\`,
+  ` tar "${'${how}'}" part -C /opt/ahpd/${part.id}${strip ? ' --strip-components=1' : ''}; \\`,
   // Each is a statement of its own, and the semicolon is added here rather than
   // left to the caller: docker joins a continued `RUN` into one line with
   // nothing between the lines, so `mkdir x` followed by `found=$(...)` is a
@@ -609,12 +614,14 @@ const byDownload = (part: Part): string => [
 /**
  * The download of the `node` part, which needs no launcher of its own.
  *
- * A Node tarball already lays out `bin/node`, `bin/npm` and `bin/npx`, and a
- * launcher for `node` would be a file that runs itself.
+ * A Node tarball lays out `bin/node`, `bin/npm` and `bin/npx` under one
+ * `node-v<version>-linux-<arch>` directory. It is stripped, because every part
+ * that copies Node in puts `/opt/ahpd/node/bin` on its PATH. A launcher for
+ * `node` would be a file that runs itself.
  */
 const byNode = (part: Part): string => [
   fetching(false, 'ca-certificates curl bzip2 xz-utils'),
-  download(part, []),
+  download(part, [], true),
   only(part.id),
 ].join('\n\n');
 
