@@ -278,9 +278,10 @@ export interface Start {
    * host is configured with none and no client plugin adds one, which is a
    * backend that is asked for nothing rather than one asked for an empty list.
    *
-   * A backend that cannot take MCP servers ignores them: this host's own
-   * backends reach the same servers through their own configuration, and an
-   * agent that speaks ACP is handed the list on its `session/new` instead.
+   * The Claude backend declares them to its CLI, and an agent that speaks ACP
+   * is handed the list on its `session/new`. A backend that cannot take MCP
+   * servers ignores them, as pi and cofold do: they reach the same servers
+   * through their own configuration.
    */
   mcpServers?: Record<string, McpServer>;
   /**

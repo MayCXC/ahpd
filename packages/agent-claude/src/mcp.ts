@@ -1,9 +1,49 @@
-/** The MCP servers a session runs with, read from the files the CLI reads. */
+/** The MCP servers a session runs with: the host's, and the ones in the files the CLI reads. */
 
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
-import type { Bag } from '@ahpd/sdk';
+import { join, resolve } from 'node:path';
+import type { Bag, McpServer } from '@ahpd/sdk';
+
+/**
+ * The servers the host offers a session, in the shape the SDK takes, for a
+ * session that runs in `folder`.
+ *
+ * Every session is offered the host's servers whatever agent it runs, the
+ * ones a client plugin contributes among them, which the CLI does not find in
+ * the plugin itself because it is told to skip them there. An HTTP server goes
+ * as it is. A stdio server goes without its directory, which the SDK has no
+ * field for: the CLI starts it in the session's own folder, so one whose
+ * directory is another folder is left out and said, as the reference leaves
+ * out a server whose directory it cannot represent.
+ * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeSdkOptions.ts#L235-L266
+ */
+export function offeredServers(
+  servers: Record<string, McpServer> | undefined,
+  folder: string,
+  say?: (line: string) => void,
+): Record<string, Bag> {
+  const taken: Record<string, Bag> = {};
+  for (const [name, one] of Object.entries(servers ?? {})) {
+    if (one.type === 'http') {
+      taken[name] = { type: 'http', url: one.url, ...(one.headers === undefined ? {} : { headers: { ...one.headers } }) };
+      continue;
+    }
+    const named = one.cwd === '~' ? homedir() : one.cwd?.startsWith('~/') === true ? join(homedir(), one.cwd.slice(2)) : one.cwd;
+    const where = named === undefined ? undefined : resolve(folder, named);
+    if (where !== undefined && where !== resolve(folder)) {
+      say?.(`${name}: the CLI starts a stdio MCP server in the session's folder, so one that starts in ${one.cwd} was left out`);
+      continue;
+    }
+    taken[name] = {
+      type: 'stdio',
+      command: one.command,
+      ...(one.args === undefined ? {} : { args: [...one.args] }),
+      ...(one.env === undefined ? {} : { env: { ...one.env } }),
+    };
+  }
+  return taken;
+}
 
 /**
  * Every MCP server configured for a directory, by name.
