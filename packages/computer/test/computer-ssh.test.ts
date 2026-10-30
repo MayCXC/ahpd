@@ -13,7 +13,8 @@ import { echo } from '../../../examples/echo/agent.js';
 import { closeAll, keeping } from './support/closing.js';
 import { isRunning } from '../src/runtime.js';
 import { routed } from '../src/router.js';
-import { STATS, quote, sshRuntime, statsFrom } from '../src/ssh.js';
+import { forgetHost, keygenWith, machineKey } from '../src/keys.js';
+import { STATS, quote, sshReach, sshRuntime, statsFrom } from '../src/ssh.js';
 import type { SshMachine } from '../src/ssh.js';
 import type { Agent } from '../../sdk/src/types/agent.js';
 import type { HostOptions, HostTool } from '../../sdk/src/types/host.js';
@@ -34,6 +35,7 @@ const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/computer/src/index.ts';
 const FIXTURE = fileURLToPath(new URL('./fixtures/ssh.mjs', import.meta.url));
 const DOCKER_FIXTURE = fileURLToPath(new URL('./fixtures/docker.mjs', import.meta.url));
+const KEYGEN_FIXTURE = fileURLToPath(new URL('./fixtures/ssh-keygen.mjs', import.meta.url));
 
 /** A temporary directory removed after the test that made it. */
 let loose: string | undefined;
@@ -815,4 +817,67 @@ it('refuses a command in the box when a value there is the vault own, and writes
   expect(recorded().length).toBeGreaterThan(0);
   expect(recorded().every((one) => one.at(-1) === 'true')).toBe(true);
   expect(JSON.stringify(recorded())).not.toContain(SECRET);
+});
+
+it('reaches a made machine through a jump, with a known-hosts file of its own', () => {
+  const reach = sshReach({}, {
+    destination: 'ahpd@192.168.122.40',
+    identity: '/config/computer-ssh/id_ed25519',
+    jump: 'dev02',
+    knownHosts: '/config/computer-ssh/known_hosts',
+  });
+
+  // A new host key is accepted into the file of its own, unhashed so its
+  // address can be removed again; the jump is reached with the person's own
+  // configuration.
+  expect(reach.argv('true')).toEqual([
+    '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
+    '-o', 'StrictHostKeyChecking=accept-new', '-o', 'UserKnownHostsFile=/config/computer-ssh/known_hosts', '-o', 'HashKnownHosts=no',
+    '-J', 'dev02',
+    '-i', '/config/computer-ssh/id_ed25519',
+    'ahpd@192.168.122.40', '--', 'true',
+  ]);
+  // A box an operator wrote has neither, as before.
+  expect(sshReach({}, { destination: 'dev02', port: '2229' }).argv('true'))
+    .toEqual(['-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-p', '2229', 'dev02', '--', 'true']);
+  expect(sshReach({}, { destination: 'dev02', host: ['/opt/ahpd/ahpd/bin/ahpd'] }).hostCommand()).toEqual(['/opt/ahpd/ahpd/bin/ahpd']);
+});
+
+it('makes the machine key once, however many machines ask for it at once', async () => {
+  const config = (home ??= mkdtempSync(join(tmpdir(), 'ahpd-ssh-config-')));
+  const calls = join(config, 'keygen.jsonl');
+  const keygen = keygenWith(process.execPath, [KEYGEN_FIXTURE]);
+  process.env.SSH_KEYGEN_FAKE_LOG = calls;
+  try {
+    const [one, two] = await Promise.all([machineKey(config, keygen), machineKey(config, keygen)]);
+    const three = await machineKey(config, keygen);
+
+    expect(one).toEqual({
+      private: join(config, 'computer-ssh', 'id_ed25519'),
+      public: join(config, 'computer-ssh', 'id_ed25519.pub'),
+      knownHosts: join(config, 'computer-ssh', 'known_hosts'),
+    });
+    expect(two).toEqual(one);
+    expect(three).toEqual(one);
+    expect(readFileSync(one.public, 'utf8')).toMatch(/^ssh-ed25519 /);
+    // One run, with no passphrase: a daemon has nobody to type one.
+    expect(readFileSync(calls, 'utf8').trim().split('\n').map((line) => JSON.parse(line) as string[])).toEqual([
+      ['-q', '-t', 'ed25519', '-N', '', '-C', 'ahpd-computer', '-f', one.private],
+    ]);
+  } finally {
+    delete process.env.SSH_KEYGEN_FAKE_LOG;
+  }
+});
+
+it('forgets a removed machine address, so the next machine given it is not refused', async () => {
+  const config = (home ??= mkdtempSync(join(tmpdir(), 'ahpd-ssh-config-')));
+  const keygen = keygenWith(process.execPath, [KEYGEN_FIXTURE]);
+  // No file yet is no address to forget, and nothing is run.
+  await forgetHost(config, '192.168.122.40', async () => { throw new Error('run with no file'); });
+
+  const { knownHosts } = await machineKey(config, keygen);
+  writeFileSync(knownHosts, '192.168.122.40 ssh-ed25519 AAAAold\n192.168.122.41 ssh-ed25519 AAAAother\n');
+  await forgetHost(config, '192.168.122.40', keygen);
+
+  expect(readFileSync(knownHosts, 'utf8')).toBe('192.168.122.41 ssh-ed25519 AAAAother\n');
 });

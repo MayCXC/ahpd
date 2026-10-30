@@ -48,7 +48,7 @@ appendFileSync(log, `${JSON.stringify(args)}\n`);
  * word splitting. A destination is the first word that is not a flag.
  */
 const read = () => {
-  const held = { destination: undefined, port: undefined, identity: undefined, ohs: [], remote: [] };
+  const held = { destination: undefined, port: undefined, identity: undefined, jump: undefined, ohs: [], remote: [] };
   let at = 0;
   for (; at < args.length; at++) {
     const said = String(args[at]);
@@ -56,6 +56,7 @@ const read = () => {
     if (said === '-o') { held.ohs.push(String(args[++at])); continue; }
     if (said === '-p') { held.port = String(args[++at]); continue; }
     if (said === '-i') { held.identity = String(args[++at]); continue; }
+    if (said === '-J') { held.jump = String(args[++at]); continue; }
     if (said.startsWith('-')) continue;
     held.destination = said;
     at++;

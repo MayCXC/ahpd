@@ -17,6 +17,7 @@ import { spawn } from 'node:child_process';
 import type { Spawn, SpawnOptions } from '@ahpd/sdk';
 import type { ComputerRuntime, ExecResult, Machine, MachineStats, RuntimeCapabilities } from './runtime.js';
 import { checkServer, SERVER_CHECK } from './servercheck.js';
+import type { ServerReport } from './servercheck.js';
 
 /** What `capabilities` reports for this runtime. */
 const CAPABILITIES: RuntimeCapabilities = {
@@ -166,7 +167,7 @@ const madeElsewhere = (id: string): Error =>
   new Error(`${id}: an ssh machine is listed in this host's options, not made by this host`);
 
 /** What a box's answer came to: whether it is up, and its last line either way. */
-interface Reached {
+export interface Reached {
   up: boolean;
   /** `ssh`'s own last line, which is the whole of why a box did not answer. */
   said: string;
@@ -185,7 +186,7 @@ const lastLine = (said: string): string => {
  * and a key of their own, so the daemon's environment is what an ssh already
  * works with, and the option is the one place an extra variable is said.
  */
-const ran = (options: SshOptions, args: string[], timeout: number, input?: string): Promise<Ran> => new Promise((resolve, reject) => {
+const ran = (options: SshProgram, args: string[], timeout: number, input?: string): Promise<Ran> => new Promise((resolve, reject) => {
   const child = spawn(options.command ?? 'ssh', [...(options.args ?? []), ...args], {
     // Stdin only for a script sent to the box's `sh`: anything else has
     // nothing to read, and an open pipe would be one it waits on.
@@ -220,6 +221,148 @@ const ran = (options: SshOptions, args: string[], timeout: number, input?: strin
   });
 });
 
+/** How the `ssh` program is run, whichever box it reaches. */
+export type SshProgram = Pick<SshOptions, 'command' | 'args' | 'env' | 'connectTimeout'>;
+
+/** One destination, with what reaching it takes beyond a box an operator wrote. */
+export interface SshTarget extends SshMachine {
+  /** The box `ssh -J` goes through first, for a destination on a network this host has no route to. */
+  jump?: string;
+  /** A known-hosts file of its own, which a new host key is accepted into. */
+  knownHosts?: string;
+}
+
+/** What one destination answers, each verb one run of the `ssh` program. */
+export interface SshReach {
+  /** The `ssh` arguments for one remote string, after the program's own. */
+  argv(remote: string): string[];
+  /** Whether the destination answers `true`, and `ssh`'s last line when it does not. */
+  reached(): Promise<Reached>;
+  /** The program and arguments that run one command there. */
+  how(asked: SpawnOptions): Spawn;
+  exec(command: string[], env?: Record<string, string>): Promise<ExecResult>;
+  stats(): Promise<MachineStats | undefined>;
+  /** The server check, sent to the destination's `sh`; `id` names it in a refusal. */
+  check(id: string): Promise<ServerReport>;
+  /** How a nested host is started there. */
+  hostCommand(): string[];
+}
+
+/**
+ * One destination reached over `ssh`: an operator's box, or a machine this host made.
+ *
+ * `-T` because no terminal is asked for: a listing and a command both read
+ * what the box printed rather than what a terminal would have done to it.
+ * `BatchMode=yes` so a box that wants a password fails with its own sentence
+ * instead of waiting for one forever - it is the flag that turns a hang into
+ * an answer.
+ *
+ * A target with `knownHosts` is a machine whose host key nobody has seen: its
+ * key is accepted the first time into that file, never into the person's own.
+ * The file is written unhashed, so a removed machine's address can be found
+ * in it again. `-J` reaches the jump with the person's own configuration,
+ * because `ssh` gives the jump none of the `-o` options here.
+ */
+export const sshReach = (program: SshProgram, target: SshTarget): SshReach => {
+  const connect = program.connectTimeout ?? DEFAULT_CONNECT_TIMEOUT;
+  // The connect timeout is the box's; this is the process's, and it is the one
+  // that ends a command the box accepted and never finished.
+  const bound = connect * 1000 + MARGIN_MS;
+
+  const argv = (remote: string): string[] => [
+    '-T',
+    '-o', 'BatchMode=yes',
+    '-o', `ConnectTimeout=${connect}`,
+    ...(target.knownHosts === undefined
+      ? []
+      : ['-o', 'StrictHostKeyChecking=accept-new', '-o', `UserKnownHostsFile=${target.knownHosts}`, '-o', 'HashKnownHosts=no']),
+    ...(target.jump === undefined ? [] : ['-J', target.jump]),
+    ...(target.port === undefined ? [] : ['-p', target.port]),
+    ...(target.identity === undefined ? [] : ['-i', target.identity]),
+    target.destination,
+    '--',
+    remote,
+  ];
+
+  /**
+   * The remote string for one command, with its directory and its variables.
+   *
+   * `ssh` takes none of Docker's own flags: `-w` becomes a `cd` and `-e`
+   * becomes `env`, both written into the string the login shell parses. The
+   * directory is the box's own `workdir` and never a path from this host -
+   * a path here is not a path there.
+   */
+  const remote = (command: string[], env?: Record<string, string>): string => {
+    const variables = Object.entries(env ?? {}).map(([name, value]) => quote(`${name}=${value}`));
+    const said = [
+      ...(variables.length === 0 ? [] : ['env', ...variables]),
+      ...command.map(quote),
+    ].join(' ');
+    return target.workdir === undefined ? said : `cd ${quote(target.workdir)} && ${said}`;
+  };
+
+  return {
+    argv,
+
+    reached: async () => {
+      const held = await ran(program, argv('true'), bound);
+      if (held.code === 0) return { up: true, said: '' };
+      if (held.timedOut) return { up: false, said: `it did not answer within ${bound}ms` };
+      return { up: false, said: lastLine(held.stderr) || lastLine(held.stdout) || `ssh exited ${held.code}` };
+    },
+
+    how: (asked) => ({
+      command: program.command ?? 'ssh',
+      // A caller's `cwd` is a path on this host and is left out: the box's
+      // own `workdir` is what a command starts in.
+      args: [...(program.args ?? []), ...argv(remote([asked.command, ...(asked.args ?? [])], asked.env))],
+    }),
+
+    exec: async (command, env) => {
+      const held = await ran(program, argv(remote(command, env)), bound);
+      // Not tolerated and not thrown: a command that failed is the tool
+      // working, and its exit code is what the caller asked for.
+      return { output: `${held.stdout}${held.stderr}`.trim(), code: held.code };
+    },
+
+    /**
+     * What the box itself is using, read from its own `/proc`.
+     *
+     * One command that prints the box's first `/proc/stat` line, then that line
+     * again half a second later, then `/proc/meminfo` and the core count. The
+     * percentages are worked out here rather than there, so a box with an `awk`
+     * of its own is not needed and what is parsed is the same text everywhere.
+     */
+    stats: async () => {
+      const held = await ran(program, argv(STATS.probe), bound);
+      // A box with no `/proc` - a FreeBSD box is the one this is written for -
+      // answers a command that failed, and a gauge drawn from nothing is worse
+      // than one that is not drawn.
+      if (held.code !== 0) return undefined;
+      return statsFrom(held.stdout);
+    },
+
+    /*
+     * What the box can run, from the server check sent to its `sh`.
+     *
+     * The box's own `sh` rather than its login shell, so the script reads the
+     * same whatever shell the account logs in with. A box that does not
+     * answer, or whose `sh` failed, is a sentence naming it, because a report
+     * of nothing would read as a box that has nothing.
+     */
+    check: async (id) => checkServer(async () => {
+      const held = await ran(program, argv(SERVER_CHECK.command), bound + CHECK_MARGIN_MS, SERVER_CHECK.script);
+      if (held.timedOut) throw new Error(`${id} did not answer the server check within ${bound + CHECK_MARGIN_MS}ms`);
+      if (held.code !== 0) {
+        throw new Error(`${id} did not answer the server check: ${lastLine(held.stderr) || lastLine(held.stdout) || `ssh exited ${held.code}`}`);
+      }
+      return held.stdout;
+    }),
+
+    hostCommand: () => target.host ?? ['ahpd'],
+  };
+};
+
 /**
  * Machines, on boxes reached over `ssh`.
  *
@@ -230,30 +373,7 @@ const ran = (options: SshOptions, args: string[], timeout: number, input?: strin
 export const sshRuntime = (options: SshOptions): ComputerRuntime => {
   const machines = options.machines;
   const known = Object.keys(machines);
-  const connect = options.connectTimeout ?? DEFAULT_CONNECT_TIMEOUT;
-  // The connect timeout is the box's; this is the process's, and it is the one
-  // that ends a command the box accepted and never finished.
-  const bound = connect * 1000 + MARGIN_MS;
-
-  /**
-   * The whole `ssh` call for one box, with the remote command as one string.
-   *
-   * `-T` because no terminal is asked for: a listing and a command both read
-   * what the box printed rather than what a terminal would have done to it.
-   * `BatchMode=yes` so a box that wants a password fails with its own sentence
-   * instead of waiting for one forever - it is the flag that turns a hang into
-   * an answer.
-   */
-  const argv = (machine: SshMachine, remote: string): string[] => [
-    '-T',
-    '-o', 'BatchMode=yes',
-    '-o', `ConnectTimeout=${connect}`,
-    ...(machine.port === undefined ? [] : ['-p', machine.port]),
-    ...(machine.identity === undefined ? [] : ['-i', machine.identity]),
-    machine.destination,
-    '--',
-    remote,
-  ];
+  const reaches = new Map(Object.entries(machines).map(([name, machine]) => [name, sshReach(options, machine)]));
 
   /** One box, or a sentence naming the ones this host lists instead. */
   const must = (name: string): SshMachine => {
@@ -264,29 +384,10 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
     return held;
   };
 
-  /** What one box answers to `true`, which is the whole of whether it is up. */
-  const reached = async (machine: SshMachine): Promise<Reached> => {
-    const held = await ran(options, argv(machine, 'true'), bound);
-    if (held.code === 0) return { up: true, said: '' };
-    if (held.timedOut) return { up: false, said: `it did not answer within ${bound}ms` };
-    return { up: false, said: lastLine(held.stderr) || lastLine(held.stdout) || `ssh exited ${held.code}` };
-  };
-
-  /**
-   * The remote string for one command, with its directory and its variables.
-   *
-   * `ssh` takes none of Docker's own flags: `-w` becomes a `cd` and `-e`
-   * becomes `env`, both written into the string the login shell parses. The
-   * directory is the box's own `workdir` and never a path from this host -
-   * a path here is not a path there.
-   */
-  const remote = (machine: SshMachine, command: string[], env?: Record<string, string>): string => {
-    const variables = Object.entries(env ?? {}).map(([name, value]) => quote(`${name}=${value}`));
-    const said = [
-      ...(variables.length === 0 ? [] : ['env', ...variables]),
-      ...command.map(quote),
-    ].join(' ');
-    return machine.workdir === undefined ? said : `cd ${quote(machine.workdir)} && ${said}`;
+  /** The reach of a box that `must` found. */
+  const reachOf = (name: string): SshReach => {
+    must(name);
+    return reaches.get(name) as SshReach;
   };
 
   /**
@@ -329,8 +430,8 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
      * not answer is not `unreachable` alone is that the line after it is the
      * only thing that says which box went and why.
      */
-    list: async () => Promise.all(Object.entries(machines).map(async ([name, machine]): Promise<Machine> => {
-      const held = await reached(machine);
+    list: async () => Promise.all([...reaches].map(async ([name, reach]): Promise<Machine> => {
+      const held = await reach.reached();
       return {
         id: name,
         // Not made from anything here: a box is set up by hand, so there is no
@@ -356,9 +457,9 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
      * A box that is not configured is not a machine, which is `undefined`.
      */
     state: async (id) => {
-      const machine = machines[id];
-      if (machine === undefined) return undefined;
-      return (await reached(machine)).up ? RUNNING : 'stopped';
+      const reach = reaches.get(id);
+      if (reach === undefined) return undefined;
+      return (await reach.reached()).up ? RUNNING : 'stopped';
     },
 
     /*
@@ -394,22 +495,10 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
      * A command on the box, with its directory and its variables written into
      * the remote string - `ssh` has no `-w` and no `-e` to give them to.
      */
-    how: async (id, asked) => {
-      const machine = machines[id];
-      if (machine === undefined) return undefined;
-      return {
-        command: options.command ?? 'ssh',
-        // A caller's `cwd` is a path on this host and is left out: the box's
-        // own `workdir` is what a command starts in.
-        args: [...(options.args ?? []), ...argv(machine, remote(machine, [asked.command, ...(asked.args ?? [])], asked.env))],
-      } satisfies Spawn;
-    },
+    how: async (id, asked) => reaches.get(id)?.how(asked) satisfies Spawn | undefined,
 
     /** How this box starts a nested host, as its operator wrote it. */
-    hostCommand: async (id) => {
-      const machine = machines[id];
-      return machine === undefined ? undefined : machine.host ?? ['ahpd'];
-    },
+    hostCommand: async (id) => reaches.get(id)?.hostCommand(),
 
     /*
      * The verbs that make a machine, which a box is not.
@@ -424,13 +513,7 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
     restart: async (id) => { must(id); throw madeElsewhere(id); },
     remove: async (id) => { must(id); throw madeElsewhere(id); },
 
-    exec: async (id, command, env): Promise<ExecResult> => {
-      const machine = must(id);
-      const held = await ran(options, argv(machine, remote(machine, command, env)), bound);
-      // Not tolerated and not thrown: a command that failed is the tool
-      // working, and its exit code is what the caller asked for.
-      return { output: `${held.stdout}${held.stderr}`.trim(), code: held.code };
-    },
+    exec: async (id, command, env): Promise<ExecResult> => reachOf(id).exec(command, env),
 
     /*
      * A file written onto the box is not a thing this host does.
@@ -458,45 +541,9 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
     bringBack: async () => undefined,
     follow: async () => {},
 
-    /**
-     * What the box itself is using, read from its own `/proc`.
-     *
-     * One command that prints the box's first `/proc/stat` line, then that line
-     * again half a second later, then `/proc/meminfo` and the core count. The
-     * percentages are worked out here rather than there, so a box with an `awk`
-     * of its own is not needed and what is parsed is the same text everywhere.
-     */
-    stats: async (id) => {
-      const machine = machines[id];
-      if (machine === undefined) return undefined;
-      const held = await ran(options, argv(machine, STATS.probe), bound);
-      // A box with no `/proc` - a FreeBSD box is the one this is written for -
-      // answers a command that failed, and a gauge drawn from nothing is worse
-      // than one that is not drawn.
-      if (held.code !== 0) return undefined;
-      return statsFrom(held.stdout);
-    },
+    stats: async (id) => reaches.get(id)?.stats(),
 
-    /*
-     * What the box can run, from the server check sent to its `sh`.
-     *
-     * The box's own `sh` rather than its login shell, so the script reads the
-     * same whatever shell the account logs in with. A box that does not
-     * answer, or whose `sh` failed, is a sentence naming it, because a report
-     * of nothing would read as a box that has nothing.
-     */
-    check: async (id) => {
-      const machine = machines[id];
-      if (machine === undefined) return undefined;
-      return checkServer(async () => {
-        const held = await ran(options, argv(machine, SERVER_CHECK.command), bound + CHECK_MARGIN_MS, SERVER_CHECK.script);
-        if (held.timedOut) throw new Error(`${id} did not answer the server check within ${bound + CHECK_MARGIN_MS}ms`);
-        if (held.code !== 0) {
-          throw new Error(`${id} did not answer the server check: ${lastLine(held.stderr) || lastLine(held.stdout) || `ssh exited ${held.code}`}`);
-        }
-        return held.stdout;
-      });
-    },
+    check: async (id) => reaches.get(id)?.check(id),
     checks: (id) => machines[id] !== undefined,
 
     capabilities: () => CAPABILITIES,
