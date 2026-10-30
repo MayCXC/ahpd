@@ -109,6 +109,7 @@ Softov's screenshots of a VS Code Claude session on `opendoop` show the result:
 - The disk read covers `~/.claude/skills/synced/<id>/<name>/SKILL.md` too, which VS Code does not.
 - The disk read covers the project scope, `<working directory>/.claude/<kind>`, in this change. Softov, 2026-10-30: "this I think".
   Each scope gets its own writable directories, so a client shows User and Workspace groups.
+- A writable directory is sent with no children too, as VS Code does. Softov, 2026-10-30: "yes, send them".
 - On the same name, the skill the CLI runs is the one listed: personal over project, and a skill over a command. Softov, 2026-10-30: "preference for the one that the harness will use".
 - A skill, command or agent that the SDK reports and the disk read does not find gets an internal URI, never a `file:` URI.
 - SDK skills with no file go in one read-only `builtin` directory, as VS Code does. Softov, 2026-10-30: "yes".

@@ -62,12 +62,15 @@ He wants an agent written through a session to show in that session without a re
 - The daemon's probe is read again after the same write.
   Then a new session and the agent list outside a session also show the new agent.
 - An edit and a delete in the directory reach the list the same way as a new file.
+- A writable directory is sent with no children too, as VS Code does. Softov, 2026-10-30: "yes, send them".
+  Without it, New agent and New skill show only for a person who already has one.
+- A new skill shows after the reload too, as a new agent does.
 
 ## Open points
 
 - What starts the read: a client's `resourceWrite` only, or a watcher on each writable directory.
   A watcher also catches a file that the agent or a person writes.
-- Whether the Agents directory is sent with no children, so a client can make the first agent. VS Code then shows an empty User group with its `+`.
 - Whether ahpd sends `<working directory>/.claude/<kind>` too, as a writable container, so a Workspace agent can be made.
 - Not checked: whether `initializationResult()` answers new agents after `reloadPlugins()`, or only the agents read when the CLI started.
+- Not checked: whether `reloadPlugins()` reads the skills again. The SDK 0.3.301 also has `reloadSkills()`, which answers `skills`.
 - Not checked: whether a running Claude turn can call a new agent through its Task tool after the reload.
