@@ -123,11 +123,11 @@ const AS_ME = ME === undefined ? {} : { user: ME };
  */
 const DOCKER_CASE = 120_000;
 
-/** Whether a Docker daemon answers here, which is what the case below needs. */
+/** Whether a Docker daemon that runs Linux images answers here, which is what the case below needs. */
 const answers = (): boolean => {
   try {
-    execFileSync('docker', ['version', '--format', '{{.Server.Version}}'], { stdio: 'pipe' });
-    return true;
+    // A Windows runner's engine answers too, but runs no Linux image.
+    return execFileSync('docker', ['version', '--format', '{{.Server.Os}}'], { stdio: 'pipe' }).toString().trim() === 'linux';
   }
   catch { return false; }
 };

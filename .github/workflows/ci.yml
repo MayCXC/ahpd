@@ -99,6 +99,14 @@ jobs:
         run: timeout 300 pnpm test:unit --shard=${{ matrix.shard }}/3
         shell: bash
 
+      # The computer plugin's cases that need no Docker, which `processes`
+      # runs on Linux only: its Windows paths run nowhere else. The cases that
+      # start a real container skip, because this runner's engine runs no
+      # Linux image.
+      - name: Computer tests
+        run: timeout 300 pnpm exec vitest run packages/computer/ --shard=${{ matrix.shard }}/3
+        shell: bash
+
       # Last, because it is the slowest and the only one that writes anything.
       # `check` packs each package after this step and this job does not: what a
       # package would publish is one answer, and Linux's is it.
