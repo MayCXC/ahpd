@@ -29,7 +29,7 @@ A profile names its box with `server`, and `serverGate(check).requireOn(server, 
 ## Departures from the plan
 
 - `fixesOf` takes the system as a parameter, `fixesOf(report, os, user)`, because the report keeps only what a person reads.
-- The script adds `~/.local/node/bin` to the end of PATH, found on dev02: the install script puts ahpd there, and `ssh box cmd` does not have it on its PATH.
+- The script adds `~/.local/node/bin` to the end of PATH. The install script puts ahpd there, and `ssh box cmd` does not have it on its PATH.
 
 ## Left for later
 
