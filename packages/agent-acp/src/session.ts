@@ -51,8 +51,15 @@ const CLOSE_GRACE_MS = 1000;
  * `options` is the backend's identity and wiring; `start` is what this
  * particular session was told. The server is spawned lazily, on the first
  * turn, so a session somebody opened and never used costs no subprocess.
+ *
+ * `heardModes` is how this session tells its agent the modes its server named,
+ * which the agent's schema lists until a later session hears others.
  */
-export function acpSession(options: AcpOptions, start: Start): Session {
+export function acpSession(
+  options: AcpOptions,
+  start: Start,
+  heardModes?: (modes: { id: string; name: string }[]) => void,
+): Session {
   const provider = options.provider ?? 'acp';
   const emit = start.emit;
   /*
@@ -121,6 +128,7 @@ export function acpSession(options: AcpOptions, start: Start): Session {
     seeds: [...(start.seedCustomizations ?? [])],
     commands: [],
     modes: undefined,
+    heardModes,
     active: undefined,
     mapping: undefined,
     cumulative: undefined,

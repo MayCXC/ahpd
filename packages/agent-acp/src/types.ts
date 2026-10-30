@@ -93,6 +93,14 @@ export interface AcpOptions {
   /** The model id a session that names none runs on. */
   model?: string;
   /**
+   * The approval modes this agent's server is known to name.
+   *
+   * A preset carries the modes its agent's own source lists, so a client draws
+   * a picker before any session of the agent has opened. A session that hears
+   * its server's modes replaces this list in the agent.
+   */
+  modes?: { id: string; name: string }[];
+  /**
    * The sign-in to send after the handshake, for a server that refuses a
    * session until one has happened.
    *
