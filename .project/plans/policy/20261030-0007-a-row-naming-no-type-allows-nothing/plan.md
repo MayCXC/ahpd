@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
 refs:
-  - "[code://packages/sdk/src/access/decide.ts#L118-L142](../../../../packages/sdk/src/access/decide.ts#L118-L142) - `matched`: a row about nothing the request asked for is not a candidate at all"
+  - "[code://packages/sdk/src/access/decide.ts#L149-L173](../../../../packages/sdk/src/access/decide.ts#L149-L173) - `matched`: a row about nothing the request asked for is not a candidate at all"
   - "[code://docs/sdk/POLICY.md#L34-L38](../../../../docs/sdk/POLICY.md#L34-L38) - `*`, a type left out, and an allow as a candidate on what was asked"
 ---
 

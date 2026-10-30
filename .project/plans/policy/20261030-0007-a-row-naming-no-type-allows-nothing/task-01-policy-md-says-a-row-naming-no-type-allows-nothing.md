@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: docs
 refs:
-  - "[code://packages/sdk/src/access/decide.ts#L118-L142](../../../../packages/sdk/src/access/decide.ts#L118-L142) - `matched`"
+  - "[code://packages/sdk/src/access/decide.ts#L149-L173](../../../../packages/sdk/src/access/decide.ts#L149-L173) - `matched`"
   - "[code://docs/sdk/POLICY.md#L34-L38](../../../../docs/sdk/POLICY.md#L34-L38) - what a `match` holds"
 ---
 
