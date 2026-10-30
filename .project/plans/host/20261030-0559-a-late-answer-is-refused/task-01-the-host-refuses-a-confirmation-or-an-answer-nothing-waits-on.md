@@ -1,6 +1,6 @@
 ---
 title: The host refuses a confirmation or an answer nothing waits on
-status: pending
+status: done
 depends: []
 layer: host
 refs:
@@ -44,4 +44,5 @@ refs:
 
 ## Resume
 
-Not started.
+Done 2026-10-30.
+Every step is built. The sdk and backend suites run once more on the union.
