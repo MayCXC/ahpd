@@ -493,6 +493,29 @@ describe('a failed login', () => {
     expect(sdk.said.at(-1)).toMatchObject({ content: 'four' });
   });
 
+  it('notes each call of a login: a failure with its words and when the login is back, a turn that went through as one that worked', async () => {
+    const clock = { now: Date.now() };
+    const logins = new OpenLogins(() => clock.now);
+    opened(logins, 'work', 'token-work');
+    opened(logins, 'personal', 'token-personal');
+    const calls: { id: string; outcome: Bag }[] = [];
+    logins.onCall = (id, outcome) => { calls.push({ id, outcome }); };
+    const reset = Math.floor(clock.now / 1000) + 3600;
+    const { session } = await answeredOnce(logins);
+    session.begin('t2', 'two');
+    await settle();
+    sdk.push(...failure('rate_limit', SPENT, reset));
+    await settle();
+    sdk.push(...answered('t2'));
+    await settle();
+
+    expect(calls).toEqual([
+      { id: 'work', outcome: { ok: true } },
+      { id: 'work', outcome: { ok: false, error: `rate_limit: ${SPENT}; back at ${new Date(reset * 1000).toISOString()}` } },
+      { id: 'personal', outcome: { ok: true } },
+    ]);
+  });
+
   it('brings a resting login back at once when a put opens it again', async () => {
     const logins = twoLogins();
     const { session } = await answeredOnce(logins);
@@ -909,7 +932,7 @@ describe('the plugin', () => {
   /** One connector of `claude-login`, as the host hands it to `open` and `check`. */
   const connectorOf = (id: string, token: string): Connector => ({ id, adapter: 'claude-login', owner: 'host', config: { token } });
 
-  it("logs a login's failure and asks the host to check that connector, on one connection", async () => {
+  it("logs a login's failure, asks the host to check that connector and to keep each call of it, on one connection", async () => {
     const { apply } = await import('../src/plugin.js');
     const { host, adapters, engines, requests, logged, connects } = fakeHost();
     // Before the load, which is when the adapter takes the `fetch` it checks with.
@@ -942,22 +965,28 @@ describe('the plugin', () => {
       session.begin('t2', 'two');
       await settle();
       sdk.push(...failure('authentication_failed', denied));
-      await until(() => requests.length >= 2);
+      await until(() => requests.length >= 4);
       expect(requests).toEqual([
         { method: 'initialize', params: { clientId: 'agent-claude', protocolVersions: ['0.9.0'] } },
+        // The first turn's calls went through.
+        { method: 'x-ahpd/connectors/note', params: { id: 'work', ok: true } },
         { method: 'x-ahpd/connectors/check', params: { id: 'work' } },
+        { method: 'x-ahpd/connectors/note', params: { id: 'work', ok: false, error: `authentication_failed: ${denied}` } },
       ]);
       expect(logged.some((line) => line.includes('work') && line.includes('authentication_failed') && line.includes(denied))).toBe(true);
       // The check asks the API with the login's token.
       expect(await adapter.check?.(connectorOf('work', 'token-work'))).toEqual({ result: 'ok' });
       expect(fetcher).toHaveBeenCalledTimes(1);
 
-      // A failure that moves the turn is checked too, on the same connection.
+      // A failure that moves the turn is checked and kept too, on the same connection.
       session.begin('t3', 'three');
       await settle();
       sdk.push(...failure('rate_limit'));
-      await until(() => requests.length >= 3);
-      expect(requests.at(-1)).toEqual({ method: 'x-ahpd/connectors/check', params: { id: 'work' } });
+      await until(() => requests.length >= 6);
+      expect(requests.slice(4)).toEqual([
+        { method: 'x-ahpd/connectors/check', params: { id: 'work' } },
+        { method: 'x-ahpd/connectors/note', params: { id: 'work', ok: false, error: `rate_limit: ${SPENT}` } },
+      ]);
       expect(tokenOf()).toBe('token-personal');
       expect(connects()).toBe(1);
     }
