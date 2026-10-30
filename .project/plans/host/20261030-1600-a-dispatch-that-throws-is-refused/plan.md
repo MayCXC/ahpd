@@ -1,7 +1,7 @@
 ---
 title: A dispatch that throws is refused
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -71,7 +71,7 @@ receive -> handle -> dispatchAction -> applyNow -> applyDispatch -> the store th
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host refuses a dispatch that throws](task-01-the-host-refuses-a-dispatch-that-throws.md) | todo | - |
+| [01 - The host refuses a dispatch that throws](task-01-the-host-refuses-a-dispatch-that-throws.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -80,8 +80,8 @@ receive -> handle -> dispatchAction -> applyNow -> applyDispatch -> the store th
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-host-refuses-a-dispatch-that-throws.md](task-01-the-host-refuses-a-dispatch-that-throws.md).
+- **Done so far:** planned and built 2026-10-30. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a dispatch sent through the in-process `handle` shows the refusal on the test's peer.
   Only a frame sent through `receive` shows what a client on a socket hears.

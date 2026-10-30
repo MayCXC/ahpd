@@ -1,6 +1,6 @@
 ---
 title: The host refuses a dispatch that throws
-status: todo
+status: done
 depends: []
 layer: host
 refs:
@@ -34,4 +34,5 @@ The refusal comes from the same code that refuses a dispatch that failed while i
 
 ## Resume
 
-Not started.
+Done 2026-10-30.
+Every step is built, and both test files and the type check pass.
