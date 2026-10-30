@@ -1707,6 +1707,21 @@ export function createHost(options: HostOptions): Host {
         finally { applying = undefined; }
       };
       /**
+       * A dispatch whose apply failed, logged and refused to the client that
+       * sent it.
+       *
+       * One that failed at once and one that failed after waiting are told the
+       * same way: the client holds its action until it hears an echo or a
+       * refusal, and the error's own words are the reason it is given.
+       */
+      const refuseFailed = (params: Record<string, unknown>, origin: Origin, error: unknown): void => {
+        const reason = error instanceof Error ? error.message : String(error);
+        log(`a dispatch from ${connection.clientId || 'anonymous'} failed: ${reason}`);
+        if (!connections.has(connection)) return;
+        const action = (typeof params.action === 'object' && params.action !== null ? params.action : {}) as Record<string, unknown>;
+        refuse(connection.peer, meantBy(String(params.channel ?? '')), action, origin, reason);
+      };
+      /**
        * `waiting`, extended by one step for the dispatch in `params`.
        *
        * A step whose connection left while it waited is dropped: there is
@@ -1717,11 +1732,7 @@ export function createHost(options: HostOptions): Host {
       conn.applyNow = applyNow;
       const behind = (params: Record<string, unknown>, origin: Origin, step: () => Promise<void> | undefined): void => {
         const next = (waiting ?? Promise.resolve()).then(() => (connections.has(connection) ? step() : undefined)).catch((error: unknown) => {
-          const reason = error instanceof Error ? error.message : String(error);
-          log(`a dispatch from ${connection.clientId || 'anonymous'} failed: ${reason}`);
-          if (!connections.has(connection)) return;
-          const action = (typeof params.action === 'object' && params.action !== null ? params.action : {}) as Record<string, unknown>;
-          refuse(connection.peer, meantBy(String(params.channel ?? '')), action, origin, reason);
+          refuseFailed(params, origin, error);
         });
         waiting = next;
         void next.then(() => { if (waiting === next) waiting = undefined; });
@@ -1760,6 +1771,10 @@ export function createHost(options: HostOptions): Host {
          * begin while this one is being applied. A dispatch that has to wait
          * returns what it waits on instead, and this connection's later
          * dispatches go behind it in `waiting`.
+         *
+         * One whose apply throws is refused here, as a step of `waiting` that
+         * fails is: a notification gets no reply, so a throw that left this
+         * handler would reach no client at all.
          */
         dispatchAction: (params) => {
           const origin: Origin = {
@@ -1770,7 +1785,12 @@ export function createHost(options: HostOptions): Host {
             behind(params, origin, () => applyNow(params, origin));
             return;
           }
-          const later = applyNow(params, origin);
+          let later: Promise<void> | undefined;
+          try { later = applyNow(params, origin); }
+          catch (error) {
+            refuseFailed(params, origin, error);
+            return;
+          }
           if (later !== undefined) behind(params, origin, () => later);
         },
       };
