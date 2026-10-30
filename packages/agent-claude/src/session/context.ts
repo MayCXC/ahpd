@@ -226,6 +226,16 @@ export interface SessionContext extends Omit<Config, 'methods'>, Omit<ClientTool
    */
   interrupted: boolean;
   /**
+   * The calls a stop answered itself and the CLI has not reported yet, while
+   * the stop's interrupt waits for them.
+   *
+   * The CLI keeps an answer only once it has recorded the call's result, and
+   * an interrupt that reaches it before that has it write its own text for
+   * the call instead: "The user doesn't want to proceed with this tool use".
+   * Nothing while no stop is waiting.
+   */
+  stopAnswers: Set<string> | undefined;
+  /**
    * The model the turn now running actually answered on, as its own frames
    * reported it.
    *

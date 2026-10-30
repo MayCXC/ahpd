@@ -396,7 +396,7 @@ describe('driving a turn', () => {
       params: { channel: uri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } } },
     });
     await settle();
-    const decision = sdk.canUseTool?.('Bash', { command: 'sleep 100' });
+    const decision = sdk.canUseTool?.('Bash', { command: 'sleep 100' }, { toolUseID: 'toolu_sleep', signal: new AbortController().signal, suggestions: [] });
     await settle();
 
     client.handle({
@@ -406,6 +406,12 @@ describe('driving a turn', () => {
     // A cancel that only interrupts leaves the subprocess waiting on a
     // promise nobody will ever settle.
     expect(await decision).toMatchObject({ behavior: 'deny' });
+    // The CLI reports the call's result once it has recorded the answer, and
+    // the interrupt follows it.
+    await emit({
+      type: 'user', parent_tool_use_id: null,
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_sleep', is_error: true, content: 'The turn was stopped' }] },
+    });
     expect(sdk.interrupted).toBe(1);
   });
 });

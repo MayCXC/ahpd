@@ -1,0 +1,195 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { expect, it, vi } from 'vitest';
+import type { Bag, BoundTool } from '@ahpd/sdk';
+
+/*
+ * A call a stop catches is told the turn was stopped, before the turn stops.
+ *
+ * A stop ends the turn, and the protocol's reducer closes a call still open
+ * then as cancelled and skipped, never denied. This backend holds two kinds of
+ * call: one waiting on a person's confirmation, answered in `canUseTool`, and
+ * one a client is running, answered through the SDK server's handler. A stop
+ * answers both with what happened, and the model reads that answer only if it
+ * reaches the CLI before the interrupt does.
+ *
+ * The SDK writes an answer to the CLI once the promise it awaited settles, and
+ * writes an interrupt the moment it is asked for one, so the cases model it
+ * the same way: an answer is heard when its promise settles, an interrupt when
+ * it is called. Heard the other way round, the CLI records its own text for
+ * the call, "The user doesn't want to proceed with this tool use ... STOP what
+ * you are doing and wait for the user to tell you how to proceed", and the
+ * model takes the stop for a person refusing the call.
+ */
+
+const sdk = vi.hoisted(() => {
+  const state = {
+    held: [] as Record<string, unknown>[],
+    wake: undefined as (() => void) | undefined,
+    heard: [] as unknown[],
+    canUseTool: undefined as undefined | ((name: string, input: Record<string, unknown>, about?: Record<string, unknown>) => Promise<unknown>),
+    servers: new Map<string, Record<string, unknown>>(),
+    reset() { state.held = []; state.wake = undefined; state.heard = []; state.servers.clear(); },
+    push(...frames: Record<string, unknown>[]) {
+      state.held.push(...frames);
+      state.wake?.();
+      state.wake = undefined;
+    },
+    async next(): Promise<Record<string, unknown>> {
+      while (state.held.length === 0) await new Promise<void>((resolve) => { state.wake = resolve; });
+      return state.held.shift() as Record<string, unknown>;
+    },
+  };
+  return state;
+});
+
+vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
+  createSdkMcpServer: (given: Record<string, unknown>) => {
+    sdk.servers.set(given.name as string, given);
+    return { type: 'sdk', name: given.name, tools: given.tools };
+  },
+  query: ({ options }: { options: Record<string, unknown> }) => ({
+    async *[Symbol.asyncIterator]() {
+      sdk.canUseTool = options.canUseTool as typeof sdk.canUseTool;
+      for (;;) yield await sdk.next();
+    },
+    interrupt: async () => { sdk.heard.push('interrupt'); },
+    setPermissionMode: async () => {},
+    setModel: async () => {},
+    applyFlagSettings: async () => {},
+    toggleMcpServer: async () => {},
+    reconnectMcpServer: async () => {},
+    setMcpServers: async () => {},
+    initializationResult: async () => ({}),
+    mcpServerStatus: async () => [],
+    reloadSkills: async () => ({ skills: [] }),
+    reloadPlugins: async () => ({ plugins: [] }),
+    supportedModels: async () => [],
+    streamInput: async () => {},
+    close: () => {},
+  }),
+}));
+
+const { createSession } = await import('../src/session.js');
+
+const settle = async (times = 30): Promise<void> => {
+  for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 0); });
+};
+
+/** A tool a client offers, named the way the host names one: `<clientId>__<name>`. */
+const offered: BoundTool = {
+  owner: 'room',
+  definition: {
+    name: 'room__post_message',
+    description: 'Say something in a room',
+    inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
+  },
+} as unknown as BoundTool;
+
+/** The name the CLI calls the client's tool by. */
+const CALLED = 'mcp__ahp__room__post_message';
+
+/** The model calling the client's tool, as the CLI reports the call. */
+const calling = {
+  type: 'assistant', parent_tool_use_id: null, uuid: 'a1',
+  message: {
+    id: 'msg_1', role: 'assistant',
+    content: [{ type: 'tool_use', id: 'toolu_post', name: CALLED, input: { text: 'hello' } }],
+  },
+};
+
+/** A session with the client's tool on offer and a turn running. */
+async function started(): Promise<{ session: ReturnType<typeof createSession> }> {
+  sdk.reset();
+  const session = createSession({
+    uri: 'ahp-session:/stopped-call',
+    chatUri: 'ahp-chat:/stopped-call',
+    cwd: mkdtempSync(join(tmpdir(), 'ahpd-stopped-call-')),
+    emit: () => {},
+  });
+  await settle();
+  await session.setTools?.([offered]);
+  session.begin('t1', 'say hello in the room');
+  await settle();
+  sdk.push(calling);
+  await settle();
+  return { session };
+}
+
+/** The handler the SDK server was handed for the client's tool, which is what runs a call. */
+const handler = (): ((input: Bag, extra: unknown) => Promise<unknown>) => {
+  const tools = (sdk.servers.get('ahp')?.tools ?? []) as { name: string; handler: (input: Bag, extra: unknown) => Promise<unknown> }[];
+  const tool = tools.find((one) => one.name === 'room__post_message');
+  if (tool === undefined) throw new Error('the SDK server was handed no room__post_message');
+  return tool.handler;
+};
+
+/** The text of an answer, whichever of the two kinds of call it settled. */
+const said = (answer: unknown): string => {
+  const bag = answer as Bag;
+  if (typeof bag.message === 'string') return bag.message;
+  return ((bag.content ?? []) as Bag[]).map((part) => part.text).join('');
+};
+
+/** The CLI reporting the call's result, which it does once it has recorded an answer. */
+const reported = (text: string) => ({
+  type: 'user', parent_tool_use_id: null, uuid: 'u1',
+  message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_post', is_error: true, content: text }] },
+});
+
+/** The CLI hearing an answer: kept as heard, and the call's result reported after it. */
+const heard = (answer: unknown): void => {
+  sdk.heard.push(answer);
+  sdk.push(reported(said(answer)));
+};
+
+it('tells a call waiting on a person that the turn was stopped, before anything stops the turn', async () => {
+  const { session } = await started();
+  void sdk.canUseTool!(CALLED, { text: 'hello' }, { toolUseID: 'toolu_post', signal: new AbortController().signal, suggestions: [] })
+    .then(heard);
+  await settle();
+
+  session.cancel('t1');
+  await settle();
+
+  const [first, ...after] = sdk.heard;
+  expect(first).toMatchObject({ behavior: 'deny' });
+  expect(said(first)).toBe('The turn was stopped');
+  expect(after).toContain('interrupt');
+});
+
+it('tells a call a client is running that the turn was stopped, before anything stops the turn', async () => {
+  const { session } = await started();
+  const asking = sdk.canUseTool!(CALLED, { text: 'hello' }, { toolUseID: 'toolu_post', signal: new AbortController().signal, suggestions: [] });
+  await settle();
+  session.confirm('toolu_post', true);
+  await asking;
+  void handler()({ text: 'hello' }, { _meta: { 'claudecode/toolUseId': 'toolu_post' } }).then(heard);
+  await settle();
+
+  session.cancel('t1');
+  await settle();
+
+  const [first, ...after] = sdk.heard;
+  expect(first).not.toBe('interrupt');
+  expect(said(first)).toContain('The turn was stopped');
+  expect(after).toContain('interrupt');
+});
+
+it('interrupts at once a turn whose open call the CLI runs itself', async () => {
+  const { session } = await started();
+  sdk.push({
+    type: 'assistant', parent_tool_use_id: null, uuid: 'a2',
+    message: {
+      id: 'msg_2', role: 'assistant',
+      content: [{ type: 'tool_use', id: 'toolu_wait', name: 'Bash', input: { command: 'sleep 100', description: 'Wait' } }],
+    },
+  });
+  await settle();
+
+  session.cancel('t1');
+
+  // Nothing of the CLI's own is answered here, and only the interrupt stops it.
+  expect(sdk.heard).toEqual(['interrupt']);
+});
