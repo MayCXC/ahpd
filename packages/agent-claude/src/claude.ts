@@ -1,5 +1,5 @@
 import { probe } from './probe.js';
-import { serversFor } from './mcp.js';
+import { offeredServers, serversFor } from './mcp.js';
 import { createSession, EFFORT_LABELS, EFFORTS } from './session.js';
 import { restoreSavedOutputs } from './session/savedoutput.js';
 import { turnsOf, subagentsOf } from './transcript.js';
@@ -654,14 +654,24 @@ export function claude(options: ClaudeOptions): Agent {
        * The MCP servers, declared by this host rather than found by the CLI.
        *
        * The same files the CLI reads - `.mcp.json` beside the project and
-       * `mcpServers` in `~/.claude.json` - handed to the SDK so they are
-       * *its* servers. That is what makes a token a client signed in with
-       * applicable: `setMcpServers` re-declares only what the SDK was given.
+       * `mcpServers` in `~/.claude.json` - and the servers the host offers
+       * every session, its own and its client plugins', all handed to the SDK
+       * so they are *its* servers. That is what makes a token a client signed
+       * in with applicable: `setMcpServers` re-declares only what the SDK was
+       * given.
+       *
+       * A name the host's servers and those files both use is handed over as
+       * the host's: the CLI reads its files itself, and its own precedence
+       * settles the clash, as the reference leaves it.
+       * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/claude/claudeAgentSession.ts#L988-L990
        *
        * A folder the host did not vouch for contributes none of its own: its
        * `.mcp.json` names servers this host would run as commands.
        */
-      mcpServers: serversFor([cwd, ...(start.additional ?? [])], start.trusted),
+      mcpServers: {
+        ...serversFor([cwd, ...(start.additional ?? [])], start.trusted),
+        ...offeredServers(start.mcpServers, cwd, options.log),
+      },
       /*
        * The client plugins, as the directories the host copied them into.
        *
