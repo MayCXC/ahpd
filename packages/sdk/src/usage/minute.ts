@@ -58,9 +58,11 @@ export function createMinuteMeter(): MinuteMeter {
       // add does not move the window that has turned since.
       if (newest !== undefined && minute < newest.minute - 1) return;
       // A record written after the minute turned still counts in the minute it
-      // is in, which is the one before the window and still kept.
+      // is in, which is the one before the window and still kept. It goes after
+      // the newer bucket, so the list stays newest first and the next add reads
+      // the real newest minute.
       if (newest !== undefined && minute < newest.minute) {
-        held.set(key, [{ minute, sum: amount }, ...kept]);
+        held.set(key, [...kept, { minute, sum: amount }]);
         return;
       }
       // A minute that has just begun keeps the one before it, for a record

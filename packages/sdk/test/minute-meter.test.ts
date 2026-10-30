@@ -54,6 +54,19 @@ describe('createMinuteMeter', () => {
     expect(meter.sum('policy:A3/tokens', at('2026-10-20T12:01:15.000Z'))).toBe(100);
   });
 
+  it('keeps the newest bucket first after a late record, so a turned window stays turned', () => {
+    const meter = createMinuteMeter();
+    meter.add('policy:A3/tokens', 100, at('2026-10-20T12:01:05.000Z'));
+    meter.add('policy:A3/tokens', 20, at('2026-10-20T12:00:30.000Z'));
+    // The minute before the newest is kept by the late record. A minute two
+    // back from the newest has turned, so its add is dropped - which it is only
+    // if the newest bucket is still the first one.
+    meter.add('policy:A3/tokens', 5, at('2026-10-20T11:59:30.000Z'));
+    expect(meter.sum('policy:A3/tokens', at('2026-10-20T11:59:45.000Z'))).toBe(0);
+    expect(meter.sum('policy:A3/tokens', at('2026-10-20T12:00:45.000Z'))).toBe(20);
+    expect(meter.sum('policy:A3/tokens', at('2026-10-20T12:01:15.000Z'))).toBe(100);
+  });
+
   it('answers zero for a key it was never told about', () => {
     expect(createMinuteMeter().sum('policy:none/tokens', at('2026-10-20T12:00:00.000Z'))).toBe(0);
   });
