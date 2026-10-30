@@ -1,7 +1,7 @@
 ---
 title: A server says what it can run
 domain: container
-status: active
+status: built
 priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -91,7 +91,7 @@ profile.server = <name> -> [new] requireOn(box, needs) before the first create o
 ## Resume state
 
 - **Done so far:** tasks 01 to 05.
-- **Next action:** write `implemented.md` and close the plan after the merge.
+- **Next action:** none; the Docker plan and the VM plan call the gate.
 - **Open questions:** none.
 - **Watch out for:** the script must run under `sh`, not `bash`, and every probe must not fail the script when a program is absent.
 
@@ -99,4 +99,4 @@ profile.server = <name> -> [new] requireOn(box, needs) before the first create o
 
 - [x] Reading `computer://ssh.dev02/server` on a test daemon lists each item, and each missing item has its fix.
 - [x] After Softov runs the fixes, the same read says each item is ok.
-- [ ] A Docker profile on a box without Docker is refused with the fix lines, and nothing is made.
+- [ ] A Docker profile on a box without Docker is refused with the fix lines, and nothing is made. This waits for the Docker plan, which calls the gate.
