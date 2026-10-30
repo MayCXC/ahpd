@@ -63,9 +63,10 @@ export interface Profile {
   /**
    * What makes its machines on its `server`: `docker`, the default, a
    * container on the box's Docker; `libvirt`, a VM on the box's libvirt, as
-   * the plugin's `libvirt` option says.
+   * the plugin's `libvirt` option says; `proxmox`, a VM on the `proxmox`
+   * option's node, reached through the box when one is named.
    */
-  runtime?: 'docker' | 'libvirt';
+  runtime?: 'docker' | 'libvirt' | 'proxmox';
   /**
    * How a machine on another box's Docker is given the session's code:
    * `bundle`, the default, sends a bundle of the tree from this host; `clone`

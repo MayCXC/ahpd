@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { realpathSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { isAbsolute, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ComputerPort, ContainerPort, MachineNeed, MachineSource, Owner, Plugin, PluginSpec, SecretRef, SecretWork } from '@ahpd/sdk';
@@ -21,6 +21,9 @@ import type { Routed } from './router.js';
 import { machinesOf, sshRuntime } from './ssh.js';
 import { libvirtRuntime } from './libvirt.js';
 import type { LibvirtOptions, LibvirtProfile } from './libvirt.js';
+import { proxmoxRuntime } from './proxmox.js';
+import type { ProxmoxOptions } from './proxmox.js';
+import type { VmProfile } from './vm.js';
 import { partsFromDocker } from './template.js';
 import type { SshMachine, SshOptions } from './ssh.js';
 import { serverGate } from './servercheck.js';
@@ -122,7 +125,7 @@ export const profilesOf = (value: unknown): Record<string, Profile> | undefined 
       // that option once both are read.
       ...(text('server') === undefined ? {} : { server: text('server') as string }),
       // And what makes them there: a container on its Docker, or a VM.
-      ...(said.runtime === 'docker' || said.runtime === 'libvirt' ? { runtime: said.runtime } : {}),
+      ...(said.runtime === 'docker' || said.runtime === 'libvirt' || said.runtime === 'proxmox' ? { runtime: said.runtime } : {}),
       // How a machine there is given the session's code.
       ...(said.code === 'bundle' || said.code === 'clone' ? { code: said.code } : {}),
       ...(text('workdir') === undefined ? {} : { workdir: text('workdir') as string }),
@@ -236,6 +239,42 @@ export const libvirtOptionsOf = (value: unknown): LibvirtSaid => {
     ...(text('disk') === undefined ? {} : { disk: text('disk') as string }),
     ...(words(said.virsh) === undefined ? {} : { virsh: words(said.virsh) as string[] }),
     ...(words(said.virtInstall) === undefined ? {} : { virtInstall: words(said.virtInstall) as string[] }),
+  };
+};
+
+/** What the `proxmox` option says: its secret as written, and its `ca` as a path. */
+export type ProxmoxSaid = Pick<ProxmoxOptions, 'url' | 'tokenId' | 'node' | 'storage' | 'bridge' | 'template' | 'image' | 'user'> & {
+  /** The token's secret, or a `$secret` reference to it, read when a call needs it. */
+  secret: unknown;
+  /** The PEM file the node's certificate is checked against. */
+  ca?: string;
+};
+
+/**
+ * The `proxmox` option, or nothing when it lacks what a VM is made with.
+ *
+ * Every field but the template, the image, the user and the `ca` is needed:
+ * there is no default node, storage or bridge a VM could be put on unasked.
+ */
+export const proxmoxOptionsOf = (value: unknown): ProxmoxSaid | undefined => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const said = value as Record<string, unknown>;
+  const text = (key: string): string | undefined =>
+    (typeof said[key] === 'string' && said[key].trim() !== '' ? said[key] : undefined);
+  const [url, tokenId, node, storage, bridge] = [text('url'), text('tokenId'), text('node'), text('storage'), text('bridge')];
+  if (url === undefined || tokenId === undefined || node === undefined || storage === undefined || bridge === undefined) return undefined;
+  if (said.secret === undefined) return undefined;
+  return {
+    url,
+    tokenId,
+    node,
+    storage,
+    bridge,
+    secret: said.secret,
+    ...(text('template') === undefined ? {} : { template: text('template') as string }),
+    ...(text('image') === undefined ? {} : { image: text('image') as string }),
+    ...(text('user') === undefined ? {} : { user: text('user') as string }),
+    ...(text('ca') === undefined ? {} : { ca: text('ca') as string }),
   };
 };
 
@@ -474,7 +513,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     ['sessionTree', ['shared', 'copy']],
     ['nestedDelete', ['inside', 'record']],
     ['code', ['bundle', 'clone']],
-    ['runtime', ['docker', 'libvirt']],
+    ['runtime', ['docker', 'libvirt', 'proxmox']],
   ];
   const asList = (values: string[]): string =>
     values.length < 3 ? values.join(' or ') : `${values.slice(0, -1).join(', ')} or ${values[values.length - 1] as string}`;
@@ -654,8 +693,34 @@ export const apply: Plugin['apply'] = (host, options) => {
    * `identity` is left out here as it is for Docker.
    */
   const vmProfiles: Record<string, LibvirtProfile> = {};
+  /*
+   * And one Proxmox for every profile that makes VMs on the `proxmox` option's
+   * node. Its `server` is not where the VM is made but the box a VM is reached
+   * through, for a node whose VM network this host has no route to.
+   */
+  const proxmoxSaid = proxmoxOptionsOf(options.proxmox);
+  const proxmoxProfiles: Record<string, VmProfile> = {};
   for (const [key, one] of Object.entries(profiles ?? {})) {
     const box = one.server === undefined ? undefined : ssh?.machines[one.server];
+    if (one.runtime === 'proxmox') {
+      if (proxmoxSaid === undefined) {
+        host.log(`${name}: profiles.${key} makes Proxmox VMs, and the proxmox option does not name its url, tokenId, secret, node, storage and bridge, so the profile is left out`);
+        delete profiles?.[key];
+        continue;
+      }
+      if (one.server !== undefined && box === undefined) {
+        host.log(`${name}: profiles.${key} reaches its VMs through ${one.server}, which is not in ssh.machines, so the profile is left out`);
+        delete profiles?.[key];
+        continue;
+      }
+      if (box?.identity !== undefined) {
+        host.log(`${name}: profiles.${key} names the server ${one.server as string}, whose identity ssh -J cannot be given; name the key for ${box?.destination as string} in ssh's own configuration instead, so the profile is left out`);
+        delete profiles?.[key];
+        continue;
+      }
+      proxmoxProfiles[key] = { server: proxmoxSaid.node, ...(box === undefined ? {} : { box }), ...(one.host === undefined ? {} : { host: one.host }) };
+      continue;
+    }
     if (one.runtime === 'libvirt') {
       if (box === undefined || one.server === undefined) {
         host.log(`${name}: profiles.${key} makes VMs and names no server to make them on, so the profile is left out`);
@@ -724,6 +789,70 @@ export const apply: Plugin['apply'] = (host, options) => {
   for (const key of Object.keys(vmProfiles)) if (libvirted !== undefined) farValues[key] = libvirted.kind;
 
   /*
+   * The certificate a node's own is checked against, read once here: a `ca`
+   * that cannot be read leaves the Proxmox profiles out rather than trusting
+   * whatever certificate the node shows.
+   */
+  let proxmoxCa: string | undefined;
+  if (proxmoxSaid?.ca !== undefined && Object.keys(proxmoxProfiles).length > 0) {
+    try {
+      proxmoxCa = readFileSync(proxmoxSaid.ca, 'utf8');
+    }
+    catch (error) {
+      host.log(`${name}: proxmox.ca ${proxmoxSaid.ca} could not be read (${error instanceof Error ? error.message : String(error)}), so the Proxmox profiles are left out`);
+      for (const key of Object.keys(proxmoxProfiles)) {
+        delete proxmoxProfiles[key];
+        delete profiles?.[key];
+      }
+    }
+  }
+  /*
+   * The token's secret, read each time a call needs it rather than at load:
+   * one that cannot be read fails only the Proxmox calls, by its name.
+   */
+  const proxmoxSecret = async (): Promise<string> => {
+    const named = secretRef(proxmoxSaid?.secret);
+    if (named === undefined) {
+      if (typeof proxmoxSaid?.secret === 'string' && proxmoxSaid.secret !== '') return proxmoxSaid.secret;
+      throw new Error('the proxmox option\'s secret is neither a value nor a {"$secret": "<name>"}');
+    }
+    try {
+      return await host.secret(named);
+    }
+    catch (error) {
+      throw new Error(`the proxmox option's secret ${named} could not be read: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+  const proxmoxed = proxmoxSaid === undefined || Object.keys(proxmoxProfiles).length === 0 ? undefined : proxmoxRuntime({
+    url: proxmoxSaid.url,
+    tokenId: proxmoxSaid.tokenId,
+    secret: proxmoxSecret,
+    node: proxmoxSaid.node,
+    storage: proxmoxSaid.storage,
+    bridge: proxmoxSaid.bridge,
+    ...(proxmoxSaid.template === undefined ? {} : { template: proxmoxSaid.template }),
+    ...(proxmoxSaid.image === undefined ? {} : { image: proxmoxSaid.image }),
+    ...(proxmoxSaid.user === undefined ? {} : { user: proxmoxSaid.user }),
+    ...(proxmoxCa === undefined ? {} : { ca: proxmoxCa }),
+    ssh: {
+      ...(ssh?.command === undefined ? {} : { command: ssh.command }),
+      ...(ssh?.args === undefined ? {} : { args: ssh.args }),
+      ...(ssh?.connectTimeout === undefined ? {} : { connectTimeout: ssh.connectTimeout }),
+      ...(env === undefined ? {} : { env }),
+    },
+    profiles: proxmoxProfiles,
+    label,
+    configDir: host.configDir,
+    ...(host.hostId === undefined ? {} : { hostId: host.hostId }),
+    parts: partsFromDocker(
+      { command, ...(args === undefined ? {} : { args }), ...(env === undefined ? {} : { env }) },
+      async () => (await ensureJoined({ runtime: dockered })).tag,
+    ),
+    log: noted,
+  });
+  for (const key of Object.keys(proxmoxProfiles)) if (proxmoxed !== undefined) farValues[key] = proxmoxed.kind;
+
+  /*
    * The box a profile's machines are made on, checked for a Docker this
    * account can reach before each one is made. The report is kept a minute.
    */
@@ -760,6 +889,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     ...(noded === undefined ? {} : { [noded.kind]: noded }),
     ...farDockers,
     ...(libvirted === undefined ? {} : { [libvirted.kind]: libvirted }),
+    ...(proxmoxed === undefined ? {} : { [proxmoxed.kind]: proxmoxed }),
   };
   /*
    * The runners whose machines were never adopted, because their startup
@@ -769,7 +899,11 @@ export const apply: Plugin['apply'] = (host, options) => {
   let adoptLate: ((found: Machine[]) => Promise<void>) | undefined;
   const computerRouter = routed(runtimes, runtime, {
     log: noted,
-    timeouts: Object.fromEntries([...Object.keys(farDockers), ...(libvirted === undefined ? [] : [libvirted.kind])].map((value) => [value, farTimeout])),
+    timeouts: Object.fromEntries([
+      ...Object.keys(farDockers),
+      ...(libvirted === undefined ? [] : [libvirted.kind]),
+      ...(proxmoxed === undefined ? [] : [proxmoxed.kind]),
+    ].map((value) => [value, farTimeout])),
     makerFor: (spec) => {
       const key = spec.disposable?.profile ?? spec.profile;
       return key === undefined ? undefined : farValues[key];
@@ -1009,8 +1143,10 @@ export const apply: Plugin['apply'] = (host, options) => {
        */
       const key = asked.disposable?.profile ?? asked.profile;
       const server = key === undefined || farValues[key] === undefined ? undefined : profiles?.[key]?.server;
-      const vm = key !== undefined && vmProfiles[key] !== undefined;
-      if (server !== undefined && gate !== undefined) await gate.requireOn(server, vm ? ['kvm', 'libvirt', 'libvirtAccess'] : ['docker', 'dockerAccess']);
+      const vm = key !== undefined && (vmProfiles[key] !== undefined || proxmoxProfiles[key] !== undefined);
+      // A Proxmox profile's server is only the way to its VMs, and the node is not checked over ssh.
+      const proxmox = key !== undefined && proxmoxProfiles[key] !== undefined;
+      if (!proxmox && server !== undefined && gate !== undefined) await gate.requireOn(server, vm ? ['kvm', 'libvirt', 'libvirtAccess'] : ['docker', 'dockerAccess']);
       /*
        * The parts the machine asks for, built before it is made. One that will
        * not build is left out with a line naming it and the build's reason,
