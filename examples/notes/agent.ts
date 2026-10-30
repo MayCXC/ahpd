@@ -676,9 +676,10 @@ export function notes(options: NotesOptions): Agent {
        */
       confirm: (toolCallId, approved) => {
         const held = waiting.get(toolCallId);
-        if (!held || held.entry.kind !== 'toolConfirmation') return;
+        if (!held || held.entry.kind !== 'toolConfirmation') return false;
         wanted(held.id);
         held.settle(approved, {});
+        return true;
       },
 
       /**

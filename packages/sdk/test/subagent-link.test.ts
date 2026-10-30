@@ -128,7 +128,7 @@ function linking(): Agent {
         unqueue: () => {},
         setDraft: () => {},
         reorder: () => {},
-        confirm: () => {},
+        confirm: () => false,
         answer: () => false,
         setCustomizationEnabled: async () => false,
         startMcpServer: async () => false,

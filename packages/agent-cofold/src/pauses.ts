@@ -186,7 +186,7 @@ export const createPauses = (
        */
       confirm: (toolCallId, approved, optionId) => {
         const held = [...pending.values()].find((one) => one.kind === 'approval' && one.callId === toolCallId);
-        if (held === undefined) return;
+        if (held === undefined) return false;
         const picked = held.options?.find((one) => one.id === optionId && one.kind === (approved ? 'approve' : 'deny'));
         /*
          * The tool's name as the entry was built with it. A question rebuilt by
@@ -234,6 +234,7 @@ export const createPauses = (
           ? { type: 'approve', requestId: held.requestId, ...(picked?.id === 'allow-session' && !matched ? { alwaysApprove: true } : {}) }
           : { type: 'deny', requestId: held.requestId, reason: DECLINED });
         ctx.touch();
+        return true;
       },
 
       /**

@@ -645,8 +645,12 @@ export interface Session {
    * `optionId` is the `id` of the `ConfirmationOption` the person picked, when
    * this backend offered options on the call and the client sent one as
    * `selectedOptionId`; absent, the answer is a plain approve or deny.
+   *
+   * False when no call by that id is waiting on a confirmation here: a client
+   * out of step, which the host refuses, since the protocol has a host reject
+   * a confirmation of a call that is not pending one.
    */
-  confirm(toolCallId: string, approved: boolean, optionId?: string): void;
+  confirm(toolCallId: string, approved: boolean, optionId?: string): boolean;
 
   /**
    * Replace the tools this session offers the model.
@@ -700,9 +704,10 @@ export interface Session {
   /**
    * Answer a question the agent asked, keyed by question id.
    *
-   * False when the request is not one this session is waiting on. True is
-   * what the host says the `chat/inputCompleted` back to every client of the
-   * chat on, so a backend does not emit that action itself.
+   * False when the request is not one this session is waiting on, which the
+   * host refuses as a client out of step. True is what the host says the
+   * `chat/inputCompleted` back to every client of the chat on, so a backend
+   * does not emit that action itself.
    *
    * `response` is the kind the client sent, where it sent one, and it is here
    * because a decline and a cancel are two different things to tell a server:

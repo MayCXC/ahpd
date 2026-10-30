@@ -352,10 +352,11 @@ export function echo(options: EchoOptions): Agent {
         });
       },
 
-      // Nothing here ever asks, so there is never anything to answer. A
-      // backend that does settles the promise it parked in `canUseTool` or
-      // its equivalent - see `src/session.ts` for one that does.
-      confirm: () => {},
+      // Nothing here ever asks, so there is never anything to answer, and the
+      // host refuses a confirmation or an answer sent anyway. A backend that
+      // asks settles the promise it parked in `canUseTool` or its equivalent,
+      // as `src/session.ts` does.
+      confirm: () => false,
       answer: () => false,
 
       // Nothing here has a runtime switch and there are no MCP servers, so

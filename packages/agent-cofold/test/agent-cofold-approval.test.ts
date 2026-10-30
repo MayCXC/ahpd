@@ -55,7 +55,7 @@ const settle = async (times = 12): Promise<void> => {
   for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 0); });
 };
 
-type Note = { channel: string; action: Record<string, unknown> };
+type Note = { channel: string; action: Record<string, unknown>; rejectionReason?: string };
 
 const actions = (p: ReturnType<typeof peer>, channel: string): Note[] => p.notes
   .filter((n) => n.method === 'action')
@@ -230,7 +230,8 @@ it('runs an approved tool, takes the entry down and finishes the turn', async ()
 
   // A decision for a call that is not open settles nothing: the entry stays
   // up and the turn stays waiting, which is the difference between matching
-  // by id and comparing against whichever request was held last.
+  // by id and comparing against whichever request was held last. Its sender
+  // is told so.
   await client.handle({
     method: 'dispatchAction',
     params: { channel: chatUri, action: { type: 'chat/toolCallConfirmed', toolCallId: 'nope', approved: true } },
@@ -253,7 +254,9 @@ it('runs an approved tool, takes the entry down and finishes the turn', async ()
     .filter((e) => e.action.type === 'session/inputNeededRemoved')
     .map((e) => String(e.action.id));
   expect(removed).toEqual([entry.id]);
-  const confirmed = actions(p, chatUri).find((e) => e.action.type === 'chat/toolCallConfirmed');
+  const said = actions(p, chatUri).filter((e) => e.action.type === 'chat/toolCallConfirmed');
+  expect(said.filter((e) => e.rejectionReason !== undefined).map((e) => e.action.toolCallId)).toEqual(['nope']);
+  const confirmed = said.find((e) => e.rejectionReason === undefined);
   expect(confirmed?.action).toMatchObject({ toolCallId: 'call-a', approved: true, confirmed: 'user-action' });
 
   const { chat, session } = reduced(p, uri, chatUri);
@@ -776,7 +779,7 @@ it('stops a paused run, settles its entry and ends the turn cancelled', async ()
   expect(types(p, chatUri).filter((type) => type === 'chat/turnCancelled')).toHaveLength(1);
 });
 
-it('takes a decision for a turn that already ended, and says nothing', async () => {
+it('refuses a decision for a turn that already ended to its sender, and throws nothing', async () => {
   const ran: string[] = [];
   const model = createFakeModel({ script: writeScript('call-a', 'hi'), stream: true });
   const { client, peer: p } = await talking(model, [writer(ran)], asksFor(['write']));
@@ -789,9 +792,11 @@ it('takes a decision for a turn that already ended, and says nothing', async () 
 
   /*
    * The call is over and its entry is gone, so this is a click on a row that
-   * is no longer there - on a slow client, an ordinary one. It must be
-   * dropped rather than thrown: the handle is closed, and a `not_running` out
-   * of a dispatch would be an error a person could not act on.
+   * is no longer there, which on a slow client is an ordinary one. It must not
+   * be thrown: the handle is closed, and a `not_running` out of a dispatch
+   * would be an error a person could not act on. It is refused to the client
+   * that sent it instead, as the protocol has a host reject a confirmation of
+   * a call that waits on none, so that client lets go of the click.
    */
   const refused = await client.handle({
     method: 'dispatchAction',
@@ -800,8 +805,9 @@ it('takes a decision for a turn that already ended, and says nothing', async () 
   await settle();
 
   expect(refused?.error).toBeUndefined();
-  expect(types(p, chatUri)).toHaveLength(said);
+  const after = actions(p, chatUri).slice(said);
+  expect(after.map((e) => [e.action.type, e.rejectionReason !== undefined])).toEqual([['chat/toolCallConfirmed', true]]);
   expect(reduced(p, uri, chatUri).session.inputNeeded).toBeUndefined();
   expect(ran).toEqual(['hi']);
-  expect(types(p, chatUri).at(-1)).toBe('chat/turnComplete');
+  expect(types(p, chatUri).at(said - 1)).toBe('chat/turnComplete');
 });

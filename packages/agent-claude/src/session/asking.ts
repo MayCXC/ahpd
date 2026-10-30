@@ -168,7 +168,7 @@ export interface Asking {
    */
   settleEdits: (toolCallId?: string) => void;
   methods: {
-    confirm: (toolCallId: string, approved: boolean, optionId?: string) => void;
+    confirm: (toolCallId: string, approved: boolean, optionId?: string) => boolean;
     setAnswer: (requestId: string, questionId: string, answer: Bag | undefined) => boolean;
     answer: (requestId: string, accepted: boolean, answers?: Bag) => boolean;
   };
@@ -642,7 +642,7 @@ export function createAsking(ctx: SessionContext): Asking {  /**
       // a person pressing Approve and nothing at all happening.
       const held = [...pending.values()].find((one) => one.entry.kind === 'toolConfirmation'
         && str(bag(one.entry.toolCall).toolCallId) === toolCallId);
-      if (!held) return;
+      if (!held) return false;
       const settle = held.settle;
       pending.delete(held.id);
       ctx.inputNeededRemoved(held.id);
@@ -706,6 +706,7 @@ export function createAsking(ctx: SessionContext): Asking {  /**
         ? { behavior: 'allow', updatedInput: {}, ...(picked?.id === 'allow-always' && held.suggestions !== undefined ? { updatedPermissions: held.suggestions } : {}) }
         : { behavior: 'deny', message: DECLINED });
       ctx.touch();
+      return true;
     },
 
     /**
