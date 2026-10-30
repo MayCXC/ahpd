@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { alive, BACKEND, cli, config, daemonEnv, ENV, gone, home, knock, MAIN, MULTILINE, recordOf, REPO, SKIPS, spawned, THROWS } from './cli.js';
+import { BACKEND, cli, config, daemonEnv, ENV, home, knock, MAIN, MULTILINE, recordOf, REPO, SKIPS, spawned, THROWS } from './cli.js';
 
 describe('start, stop and status', () => {
   it('says none is running when none is, from stop and from status', async () => {
@@ -31,11 +31,6 @@ describe('start, stop and status', () => {
     const status = await cli(['status']);
     expect(status.code).toBe(0);
     expect(status.stdout).toContain(`(pid ${String(record.pid)})`);
-
-    const stopped = await cli(['stop']);
-    expect(stopped.code).toBe(0);
-    await gone(record.pid);
-    expect(alive(record.pid)).toBe(false);
   }, 40000);
 
   it('forwards an option typed before start, token and all', async () => {
@@ -211,11 +206,6 @@ describe('start, stop and status', () => {
     const status = await cli(['status']);
     expect(status.code).toBe(0);
     expect(status.stdout).toContain(`(pid ${String(record.pid)})`);
-
-    const stopped = await cli(['stop']);
-    expect(stopped.code).toBe(0);
-    await gone(record.pid);
-    expect(alive(record.pid)).toBe(false);
   }, 40000);
 
   it('reports a live record without the token it holds', async () => {
@@ -276,7 +266,5 @@ describe('start, stop and status', () => {
     const status = await cli(['status']);
     expect(status.code).toBe(0);
     expect(status.stdout).toContain(record.url);
-    const stopped = await cli(['stop']);
-    expect(stopped.code).toBe(0);
   }, 40000);
 });

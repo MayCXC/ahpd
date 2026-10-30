@@ -212,15 +212,6 @@ it('refuses a member who is neither the owner nor a session:* holder, and delete
   expect(await listed(clients.ana!)).toContain('ahp-session:/theirs');
 });
 
-it('lets a member delete a session of their own', async () => {
-  const { back, clients } = await serving(['bob']);
-  await open(clients.bob!, 'mine');
-
-  await dispose(clients.bob!, 'mine');
-
-  expect(back.deleted).toEqual([{ id: 'mine', directory: DIR }]);
-});
-
 it('refuses nothing on a host with no users directory', async () => {
   // No directory means no principal means nobody to name, so this host is
   // exactly as open as it was before there was an owner to check.

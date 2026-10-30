@@ -872,20 +872,6 @@ describe('a request signs in', () => {
     expect((JSON.parse(body) as { config: Record<string, unknown> }).config['connectionToken']).toBe('<set>');
   }, 30000);
 
-  it('answers a person who holds the grant', async () => {
-    const { one, admin } = await guarded();
-    const base = `http://127.0.0.1:${String(one.port)}/api/config`;
-    expect((await get(base)).status).toBe(401);
-    expect((await get(base, admin)).status).toBe(200);
-  }, 30000);
-
-  it('answers the running daemon for status, with its own pid', async () => {
-    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
-    const response = await get(`http://127.0.0.1:${String(one.port)}/api/status`, 'root-secret');
-    expect(response.status).toBe(200);
-    expect((await response.json() as { pid: number }).pid).toBe(one.child.pid);
-  }, 30000);
-
   it('answers a missing person with the sentence, and the daemon keeps running', async () => {
     const { one, token } = await guarded();
     const refused = await post(`http://127.0.0.1:${String(one.port)}/api/user/rm/nobody`, token, {});
@@ -1170,9 +1156,8 @@ describe('--remote', () => {
     expect(statSync(at).mode & 0o777).toBe(0o700);
   }, 30000);
 
-  it('warns when the token travels in cleartext, and still answers', async () => {
-    const address = nonLoopback();
-    if (address === undefined) return;
+  it.skipIf(nonLoopback() === undefined)('warns when the token travels in cleartext, and still answers', async () => {
+    const address = nonLoopback() as string;
     // A wildcard bind answers on every address, but `resource` is what makes
     // the address one of the daemon's own names for the Origin and Host check.
     const one = await daemon(

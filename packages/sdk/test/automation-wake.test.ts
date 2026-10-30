@@ -794,38 +794,50 @@ it('counts the hour across a switch off and on again', async () => {
   expect(runCount(store)).toBe(20);
 });
 
-it('stops measuring a turn in a session that is gone', async () => {
-  // A turn that goes quiet for longer than the rule allows wakes it: this is
-  // what the line below takes away.
-  const first = memoryAutomations();
-  const one = await live({ automations: first });
-  first.create(AUTOMATION, watchingSilence());
-  await begins(one.client, one.chatUri, 't1');
-  await until(() => (first.get(AUTOMATION)?.runs ?? []).length === 1, 'the run for a silent turn', 4000);
+/**
+ * A turn in a session of its own, armed after the one a case is about.
+ *
+ * Timers of the same length fire in the order they were armed, so once this
+ * turn's run is there, the other turn's timer is past too, and a run it did
+ * not start is one it will not start.
+ */
+const control = async () => {
+  const store = memoryAutomations();
+  const one = await live({ automations: store });
+  store.create(AUTOMATION, watchingSilence());
+  return {
+    begin: () => begins(one.client, one.chatUri, 't1'),
+    woke: () => until(() => (store.get(AUTOMATION)?.runs ?? []).length === 1, 'the run for a silent turn', 4000),
+  };
+};
 
-  // And the same turn in a session this host disposes of before the rule's
-  // length is up. Nothing will end that turn now, so nothing is waiting on it,
-  // and the timer it armed is not one to leave running.
-  const second = memoryAutomations();
-  const two = await live({ automations: second });
-  second.create(AUTOMATION, watchingSilence());
+it('stops measuring a turn in a session that is gone', async () => {
+  // A silent turn in a session this host disposes of before the rule's length
+  // is up. Nothing will end that turn now, so nothing is waiting on it, and
+  // the timer it armed is not one to leave running.
+  const store = memoryAutomations();
+  const two = await live({ automations: store });
+  store.create(AUTOMATION, watchingSilence());
+  const kept = await control();
   await begins(two.client, two.chatUri, 't1');
+  await kept.begin();
   await two.client.handle({ method: 'disposeSession', params: { channel: two.uri } });
-  await settle();
-  await new Promise((r) => { setTimeout(r, 1200); });
-  expect((second.get(AUTOMATION)?.runs ?? [])).toHaveLength(0);
+  await kept.woke();
+  expect((store.get(AUTOMATION)?.runs ?? [])).toHaveLength(0);
 });
 
 it('starts no run once the host has closed', async () => {
   const store = memoryAutomations();
   const { host, client, chatUri } = await live({ automations: store });
   store.create(AUTOMATION, watchingSilence());
+  const kept = await control();
 
   // A turn armed the rule's timer, and the host closes before the turn has been
   // quiet that long: a wake arriving at a daemon that is going away is a run
   // begun in one.
   await begins(client, chatUri, 't1');
+  await kept.begin();
   await host.close();
-  await new Promise((r) => { setTimeout(r, 1200); });
+  await kept.woke();
   expect(store.get(AUTOMATION)?.runs ?? []).toHaveLength(0);
 });

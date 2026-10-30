@@ -90,6 +90,8 @@ it.skipIf(!DOCKER)('gives a machine on a linked worktree no path into the host\'
   const { repo, tree, gitDir, state } = repository();
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-worktree-${String(process.pid)}`;
+  const before = readFileSync(join(gitDir, 'config'), 'utf8');
+  const names = readdirSync(gitDir).sort();
   await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     /*
@@ -111,7 +113,8 @@ it.skipIf(!DOCKER)('gives a machine on a linked worktree no path into the host\'
     // cannot be moved aside and replaced by a directory the machine fills.
     expect((await docker.exec(name, ['mv', machinePathOf(join(tree, '.git')), machinePathOf(join(tree, '.old'))])).code).not.toBe(0);
     // The host's git directory is what it was: no reflog, no ref, no lock.
-    expect(readFileSync(join(gitDir, 'config'), 'utf8')).not.toBe('');
+    expect(readdirSync(gitDir).sort()).toEqual(names);
+    expect(readFileSync(join(gitDir, 'config'), 'utf8')).toBe(before);
   }
   finally {
     await docker.remove(name).catch(() => {});

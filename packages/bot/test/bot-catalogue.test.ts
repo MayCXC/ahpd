@@ -156,6 +156,21 @@ async function as(host: Host, token: string, id = token): Promise<Reader> {
   return { client, ready, heard };
 }
 
+/**
+ * Yield until `reader` has heard `line`.
+ *
+ * A membership change is sent to every reader in one pass, so once one line of
+ * it has arrived, whatever else that change sent has arrived too.
+ */
+const hears = async (reader: Reader, line: string, ms = 5000): Promise<void> => {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    if (reader.heard().includes(line)) return;
+    await new Promise((r) => { setTimeout(r, 1); });
+  }
+  throw new Error(`never heard ${line}, heard: ${JSON.stringify(reader.heard())}`);
+};
+
 const call = async (reader: Reader, method: string, params: Bag) => reader.client.handle({ method, params }).then(
   (result) => ({ result: result as Bag }),
   (error: { code: number; message: string }) => error,
@@ -256,13 +271,13 @@ it('sends the bots a membership change gives and takes, to that reader alone', a
 
   members.bo = ['crew'];
   changed();
-  await new Promise((resolve) => { setTimeout(resolve, 20); });
-  // A second word about the same change finds nothing more to send.
+  await hears(bo, 'added crews');
+  // A second word about the same change finds nothing more to send, and the
+  // removal after it is what says it was sent nothing.
   changed();
-  await new Promise((resolve) => { setTimeout(resolve, 20); });
   members.bo = [];
   changed();
-  await new Promise((resolve) => { setTimeout(resolve, 20); });
+  await hears(bo, 'removed crews');
 
   expect(bo.heard()).toEqual(['added crews', 'removed crews']);
   expect(ana.heard()).toEqual([]);
@@ -282,10 +297,10 @@ it('sends a membership change only to the person it concerns on a shared client 
   // Ana leaves the team: only she is sent the removal, and Bo's set stays his.
   members.ana = [];
   changed();
-  await new Promise((resolve) => { setTimeout(resolve, 20); });
+  await hears(ana, 'removed crews');
   members.bo = ['crew'];
   changed();
-  await new Promise((resolve) => { setTimeout(resolve, 20); });
+  await hears(bo, 'added crews');
 
   expect(ana.heard()).toEqual(['removed crews']);
   expect(bo.heard()).toEqual(['added crews']);
