@@ -1260,6 +1260,11 @@ export interface Connection {
   /**
    * Tokens this client pushed, by protected resource identifier.
    *
+   * A token the client aimed at one MCP server, with `authenticate`'s
+   * `target`, is kept under its resource and that server together, so a
+   * lookup by the resource alone never finds it: the protocol has such a token
+   * reach that server and never a backend's own resource.
+   *
    * Per connection for the same reason `watching` is, and the specification says
    * so outright: authentication status is per connection, each client
    * authenticating independently. A token one client offered is theirs, spent

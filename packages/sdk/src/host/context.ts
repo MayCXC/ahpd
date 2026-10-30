@@ -417,8 +417,13 @@ export interface ConnectionContext {
    * boundary rather than fired early.
    */
   expiring: Map<string, ReturnType<typeof setTimeout>>;
-  /** Stop watching a token's clock: it was replaced, revoked, or the client left. */
-  forgetExpiry: (resource: string) => void;
+  /**
+   * Stop watching a token's clock: it was replaced, revoked, or the client left.
+   *
+   * By the key the token is kept under in `Connection.tokens`, which is the
+   * key `expiring` holds its clock by.
+   */
+  forgetExpiry: (key: string) => void;
   /**
    * Whether this connection is still here.
    *

@@ -263,7 +263,7 @@ it('a turn goes in and the inner session\'s actions come out unchanged', async (
 interface Told {
   confirmed: { id: string; approved: boolean; option?: string }[];
   answered: { id: string; accepted: boolean; answers: Bag }[];
-  signedIn: { resource: string; token: string }[];
+  signedIn: { resource: string; token: string; server?: string }[];
   backgrounded: string[];
   order: string[];
 }
@@ -271,10 +271,11 @@ interface Told {
 /**
  * An inner backend whose turn does what the case scripts, and which keeps
  * what it was told: the confirmations, the answers, the sign-ins and its close.
+ * It publishes the customizations a case gives it, such as its MCP servers.
  */
 const scriptedAgent = (
   onBegin: (session: Start, turnId: string, text: string) => void,
-  extra: { models?: { id: string; name: string }[]; awaiting?: string[] } = {},
+  extra: { models?: { id: string; name: string }[]; awaiting?: string[]; customizations?: Bag[] } = {},
 ): { agent: Agent; told: Told } => {
   const told: Told = { confirmed: [], answered: [], signedIn: [], backgrounded: [], order: [] };
   const agent = {
@@ -288,7 +289,7 @@ const scriptedAgent = (
       chatUri: session.chatUri,
       models: () => extra.models ?? [],
       agentId: () => 'scripted',
-      customizations: () => [],
+      customizations: () => extra.customizations ?? [],
       allTurns: () => [],
       status: () => 1,
       activity: () => undefined,
@@ -318,7 +319,10 @@ const scriptedAgent = (
       },
       ...(extra.awaiting === undefined ? {} : {
         awaiting: () => extra.awaiting,
-        authenticated: async (resource: string, token: string) => { told.signedIn.push({ resource, token }); return true; },
+        authenticated: async (resource: string, token: string, server?: string) => {
+          told.signedIn.push({ resource, token, ...(server === undefined ? {} : { server }) });
+          return true;
+        },
       }),
       close: () => { told.order.push('close'); },
     }),
@@ -464,6 +468,30 @@ it('a sign-in the inner session asks for is awaited outside and reaches the inne
   expect(session.awaiting?.()).toEqual([resource]);
   expect(await session.authenticated?.(resource, 'token-1')).toBe(true);
   expect(told.signedIn).toEqual([{ resource, token: 'token-1' }]);
+  session.close();
+});
+
+it('a sign-in aimed at one server reaches that server inside, and no other', async () => {
+  const resource = 'https://mcp.example/';
+  const waiting = { kind: 'authRequired', reason: 'required', resource: { resource } };
+  const { agent, told } = scriptedAgent((session) => {
+    session.emit('session', { type: 'session/mcpServerStateChanged', id: 'mcp:example', state: waiting });
+  }, {
+    awaiting: [resource],
+    // Two servers that wait for the same resource, as the session inside publishes them.
+    customizations: [
+      { type: 'mcpServer', id: 'mcp:example', name: 'example', state: waiting },
+      { type: 'mcpServer', id: 'mcp:other', name: 'other', state: waiting },
+    ],
+  });
+  const inner = innerHost(agent);
+  const { emit } = recorder();
+  const session = nestedAgent(agent, { plugins: PLUGINS, start: async () => inner.proc, timeoutMs: 500 }).create(start(emit));
+  session.begin('t1', 'use the server');
+  await until(() => (session.awaiting?.() ?? []).length > 0);
+  expect(await session.authenticated?.(resource, 'token-2', 'mcp:other')).toBe(true);
+  // The host inside was told which server: the token is that one's alone.
+  expect(told.signedIn).toEqual([{ resource, token: 'token-2', server: 'mcp:other' }]);
   session.close();
 });
 

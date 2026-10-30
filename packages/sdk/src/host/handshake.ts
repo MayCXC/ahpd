@@ -2,7 +2,9 @@ import { compareProtocolVersions, negotiateProtocolVersion, SUPPORTED_PROTOCOL_V
 import { RUN_HISTORY_LIMIT } from '../automations/automations.js';
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { uriOf } from '../resources/fileuri.js';
+import { bag, str } from '../utils/values.js';
 import { BANG } from './common.js';
+import type { Bag } from '../types/common.js';
 import type { ConnectionContext, HostContext } from './context.js';
 
 /**
@@ -36,12 +38,51 @@ const LOCALE_LIMIT = 35;
 const SPOKEN_VERSIONS = [...SUPPORTED_PROTOCOL_VERSIONS, LEGACY_COMPATIBLE_VERSION]
   .sort((a, b) => compareProtocolVersions(b, a));
 
+/**
+ * The one MCP server a token was aimed at: its session, under the name this
+ * host holds it by, and the customization id the session publishes it under.
+ */
+interface Target {
+  session: string;
+  customizationId: string;
+}
+
+/**
+ * The key a pushed token is kept under: its resource, and the server it was
+ * aimed at when the client named one.
+ *
+ * The protocol keys a provider-level token by its resource and a targeted one
+ * by its target as well, because two MCP servers can share a resource and
+ * still be two consumers. So `tokensFor` and `lent`, which look a token up by
+ * its resource, never find one aimed at a server.
+ * https://github.com/microsoft/agent-host-protocol/blob/0b7b7f9f4ceb2fbd8846557416f765ac73da647d/docs/specification/authentication.md#L151-L153
+ */
+const keyOf = (resource: string, target?: Target): string => (target === undefined
+  ? resource
+  : JSON.stringify([resource, target.session, target.customizationId]));
+
+/**
+ * The MCP server a session publishes under an id, at the top level or as the
+ * child of another customization: the two places the protocol says a target's
+ * server is found, and where the reference host looks for one.
+ * https://github.com/microsoft/agent-host-protocol/blob/0b7b7f9f4ceb2fbd8846557416f765ac73da647d/docs/specification/authentication.md#L143
+ * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/shared/mcpCustomizationController.ts#L606-L620
+ */
+const mcpServerIn = (customizations: unknown[], id: string): Bag | undefined => {
+  for (const one of customizations.map(bag)) {
+    const servers = one.type === 'mcpServer' ? [one] : (Array.isArray(one.children) ? one.children.map(bag) : []);
+    const found = servers.find((server) => server.type === 'mcpServer' && str(server.id) === id);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+};
+
 export function createHandshake(ctx: HostContext, conn: ConnectionContext): Handshake {
   const { connection } = conn;
   const {
-    advertised, advertisedChannels, advertisedGrants, advertisedMethods, advertisedSchemes, agents, answeredAs, browsable, channelAwaiting, dir, fire, flushDeltas,
-    holders, known, leaves, locales, loginId, log, LOGS, METRICS, metaMoved, metadataFor, meantBy, openedBy,
-    options, ownId, ownerFor, principals, refreshPullRequests, replayable, seenBy, sessions,
+    advertised, advertisedChannels, advertisedGrants, advertisedMethods, advertisedSchemes, agents, answeredAs, browsable, channelAwaiting,
+    clientPluginsOf, dir, fire, flushDeltas, heldAs, holders, known, leadOf, leaves, locales, loginId, log, LOGS, METRICS, metaMoved,
+    metadataFor, meantBy, openedBy, options, ownId, ownerFor, principals, refreshPullRequests, replayable, seenBy, sessions,
     snapshotOf, spellingOf, TRACES,
   } = ctx;
 
@@ -101,14 +142,14 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
    */
   const expiring = new Map<string, ReturnType<typeof setTimeout>>();
   const LONGEST = 2 ** 31 - 1;
-  const expire = (resource: string): void => {
+  const expire = (resource: string, target?: Target): void => {
     /*
      * The host's own resource holds no token to expire - what it leaves is
      * a principal - so it is the one case this path answers differently.
      * The notification is the same either way, because what a client has
      * to do about it is the same.
      */
-    if (options.users !== undefined && resource === loginId()) {
+    if (target === undefined && options.users !== undefined && resource === loginId()) {
       const until = connection.principalUntil;
       if (until === undefined) return;
       const left = until - Date.now();
@@ -128,28 +169,74 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
       });
       return;
     }
-    const held = connection.tokens.get(resource);
+    const key = keyOf(resource, target);
+    const held = connection.tokens.get(key);
     if (held?.expiresAt === undefined) return;
     const left = held.expiresAt - Date.now();
     if (left > 0) {
-      expiring.set(resource, setTimeout(() => expire(resource), Math.min(left, LONGEST)));
-      expiring.get(resource)?.unref?.();
+      expiring.set(key, setTimeout(() => expire(resource, target), Math.min(left, LONGEST)));
+      expiring.get(key)?.unref?.();
       return;
     }
-    expiring.delete(resource);
-    connection.tokens.delete(resource);
-    log(`${connection.clientId || 'a client'}'s token for ${resource} expired`);
+    expiring.delete(key);
+    connection.tokens.delete(key);
+    log(`${connection.clientId || 'a client'}'s token for ${resource}${target === undefined ? '' : ` at ${target.customizationId}`} expired`);
     connection.peer.notify('auth/required', {
-      channel: channelAwaiting(resource),
+      // An MCP server's requirement is drawn on its session, and a token
+      // aimed at one names that session itself.
+      channel: target?.session ?? channelAwaiting(resource),
       resource: metadataFor(resource),
       reason: 'expired',
     });
   };
-  /** Stop watching a token's clock: it was replaced, revoked, or the client left. */
-  const forgetExpiry = (resource: string): void => {
-    const timer = expiring.get(resource);
+  /**
+   * Stop watching a token's clock: it was replaced, revoked, or the client left.
+   *
+   * By the key the token is kept under, which is what `expiring` holds.
+   */
+  const forgetExpiry = (key: string): void => {
+    const timer = expiring.get(key);
     if (timer !== undefined) clearTimeout(timer);
-    expiring.delete(resource);
+    expiring.delete(key);
+  };
+  /**
+   * The MCP server a token's `target` names, or the refusal of it.
+   *
+   * A client that answers one server's sign-in names that server by the
+   * session and the customization id this host published, and the protocol
+   * has the host refuse a target it cannot find with `-32602`. A kind this
+   * host does not know names a consumer it cannot confine the token to, so it
+   * is refused the same way, as the reference host refuses it.
+   *
+   * The resource has to be the one that server waits for: the protocol says
+   * so, and it is the resource this host advertised for it.
+   * https://github.com/microsoft/agent-host-protocol/blob/0b7b7f9f4ceb2fbd8846557416f765ac73da647d/docs/specification/authentication.md#L143-L145
+   * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/agentService.ts#L2033-L2048
+   */
+  const aimedAt = (named: unknown, resource: string): Target => {
+    const target = bag(named);
+    if (target.kind !== 'mcpServer') {
+      throw new RpcError(INVALID_PARAMS, `A target of kind ${JSON.stringify(target.kind ?? null)} is not one this host knows`);
+    }
+    const asked = str(target.session) ?? '';
+    const customizationId = str(target.customizationId) ?? '';
+    // Under whatever spelling the client knows the session by.
+    const session = heldAs(asked);
+    const held = sessions.get(session);
+    const lead = held === undefined ? undefined : leadOf(held);
+    // Both halves of what the session publishes: what its backend reports,
+    // and the plugins its clients handed it.
+    const server = lead === undefined
+      ? undefined
+      : mcpServerIn([...lead.customizations(), ...clientPluginsOf(session)], customizationId);
+    if (server === undefined) {
+      throw new RpcError(INVALID_PARAMS, `${customizationId || 'That'} is not an MCP server of ${asked || 'a session this host holds'}`);
+    }
+    const state = bag(server.state);
+    if (state.kind !== 'authRequired' || bag(state.resource).resource !== resource) {
+      throw new RpcError(INVALID_PARAMS, `${customizationId} in ${asked} is not waiting for a token for ${resource || 'that resource'}`);
+    }
+    return { session, customizationId };
   };
   conn.tokensFor = tokensFor;
   conn.expiring = expiring;
@@ -547,19 +634,32 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
       const resource = String(params.resource ?? '');
       const token = String(params.token ?? '');
       /*
+       * The one MCP server the client aimed the token at, when it named one.
+       *
+       * Read from the request as it arrives: the protocol added `target`
+       * after the 1.0.0 package this host is typed over, and says it needs
+       * no version of its own. A token aimed at a server is that server's
+       * alone, so nothing below treats it as the host's sign-in or as a
+       * backend's own credential.
+       */
+      const target = params.target === undefined ? undefined : aimedAt(params.target, resource);
+      /*
        * A backend's own resource, or one of its MCP servers'.
        *
        * The second kind is advertised on a server's `authRequired` state
        * rather than on the agent, and is just as much a resource this host
        * named - the protocol's rule is that a client's `resource` matches
-       * one the server advertised, and both of these are.
+       * one the server advertised, and both of these are. A target has
+       * already named its server, and its session's chats are the ones told.
        */
-      const waiting = [...sessions.values()]
-        .flatMap((held) => [...held.chats.values()])
+      const waiting = (target === undefined
+        ? [...sessions.values()].flatMap((held) => [...held.chats.values()])
+        : [...(sessions.get(target.session)?.chats.values() ?? [])])
         .filter((chat) => chat.awaiting?.().includes(resource) === true);
-      if (waiting.length === 0 && !advertised().has(resource)) {
+      if (target === undefined && waiting.length === 0 && !advertised().has(resource)) {
         throw new RpcError(INVALID_PARAMS, `${resource || 'That'} is not a resource this host advertises`);
       }
+      const key = keyOf(resource, target);
       /*
        * An empty token takes the credential back.
        *
@@ -570,17 +670,21 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
        * have started on a credential it no longer meant to lend. Nothing
        * running is told; a token is spent at start, and what is already
        * running has it in its environment and no way to give it back.
+       *
+       * With a target, the token kept for that server is the one that goes:
+       * the protocol limits a revocation to its target.
        */
       if (token === '') {
-        const had = connection.tokens.delete(resource);
-        forgetExpiry(resource);
-        const signedOut = options.users !== undefined && resource === loginId()
+        const had = connection.tokens.delete(key);
+        forgetExpiry(key);
+        const signedOut = target === undefined && options.users !== undefined && resource === loginId()
           && connection.principal !== undefined && connection.root !== true;
         if (signedOut) {
           delete connection.principal;
           delete connection.principalUntil;
         }
-        log(`${connection.clientId || 'a client'} ${had ? 'revoked' : 'had no'} token for ${resource}${signedOut ? ' and signed out' : ''}`);
+        const at = target === undefined ? '' : ` at ${target.customizationId} in ${target.session}`;
+        log(`${connection.clientId || 'a client'} ${had ? 'revoked' : 'had no'} token for ${resource}${at}${signedOut ? ' and signed out' : ''}`);
         return {};
       }
       /*
@@ -603,7 +707,7 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
        * demote it and signing out could only lose the key. Answered as accepted and otherwise
        * ignored, because the client asked for something that is already so.
        */
-      if (connection.root === true && options.users !== undefined && resource === loginId()) return {};
+      if (target === undefined && connection.root === true && options.users !== undefined && resource === loginId()) return {};
       /*
        * The host's own resource: the one credential here that is checked.
        *
@@ -612,7 +716,7 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
        * still does. This one is a person, and the directory is the only
        * thing that can say whether the token belongs to one.
        */
-      if (options.users !== undefined && resource === loginId()) {
+      if (target === undefined && options.users !== undefined && resource === loginId()) {
         const held = await options.users.verify(token);
         if (held === undefined) {
           throw new RpcError(-32007, 'That credential is not one this host knows', {
@@ -685,20 +789,23 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
        * A token for an MCP server is that server's `Authorization` header
        * and nothing else's; a token for a backend is a credential its next
        * session starts with. The first takes effect now, on the sessions
-       * that were waiting for it.
+       * that were waiting for it, and a targeted one names its server to
+       * each chat so no server beside it takes the token.
        */
-      for (const chat of waiting) void chat.authenticated?.(resource, token);
-      forgetExpiry(resource);
-      connection.tokens.set(resource, {
+      for (const chat of waiting) void chat.authenticated?.(resource, token, target?.customizationId);
+      forgetExpiry(key);
+      connection.tokens.set(key, {
         token,
         ...(expiresIn !== undefined ? { expiresAt: Date.now() + expiresIn * 1000 } : {}),
       });
       void fire({ type: 'authenticated', client: connection.clientId || 'anonymous', resource });
-      if (expiresIn !== undefined) expire(resource);
-      log(`${connection.clientId || 'a client'} authenticated for ${resource}${expiresIn !== undefined ? `, for ${expiresIn}s` : ''}`);
+      if (expiresIn !== undefined) expire(resource, target);
+      const at = target === undefined ? '' : ` at ${target.customizationId} in ${target.session}`;
+      log(`${connection.clientId || 'a client'} authenticated for ${resource}${at}${expiresIn !== undefined ? `, for ${expiresIn}s` : ''}`);
       // A GitHub token is a reason to ask GitHub again: a lookup that
-      // answered nothing as nobody may answer as this person.
-      if (resource === String(options.github?.resource.resource ?? '')) {
+      // answered nothing as nobody may answer as this person. One aimed at
+      // a server is not a token those lookups are ever given.
+      if (target === undefined && resource === String(options.github?.resource.resource ?? '')) {
         for (const dir of browsable()) {
           void refreshPullRequests(dir).then((moved) => { if (moved) metaMoved(dir); }).catch(() => {});
         }

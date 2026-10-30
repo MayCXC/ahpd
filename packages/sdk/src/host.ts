@@ -1924,7 +1924,7 @@ export function createHost(options: HostOptions): Host {
             if (at !== undefined) stopUnwatched(at.dir);
           }
           // The tokens went with the connection; so do their clocks.
-          for (const resource of [...conn.expiring.keys()]) conn.forgetExpiry(resource);
+          for (const key of [...conn.expiring.keys()]) conn.forgetExpiry(key);
           // And the watches it was keeping for other clients: the channel was
           // its to report on, and with it gone nothing ever will again.
           for (const [channel, away] of [...relayed]) {
