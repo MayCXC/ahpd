@@ -9,8 +9,13 @@
  * issuer over the network; then a person, verified by the directory, still on
  * file, and holding the grant the call needs.
  *
+ * A team's key is checked the same way, by `verifyTeamKey` once `verify` answers
+ * nothing. It names no person, so `verify` never answers it, and the proxy is
+ * the only door that asks for it.
+ *
  * A person's work is charged to a team and project, named in `X-AHP-Scope` or
  * `?scope=` or else their primary, resolved by `scopeFor` as a session's is.
+ * A team key's work is charged to its team.
  */
 
 import { checkMeta, parseMeta, refusalReason, scopeFor, type Grant, type Owner, type Principal, type Scope, type Users } from '@ahpd/sdk';
@@ -102,6 +107,12 @@ export async function callerOf(request: Request, options: CallerOptions, grant: 
   let who: Principal | undefined;
   try { who = await options.users.verify(presented); }
   catch { who = undefined; }
+  // A team's key, which `verify` refuses because it names no person. The
+  // proxy is the one door it opens, so no other caller asks this.
+  if (who === undefined && options.users.verifyTeamKey !== undefined) {
+    try { who = await options.users.verifyTeamKey(presented); }
+    catch { who = undefined; }
+  }
   if (who === undefined) return { refusal: { status: 401, message: 'That credential is not one this host knows' } };
   // Removed since the token was minted: the directory re-reads its file, so
   // this is current as of this call.
