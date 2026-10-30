@@ -5,7 +5,7 @@
  * Importing this registers the hooks that make and remove that directory, so
  * each file that imports it gets them.
  */
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer, type AddressInfo } from 'node:net';
 import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
@@ -69,6 +69,8 @@ export let users: string;
 export let wire: string;
 /** Pids a `start` case left behind, killed when the case ends. */
 export const spawned: number[] = [];
+/** The `cli` commands still running, stopped when the case ends. */
+const running = new Set<ChildProcess>();
 
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), 'ahpd-cli-'));
@@ -79,7 +81,16 @@ beforeEach(() => {
   writeFileSync(config, '{}\n');
 });
 afterEach(async () => {
-  const pids = [...spawned.splice(0), ...announced()];
+  /*
+   * A command the case left running is asked to stop and waited for first. A
+   * `start` still waiting for its daemon stops that daemon as it goes, and is
+   * the only process that knows its pid until the record is written.
+   */
+  await Promise.all([...running].map((child) => new Promise<void>((done) => {
+    child.once('exit', () => { done(); });
+    if (!child.kill('SIGTERM')) done();
+  })));
+  const pids = [...spawned.splice(0), ...announced(), ...recorded()];
   for (const pid of pids) {
     try { process.kill(pid, 'SIGKILL'); }
     catch { /* it was already gone, which is what was wanted */ }
@@ -106,6 +117,18 @@ export const announced = (): number[] => {
   return [...log.matchAll(/\(pid (\d+)\)/gu)]
     .map((match) => Number(match[1]))
     .filter((pid) => pid !== process.pid);
+};
+
+/**
+ * The pid the case's daemon record names, so a daemon a case started and then
+ * failed before keeping is stopped all the same.
+ */
+const recorded = (): number[] => {
+  try {
+    const { pid } = JSON.parse(readFileSync(join(home, 'ahpd', 'daemon.json'), 'utf8')) as { pid?: unknown };
+    return typeof pid === 'number' && pid !== process.pid ? [pid] : [];
+  }
+  catch { return []; }
 };
 
 /** Whether the OS still holds that process. */
@@ -160,6 +183,7 @@ export const cli = (
     [MAIN, ...args],
     { cwd: REPO, env: daemonEnv(options.env ?? {}, options.unset ?? []), stdio: ['pipe', 'pipe', 'pipe'] },
   );
+  running.add(child);
   // The peer's end of the pipe, closed at once: a stdio host serves until the
   // client goes away, and a case that starts one has nothing to say to it.
   child.stdin.end();
@@ -171,7 +195,7 @@ export const cli = (
     // A run that does start and somehow sat on the pipe fails on the cases
     // below rather than on the suite's own timeout.
     const timer = setTimeout(() => { child.kill(); }, 15000);
-    child.on('exit', (code) => { clearTimeout(timer); done({ code, stdout, stderr }); });
+    child.on('exit', (code) => { clearTimeout(timer); running.delete(child); done({ code, stdout, stderr }); });
   });
 };
 
@@ -287,6 +311,8 @@ export const supervised = async (args: readonly string[] = [], env: Record<strin
 export const KEPT = join(import.meta.dirname, 'fixtures', 'plugin-kept', 'index.ts');
 /** A plugin whose `stopping` handler waits for the file `AHPD_RELEASE` names. */
 export const SLOW_STOP = join(import.meta.dirname, 'fixtures', 'plugin-slow-stop', 'index.ts');
+/** A plugin that writes the daemon's pid to `AHPD_STARTING`, then holds its start until `AHPD_RELEASE`. */
+export const SLOW_START = join(import.meta.dirname, 'fixtures', 'plugin-slow-start', 'index.ts');
 /** A plugin that says whether the daemon's environment holds `AHPD_DETACHED`. */
 export const ENV = join(import.meta.dirname, 'fixtures', 'plugin-env', 'index.ts');
 /** A plugin whose `apply` throws, which costs it and not the daemon. */

@@ -4,10 +4,10 @@
  * `start`, `stop` and `status`, with a daemon started in the background.
  */
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BACKEND, cli, config, daemonEnv, ENV, home, knock, MAIN, MULTILINE, recordOf, REPO, SKIPS, spawned, THROWS } from './cli.js';
+import { alive, BACKEND, cli, config, daemonEnv, ENV, gone, home, knock, MAIN, MULTILINE, recordOf, REPO, SKIPS, SLOW_START, spawned, THROWS } from './cli.js';
 
 describe('start, stop and status', () => {
   it('says none is running when none is, from stop and from status', async () => {
@@ -266,5 +266,27 @@ describe('start, stop and status', () => {
     const status = await cli(['status']);
     expect(status.code).toBe(0);
     expect(status.stdout).toContain(record.url);
+  }, 40000);
+
+  it('stops the daemon a start made when the start is ended before the daemon says where it is', async () => {
+    const starting = join(home, 'starting.pid');
+    const child = spawn(
+      process.execPath,
+      [MAIN, 'start', '--port', '0', '--plugin', BACKEND, '--plugin', SLOW_START, '--sessions', 'memory', '--automations', 'memory', '--no-update-check'],
+      { cwd: REPO, env: daemonEnv({ AHPD_STARTING: starting, AHPD_RELEASE: join(home, 'release') }), stdio: 'ignore' },
+    );
+    const ended = new Promise<NodeJS.Signals | null>((done) => { child.on('exit', (_code, signal) => done(signal)); });
+    // The daemon writes its pid as its plugins apply, and then waits on a
+    // release that never comes, so `start` is still waiting for it.
+    const until = Date.now() + 30000;
+    while (!existsSync(starting) && Date.now() < until) await new Promise((wait) => setTimeout(wait, 50));
+    const daemon = Number(readFileSync(starting, 'utf8'));
+    spawned.push(daemon);
+    expect(alive(daemon)).toBe(true);
+
+    child.kill('SIGTERM');
+    expect(await ended).toBe('SIGTERM');
+    await gone(daemon);
+    expect(alive(daemon)).toBe(false);
   }, 40000);
 });

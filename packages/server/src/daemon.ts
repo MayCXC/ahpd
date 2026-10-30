@@ -537,61 +537,86 @@ export async function start(argv: string[], self: string, token?: string, replac
   child.unref();
   closeSync(log);
 
-  /*
-   * Wait for it to say where it is, by reading what it wrote.
-   *
-   * Polling rather than listening, because nothing here is holding its
-   * output any more - which is exactly the point.
-   */
   /** What it said about itself, so the record is its answer and not a guess. */
   let announced = '';
-  await new Promise<string>((answer, fail) => {
-    const gaveUp = Date.now() + READY_TIMEOUT_MS;
-    const look = (): void => {
-      const said = logSince(from);
-      const own = child.pid === undefined ? undefined : announcementOf(said, child.pid);
-      if (own !== undefined) { announced = own; answer(own); return; }
-      if (child.exitCode !== null) {
-        fail(new Error(`it exited with ${String(child.exitCode)}. See ${daemonLog()}`));
-        return;
-      }
-      if (Date.now() > gaveUp) {
-        fail(new Error(`it started but never said where it was listening. See ${daemonLog()}`));
-        return;
-      }
-      setTimeout(look, 100);
-    };
-    look();
-  }).catch((error: unknown) => {
+  /*
+   * A signal that would end this process before the record names the child
+   * ends the child too: until the record is written nothing else knows its
+   * pid, and a detached child outlives the process that started it. It is
+   * stopped as the two ways out below stop it, killed before it has said where
+   * it is and asked to stop once it has, and the signal then ends this process
+   * as it would have. A signal something else here answers, as a daemon
+   * restarting itself answers a stop, is left to that.
+   */
+  const ending = (['SIGINT', 'SIGTERM', 'SIGHUP'] as const).filter((signal) => process.listenerCount(signal) === 0);
+  const end = (signal: NodeJS.Signals): void => {
+    for (const one of ending) process.off(one, end);
     if (child.pid !== undefined) {
-      try { process.kill(child.pid, 'SIGKILL'); }
+      try { process.kill(child.pid, announced === '' ? 'SIGKILL' : 'SIGTERM'); }
       catch { /* already gone */ }
     }
-    throw error;
-  });
-
-  // It announced where it was listening, so it started; this is for the type
-  // rather than for the case, and `0` must never reach the record.
-  if (child.pid === undefined) throw new Error('it started but has no process id');
-  const record = recordOf(announced, child.pid, token, argv, control);
-  /** Stop the child this start made, which no record will name. */
-  const unmade = (): void => {
-    try { process.kill(child.pid as number, 'SIGTERM'); }
-    catch { /* already gone */ }
+    process.kill(process.pid, signal);
   };
-  let other: Running | undefined;
+  for (const signal of ending) process.on(signal, end);
+
   try {
-    other = claim(record, replacing);
+    /*
+     * Wait for it to say where it is, by reading what it wrote.
+     *
+     * Polling rather than listening, because nothing here is holding its
+     * output any more - which is exactly the point.
+     */
+    await new Promise<string>((answer, fail) => {
+      const gaveUp = Date.now() + READY_TIMEOUT_MS;
+      const look = (): void => {
+        const said = logSince(from);
+        const own = child.pid === undefined ? undefined : announcementOf(said, child.pid);
+        if (own !== undefined) { announced = own; answer(own); return; }
+        if (child.exitCode !== null) {
+          fail(new Error(`it exited with ${String(child.exitCode)}. See ${daemonLog()}`));
+          return;
+        }
+        if (Date.now() > gaveUp) {
+          fail(new Error(`it started but never said where it was listening. See ${daemonLog()}`));
+          return;
+        }
+        setTimeout(look, 100);
+      };
+      look();
+    }).catch((error: unknown) => {
+      if (child.pid !== undefined) {
+        try { process.kill(child.pid, 'SIGKILL'); }
+        catch { /* already gone */ }
+      }
+      throw error;
+    });
+
+    // It announced where it was listening, so it started; this is for the type
+    // rather than for the case, and `0` must never reach the record.
+    if (child.pid === undefined) throw new Error('it started but has no process id');
+    const record = recordOf(announced, child.pid, token, argv, control);
+    /** Stop the child this start made, which no record will name. */
+    const unmade = (): void => {
+      try { process.kill(child.pid as number, 'SIGTERM'); }
+      catch { /* already gone */ }
+    };
+    let other: Running | undefined;
+    try {
+      other = claim(record, replacing);
+    }
+    catch (error) {
+      unmade();
+      throw error;
+    }
+    if (other !== undefined) {
+      unmade();
+      throw new Error(`another daemon, pid ${String(other.pid)}, was started in its place while it started`);
+    }
+    return record;
   }
-  catch (error) {
-    unmade();
-    throw error;
+  finally {
+    for (const signal of ending) process.off(signal, end);
   }
-  if (other !== undefined) {
-    unmade();
-    throw new Error(`another daemon, pid ${String(other.pid)}, was started in its place while it started`);
-  }
-  return record;
 }
 
 /**
