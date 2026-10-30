@@ -11,6 +11,7 @@
  * container.
  */
 
+import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { MachineNeed } from './machine.js';
 import type { Owner } from './usage.js';
 
@@ -24,6 +25,29 @@ export interface Spawn {
   env?: Record<string, string>;
   /** Where the spawned program starts on this host. */
   cwd?: string;
+}
+
+/**
+ * The inner host's two streams and its end.
+ *
+ * Narrower than a child process on purpose: what the proxy needs is a line in
+ * and a line out, and a test hands it a pair of in-memory streams instead of a
+ * process. `start` is the only place that knows which it is, and a port that
+ * hands a host over a socket answers one too.
+ */
+export type NestedHost = Pick<ChildProcessWithoutNullStreams, 'stdin' | 'stdout' | 'stderr' | 'on' | 'kill'>;
+
+/**
+ * A started inner host, and the path inside the machine its session works at.
+ *
+ * `workingDirectory` is the session folder as the machine sees it, through its
+ * mounts; absent, the inner session is created at the folder this host named.
+ * A nested host started over a socket answers the folder its own end reported,
+ * because a path this host names is not a path on that machine.
+ */
+export interface NestedStarted {
+  host: NestedHost;
+  workingDirectory?: string;
 }
 
 /**
@@ -271,6 +295,22 @@ export interface ComputerPort {
    * Absent on a port whose runtime has no way to start one.
    */
   nested?(id: string, asked: NestedStart): Promise<NestedSpawn | undefined>;
+  /**
+   * Start a whole host inside a machine, over a connection the machine opened.
+   *
+   * The same host `nested` answers a command for, for a machine this host
+   * cannot reach by spawning anything: a node that dialled this one holds a
+   * socket open for each session, and this answers that socket as a
+   * `NestedHost`, with the folder its sessions start in.
+   *
+   * `undefined` is "this is not a machine I serve", which is what a port that
+   * serves one kind of machine answers about every other, and the host then
+   * asks `nested`. A machine the port does serve and that is not there throws,
+   * because a session start waits for no reconnection.
+   *
+   * Absent on a port whose machines are all reached by a command.
+   */
+  connect?(id: string, asked: NestedStart): Promise<NestedStarted | undefined>;
   /**
    * What deleting a nested session that is not running does to the machine's
    * copy of it, as the machine's own profile says.

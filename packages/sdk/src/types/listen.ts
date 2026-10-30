@@ -14,14 +14,46 @@ export interface Connected {
 }
 
 /**
+ * A connection that is its own wire.
+ *
+ * A node's session socket carries another host's frames as they are, so this
+ * side parses none of them: `raw` is one message, as it arrived, and what
+ * answers it is the host the socket was given to.
+ */
+export interface Raw {
+  /** One message, exactly as the socket delivered it. */
+  raw(text: string): void;
+  /** Release what the connection held. Called once, when it drops. */
+  close(): void;
+}
+
+/**
+ * Where a connection came in, and which node it is.
+ *
+ * The door decides who may open a connection, and the two runtimes hand the
+ * request over separately, so the rest of what it carried arrives here: the
+ * URL, which names a session's socket, and the node whose own token admitted
+ * it - always both or neither, because only the join path admits a node.
+ */
+export interface Opened {
+  /** The URL it was opened on, as the request carried it. */
+  url?: string;
+  /** The node whose own token admitted it, on the join path. */
+  node?: string;
+}
+
+/**
  * Called per connection, to hand it to whatever will answer it.
  *
  * The person is the one the presented token resolved to, when it resolved to
  * somebody: the deployment's own token names nobody, and a host with no
  * directory resolves nobody. It is passed here rather than looked up later
  * because the door is the only place the token is still in hand.
+ *
+ * An answer is either a `Connected`, which is answered frame by frame, or a
+ * `Raw`, which is handed every message whole.
  */
-export type OnConnect = (peer: Peer, principal?: Principal, root?: boolean) => Connected;
+export type OnConnect = (peer: Peer, principal?: Principal, root?: boolean, opened?: Opened) => Connected | Raw;
 
 /**
  * Called with every frame, in either direction, as it crosses the socket.
@@ -109,6 +141,15 @@ export interface ListenOptions extends Bounds {
    */
   identify?: (token: string) => Promise<Arrival | undefined> | Arrival | undefined;
   /**
+   * The path another host joins on, and the nodes whose tokens it takes.
+   *
+   * Given, a request on that path is decided by that token alone: the
+   * deployment's own token and `identify` are not asked, since a node's token
+   * opens the join path and nothing else. Left out, the path is a client's
+   * like any other, and no node can join this listener.
+   */
+  join?: NodeDoor;
+  /**
    * Whether the deployment's own token is the host itself.
    *
    * True and a socket admitted on `token` is the host: every capability, and
@@ -137,15 +178,32 @@ export interface ListenOptions extends Bounds {
 }
 
 /** The part of `ListenOptions` that decides who may open a connection. */
-export type DoorOptions = Pick<ListenOptions, 'token' | 'identify' | 'root'>;
+export type DoorOptions = Pick<ListenOptions, 'token' | 'identify' | 'root' | 'join'>;
+
+/**
+ * The path another host joins on, and who may.
+ *
+ * A request on this path presents a node's own token, which is the only
+ * credential it answers: the deployment's token and the people directory are
+ * not consulted, because a node's token opens this door and no other door.
+ */
+export interface NodeDoor {
+  /** The path, such as `/join`. A session's socket is the same path with `data`. */
+  path: string;
+  /** The node whose own token this is, or nothing to refuse the request. */
+  verify(token: string): Promise<string | undefined>;
+}
 
 /**
  * What the door decided about one request's token.
  *
- * Admitted, with the person it named when it named one and `root` when it is
- * the host itself; or refused.
+ * Admitted, with the person it named when it named one, `root` when it is the
+ * host itself, and `node` when a node's own token opened the join path; or
+ * refused.
  */
-export type Admission = { admitted: true; principal?: Principal; root?: boolean } | { admitted: false };
+export type Admission =
+  | { admitted: true; principal?: Principal; root?: boolean; node?: string }
+  | { admitted: false };
 
 /** The door: the decision on a request's URL and its `Authorization` header. */
 export type Door = (url: string | undefined, authorization: string | null) => Promise<Admission>;

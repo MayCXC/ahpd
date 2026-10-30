@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { canonicalFromCli, check, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
 import type { Command, JsonSchema, Registry } from '@cofold/commands';
-import type { Agent, Alert, AutomationStore, AutomationsOptions, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, ServedEngine, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, Alert, AutomationStore, AutomationsOptions, CommandSplitter, Connected, Contribution, DoorOptions, HostOptions, Loaded, Opened, Peer, Principal, Raw, RequestHandler, Route, ServedAdapter, ServedEngine, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   adaptersChannel,
   enginesChannel,
@@ -29,12 +29,16 @@ import {
   filePolicies,
   policyChannels,
   fileUsers,
+  fileNodes,
+  liveNodes,
+  nodesFileOf,
   gitBranches,
   gitChanges,
   gitWorktrees,
   githubPullRequests,
   hostTools,
   issuerFrom,
+  JOIN_PATH,
   listen,
   memoryAutomations,
   memorySessions,
@@ -366,6 +370,21 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     });
 
   /*
+   * The nodes that may join this host, and the ones that have.
+   *
+   * One registry answers both halves: the file beside the users says who may,
+   * and the same object says who is connected now and hands a session's socket
+   * to the proxy. It is the join path's credential check and the place a node's
+   * sockets go, which are the same thing seen from the door and from inside.
+   *
+   * A host with no directory has no file to keep them in and no join path:
+   * there is no record of who may join, so nobody may.
+   */
+  const nodes = options.users === undefined
+    ? undefined
+    : liveNodes({ file: fileNodes({ path: nodesFileOf(options.users), onProblem: stamp }), log: stamp });
+
+  /*
    * The scratch of writers that are gone, cleared once at the start.
    *
    * Every one of these files is written whole beside itself and renamed over,
@@ -610,6 +629,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   const door: DoorOptions = {
     ...(token !== undefined ? { token } : {}),
+    // The join path takes a node's own token and nothing else, so a node never
+    // holds the deployment's key.
+    ...(nodes === undefined ? {} : { join: { path: JOIN_PATH, verify: (presented: string) => nodes.verify(presented) } }),
     ...(users === undefined
       ? {}
       : {
@@ -1682,6 +1704,20 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * it may exist. `listen` is the only file that knows which runtime answered,
    * and the announcement says which one it found.
    */
+  /*
+   * What one connection is: a node's socket, or a client's.
+   *
+   * The door admits a socket on the join path only on a node's own token, so a
+   * socket that arrives with a node's name is that node's - its control socket,
+   * or the socket of one session - and is the registry's. Everything else is a
+   * client of this host, whoever the door said it is.
+   */
+  const acceptConnection = (peer: Peer, principal?: Principal, root?: boolean, opened?: Opened): Connected | Raw => {
+    const node = opened?.node;
+    if (node === undefined || nodes === undefined) return host.accept(peer, principal, root);
+    return nodes.accept(node, peer, opened?.url);
+  };
+
   stamp('start: listen');
   const listener = options.stdio
     ? await overStdio(
@@ -1697,7 +1733,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
         // The plain requests beside the upgrade.
         ...plainRequests(daemonRequest),
       },
-      (peer, principal, root) => host.accept(peer, principal, root),
+      acceptConnection,
     );
   // Where the API and the daemon actually are, now that both listeners are bound.
   apiBoundPort = apiListener?.port ?? listener.port;

@@ -93,8 +93,8 @@ export { chargeFor, countCall, COUNTED, keysOf, limitsOf } from './usage/charge.
 export type { Charge, ChargeOptions, ChargeRefusal, LimitFigure, LimitMember, PayOrder } from './usage/charge.js';
 export { fileUsers, grantProblem, signInRecord } from './access/users.js';
 export type { FileUserOptions } from './access/users.js';
-export { fileNodes, nodesFileOf } from './nodes.js';
-export type { FileNodeOptions, NodeFile, NodeRecord, Nodes } from './nodes.js';
+export { fileNodes, JOIN_PATH, liveNodes, nodesFileOf } from './nodes.js';
+export type { FileNodeOptions, LiveNodes, LiveOptions, NodeFile, NodeRecord, Nodes } from './nodes.js';
 export { tokenMethods } from './access/tokens.js';
 export { meMethods } from './access/me.js';
 export { peopleChannels, peopleProviders } from './access/people.js';

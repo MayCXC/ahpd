@@ -36,7 +36,6 @@
  */
 
 import { spawn as startProcess } from 'node:child_process';
-import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 import { AhpClient, RpcError } from '@microsoft/agent-host-protocol/client';
 import type { AhpTransport, Subscription, TransportFrame } from '@microsoft/agent-host-protocol/client';
@@ -52,7 +51,7 @@ import { computerId } from '../machines/computers.js';
 import type { Agent, Start } from '../types/agent.js';
 import type { BackgroundTask } from '../types/background.js';
 import type { Bag } from '../types/common.js';
-import type { ComputerPort } from '../types/computers.js';
+import type { ComputerPort, NestedHost, NestedStarted } from '../types/computers.js';
 import type { Chosen, MessageFrom, Session, SubagentChat } from '../types/session.js';
 
 /** How many of the inner host's own lines are kept for a failure's sentence. */
@@ -102,14 +101,12 @@ const NO_AGENT = -32001;
 /** The session actions about one chat in the session's catalogue. */
 const CATALOGUE = new Set(['session/chatAdded', 'session/chatUpdated', 'session/chatRemoved', 'session/defaultChatChanged']);
 
-/**
- * The inner host's two streams and its end.
- *
- * Narrower than a child process on purpose: what the proxy needs is a line in
- * and a line out, and a test hands it a pair of in-memory streams instead of a
- * process. `start` is the only place that knows which it is.
+/*
+ * What a started inner host is is the port's, not this file's: `connect` answers
+ * one over a socket, and `NestedHost` is what both roads hand back. Re-exported
+ * here because this is where a caller of the proxy looks for it.
  */
-export type NestedHost = Pick<ChildProcessWithoutNullStreams, 'stdin' | 'stdout' | 'stderr' | 'on' | 'kill'>;
+export type { NestedHost, NestedStarted };
 
 /** What the proxy asks for a host inside a machine. */
 export interface NestedAsked {
@@ -121,17 +118,6 @@ export interface NestedAsked {
   cwd?: string;
   /** The session's port, which is where the default `start` asks. */
   computers?: ComputerPort;
-}
-
-/**
- * A started inner host, and the path inside the machine its session works at.
- *
- * `workingDirectory` is the session folder as the machine sees it, through its
- * mounts; absent, the inner session is created at the folder this host named.
- */
-export interface NestedStarted {
-  host: NestedHost;
-  workingDirectory?: string;
 }
 
 /** How one session of this backend runs nested. */
@@ -148,12 +134,15 @@ export interface NestedOptions {
   /** How long a question to the inner host waits. Default `ANSWER_TIMEOUT`. */
   timeoutMs?: number;
   /**
-   * Start the inner host, for a caller that is not this host's `computers`
-   * port. A test hands in in-memory streams; the default asks the port for a
-   * spawn and runs it here. Answers the host alone, or the host with the path
-   * inside the machine its session works at.
+   * Start the inner host, where the port has a road the default does not take.
+   *
+   * A test hands in in-memory streams, and a host whose port can `connect`
+   * hands back the socket the machine opened for this session. Answers the
+   * host alone, or the host with the path inside the machine its session works
+   * at, or nothing for a machine this caller does not serve: nothing falls back
+   * to the default, which asks the port for a spawn here.
    */
-  start?: (asked: NestedAsked) => NestedHost | NestedStarted | Promise<NestedHost | NestedStarted>;
+  start?: (asked: NestedAsked) => NestedHost | NestedStarted | undefined | Promise<NestedHost | NestedStarted | undefined>;
   /** One line worth keeping. Nothing is logged without one. */
   log?: (line: string) => void;
 }
@@ -851,7 +840,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       ...(start.workingDirectory === undefined ? {} : { cwd: start.workingDirectory }),
       ...(start.computers === undefined ? {} : { computers: start.computers }),
     };
-    const answer = options.start !== undefined ? await options.start(asked) : await startInside(asked);
+    const answer = (options.start === undefined ? undefined : await options.start(asked)) ?? await startInside(asked);
     const started: NestedStarted = 'stdin' in answer ? { host: answer } : answer;
     const opened = started.host;
     host = opened;

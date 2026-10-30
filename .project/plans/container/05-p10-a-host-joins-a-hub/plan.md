@@ -101,7 +101,7 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - `ahpd join` dials the hub and keeps the connection](task-01-ahpd-join-dials-the-hub.md) | implemented | 03 |
-| [02 - A joined socket is a nested host the proxy talks to](task-02-a-joined-socket-is-a-nested-host.md) | todo | 01 |
+| [02 - A joined socket is a nested host the proxy talks to](task-02-a-joined-socket-is-a-nested-host.md) | implemented | 01 |
 | [03 - A node has a token, and nodes are a grant subject](task-03-a-node-has-a-token.md) | implemented | - |
 | [04 - The hub lists a node as a computer](task-04-the-hub-lists-a-node.md) | todo | 02 |
 | [05 - A restart of the hub or the node leaves its sessions to resume](task-05-a-restart-leaves-node-sessions-to-resume.md) | todo | 04 |
@@ -115,8 +115,8 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 
 ## Resume state
 
-- **Done so far:** task 03, 2026-10-30, a node's token is minted, shown once and kept as a hash beside the users file, and `node:read` and `node:write` gate `ahpd node list|add|rm`; task 01, 2026-10-30, `ahpd join` dials the hub, says its versions and workdir, and serves each session from an `ahpd --stdio` of its own.
-- **Next action:** [task-02-a-joined-socket-is-a-nested-host.md](task-02-a-joined-socket-is-a-nested-host.md).
+- **Done so far:** task 03, 2026-10-30, a node's token is minted, shown once and kept as a hash beside the users file, and `node:read` and `node:write` gate `ahpd node list|add|rm`; task 01, 2026-10-30, `ahpd join` dials the hub, says its versions and workdir, and serves each session from an `ahpd --stdio` of its own; task 02, 2026-10-30, the hub admits a node's token at its join path, refuses an ahpd older than 0.14.1, and holds a session's data socket as the `NestedHost` the proxy reads.
+- **Next action:** [task-04-the-hub-lists-a-node.md](task-04-the-hub-lists-a-node.md).
 - **Open questions:** none; the one asked before task 05 was answered 2026-10-13.
 - **Watch out for:** container/04 tasks 11 and 15 and p9 task 05 change how a nested session closes and resumes; a profile that names a node to make machines on is not planned, see [deferred.md](deferred.md).
 
