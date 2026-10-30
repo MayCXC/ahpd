@@ -77,6 +77,7 @@ const host = createHost({ path, agents: [shout()] });
 | --- | --- | --- |
 | `provider`, `displayName` | Who you are. `provider` is what a client names in `createSession`, so it must be unique among a host's agents | required |
 | `schema()`, `defaults()` | What a session can be told to do differently | required |
+| `completions` | Answers for a key of your own `schema()`, drawn as a picker | optional |
 | `create(start)` | Start one. Returns a `Session` | required |
 | `description` | One line about what this backend is | optional |
 | `probe()` | What you offer, asked once at startup: the models, the commands, and the account your harness bills to | optional |
@@ -96,6 +97,16 @@ some.
 **One schema, not two.** `schema()` is used before a session exists *and* by
 every session that does. Two copies drift, and a composer then offers different
 controls on the new-session screen than in the session.
+
+**`completions` is how a key of your own schema offers answers.** A property
+with no `enum` reads as a fact somebody types, so a key whose values you already
+know - the machine this session runs in, the account it bills to - reaches every
+client as a text box. Map the key to an answerer and the host marks it
+`enumDynamic` and asks you through `sessionConfigCompletions`, seeded once so a
+client that has not asked still labels the value in force. The answerer is
+reached only when the ask names your `provider`, so two backends with a key of
+the same name do not answer for each other. A key you name here that `schema()`
+does not declare is skipped and logged once.
 
 **`probe()` is asked at startup, before any session.** The models to pick from
 and the commands behind a slash are what a composer draws itself from, so

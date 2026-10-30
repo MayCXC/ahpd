@@ -1,6 +1,6 @@
 ---
 title: A harness answers its own setting
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -45,3 +45,8 @@ The host marks that key `enumDynamic`, and asks that harness only when the ask n
 
 ## Resume
 
+Implemented 2026-10-30.
+`Agent.completions` is the map, and `sessionSchema` marks each answered key `enumDynamic`, skipping an undeclared key with one log line.
+`seeded` takes an optional third map, so `resolveSessionConfig` fills the harness key's `enum` from the same answerer.
+`sessionConfigCompletions` asks the named provider's answerer before a plugin's, in the same `try`.
+`packages/sdk/test/session-config-answerer.test.ts` covers the seed, the provider match, a throw and an undeclared key, and `docs/sdk/AGENT.md` documents `completions`.

@@ -391,3 +391,43 @@ it('keeps hostTools plugin-wide and lets a record set its own', async () => {
   const quiet = await turnOf(on.kind, 'copilot', { hostTools: false }, extra);
   expect(quiet.servers).toEqual([]);
 });
+
+it('lists the modes a row found, and keeps a text box where it found none', async () => {
+  const { kind } = await load();
+  const approvalsOf = (id: string): Bag => {
+    const agent = kind.open(viewOf(id, () => ({})));
+    return ((agent.schema() as Bag)['properties'] as Bag)['permissionMode'] as Bag;
+  };
+  expect(approvalsOf('codex')).toMatchObject({
+    enum: ['read-only', 'workspace-write', 'agent', 'agent-full-access'],
+    enumLabels: ['Read-only', 'Workspace access', 'Auto review', 'Full access'],
+  });
+  // A row for an agent whose modes nobody found keeps the plain string.
+  expect(approvalsOf('cline')).not.toHaveProperty('enum');
+});
+
+it('replaces a row\'s modes with the ones a session hears', async () => {
+  const { kind } = await load();
+  const log = join(scratch('heard'), 'requests.jsonl');
+  const agent = kind.open(viewOf('codex', () => ({
+    command: process.execPath,
+    args: [FIXTURE],
+    env: { ACP_LOG: log },
+  })));
+  const approvalsOf = (): Bag => ((agent.schema() as Bag)['properties'] as Bag)['permissionMode'] as Bag;
+  expect(approvalsOf()['enum']).toEqual(['read-only', 'workspace-write', 'agent', 'agent-full-access']);
+
+  const ended: string[] = [];
+  const session = agent.create(startOf('heard', {
+    emit: (_channel: string, action: Bag) => {
+      if (action.type === 'chat/turnComplete' || action.type === 'chat/error') ended.push(String(action.type));
+    },
+  }));
+  started.push(session);
+  session.begin('t1', 'hi');
+  for (let i = 0; i < 3000 && ended.length === 0; i++) await new Promise((resolve) => { setTimeout(resolve, 1); });
+  expect(ended).toEqual(['chat/turnComplete']);
+
+  // The fixture names `ask` and `code`, which are not the row's own.
+  expect(approvalsOf()).toMatchObject({ enum: ['ask', 'code'], enumLabels: ['Ask', 'Code'] });
+});

@@ -44,6 +44,12 @@ export function createConfig(ctx: SessionContext): Config {
     if (state === null || state === undefined) return;
     ctx.modes = { ...state };
     settings.permissionMode = state.currentModeId;
+    /*
+     * The server's list is the agent's from here, so the next new session box
+     * of this agent offers it rather than the preset's, and a server that has
+     * moved its modes is what a client draws next.
+     */
+    ctx.heardModes?.(state.availableModes.map((one) => ({ id: one.id, name: one.name })));
   };
 
   /** The option a model choice is set through, when the server named one. */
@@ -180,11 +186,12 @@ export function createConfig(ctx: SessionContext): Config {
   /**
    * The schema this session reports, with what the server named.
    *
-   * The agent's own schema carries `permissionMode` without an `enum`, because
-   * no server has been asked yet. A session that has asked fills it in - from
-   * the `mode` option where the server named one, and from the legacy modes
-   * where it did not, which is the only place either can come from - and adds
-   * every other option as a control of its own under `acp.<id>`.
+   * The agent's own schema carries `permissionMode` without an `enum` unless the
+   * preset named the agent's modes, because no server has been asked yet. A
+   * session that has asked fills it in - from the `mode` option where the server
+   * named one, and from the legacy modes where it did not, which is the only
+   * place either can come from - and adds every other option as a control of
+   * its own under `acp.<id>`.
    */
   const schemaOf = (): Bag => {
     const base = bag(start.schema());

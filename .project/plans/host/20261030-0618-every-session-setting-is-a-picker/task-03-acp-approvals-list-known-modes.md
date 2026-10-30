@@ -1,6 +1,6 @@
 ---
 title: ACP approvals list the known modes
-status: todo
+status: implemented
 depends: []
 layer: agent-acp
 refs:
@@ -43,3 +43,13 @@ The list is the preset's, until a session of that harness names the server's own
 
 ## Resume
 
+Implemented 2026-10-30.
+`AcpPreset` has `modes`, filled for the three agents whose own source lists their modes.
+Codex reads from its adapter's `AgentMode` class, and Gemini from `buildAvailableModes` without the conditional `plan`.
+Qwen reads from its `APPROVAL_MODE_INFO`.
+Each row names its URL in a comment on the list.
+`AcpOptions.modes` carries the row's list through `optionsOfRecord`, and `acpAgent` keeps it in `lastModes`. `schema()` draws `lastModes` as the `enum` and `enumLabels` of `permissionMode`, and no `enum` when it has none.
+A session calls the callback `acpSession` was given with the `availableModes` its server named, and the next `schema()` lists those instead. The list lives in memory, as *Answers* says, so a restart is back to the row's list.
+Every other preset carries no `modes`, because no source for its modes was found.
+Its `permissionMode` stays a text box until a session of that agent hears the server's own list.
+`packages/agent-acp/test/agent-acp-presets.test.ts` covers the row's list, the text box where a row has none, and the replacement by a session's modes. `docs/plugins/agent-acp.md` says where the list comes from.

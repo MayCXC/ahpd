@@ -1,6 +1,6 @@
 ---
 title: The bot chat offers its bots
-status: todo
+status: implemented
 depends: [task-01-a-harness-answers-its-own-setting.md]
 layer: bot
 refs:
@@ -38,3 +38,10 @@ The Bot chat harness answers `bot` with the bot records, so a person picks a bot
 
 ## Resume
 
+Implemented 2026-10-30.
+`botChatAgent` returns `completions.bot`, which waits for `store.ready()` and answers one item per bot.
+The slug is the value and the name is the label, and the filter matches either without regard to case.
+The key's description is "The bot this chat is with."
+`packages/bot/test/bot-chat.test.ts` covers the seed, the `enumDynamic` mark and a query.
+Plan `plugin/56` was merged into this branch after the build.
+Its change is at `steer` and this task's is at the schema, so the two do not overlap.

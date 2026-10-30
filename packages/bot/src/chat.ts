@@ -1141,12 +1141,34 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
         bot: {
           type: 'string',
           title: 'Bot',
-          description: 'The bot this chat is with, by its slug.',
+          description: 'The bot this chat is with.',
           sessionMutable: false,
         },
       },
     }),
     defaults: () => ({}),
+
+    /*
+     * The bots, as the answers to the chat's one setting.
+     *
+     * Without this the key reached every client as a text box: a property with
+     * no `enum` is a fact somebody types, so a person had to know a bot's slug
+     * and spell it. The store is the only thing that knows which bots there
+     * are, and answering here means every client gets the picker rather than
+     * the one that wrote code for the key by name.
+     *
+     * Waited for rather than read now: the first read of both collections is
+     * what fills the store, and a picker opened before it would offer nothing.
+     */
+    completions: {
+      bot: async (ask) => {
+        await store.ready();
+        const query = ask.query.toLowerCase();
+        return store.all()
+          .map((one) => ({ value: one.id, label: one.name }))
+          .filter((one) => one.value.toLowerCase().includes(query) || one.label.toLowerCase().includes(query));
+      },
+    },
 
     /** Every chat this daemon has a log for, read off each bot's `logs/` folder. */
     list: async (): Promise<Listed[]> => {

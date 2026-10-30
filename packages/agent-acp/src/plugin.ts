@@ -374,6 +374,9 @@ const optionsOfRecord = (shared: Shared, record: AgentView): AcpOptions => {
     ...(hostTools === undefined ? {} : { hostTools }),
     ...(honoursTrust === undefined ? {} : { honoursTrust }),
     ...(toolsChanged === undefined ? {} : { toolsChanged }),
+    // The row's known modes, copied so a session that hears others changes only
+    // this agent's list rather than the row every other record reads.
+    ...(row?.modes === undefined ? {} : { modes: row.modes.map((one) => ({ ...one })) }),
     ...(machine === undefined ? {} : { machine }),
     ...(inMachine === undefined ? {} : { authenticateInMachine: inMachine }),
     ...(record.description === undefined ? {} : { description: record.description }),

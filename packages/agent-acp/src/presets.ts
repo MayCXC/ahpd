@@ -60,6 +60,15 @@ export interface AcpPreset {
    */
   honoursTrust?: boolean;
   /**
+   * The approval modes the agent's server names, as the server names them.
+   *
+   * Set only where the agent's own source or documentation lists them, and the
+   * row says where. A client draws these before any session of the agent has
+   * opened; a session that hears its server's modes replaces the list in the
+   * agent, which is what a server whose modes have moved is read from.
+   */
+  modes?: { id: string; name: string }[];
+  /**
    * What a machine needs to run it: the part its CLI comes from, the variables
    * that point its configuration at a state directory, and that directory with
    * the host files it is seeded from.
@@ -106,6 +115,14 @@ export const presets: Record<string, AcpPreset> = {
     ...rowOf('codex'),
     // The `codex` CLI has no ACP mode of its own; this is Codex behind an
     // adapter, installed with `npm i -g @agentclientprotocol/codex-acp`.
+    // The modes are the adapter's own `AgentMode` class:
+    // https://github.com/agentclientprotocol/codex-acp/blob/main/src/AgentMode.ts
+    modes: [
+      { id: 'read-only', name: 'Read-only' },
+      { id: 'workspace-write', name: 'Workspace access' },
+      { id: 'agent', name: 'Auto review' },
+      { id: 'agent-full-access', name: 'Full access' },
+    ],
     authenticate: { methodId: 'api-key', fromEnv: ['CODEX_API_KEY', 'OPENAI_API_KEY'] },
     machine: {
       part: 'codex',
@@ -116,6 +133,14 @@ export const presets: Record<string, AcpPreset> = {
   gemini: {
     ...rowOf('gemini'),
     args: ['--acp'],
+    // `buildAvailableModes` names these, and adds `plan` only where the agent's
+    // plan mode is enabled, so the list here is the one every session has:
+    // https://github.com/google-gemini/gemini-cli/blob/main/packages/cli/src/acp/acpUtils.ts
+    modes: [
+      { id: 'default', name: 'Default' },
+      { id: 'autoEdit', name: 'Auto Edit' },
+      { id: 'yolo', name: 'YOLO' },
+    ],
     machine: {
       part: 'gemini',
       env: { GEMINI_CLI_HOME: '/ahpd/gemini' },
@@ -215,6 +240,16 @@ export const presets: Record<string, AcpPreset> = {
   qwen: {
     ...rowOf('qwen'),
     args: ['--acp'],
+    // `APPROVAL_MODE_INFO` in this package's bundle names these five, and its
+    // own `docs/features/approval-mode.md` lists the same modes in this order:
+    // https://www.npmjs.com/package/@qwen-code/qwen-code/v/0.26.4
+    modes: [
+      { id: 'plan', name: 'Plan' },
+      { id: 'default', name: 'Default' },
+      { id: 'auto-edit', name: 'Auto Edit' },
+      { id: 'auto', name: 'Auto' },
+      { id: 'yolo', name: 'YOLO' },
+    ],
     machine: {
       part: 'qwen',
       env: { QWEN_HOME: '/ahpd/qwen' },

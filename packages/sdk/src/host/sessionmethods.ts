@@ -57,7 +57,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
     about, activeSessionsMoved, admitted, agents, answeredAs, backendsOwn, beginOrRun, beside, byChat,
     charged, chatAgent, chatConfig, chatIdOf, chatOf,
     chatSummary, chatsReordered, claimable, claims, dir, dispatch, drafts, dropChat, flushDeltas,
-    forWhom, forgetSendersIn, heldAs, hold,
+    forWhom, forgetSendersIn, formOrdered, heldAs, hold,
     isolating, isolated, keepChat, keepProvider, kept, leadOf, allRows, log, madeFrom, meantBy, messageFrom,
     movable, movableMoved, openSession, openedBy, options, orderChats,
     ownerFor, owners, past, placedIn, presence, replayable, removeSession, respell, retool, scoping, seeded,
@@ -1591,12 +1591,21 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       const contributed = await seeded(
         (typeof theirs.properties === 'object' && theirs.properties !== null ? theirs.properties : {}) as Bag,
         { provider, ...(asked === undefined ? {} : { workingDirectory: asked }), config: answered },
+        agent.completions,
       );
-      const properties = {
-        ...contributed,
-        ...(typeof mine.schema.properties === 'object' && mine.schema.properties !== null ? mine.schema.properties : {}),
-        ...scoped.properties,
-      };
+      const hostProperties = (typeof mine.schema.properties === 'object' && mine.schema.properties !== null
+        ? mine.schema.properties
+        : {}) as Bag;
+      /*
+       * In the order the form reads: the computer, then this host's own keys,
+       * then whatever else the backend and another plugin offered. Only the
+       * order changes; what wins a shared name is still the host's value, and
+       * then the scoped one.
+       */
+      const properties = formOrdered(
+        { ...contributed, ...hostProperties, ...scoped.properties },
+        [...Object.keys(hostProperties), ...Object.keys(scoped.properties)],
+      );
       // Iterative, as a real host's is: what has been answered comes back
       // answered, so re-asking does not quietly undo a choice.
       return {
@@ -1626,7 +1635,19 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * fold is what marks the property `enumDynamic`, so a client asking
        * is a client that was told to ask.
        */
-      const answerer = options.sessionConfigCompletions?.[property];
+      /*
+       * A key a backend answers for itself, then a contributed key, before the
+       * host's own.
+       *
+       * A backend's schema is its own account of its settings, and a key of it
+       * that names answers had nowhere to go: the plugin seam answers for a key
+       * a plugin declared, and a backend declares none of those. The ask names
+       * the provider, so the answerer is this backend's only when the client
+       * asked about this backend - a second harness offering the same key name
+       * is not asked what the first one would accept.
+       */
+      const named = typeof params.provider === 'string' ? agents.get(params.provider) : undefined;
+      const answerer = named?.completions?.[property] ?? options.sessionConfigCompletions?.[property];
       if (answerer !== undefined) {
         try {
           /*
