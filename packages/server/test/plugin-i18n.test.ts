@@ -99,6 +99,12 @@ describe('ahpd.i18n', () => {
     symlinkSync(join(home, 'outside'), join(linked, 'i18n'));
     expect(readManifest(linked).i18n).toBeUndefined();
 
+    const filed = pkg('i18n-file-link', { i18n: 'i18n' });
+    write('i18n-file-link/i18n/es.json', JSON.stringify({ meta: { title: 'Dentro' } }));
+    symlinkSync(join(home, 'outside', 'pt.json'), join(filed, 'i18n', 'pt.json'));
+    expect(readManifest(filed).i18n).toEqual({ es: { meta: { title: 'Dentro' } } });
+    expect(readManifest(filed).i18nProblems).toEqual(['plugin i18n-file-link: the catalog i18n/pt.json points outside the plugin package']);
+
     const { loaded, problems } = await load([named]);
     expect(problems).toEqual(['plugin i18n-escape: the i18n folder ../outside points outside the plugin package']);
     expect(loaded.map((one) => one.name)).toEqual(['i18n-escape']);

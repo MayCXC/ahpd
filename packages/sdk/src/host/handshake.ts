@@ -46,13 +46,6 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
   } = ctx;
 
   /**
-   * What this client pushed, narrowed to what that backend asked for.
-   *
-   * Narrowed rather than handed over whole: a token for one resource is
-   * not a token for another, and a backend has no business seeing a
-   * credential meant for something it does not speak to.
-   */
-  /**
    * Keeps the locale this client sent, on the connection and by client id.
    *
    * A `locale` that is not a non-empty string of at most 35 characters is
@@ -70,6 +63,13 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
     else connection.locale = kept;
   };
 
+  /**
+   * What this client pushed, narrowed to what that backend asked for.
+   *
+   * Narrowed rather than handed over whole: a token for one resource is
+   * not a token for another, and a backend has no business seeing a
+   * credential meant for something it does not speak to.
+   */
   const tokensFor = (provider: string): Record<string, string> => {
     const agent = agents.get(provider);
     const out: Record<string, string> = {};

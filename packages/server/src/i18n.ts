@@ -61,7 +61,13 @@ export const readCatalogs = (folder: string, base: string, by: string, problem: 
     const locale = basename(name, '.json');
     if (locale === '') continue;
     try {
-      const found: unknown = JSON.parse(readFileSync(join(real, name), 'utf8'));
+      // A catalog file that links out of the package is refused as the folder is.
+      const file = realpathSync(join(real, name));
+      if (!inside(file, realpathSync(base))) {
+        problem(`${by}: the catalog ${folder}/${name} points outside the plugin package`);
+        continue;
+      }
+      const found: unknown = JSON.parse(readFileSync(file, 'utf8'));
       if (!isRecord(found)) {
         problem(`${by}: the catalog ${folder}/${name} is not a JSON object`);
         continue;
