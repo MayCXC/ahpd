@@ -1,7 +1,7 @@
 ---
 title: A steered bot chat message is its own turn
 domain: plugin
-status: planned
+status: implemented
 priority: high
 created: 2026-10-22
 revalidated: 2026-10-22
