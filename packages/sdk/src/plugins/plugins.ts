@@ -23,6 +23,7 @@ import type { SessionStore } from '../types/sessions.js';
 import type { Usage } from '../types/usage.js';
 import type { Grant, Principal } from '../types/users.js';
 import type { Vault } from '../types/vault.js';
+import type { Catalogs } from '../i18n.js';
 import { idOf, schemeOf } from '../sessions/catalog.js';
 import { frozenCopy } from '../utils/frozen.js';
 import { holds } from '../access/users.js';
@@ -346,6 +347,8 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
    * base's record, and an agent the base was handed directly has none.
    */
   const plugins: Record<string, string> = { ...base.agentPlugins };
+  /** The catalogs of the plugin each added agent came from, by provider. */
+  const agentCatalogs: Record<string, Catalogs> = { ...base.catalogs?.agents };
 
   /*
    * The URI schemes, and who holds each. Seeded from the base for the same
@@ -432,6 +435,7 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
       harnesses.set(agent.provider.toLowerCase(), contribution.by);
       added.push(keptAgent(agent));
       plugins[agent.provider] = contribution.spec ?? contribution.by;
+      if (contribution.i18n !== undefined) agentCatalogs[agent.provider] = contribution.i18n;
     }
 
     for (const [key, entry] of Object.entries(contribution.ports) as [PortKey, PortContribution | undefined][]) {
@@ -623,6 +627,8 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   const sessionCompletions: Record<string, SessionConfigAnswerer> = { ...base.sessionConfigCompletions };
   const holders = new Map<string, string>();
   for (const key of Object.keys(sessionConfig)) holders.set(key, 'the host');
+  /** The catalogs of the plugin that registered each session setting, by key. */
+  const keyCatalogs: Record<string, Catalogs> = { ...base.catalogs?.sessionConfig };
   const backendKeys = new Set<string>();
   for (const agent of options.agents) {
     const schema = agent.schema();
@@ -643,6 +649,7 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
         continue;
       }
       holders.set(key, contribution.by);
+      if (contribution.i18n !== undefined) keyCatalogs[key] = contribution.i18n;
       /*
        * A key with an answerer says so in its own schema.
        *
@@ -665,6 +672,12 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   }
   if (Object.keys(sessionConfig).length > 0) options.sessionConfig = sessionConfig;
   if (Object.keys(sessionCompletions).length > 0) options.sessionConfigCompletions = sessionCompletions;
+  if (Object.keys(keyCatalogs).length > 0 || Object.keys(agentCatalogs).length > 0) {
+    options.catalogs = {
+      ...(Object.keys(keyCatalogs).length === 0 ? {} : { sessionConfig: keyCatalogs }),
+      ...(Object.keys(agentCatalogs).length === 0 ? {} : { agents: agentCatalogs }),
+    };
+  }
 
   if (Object.keys(resourceProviders).length > 0) options.resourceProviders = resourceProviders;
   if (Object.keys(channels).length > 0) options.channels = channels;
@@ -843,6 +856,8 @@ export interface HostRecordingOptions {
    * contribution so the host can record it against each agent it registers.
    */
   spec?: string;
+  /** The catalogs the plugin ships, kept on the contribution for the fold. */
+  i18n?: Catalogs;
   /**
    * Every agent this host knows, read when `machineNeeds` is called.
    *
@@ -1054,6 +1069,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
   const contribution: Contribution = {
     by,
     ...(options.spec === undefined ? {} : { spec: options.spec }),
+    ...(options.i18n === undefined ? {} : { i18n: options.i18n }),
     agents: [],
     tools: [],
     sessionConfig: {},

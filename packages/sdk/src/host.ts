@@ -92,6 +92,8 @@ import { createVscodeMethods } from './host/vscodemethods.js';
 import { createActions } from './host/actions.js';
 import { reservedName } from './plugins/validate.js';
 import type { ConnectionContext, HostContext } from './host/context.js';
+import { HOST_CATALOGS } from './i18n.js';
+import type { Catalogs } from './i18n.js';
 export { GATE, refusalReason } from './host/gate.js';
 
 /**
@@ -1095,7 +1097,14 @@ export function createHost(options: HostOptions): Host {
    * and the helpers declared above it.
    */
   const ctx = {
-    options, dir, known, locales, localeOf: (clientId: string) => locales.get(clientId), replayable, leaves, seenBy, claims, agents, first: options.agents[0], connections, relays: new Map(), holders, sessions, byChat, subagents, owners, names,
+    options, dir, known, locales, localeOf: (clientId: string) => locales.get(clientId),
+    catalogsOf: (key: string, provider: string): readonly (Catalogs | undefined)[] => [
+      options.sessionConfig !== undefined && Object.hasOwn(options.sessionConfig, key)
+        ? options.catalogs?.sessionConfig?.[key]
+        : options.catalogs?.agents?.[provider],
+      HOST_CATALOGS,
+    ],
+    replayable, leaves, seenBy, claims, agents, first: options.agents[0], connections, relays: new Map(), holders, sessions, byChat, subagents, owners, names,
     leadOf, wheres, worktrees, worktreeOf, githubFacts, kept, offered, decided, about, terminals,
     madeFrom, origins, births, moves, listedMeta, browsable, broadcast, presence, beside, marks, lives, lifeOf, restarting, learned, starting,
     logs, detached, refuse, echoTo,

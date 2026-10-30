@@ -56,9 +56,11 @@ describe('ahpd.i18n', () => {
       pt: { meta: { title: 'Demonstração' } },
       es: { meta: { title: 'Demostración' } },
     });
-    const { loaded, problems } = await load([dir]);
+    const { loaded, problems, contributions } = await load([dir]);
     expect(problems).toEqual([]);
     expect(loaded.map((one) => one.name)).toEqual(['i18n-ok']);
+    // Carried on the contribution, so the fold keeps it by key and by agent.
+    expect(contributions[0]?.i18n?.pt).toEqual({ meta: { title: 'Demonstração' } });
   });
 
   it('drops each value that is not an object or a string', () => {

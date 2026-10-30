@@ -32,6 +32,7 @@ import type { Bag } from './common.js';
 import type { SessionConfigAnswerer } from './completions.js';
 import type { ShellEnv } from '../machines/shellenv.js';
 import type { CommandSplitter } from '../access/commandautoapprover.js';
+import type { Catalogs } from '../i18n.js';
 
 /**
  * What a host can say about a directory beyond its path.
@@ -581,6 +582,19 @@ export interface HostOptions {
    * host may set it directly for a control of its own.
    */
   sessionConfigCompletions?: Record<string, SessionConfigAnswerer>;
+  /**
+   * The catalogs a plugin ships, by what it put on the form.
+   *
+   * The fold fills this from each plugin's `ahpd.i18n`, so a key's text is
+   * looked up in the catalogs of the plugin that declared it before the
+   * host's own.
+   */
+  catalogs?: {
+    /** By session setting, the catalogs of the plugin that registered the key. */
+    sessionConfig?: Record<string, Catalogs>;
+    /** By provider, the catalogs of the plugin that registered the agent. */
+    agents?: Record<string, Catalogs>;
+  };
   /**
    * Whether the tools that declare they need advanced permission are offered.
    *

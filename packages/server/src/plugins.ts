@@ -1479,6 +1479,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     ...(options.clearAlert === undefined ? {} : { clearAlert: options.clearAlert }),
     ...(grants.length === 0 ? {} : { grants }),
     ...(declared?.contracts === undefined ? {} : { contracts: declared.contracts }),
+    ...(manifest?.i18n === undefined ? {} : { i18n: manifest.i18n }),
     ...(options.sessions === undefined ? {} : { sessions: options.sessions }),
     ...(options.records === undefined ? {} : { records: options.records }),
     ...(options.collections === undefined ? {} : { collections: options.collections }),

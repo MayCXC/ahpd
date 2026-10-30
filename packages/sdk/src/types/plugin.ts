@@ -27,6 +27,7 @@ import type { ResourceProvider } from './resources.js';
 import type { Owner, UsageEntry } from './usage.js';
 import type { Grant, Principal } from './users.js';
 import type { SecretWork } from './vault.js';
+import type { Catalogs } from '../i18n.js';
 
 /**
  * A kind of trigger a plugin offers, in the protocol's own words.
@@ -1517,6 +1518,8 @@ export interface Contribution {
    * Absent, the plugin's `name` stands for it.
    */
   spec?: string;
+  /** The catalogs the plugin ships in `ahpd.i18n`, by locale, when it ships any. */
+  i18n?: Catalogs;
   /** Backends to append, in registration order. */
   agents: Agent[];
   /** Tools to append, in registration order. */

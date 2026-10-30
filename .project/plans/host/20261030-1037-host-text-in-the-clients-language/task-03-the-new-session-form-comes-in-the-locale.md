@@ -1,6 +1,6 @@
 ---
 title: The new session form comes in the locale
-status: todo
+status: done
 depends: [task-02-the-host-and-each-plugin-carry-a-catalog.md]
 layer: sdk
 refs:
