@@ -45,6 +45,15 @@ export interface Principal {
   /** The roles the record gave them, as written, and the roles their sign-in added. */
   readonly roles: readonly string[];
   /**
+   * The team this principal is, when it is a team key's.
+   *
+   * A team key's principal stands for the team and for no person: its id is
+   * `team:<team>`, and it holds only `proxy:call` and `proxy:models`. `can`
+   * answers for the team, so a role the team was never given confers nothing.
+   * Absent for a person, a plugin and the root connection.
+   */
+  readonly team?: string;
+  /**
    * The roles their sign-in added, which `roles` holds too.
    *
    * Read from the claim the record's `rolesFrom` names, once, at sign-in.
@@ -299,8 +308,20 @@ export interface UserRecord {
 export interface TokenRecord {
   /** The id `revokeToken` takes, and what a principal signed in this way carries. */
   id: string;
-  /** The id of the person the token was minted for. */
-  user: string;
+  /**
+   * The id of the person the token was minted for, when it was minted for one.
+   *
+   * A record holds exactly one of `user` and `team`: a person's key names the
+   * person, and a team's key names the team.
+   */
+  user?: string;
+  /**
+   * The id of the team the token was minted for, when it was minted for one.
+   *
+   * A team key is for the proxy and opens no other door: `verify` answers
+   * nothing for it, and `verifyTeamKey` answers the team.
+   */
+  team?: string;
   /** What the person called it, when they said. */
   label?: string;
   /**
@@ -454,8 +475,20 @@ export interface Users {
    * many hosts and two of them must not share one id.
    */
   readonly resource: Record<string, unknown>;
-  /** The person that token belongs to, or nothing when it belongs to nobody. */
+  /**
+   * The person that token belongs to, or nothing when it belongs to nobody.
+   *
+   * A team key answers nothing here, because it belongs to no person. Only the
+   * proxy asks `verifyTeamKey` for one, so every other door refuses it.
+   */
   verify(token: string): Promise<Principal | undefined>;
+  /**
+   * The team a team key belongs to, or nothing when the token is no team key.
+   *
+   * The proxy's own check, asked only after `verify` answers nothing. Optional
+   * because a directory that is not a file may keep no team keys.
+   */
+  verifyTeamKey?(token: string): Promise<Principal | undefined>;
   /**
    * Everybody, without their credentials, and what their roles resolve to.
    *
@@ -550,10 +583,15 @@ export interface Users {
    * primary. `meta` is what the key says about itself, and each call made with
    * it adds its own entries to those. Optional, like `watch`, because a
    * directory that is not a file may keep no tokens.
+   *
+   * A team key names `team` and no `user`. It holds only `proxy:call` and
+   * `proxy:models`, its scope is its team or a project of it, and its calls are
+   * charged to its team. A team may hold as many keys as a person may.
    */
   mintToken?(
-    user: string,
+    user: string | undefined,
     options?: {
+      team?: string;
       label?: string;
       grants?: readonly Grant[];
       expires?: number;

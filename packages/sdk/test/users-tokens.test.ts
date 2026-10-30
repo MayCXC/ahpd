@@ -6,6 +6,7 @@ import { posix } from '../../../tools/posix.ts';
 import { same } from '../src/listen.js';
 import { fileUsers } from '../src/access/users.js';
 import type { FileUserOptions } from '../src/access/users.js';
+import { scopeFor } from '../src/usage/scopes.js';
 import type { Users } from '../src/types/users.js';
 
 // Counted, not replaced: every comparison still happens, and a case can say
@@ -54,7 +55,8 @@ const open = (options: Partial<FileUserOptions> = {}): Users => fileUsers({ path
 /** The tokens file as it was written, hashes and all. */
 interface StoredToken {
   id: string;
-  user: string;
+  user?: string;
+  team?: string;
   label?: string;
   grants?: string[];
   scope?: string;
@@ -457,6 +459,140 @@ it('answers nothing for a token whose person was removed', async () => {
   expect(await users.verify(minted.secret)).toBeUndefined();
   expect(held?.standing?.()).toBe(false);
   expect(held?.can('file:read')).toBe(false);
+});
+
+it('mints a team key that names its team and no person', async () => {
+  const users = open();
+  await users.addTeam('backend');
+  const minted = await users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call'], label: 'bot' });
+
+  expect(minted.team).toBe('backend');
+  expect(minted.user).toBeUndefined();
+  expect(minted.scope).toBe('backend');
+  expect(minted.label).toBe('bot');
+  const [record] = stored().tokens;
+  expect(record?.team).toBe('backend');
+  expect(record).not.toHaveProperty('user');
+  expect(record?.grants).toEqual(['proxy:call']);
+  // The listing hands back the same record, with the team on it.
+  expect((await users.tokens!())[0]?.team).toBe('backend');
+});
+
+it('answers nothing for a team key at verify, and its team at verifyTeamKey', async () => {
+  const users = open();
+  await users.addTeam('backend');
+  await users.add('ana', ['member']);
+  const team = await users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call'] });
+  const person = await users.mintToken!('ana');
+
+  // The two doors are disjoint: a team key is no person, and a person's key is
+  // no team.
+  expect(await users.verify(team.secret)).toBeUndefined();
+  expect(await users.verifyTeamKey!(person.secret)).toBeUndefined();
+
+  const held = await users.verifyTeamKey!(team.secret);
+  expect(held?.id).toBe('team:backend');
+  expect(held?.team).toBe('backend');
+  expect(held?.token).toBe(team.id);
+  expect(held?.roles).toEqual([]);
+  // Only the proxy's grants, and only the ones the key was minted with.
+  expect(held?.can('proxy:call')).toBe(true);
+  expect(held?.can('proxy:models')).toBe(false);
+  expect(held?.can('session:read')).toBe(false);
+  expect(held?.can('*:*')).toBe(false);
+  // Its scope is the team, and scopeFor resolves a call to it.
+  expect(held?.keyScope).toBe('backend');
+  expect(held?.memberships).toEqual(['backend']);
+  expect(scopeFor(held)).toEqual({ scope: { team: 'backend' } });
+});
+
+it('gives a team key a project of its team as its scope', async () => {
+  const users = open();
+  await users.addTeam('backend');
+  await users.addProject('ahpd');
+  const minted = await users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call'], scope: 'backend:ahpd' });
+  const held = await users.verifyTeamKey!(minted.secret);
+
+  expect(held?.keyScope).toBe('backend:ahpd');
+  expect(held?.memberships).toEqual(['backend', 'backend:ahpd']);
+  expect(scopeFor(held)).toEqual({ scope: { team: 'backend', project: 'ahpd' } });
+});
+
+it('answers nothing for a team key that expired, or whose team was removed', async () => {
+  vi.useFakeTimers();
+  const now = new Date('2026-01-01T00:00:00Z').getTime();
+  vi.setSystemTime(now);
+  const users = open();
+  await users.addTeam('backend');
+  await users.addTeam('sales');
+  const short = await users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call'], expires: now + 1000 });
+  const gone = await users.mintToken!(undefined, { team: 'sales', grants: ['proxy:call'] });
+  const held = await users.verifyTeamKey!(short.secret);
+  expect(held?.standing?.()).toBe(true);
+
+  vi.setSystemTime(now + 2000);
+  expect(held?.standing?.()).toBe(false);
+  expect(held?.can('proxy:call')).toBe(false);
+  expect(await users.verifyTeamKey!(short.secret)).toBeUndefined();
+
+  expect(await users.removeTeam('sales')).toBe(true);
+  expect(await users.verifyTeamKey!(gone.secret)).toBeUndefined();
+});
+
+it('refuses a team key the host cannot mint', async () => {
+  const users = open({ tokensPerPerson: 2 });
+  await users.addTeam('backend');
+  await users.addTeam('sales');
+  await users.addProject('ahpd');
+  await users.add('ana', ['member']);
+
+  await expect(users.mintToken!(undefined, { team: 'nope', grants: ['proxy:call'] }))
+    .rejects.toThrow('no team called nope');
+  // A team holds neither every grant nor one outside the proxy's two.
+  await expect(users.mintToken!(undefined, { team: 'backend' }))
+    .rejects.toThrow('names none');
+  await expect(users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call', 'session:read'] }))
+    .rejects.toThrow('session:read is not a grant a team key may hold');
+  // A person and a team in one mint is a caller that did not say which.
+  await expect(users.mintToken!('ana', { team: 'backend', grants: ['proxy:call'] }))
+    .rejects.toThrow('a token names a user or a team, not both');
+  // The scope is its team or a project of it, and nothing else.
+  await expect(users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call'], scope: 'sales:ahpd' }))
+    .rejects.toThrow('sales:ahpd names another team');
+  await expect(users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call'], scope: 'backend:web' }))
+    .rejects.toThrow('backend:web is not a project this host names');
+  expect(await users.tokens!()).toEqual([]);
+});
+
+it('counts a team key against the same limit as a person', async () => {
+  const users = open({ tokensPerPerson: 2 });
+  await users.addTeam('backend');
+  await users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call'] });
+  await users.mintToken!(undefined, { team: 'backend', grants: ['proxy:models'] });
+
+  await expect(users.mintToken!(undefined, { team: 'backend', grants: ['proxy:call'] }))
+    .rejects.toThrow('team backend may hold 2 tokens at most');
+  expect((await users.tokens!()).filter((one) => one.team === 'backend')).toHaveLength(2);
+});
+
+it('reads a token record naming both a user and a team, or neither, as broken', async () => {
+  writeFileSync(path, JSON.stringify({ users: [{ id: 'ana', roles: ['member'], token: '' }] }));
+  const broken = [
+    { user: 'ana', team: 'backend' },
+    {},
+    { user: 'ana', team: 3 },
+    { user: 'ana', team: '' },
+    { user: 3 },
+  ];
+  for (const owner of broken) {
+    writeFileSync(tokensPath, JSON.stringify({
+      tokens: [{ id: 't1', ...owner, created: 1, token: 'sha256:0' }],
+    }));
+    const said: string[] = [];
+    const users = open({ onProblem: (one) => said.push(one) });
+    expect(await users.tokens!(), JSON.stringify(owner)).toEqual([]);
+    expect(said.some((one) => one.includes('names')), JSON.stringify(owner)).toBe(true);
+  }
 });
 
 it('compares every hash in one pass, for a match and for a miss', async () => {
