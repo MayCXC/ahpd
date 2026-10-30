@@ -351,7 +351,7 @@ describe('driving a turn', () => {
       expect(await decision).toMatchObject({ behavior: 'deny' });
     });
 
-    it('takes an answer to a request nothing is waiting on as a no-op, and says nothing back', async () => {
+    it('refuses an answer to a request nothing is waiting on, to its sender alone', async () => {
       const { p, q, chatUri } = await running().then(async ({ host, client, peer: p, chatUri }) => {
         const q = peer();
         const other = host.accept(q);
@@ -364,10 +364,27 @@ describe('driving a turn', () => {
         await settle();
         return { p, q, chatUri };
       });
-      expect(actions(p).filter((e) => e.rejectionReason !== undefined)).toEqual([]);
+      // The protocol's chat-channel.md, "Server Validation of Client Actions": an answer to no
+      // waiting request SHOULD be rejected, so its sender lets go of it.
+      const refused = actions(p).filter((e) => e.rejectionReason !== undefined);
+      expect(refused.map((e) => e.action.type)).toEqual(['chat/inputCompleted']);
+      expect(refused[0]?.rejectionReason).toContain('nobody');
       expect(actions(q, chatUri).map((e) => e.action.type)).not.toContain('chat/inputCompleted');
       expect(actions(p, chatUri).filter((e) => e.rejectionReason === undefined).map((e) => e.action.type))
         .not.toContain('chat/inputCompleted');
+    });
+
+    it('refuses a confirmation of a call that waits on none', async () => {
+      const { client, peer: p, uri } = await running();
+      client.handle({
+        method: 'dispatchAction',
+        params: { channel: uri, action: { type: 'chat/toolCallConfirmed', toolCallId: 'nobody', approved: true } },
+      });
+      await settle();
+      // The same table: a confirmation of a call not in `pending-confirmation` MUST be rejected.
+      const refused = actions(p).filter((e) => e.rejectionReason !== undefined);
+      expect(refused.map((e) => e.action.type)).toEqual(['chat/toolCallConfirmed']);
+      expect(refused[0]?.rejectionReason).toContain('nobody');
     });
   });
 

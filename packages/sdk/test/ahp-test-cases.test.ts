@@ -314,6 +314,7 @@ const NOT_REPLAYED = [
   '093-usage-wrong-turnid-is-no-op',
   '094-delta-nonexistent-partid-is-no-op',
   '095-toolcalldelta-wrong-status-is-no-op',
+  '096-toolcallconfirmed-wrong-status-is-no-op',
   '097-toolcallcomplete-wrong-status-is-no-op',
   '098-toolcallresultconfirmed-wrong-status-is-no-op',
   '099-endturn-force-cancels-running-tool-call',
@@ -386,9 +387,11 @@ const NOT_REPLAYED = [
   '231-session-inputneededset-preserves-orthogonal-flags',
   '232-chat-turnsloaded-prepends-older-turns',
   '233-chat-turnsloaded-dedupes-overlap-and-clears-cursor',
+  '235-session-input-completion-records-declined-request-in-turn',
   '235-session-mcpserverstartrequested-starts-top-level-server',
   '236-session-input-completion-without-active-turn-records-nothing',
   '236-session-mcpserverstoprequested-stops-auth-required-server',
+  '237-session-input-completion-no-op-unknown-id-with-open-requests',
   '237-session-mcpserverstoprequested-stops-container-child',
   '238-session-mcpserverstartrequested-no-op-absent-customizations',
   '239-session-mcpserverstartrequested-no-op-unknown-id',
@@ -516,6 +519,8 @@ const HOST_REFUSED = [
   '086-toolcall-contentchanged-replaces-existing',
   '097-toolcallcomplete-wrong-status-is-no-op',
   '098-toolcallresultconfirmed-wrong-status-is-no-op',
+  // `<id> is not a call this chat is waiting to have confirmed`
+  '096-toolcallconfirmed-wrong-status-is-no-op',
   // `<key> is not a config key this backend takes`
   '113-session-configchanged-merges-into-config-values',
   '114-session-configchanged-noops-when-config-undefined',
@@ -539,6 +544,8 @@ const HOST_REFUSED = [
   '239-session-mcpserverstartrequested-no-op-unknown-id',
   // `<id> is not a question this chat is waiting on`
   '109-session-input-unknown-actions-are-no-op',
+  '235-session-input-completion-records-declined-request-in-turn',
+  '237-session-input-completion-no-op-unknown-id-with-open-requests',
 ];
 
 /**
@@ -694,17 +701,17 @@ describe('the protocol’s root, session and chat cases, through ahpd', () => {
   }
 
   it('names every case it cannot replay, and no other', () => {
-    expect(NOT_REPLAYED).toHaveLength(198);
-    expect(new Set(NOT_REPLAYED).size).toBe(198);
-    expect(HOST_REFUSED).toHaveLength(52);
+    expect(NOT_REPLAYED).toHaveLength(201);
+    expect(new Set(NOT_REPLAYED).size).toBe(201);
+    expect(HOST_REFUSED).toHaveLength(55);
     // The rest of the refused cases are the ones a client may not send, and
     // each of those is checked against the protocol's own answer per case.
     expect(NOT_REPLAYED.length - HOST_REFUSED.length).toBe(146);
     expect(Object.keys(HOST_OWNS)).toHaveLength(14);
-    // And 36 that ran and agreed, which need no entry in either list: they are
+    // And 33 that ran and agreed, which need no entry in either list: they are
     // the coverage this suite is for, and a case joining or leaving them is
     // what moves this number.
-    expect(NOT_REPLAYED.length + Object.keys(HOST_OWNS).length + 36).toBe(hostCases.length);
+    expect(NOT_REPLAYED.length + Object.keys(HOST_OWNS).length + 33).toBe(hostCases.length);
   });
 });
 
