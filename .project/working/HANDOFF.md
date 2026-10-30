@@ -4,27 +4,36 @@ title: "Handoff: where ahpd stands, and what is pending"
 
 # Handoff: where `ahpd` stands, and what is pending
 
-Current progress and pending items only, as of 2026-10-28.
+Current progress and pending items only, as of 2026-10-30.
 `node ~/.claude/skills/do-spec/scripts/plans.mjs` lists the backlog, and each plan's Resume state is its detail. What merged is in `git log`, and what was released is in [CHANGELOG.md](../../CHANGELOG.md).
 
 ## Main
 
 - The last release is 0.14.0 (`v0.14.0`). The CHANGELOG holds 0.14.1 as unreleased.
-- The last code merge on main is PR #123 (`fa0cdd75`). It fixes the flaky `nested-process.test.ts` case: a chat watched under another spelling of a sleeping session now hears the session wake.
-- PR #122 (`d6b282f9`) and PR #121 (`18bdda14`) merged MayCXC's branches: the Claude logins cooldown, and the host plans 1248, 1303 and 1334. PR #120 (x-ahpd/me) merged before them.
+- On 2026-10-30, six PRs merged on green CI, Windows included:
+  - #156: a dispatch that throws is refused.
+  - #157: a targeted token reaches only its server.
+  - #159: a token reaches only the sessions its connection watches (the head of #158).
+  - #160: a record agent runs in a machine.
+  - #161: only the echo carries the origin.
+  - #151: container/05 p8, a profile's machines on another server's Docker.
+- The last code merge on main is #151 (`f3495654`).
+- #158 was based on the #157 branch, so its merge went into that branch and never reached main. #159 took the same head into main. Check `baseRefName` before you merge a stacked fork PR.
+- Disposing a session that this process does not hold leaves its disposable machine behind. The `held === undefined` branch in `lifecycle.ts` never calls `leaveForgotten`. It is on main from before p8, and a small plan of its own fixes it.
 - The README is rewritten for people who run ahpd (`a22c1934`). The brief it came from is `ahp-review/ahpd-review/ahpd-readme-2026-10-27/`.
-- `/github/ahpd` is on main, and the tree is clean. Fetch, and check the base before you cut a build worktree.
+- `/github/ahpd` is on main with one local commit that is not pushed: `1965724e` (briefs: send an empty writable directory, and reload skills with agents). Softov wrote it. Leave it for him.
+- Fetch, and check the base before you cut a build worktree.
 - Softov's dev daemon runs from source on port 37537. He restarted it after #114.
 - Code goes through a PR on `softov/ahpd`. Plan-only commits go to main. Run `gh pr checks` with `-R softov/ahpd` outside a repo.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by every test run. Restore it with `git checkout --` and never print it.
 - On this machine, two Docker tests time out: `computer-devcontainer` and `computer-disposable`. They time out on main too, and CI passes them.
-- The worktrees in `/github/ahpd.worktrees/` are `build-agents-fda88f4a` (the old container/05 p8), and `fork-maycxc-1237`, `review-maycxc-union` and `fix-nested-resume-flake`. The last three are merged and wait for Softov's word to remove. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
-- The local branch `fork/maycxc-24-25-26-127-128` is the closed PR #110. It is not on main, and #113 replaced it. The local branches `fork/maycxc-1237`, `fork/maycxc-1248-1303-1334` and `fix/nested-resume-flake` are merged.
+- The worktrees in `/github/ahpd.worktrees/` are `build-agents-fda88f4a` (the old container/05 p8) and `review-maycxc-union`. The second is merged and waits for Softov's word to remove. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
+- The local branch `fork/maycxc-1248-1303-1334` is merged.
 
 ## Waiting for Softov
 
 - host/114, host/116 and x-ahpd/me: review. x-ahpd/me gives `kind` a third value, `plugin`, which the plan did not name.
-- A daemon restart, to serve host/116, `x-ahpd/me`, the host fixes of #121, the Claude logins of #122 and the chat fix of #123.
+- A daemon restart, to serve #156, #157, #159, #160, #161 and #151.
 - After the daemon restart, open a terminal in ahpw and in ahpc. `supportsCommandDetection` is now false until the shell prints its first mark.
 - host/126: review. ahpc and ahpw must create `ahp-session:` sessions.
 - daemon/29: the final checklist in its plan.
@@ -47,7 +56,9 @@ Current progress and pending items only, as of 2026-10-28.
 
 ## Next builds
 
-- Planned with tasks: container/05 p8 (task 01 first) and container/05 p10 (task 03 next).
+- The fix for the disposable machine left behind, as a small plan and PR.
+- The VM plan `20261030-1141-a-vm-is-made-on-a-server`, the last part of container/05 p8.
+- container/05 p10 (task 03 next).
 - The ahpw Connect button for plugin/71 is ahpw plan plugins/09, planned.
 
 ## Outside this repository
