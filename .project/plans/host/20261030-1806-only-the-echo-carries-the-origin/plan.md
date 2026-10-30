@@ -1,7 +1,7 @@
 ---
 title: Only the echo carries the origin
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -83,7 +83,7 @@ dispatchAction -> applyNow (applying = origin) -> applyDispatch -> a handler or 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Only the echo carries the origin](task-01-only-the-echo-carries-the-origin.md) | todo | - |
+| [01 - Only the echo carries the origin](task-01-only-the-echo-carries-the-origin.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -94,13 +94,13 @@ dispatchAction -> applyNow (applying = origin) -> applyDispatch -> a handler or 
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-30.
-- **Next action:** [task-01-only-the-echo-carries-the-origin.md](task-01-only-the-echo-carries-the-origin.md).
+- **Done so far:** planned and built 2026-10-30. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a client action other than a turn or a stop, sent to a nested session, still comes back without its origin.
 
 ## Final verification checklist
 
-- [ ] Each new case fails on `920d154a` for the reason it names, and passes after the change.
-- [ ] The touched suites and the suites that assert an origin pass.
-- [ ] `pnpm run typecheck` reports no errors.
+- [x] Each new case fails on `920d154a` for the reason it names, and passes after the change.
+- [x] The touched suites and the suites that assert an origin pass.
+- [x] `pnpm run typecheck` reports no errors.

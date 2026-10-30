@@ -1,6 +1,6 @@
 ---
 title: Only the echo carries the origin
-status: todo
+status: done
 depends: []
 layer: host
 refs:
@@ -53,3 +53,5 @@ No other action carries it.
 
 ## Resume
 
+Done 2026-10-30.
+Every step is built, and the touched suites and the type check pass.
