@@ -217,6 +217,19 @@ describe('dropping the turns after one', () => {
     }).snapshot.state;
     expect(state.turns).toEqual([]);
   });
+
+  it('says a conversation started over back with the origin of the client that asked', async () => {
+    const { client, peer: p, chatUri } = await twice();
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: chatUri, clientSeq: 6, action: { type: 'chat/truncated' } },
+    });
+    await settle();
+    // Said once the agent's copy is deleted, which is after the dispatch was
+    // applied: the client still holds the action, and this is its answer.
+    const truncated = actions(p, chatUri).find((e) => e.action.type === 'chat/truncated');
+    expect(truncated?.origin).toEqual({ clientId: 'probe', clientSeq: 6 });
+  });
 });
 
 describe('a chat made out of another', () => {

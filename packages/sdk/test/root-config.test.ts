@@ -678,6 +678,19 @@ it('sends an admin write to the daemon, and its echo to the admins only', async 
   expect(heardOnRoot(member.heard)).toEqual([expect.objectContaining({ action: { type: 'root/configChanged', config: {} } })]);
 });
 
+it('gives the echo of a daemon key its writer\'s origin, once the daemon has answered', async () => {
+  const { signedIn, heardOnRoot } = served();
+  const admin = await signedIn('admin', 'admin');
+  await admin.client.handle({
+    method: 'dispatchAction',
+    params: { channel: ROOT, clientSeq: 6, action: { type: 'root/configChanged', config: { daemonPort: 9000 } } },
+  });
+  await settle();
+  // The port answers a write later than the dispatch was applied, and the
+  // echo goes out with the answer: the admin is still holding the action.
+  expect(heardOnRoot(admin.heard)).toEqual([expect.objectContaining({ origin: { clientId: 'admin', clientSeq: 6 } })]);
+});
+
 it('keeps a written daemon key out of the host half, so a member reads none of it', async () => {
   const { signedIn, rootOf } = served();
   const admin = await signedIn('admin', 'admin');

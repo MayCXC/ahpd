@@ -322,12 +322,20 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
   /**
    * Say one thing on one channel, as though this host did it.
    *
-   * `origin` defaults to whatever this host is applying right now, so a
-   * dispatch made from inside an applied action carries that action's origin
-   * without saying so again; the few sites that answer in a later turn of the
-   * event loop pass it themselves.
+   * With no `origin` it is this host's own action, unless it is the echo of
+   * the dispatch being applied right now - the client's own action, said back
+   * - or the turn a backend owes a client through `owe`: those carry the
+   * client's origin. The few sites that say an echo in a later turn of the
+   * event loop pass the origin themselves.
    */
   dispatch: (channel: string, given: Record<string, unknown>, origin?: Origin | undefined) => void;
+  /**
+   * A client's turn handed to a backend, which says it back when it is ready.
+   *
+   * `chat/turnStarted` and `chat/turnCancelled` under `turnId` go out carrying
+   * `origin`, however long the backend takes; nothing else does.
+   */
+  owe: (type: 'chat/turnStarted' | 'chat/turnCancelled', turnId: string, origin: Origin) => void;
   /**
    * Send every streamed delta still held in the window, oldest first.
    *

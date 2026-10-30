@@ -356,6 +356,27 @@ describe('a turn, with the switch on', () => {
     expect(rejection(said)).toBeUndefined();
   });
 
+  it('gives a turn its origin when the check that allowed it answers after the dispatch', async () => {
+    const { client, said } = await signedIn(await host(true), 'alice');
+    await makeSession(client, 'sonnet', 'claude', 'sandbox-alice');
+    const chat = 'ahp-chat:/sonnet';
+    await client.handle({ method: 'subscribe', params: { channel: chat } });
+    void client.handle({
+      method: 'dispatchAction',
+      params: {
+        channel: chat,
+        clientSeq: 11,
+        action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hello', model: { id: 'anthropic/sonnet-5' } } },
+      },
+    });
+    await settle();
+    expect(rejection(said)).toBeUndefined();
+    const started = said.notes
+      .map((note) => note.params as { action?: { type?: string }; origin?: unknown })
+      .find((params) => params.action?.type === 'chat/turnStarted');
+    expect(started?.origin).toEqual({ clientId: 'probe', clientSeq: 11 });
+  });
+
   it('refuses example 21: A5 refuses bob\'s turn on fable-5, naming the row', async () => {
     const { client, said } = await signedIn(await host(true), 'bob');
     // The same row that let his session through, because this turn did name the
