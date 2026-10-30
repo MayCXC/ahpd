@@ -7,19 +7,19 @@ created: 2026-10-29
 revalidated: 2026-10-29
 refs:
   - file:///github/ahpd/.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, part 2
-  - git://5e2b7003 - the commit of `main` the facts were checked at
-  - "[code://packages/sdk/src/types/users.ts#L271-L299](../../../../packages/sdk/src/types/users.ts#L271-L299) - `TokenRecord`, whose `user` becomes one of `user` and `team`"
-  - "[code://packages/sdk/src/types/users.ts#L390-L400](../../../../packages/sdk/src/types/users.ts#L390-L400) - `Users.verify`, which answers a person"
-  - "[code://packages/sdk/src/access/users.ts#L1144-L1180](../../../../packages/sdk/src/access/users.ts#L1144-L1180) - `verify`, which compares every hash"
-  - "[code://packages/sdk/src/access/users.ts#L1512-L1569](../../../../packages/sdk/src/access/users.ts#L1512-L1569) - `mintToken`, which needs a person today"
-  - "[code://packages/sdk/src/access/tokens.ts#L95-L176](../../../../packages/sdk/src/access/tokens.ts#L95-L176) - the token commands, and `authorize` for a caller without `user:write`"
-  - "[code://packages/server/src/commands/token.ts#L150-L240](../../../../packages/server/src/commands/token.ts#L150-L240) - `ahpd token mint`, `list` and `revoke`"
-  - "[code://packages/server/src/proxy/caller.ts#L86-L112](../../../../packages/server/src/proxy/caller.ts#L86-L112) - `callerOf`, the one door a team key opens"
-  - "[code://packages/server/src/proxy/listener.ts#L472-L494](../../../../packages/server/src/proxy/listener.ts#L472-L494) - `chargedAs`, which charges a person as `user:<id>`"
-  - "[code://packages/sdk/src/access/decide.ts#L101-L112](../../../../packages/sdk/src/access/decide.ts#L101-L112) - `scoped`, which matches `user:` rows by the principal's id"
+  - git://97957653 - the commit of `main` the facts were checked at
+  - "[code://packages/sdk/src/types/users.ts#L299-L357](../../../../packages/sdk/src/types/users.ts#L299-L357) - `TokenRecord`, whose `user` becomes one of `user` and `team`"
+  - "[code://packages/sdk/src/types/users.ts#L448-L458](../../../../packages/sdk/src/types/users.ts#L448-L458) - `Users.verify`, which answers a person"
+  - "[code://packages/sdk/src/access/users.ts#L1227-L1263](../../../../packages/sdk/src/access/users.ts#L1227-L1263) - `verify`, which compares every hash"
+  - "[code://packages/sdk/src/access/users.ts#L1595-L1682](../../../../packages/sdk/src/access/users.ts#L1595-L1682) - `mintToken`, which needs a person today"
+  - "[code://packages/sdk/src/access/tokens.ts#L133-L221](../../../../packages/sdk/src/access/tokens.ts#L133-L221) - the token commands, and `authorize` for a caller without `user:write`"
+  - "[code://packages/server/src/commands/token.ts#L206-L307](../../../../packages/server/src/commands/token.ts#L206-L307) - `ahpd token mint`, `list` and `revoke`"
+  - "[code://packages/server/src/proxy/caller.ts#L89-L139](../../../../packages/server/src/proxy/caller.ts#L89-L139) - `callerOf`, the one door a team key opens"
+  - "[code://packages/server/src/proxy/listener.ts#L482-L505](../../../../packages/server/src/proxy/listener.ts#L482-L505) - `chargedAs`, which charges a person as `user:<id>`"
+  - "[code://packages/sdk/src/access/decide.ts#L131-L143](../../../../packages/sdk/src/access/decide.ts#L131-L143) - `scoped`, which matches `user:` rows by the principal's id"
   - "[code://packages/server/src/commands/authorize.ts#L84](../../../../packages/server/src/commands/authorize.ts#L84) - `/api` signs in through `users.verify`"
   - "[code://packages/sdk/src/host/handshake.ts#L591](../../../../packages/sdk/src/host/handshake.ts#L591) - the websocket signs in through `users.verify`"
-  - "[code://packages/server/src/commands/run.ts#L597-L609](../../../../packages/server/src/commands/run.ts#L597-L609) - the daemon's door signs in through `users.verify`"
+  - "[code://packages/server/src/commands/run.ts#L611-L623](../../../../packages/server/src/commands/run.ts#L611-L623) - the daemon's door signs in through `users.verify`"
 ---
 
 ## Goal

@@ -16,13 +16,13 @@ The websocket, `/api` and the daemon's door refuse the key, because they ask `us
 
 ## Files
 
-- `UPDATE: packages/server/src/proxy/caller.ts:86-112` - `callerOf` asks `users.verifyTeamKey` when `users.verify` answers nothing.
-- `UPDATE: packages/server/src/proxy/listener.ts:472-494` - `chargedAs` charges a principal with `team` as `team:<team>`.
-- `UPDATE: packages/sdk/src/access/decide.ts:101-112` - `scoped` never matches a `user:` row for a principal with `team`.
+- `UPDATE: packages/server/src/proxy/caller.ts:89-139` - `callerOf` asks `users.verifyTeamKey` when `users.verify` answers nothing.
+- `UPDATE: packages/server/src/proxy/listener.ts:482-505` - `chargedAs` charges a principal with `team` as `team:<team>`.
+- `UPDATE: packages/sdk/src/access/decide.ts:131-143` - `scoped` never matches a `user:` row for a principal with `team`.
 - `UPDATE: packages/server/test/proxy-listener.test.ts` - a call with a team key.
 - `UPDATE: packages/server/test/proxy-policy-usage.test.ts` - the record and the policy rows.
 - `UPDATE: packages/server/test/server-http.test.ts` - a team key is refused on `/api`.
-- `UPDATE: docs/server/PROXY.md:51-68` - "Who may call" names a team key.
+- `UPDATE: docs/server/PROXY.md:51-78` - "Who may call" names a team key.
 - `UPDATE: docs/sdk/AUTHENTICATION.md` - a team key opens the proxy and no other door.
 
 ## Steps

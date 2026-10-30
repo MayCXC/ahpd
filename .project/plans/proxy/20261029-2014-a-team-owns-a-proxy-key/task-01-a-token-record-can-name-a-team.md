@@ -15,12 +15,12 @@ A token record names a person in `user` or a team in `team`, never both.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/types/users.ts:271-299` - `TokenRecord` makes `user` optional, adds `team?: string`, and says one of them is set.
-- `UPDATE: packages/sdk/src/types/users.ts:40-130` - adds `team?: string` to `Principal`: the team a team key stands for.
-- `UPDATE: packages/sdk/src/types/users.ts:390-420` - adds `verifyTeamKey(token)` to `Users`.
-- `UPDATE: packages/sdk/src/access/users.ts:905-940` - the tokens file reader refuses a record with both or neither of `user` and `team`.
-- `UPDATE: packages/sdk/src/access/users.ts:1144-1200` - `verify` skips a team key, and `verifyTeamKey` compares the same hashes and answers a team principal.
-- `UPDATE: packages/sdk/src/access/users.ts:1512-1569` - `mintToken` takes `{ team }` in place of a person, checks the team, the grants and the scope, and counts the team's live keys.
+- `UPDATE: packages/sdk/src/types/users.ts:299-357` - `TokenRecord` makes `user` optional, adds `team?: string`, and says one of them is set.
+- `UPDATE: packages/sdk/src/types/users.ts:42-160` - adds `team?: string` to `Principal`: the team a team key stands for.
+- `UPDATE: packages/sdk/src/types/users.ts:448-478` - adds `verifyTeamKey(token)` to `Users`.
+- `UPDATE: packages/sdk/src/access/users.ts:908-983` - the tokens file reader refuses a record with both or neither of `user` and `team`.
+- `UPDATE: packages/sdk/src/access/users.ts:1227-1283` - `verify` skips a team key, and `verifyTeamKey` compares the same hashes and answers a team principal.
+- `UPDATE: packages/sdk/src/access/users.ts:1595-1682` - `mintToken` takes `{ team }` in place of a person, checks the team, the grants and the scope, and counts the team's live keys.
 - `UPDATE: packages/sdk/test/users-tokens.test.ts` - the record, the two verifies and the mint.
 
 ## Steps

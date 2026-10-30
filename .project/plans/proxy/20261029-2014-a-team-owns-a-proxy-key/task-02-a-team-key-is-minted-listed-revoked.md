@@ -15,11 +15,11 @@ Only root and a caller who holds `user:write` reach them for a team.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/access/tokens.ts:95-176` - the commands take `team`, refuse it beside `user`, and `authorize` refuses a caller who names a team.
-- `UPDATE: packages/server/src/commands/token.ts:110-240` - `--team <team>` on `mint`, `list` and `revoke`, refused beside `--user`.
+- `UPDATE: packages/sdk/src/access/tokens.ts:133-221` - the commands take `team`, refuse it beside `user`, and `authorize` refuses a caller who names a team.
+- `UPDATE: packages/server/src/commands/token.ts:149-307` - `--team <team>` on `mint`, `list` and `revoke`, refused beside `--user`.
 - `UPDATE: packages/sdk/test/token-methods.test.ts` - the `team` param and who may use it.
 - `UPDATE: packages/server/test/token-command.test.ts` - the flag.
-- `UPDATE: docs/server/USERS.md:37-59` - "Tokens of their own" says how to mint a team key.
+- `UPDATE: docs/server/USERS.md:37-71` - "Tokens of their own" says how to mint a team key.
 
 ## Steps
 
