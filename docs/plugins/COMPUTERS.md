@@ -84,6 +84,7 @@ A container someone made with `devcontainer up` by hand carries only the CLI's `
 | `resourceRead` on `computer://<id>/status` | The runtime's record of one |
 | `resourceRead` on `computer://<id>/capabilities` | The runtime, the manifest fields and the limits |
 | `resourceRead` on `computer://<id>/stats` | CPU, memory, processes, network and disk right now |
+| `resourceRead` on `computer://ssh.<name>/server` | What an ssh box can run, and the lines that fix what it lacks; see [What the box can run](#what-the-box-can-run) |
 | `resourceRead` / `resourceWrite` on `computer://<id>/state` | `running` or `stopped`; write `running`, `stopped` or `restarted` |
 | `resourceWrite` to `computer://<id>` | Make one |
 | `resourceDelete` on `computer://<id>` | Destroy it and everything in it |
@@ -345,6 +346,37 @@ A policy names every ssh machine with `computer: ["ssh.*"]`.
 - Its own model credentials. Nothing is sent from this host: `host` above sources a file on the box, because a non-interactive ssh reads no profile.
 - This host's key in `authorized_keys`, and the box's host key known to this host. Every call passes `BatchMode=yes`, so a password prompt or an unknown host key fails with ssh's own sentence.
 
+### What the box can run
+
+`computer://ssh.<name>/server` asks the box what it has. Each read sends one `sh` script over ssh and answers JSON: the user it ran as, and one item for each part below. Nothing is installed on the box.
+
+```json
+{ "user": "me",
+  "items": {
+    "docker": { "ok": true, "found": "29.8.1", "fix": [] },
+    "libvirt": { "ok": false, "found": "not installed", "fix": [
+      "sudo apt install libvirt-daemon-system qemu-system-x86 qemu-utils virtinst cloud-image-utils",
+      "sudo usermod -aG libvirt me",
+      "# log in to the box again, so the new group applies"
+    ] } } }
+```
+
+| Item | Ok when |
+| --- | --- |
+| `os` | `/etc/os-release` names the system. |
+| `arch` | `uname -m` answers. |
+| `cpus` | `nproc` answers a count. |
+| `memory` | `/proc/meminfo` gives `MemTotal`. |
+| `disk` | `df` gives the free space of the home folder and of `/var/lib`. |
+| `docker` | `docker` is on the box. |
+| `dockerAccess` | `docker info` works as the user. |
+| `kvm` | `/dev/kvm` exists, and the user can read and write it. |
+| `libvirt` | `virsh` is on the box. |
+| `libvirtAccess` | `virsh -c qemu:///system list` works as the user. |
+| `ahpd` | `ahpd --version` answers, from the `PATH` or from `~/.local/node/bin`, where the install script puts it. |
+
+`fix` holds the lines to run on the box, in order. A line that starts with `#` is a note, so the list can be pasted into a shell as it is. The `apt` lines are for Debian and Ubuntu; on another system the fix names the package to install. A new group takes effect at the next login, so log in again before you read the leaf again.
+
 ### What runs there
 
 Every session on an ssh machine runs nested, whatever its backend: `<host> --stdio --plugin <the agent's plugin>` on the box, over one `ssh -T`.
@@ -531,6 +563,12 @@ Two agents that ask for the same thing at one target get it once: an environment
 A mount whose host path is not there is refused at create, naming the mount and whether it came from the plugin options, a profile or a body - not mounted as an empty directory for the session to find out about later. A relative source is refused the same way, because Docker reads `cache:/cache` as a named volume rather than as a path on this host. The check is at create and not at load, so a folder made after the daemon started is still accepted, and the same is true of a need's own value.
 
 The names are published in the create schema as an `enum` with titles and descriptions in `x-choices`, so a client can draw a picker. No profiles means no such property.
+
+`server` names the entry of `ssh.machines` that a profile's machines are made on, and that box's `server` leaf says what it can run. A profile whose `server` is not an entry there is left out, with a line in the log:
+
+```json
+{ "profiles": { "remote": { "title": "On dev02", "server": "dev02" } } }
+```
 
 ## Disposable machines
 

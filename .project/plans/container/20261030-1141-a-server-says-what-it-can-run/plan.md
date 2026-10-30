@@ -80,7 +80,7 @@ profile.server = <name> -> [new] requireOn(box, needs) before the first create o
 | [02 - The report is a leaf of the ssh machine](task-02-the-report-is-a-leaf.md) | done | 01 |
 | [03 - A profile names its server and is checked first](task-03-a-profile-names-its-server.md) | done | 01 |
 | [04 - dev02 is checked and fixed by hand](task-04-dev02-is-checked-by-hand.md) | done | 02 |
-| [05 - Docs](task-05-docs.md) | todo | 03, 04 |
+| [05 - Docs](task-05-docs.md) | done | 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -90,8 +90,8 @@ profile.server = <name> -> [new] requireOn(box, needs) before the first create o
 
 ## Resume state
 
-- **Done so far:** tasks 01 to 04.
-- **Next action:** [task-05-docs.md](task-05-docs.md).
+- **Done so far:** tasks 01 to 05.
+- **Next action:** write `implemented.md` and close the plan after the merge.
 - **Open questions:** none.
 - **Watch out for:** the script must run under `sh`, not `bash`, and every probe must not fail the script when a program is absent.
 
