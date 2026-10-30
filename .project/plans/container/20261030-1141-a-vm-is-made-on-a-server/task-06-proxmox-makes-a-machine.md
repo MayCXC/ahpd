@@ -1,6 +1,6 @@
 ---
 title: Proxmox makes a machine the same way
-status: todo
+status: doing
 depends: [task-04-lifecycle-and-up-time.md, task-05-a-template-from-versions-json.md]
 layer: "computer"
 refs:
@@ -33,3 +33,14 @@ refs:
 - By hand on the Proxmox node named then.
 
 ## Resume
+
+- Code and tests done on 2026-10-30. The check by hand waits until Softov names a Proxmox node.
+- `vm.ts` holds what libvirt and Proxmox share: the waits, the ssh reach, the labels, the seed, the template steps and the lifecycle. Each hypervisor is a `VmMaker` of verbs keyed by server and name.
+- `proxmox.ts` is the Proxmox maker. Every call is one `request` on `node:https`, with `ca` when the option names a PEM file.
+- A linked clone of `proxmox.template` is made with `full=0`. Its config is given the login, the key, `ipconfig0=ip=dhcp`, the `ahpd` tag and the labels as JSON in its notes.
+- The address is the first IPv4 address that is not the loopback in `agent/network-get-interfaces`. The template must have the QEMU guest agent.
+- A template built here is a full clone of `proxmox.image` onto `proxmox.storage`. Its packages go in with `apt-get` over ssh, since Proxmox's cloud-init takes no package list.
+- A Proxmox profile's `server` is optional and is only the box that `ssh -J` goes through. The node is not checked over ssh.
+- The secret is read with `host.secret` at each call. A 401 says the token id and Proxmox's reason, never the secret.
+- `computer-proxmox.test.ts` runs a fake API over TLS, with a certificate that `openssl` makes for the run.
+
