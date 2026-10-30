@@ -155,6 +155,8 @@ export interface Engine {
 export interface ServedEngine extends Engine {
   /** The plugin that registered it. */
   by: string;
+  /** What configuration named that plugin by, a package or a path, where it named one. */
+  spec?: string;
 }
 
 /** The three states an agent row can be in. */

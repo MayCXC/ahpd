@@ -3,7 +3,7 @@ import { realpathSync } from 'node:fs';
 import { isAbsolute, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ComputerPort, ContainerPort, MachineNeed, MachineSource, Owner, Plugin, PluginSpec, SecretRef, SecretWork } from '@ahpd/sdk';
-import { resolveNeeds, secretRef, strings } from '@ahpd/sdk';
+import { AGENT_RECORD_VARIABLE, resolveNeeds, secretRef, strings } from '@ahpd/sdk';
 import { cliOf, devContainer, hasDefinition, idLabels } from './devcontainer.js';
 import type { CliOptions } from './devcontainer.js';
 import { COMPUTERS_SCHEME, computerCatalogue } from './catalogue.js';
@@ -1397,12 +1397,20 @@ export const apply: Plugin['apply'] = (host, options) => {
     if (held === undefined) return undefined;
     const host = await made.hostCommand(id) ?? hostDefault;
     const [program, ...before] = host;
+    const away = offHost(id);
+    /*
+     * The record of an agent made from a record, which the host inside serves.
+     * It goes in the environment, which the runtime gives by name; a machine
+     * off this host gets the copy with no secret field, for the reason below.
+     */
+    const record = asked.record === undefined ? undefined : away ? asked.record.bare : asked.record.whole;
     const startWith = {
       command: program ?? hostDefault[0],
       // One `--plugin` per spec, which is how the daemon's own flag repeats.
       args: [...before, '--stdio', ...asked.plugins.flatMap((plugin) => ['--plugin', plugin])],
       ...(asked.cwd === undefined ? {} : { cwd: asked.cwd }),
       ...(asked.provider === undefined ? {} : { provider: asked.provider }),
+      ...(record === undefined ? {} : { env: { [AGENT_RECORD_VARIABLE]: JSON.stringify(record) } }),
     };
     /*
      * A machine off this host is handed nothing of this host's vault: the ahpd
@@ -1411,7 +1419,7 @@ export const apply: Plugin['apply'] = (host, options) => {
      * also keeps a session in such a machine clear of the refusal above, since
      * it never reaches it.
      */
-    const spawn = offHost(id) ? await made.how(id, startWith) : await reach(id, startWith);
+    const spawn = away ? await made.how(id, startWith) : await reach(id, startWith);
     if (spawn === undefined) return undefined;
     /*
      * Where the session works inside: the caller's folder read through the

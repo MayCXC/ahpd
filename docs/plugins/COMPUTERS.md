@@ -158,6 +158,15 @@ An agent registered from a preset says so with `variant: true`, as every Claude 
 An agent handed to the host directly rather than through a plugin cannot run nested, and its session says the host does not know which plugin serves it.
 A plugin loaded from a path names a file on this host, so the machine has to have it at that path.
 
+**An agent made from a record takes its record inside.**
+A cofold or pi agent is a record of its engine, so the inner host is started with the plugin that registered that engine.
+The record goes in `AHPD_AGENT_RECORD`, as JSON, in the environment of the command that starts the inner host.
+The inner host serves it under the record's id, from memory, and never writes it to its own agent records.
+A machine on this host gets the whole record, keys included, by name: `docker exec -e AHPD_AGENT_RECORD`, never its value in an argument.
+An ssh box and a dialled node get the record without its secret fields.
+The `ahpd` there needs the key set up by hand, as it does for its own configuration.
+A record of an engine the inner host did not load is refused at its start, and the line names the engine.
+
 **The inner host takes nothing from the outer plugin's options.**
 It loads the plugin with its defaults, and what holds inside a machine is its profile and what that mounts: for cofold, its configuration file at the [fixed target](#cofold-in-a-machine), and for pi, its [agent directory](#pi-in-a-machine) at `/ahpd/pi`.
 

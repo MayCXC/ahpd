@@ -1,6 +1,6 @@
 ---
 title: The docs say a record agent runs in a machine
-status: todo
+status: done
 depends: [task-02-the-record-reaches-the-host-inside.md]
 layer: "docs"
 refs:
@@ -25,3 +25,5 @@ The computer docs say that a record agent runs in a machine, and that its record
 - `node ~/.claude/skills/do-spec/scripts/lint-prose.mjs` passes on the plan folder.
 
 ## Resume
+
+- Done.

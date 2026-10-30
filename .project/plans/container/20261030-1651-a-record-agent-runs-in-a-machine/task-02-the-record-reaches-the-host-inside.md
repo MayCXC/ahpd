@@ -1,6 +1,6 @@
 ---
 title: The record reaches the host inside
-status: todo
+status: done
 depends: [task-01-the-host-names-a-record-agents-plugin.md]
 layer: "computer, server, sdk"
 refs:
@@ -39,3 +39,6 @@ The host inside a machine serves the record it was handed, under the record's id
 - `pnpm typecheck` passes.
 
 ## Resume
+
+- Done. A dialled node gets the record from `nodes.ts`, in the `env` of `node/open`, which `join.ts` already applies.
+- The run by hand on a disposable machine is not done; container 05 p8 task 05 runs a cofold record session on dev02.

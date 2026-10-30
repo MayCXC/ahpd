@@ -13,6 +13,8 @@ import { echo } from '../../../examples/echo/agent.js';
 import type { Agent, Start } from '../src/types/agent.js';
 import type { BackgroundTask } from '../src/types/background.js';
 import type { NestedHost } from '../src/sessions/nested.js';
+import type { NestedStart } from '../src/types/computers.js';
+import type { HostOptions } from '../src/types/host.js';
 import type { Handler, Peer, Wire } from '../src/types/rpc.js';
 
 /*
@@ -795,6 +797,76 @@ it('a backend that declares runsNested is given the proxy by the host', async ()
   await until(() => peer.seen.some(({ method, params }) => method === 'action' && params?.action?.type === 'session/creationFailed'));
   const said = peer.seen.find(({ method, params }) => method === 'action' && params?.action?.type === 'session/creationFailed');
   expect(said?.params.action.error.message).toMatch(/There is no computer called computer:\/\/box/);
+});
+
+/**
+ * What the port's `nested` was asked for one session of an agent on a machine,
+ * with the host's options for that agent beside the agent itself.
+ */
+const askedOfPort = async (options: Partial<HostOptions>): Promise<NestedStart | undefined> => {
+  let asked: NestedStart | undefined;
+  const real: Agent = {
+    provider: PROVIDER,
+    displayName: 'Cofold',
+    runsNested: true,
+    schema: () => ({ properties: {} }),
+    defaults: () => ({}),
+    create: () => { throw new Error('the backend must not be started on this host'); },
+  };
+  const host = createHost({
+    path: REPO_ROOT,
+    agents: [real],
+    ...options,
+    computers: {
+      how: async () => ({ command: 'true', args: [] }),
+      nested: async (_id, one) => { asked = one; return undefined; },
+    },
+  });
+  const peer = watching();
+  const client = host.accept(peer);
+  await client.handle({ method: 'initialize', params: { clientId: 'window', protocolVersions: ['0.9.0'] } });
+  await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/nested', provider: PROVIDER, config: { computer: 'computer://box' } } });
+  await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/nested' } });
+  await until(() => peer.seen.some(({ method, params }) => method === 'action' && params?.action?.type === 'session/creationFailed'));
+  const said = peer.seen.find(({ method, params }) => method === 'action' && params?.action?.type === 'session/creationFailed');
+  if (asked === undefined) throw new Error(String(said?.params.action.error.message));
+  return asked;
+};
+
+it('an agent made from a record asks the port for its engine\'s plugin and its record', async () => {
+  const record = { id: PROVIDER, engine: 'cofold', owner: 'host' as const, name: 'Cofold', config: { apiKey: 'k' } };
+  const bare = { ...record, config: {} };
+  const asked = await askedOfPort({
+    handedAgent: async (provider) => (provider === PROVIDER ? { plugin: '@ahpd/agent-cofold', record: { whole: record, bare } } : undefined),
+  });
+  expect(asked?.plugins).toEqual(['@ahpd/agent-cofold']);
+  expect(asked?.record).toEqual({ whole: record, bare });
+});
+
+it('an agent a plugin registered asks for its plugin and no record', async () => {
+  let handed = 0;
+  const asked = await askedOfPort({
+    agentPlugins: { [PROVIDER]: '@ahpd/agent-cofold' },
+    handedAgent: async () => { handed += 1; return undefined; },
+  });
+  expect(asked?.plugins).toEqual(['@ahpd/agent-cofold']);
+  expect(asked?.record).toBeUndefined();
+  expect(handed).toBe(0);
+});
+
+it('an agent neither a plugin nor a record serves ends saying no plugin serves it', async () => {
+  const { seen, emit } = recorder();
+  let started = 0;
+  const session = nestedAgent(backend(), {
+    plugins: [],
+    handed: async () => undefined,
+    start: async () => { started += 1; throw new Error('must not start'); },
+    timeoutMs: 500,
+  }).create(start(emit));
+  await until(() => seen.some(({ action }) => action.type === 'session/creationFailed'));
+  expect(seen.find(({ action }) => action.type === 'session/creationFailed')?.action.error.message).toMatch(/does not know which plugin serves/);
+  expect(started).toBe(0);
+  session.close();
 });
 
 /** The `initialize` answer a scripted host gives, carrying what a case adds. */

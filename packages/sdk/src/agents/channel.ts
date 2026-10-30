@@ -54,6 +54,7 @@ import {
   onTeam,
   ownerAllows,
   refuseOwner,
+  withoutSecrets,
   resolved as resolvedRecord,
   secretPaths,
   DENIED,
@@ -64,6 +65,7 @@ import { bag, isRecord, reason } from '../utils/values.js';
 import type { Icon } from '@microsoft/agent-host-protocol';
 import type { Agent } from '../types/agent.js';
 import type { AgentHealth, AgentOwner, AgentState, AgentTemplate, ServedEngine } from '../types/agents.js';
+import type { HandedAgent } from '../types/computers.js';
 import type { ConnectorRef } from '../types/connectors.js';
 import type { PluginMethod } from '../types/plugin.js';
 import type { RecordCollection, StoredRecord } from '../types/records.js';
@@ -188,6 +190,12 @@ export interface AgentsChannel {
    * reads to decide which agents one caller is told about.
    */
   owners(): ReadonlyMap<string, AgentOwner | undefined>;
+  /**
+   * The plugin and the record one open agent runs on inside a machine.
+   *
+   * Nothing for an id that is not an open record.
+   */
+  handed(id: string): Promise<HandedAgent | undefined>;
 }
 
 export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
@@ -351,6 +359,34 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
       throw new Error(`${engine.name} opened ${record.id} as ${agent.provider}, and an agent is served by the id of its record`);
     }
     return { engine, view, agent };
+  };
+
+  /**
+   * The plugin of one open record's engine, and the record twice: as its
+   * engine opened it, each secret read back, and as it is stored with each
+   * secret field left out.
+   */
+  const handed = async (id: string): Promise<HandedAgent | undefined> => {
+    const entry = open.get(id);
+    const stored = entry === undefined ? undefined : await options.collection.get(id);
+    if (entry === undefined || stored === undefined) return undefined;
+    const { view } = entry;
+    const shown = {
+      id: view.id,
+      engine: view.engine,
+      owner: view.owner,
+      name: view.name,
+      ...(view.description === undefined ? {} : { description: view.description }),
+      ...(view.icon === undefined ? {} : { icon: view.icon }),
+      ...(view.model === undefined ? {} : { model: view.model }),
+    };
+    return {
+      plugin: entry.engine.spec ?? entry.engine.by,
+      record: {
+        whole: { ...shown, config: { ...view.config } },
+        bare: { ...shown, config: withoutSecrets(configOf(stored), AGENT_SECRETS) },
+      },
+    };
   };
 
   /** The agent records the store holds, and the owner each names. */
@@ -892,5 +928,6 @@ export function agentsChannel(options: AgentsChannelOptions): AgentsChannel {
     }),
     refresh: () => channel.refresh(),
     owners: ownersFor,
+    handed,
   };
 }

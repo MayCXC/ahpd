@@ -24,6 +24,7 @@ import { PassThrough } from 'node:stream';
 import { INVALID_PARAMS, METHOD_NOT_FOUND, RpcError, stringParam } from './rpc.js';
 import { readJson, writeJsonAtomic } from './utils/jsonfile.js';
 import { same } from './listen.js';
+import { AGENT_RECORD_VARIABLE } from './types/computers.js';
 import type { NestedHost, NestedStart, NestedStarted } from './types/computers.js';
 import type { NodeChange } from './types/host.js';
 import type { Connected, Raw } from './types/listen.js';
@@ -540,8 +541,13 @@ export function liveNodes(options: LiveOptions): LiveNodes {
     try {
       // The plugins the node's host loads, and nothing about where: the node's
       // own folder is where its sessions start, and the answer to this is the
-      // node saying it started one.
-      await live.peer.request('node/open', { id: open, plugins: asked.plugins }, OPEN_ANSWER_MS);
+      // node saying it started one. A record agent's record goes without its
+      // secrets, since a node is handed nothing of this host's vault.
+      await live.peer.request('node/open', {
+        id: open,
+        plugins: asked.plugins,
+        ...(asked.record === undefined ? {} : { env: { [AGENT_RECORD_VARIABLE]: JSON.stringify(asked.record.bare) } }),
+      }, OPEN_ANSWER_MS);
     }
     catch (error: unknown) {
       opening.delete(open);

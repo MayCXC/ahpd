@@ -17,7 +17,7 @@ import type { ConnectorRef, ServedAdapter } from './connectors.js';
 import type { AgentOwner, ServedEngine } from './agents.js';
 import type { ConnectorsChannel } from '../connectors/channel.js';
 import type { SessionStore } from './sessions.js';
-import type { ComputerPort, NestedStart, NestedStarted } from './computers.js';
+import type { ComputerPort, HandedAgent, NestedStart, NestedStarted } from './computers.js';
 import type { ContainerPort } from './containers.js';
 import type { ClientPlugins } from './clientplugins.js';
 import type { Usage } from './usage.js';
@@ -156,6 +156,15 @@ export interface HostOptions {
    * entry, and a session of it cannot run nested.
    */
   agentPlugins?: Record<string, string>;
+  /**
+   * The plugin and the record of an agent made from a record, by provider.
+   *
+   * What a host inside a machine is started with for a session of that agent
+   * that runs nested, since no plugin registered the agent itself. Read at each
+   * start, so the record is the one the host serves then. Answers nothing for
+   * an id no record holds.
+   */
+  handedAgent?(provider: string): Promise<HandedAgent | undefined>;
   /**
    * The files a client may read, and complete an `@` into.
    *

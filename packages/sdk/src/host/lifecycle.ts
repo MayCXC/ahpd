@@ -515,8 +515,9 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
    * question, `record` leaves the transcript where it is.
    *
    * The plugin the session's agent was registered by is what the host inside is
-   * started with, so a record whose plugin this daemon does not have ends with a
-   * line rather than with a host that serves nobody.
+   * started with, or the plugin and the record of an agent made from a record,
+   * so a record whose plugin this daemon does not have ends with a line rather
+   * than with a host that serves nobody.
    */
   const deletedInside = async (uri: string): Promise<void> => {
     const record = kept.nested?.(idOf(uri));
@@ -524,7 +525,9 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     const computers = options.computers;
     const said = await computers?.nestedDelete?.(record.machine).catch(() => undefined);
     if (said === 'record') return;
-    const plugin = options.agentPlugins?.[record.provider];
+    const own = options.agentPlugins?.[record.provider];
+    const handed = own === undefined ? await options.handedAgent?.(record.provider).catch(() => undefined) : undefined;
+    const plugin = own ?? handed?.plugin;
     if (plugin === undefined) {
       log(`${record.inner} is inside computer://${record.machine}, and this host does not know which plugin serves ${record.provider}, so nothing was deleted there`);
       return;
@@ -532,6 +535,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     await deleteNested({
       id: record.machine,
       plugins: [plugin],
+      ...(handed === undefined ? {} : { record: handed.record }),
       sessionId: record.inner,
       ...(computers === undefined ? {} : { computers }),
       log,

@@ -12,6 +12,7 @@
  */
 
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
+import type { AgentRecord } from './agents.js';
 import type { MachineNeed } from './machine.js';
 import type { Owner } from './usage.js';
 
@@ -72,6 +73,39 @@ export interface NestedStart {
    * machine's vault-read variables it is given are that agent's own.
    */
   provider?: string;
+  /**
+   * The record of the agent the host inside serves, for an agent made from a
+   * record: the port puts one of its two copies in `AGENT_RECORD_VARIABLE`.
+   */
+  record?: HandedRecord;
+}
+
+/**
+ * The variable a host inside a machine reads the record of its agent from, as
+ * JSON.
+ */
+export const AGENT_RECORD_VARIABLE = 'AHPD_AGENT_RECORD';
+
+/**
+ * The record an agent made from a record runs on, as a host inside a machine
+ * is handed it.
+ *
+ * Two copies, because the port knows which machine is handed this host's
+ * vault and the record's owner knows which fields are secret.
+ */
+export interface HandedRecord {
+  /** The record with each secret read back from the vault. */
+  whole: AgentRecord;
+  /** The same record with no secret field, for a machine handed nothing of the vault. */
+  bare: AgentRecord;
+}
+
+/** What a host inside a machine is started with to serve an agent made from a record. */
+export interface HandedAgent {
+  /** The spec of the plugin that registered the record's engine. */
+  plugin: string;
+  /** The record the host inside serves. */
+  record: HandedRecord;
 }
 
 /** The command that starts a nested host, and where its session works. */
