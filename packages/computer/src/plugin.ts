@@ -114,6 +114,9 @@ export const profilesOf = (value: unknown): Record<string, Profile> | undefined 
       // The OCI runtime Docker starts its machines under, `runsc` for gVisor:
       // how a container's kernel is isolated, which is the profile's to say.
       ...(text('ociRuntime') === undefined ? {} : { ociRuntime: text('ociRuntime') as string }),
+      // The box from `ssh.machines` its machines are made on, checked against
+      // that option once both are read.
+      ...(text('server') === undefined ? {} : { server: text('server') as string }),
       ...(text('workdir') === undefined ? {} : { workdir: text('workdir') as string }),
       ...(words(said.mounts) === undefined ? {} : { mounts: words(said.mounts) as string[] }),
       // The agents a profile prepares for, and any value it gives their needs.
@@ -398,6 +401,16 @@ export const apply: Plugin['apply'] = (host, options) => {
       host.log(`${name}: profiles.${key}.parts names ${id}, which the versions file does not, so its machines are made without it`);
     }
     one.parts = one.parts.filter((part) => partIds.has(part));
+  }
+  /*
+   * Each profile's `server`, against the boxes the ssh option names: a profile
+   * whose box is not there is left out with a line naming both, because a
+   * machine made from it would be made somewhere its operator did not mean.
+   */
+  for (const [key, one] of Object.entries(profiles ?? {})) {
+    if (one.server === undefined || ssh?.machines[one.server] !== undefined) continue;
+    host.log(`${name}: profiles.${key} names the server ${one.server}, which ssh.machines does not, so the profile is left out`);
+    delete profiles?.[key];
   }
   /*
    * A `secretUnreadable`, `state`, `stateScope`, `gitGuard`, `sessionTree` or

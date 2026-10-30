@@ -16,12 +16,13 @@
 import { spawn } from 'node:child_process';
 import type { Spawn, SpawnOptions } from '@ahpd/sdk';
 import type { ComputerRuntime, ExecResult, Machine, MachineStats, RuntimeCapabilities } from './runtime.js';
+import { checkServer, SERVER_CHECK } from './servercheck.js';
 
 /** What `capabilities` reports for this runtime. */
 const CAPABILITIES: RuntimeCapabilities = {
   runtime: 'ssh',
   actions: ['exec'],
-  resources: ['status', 'capabilities', 'stats'],
+  resources: ['status', 'capabilities', 'stats', 'server'],
 };
 
 /** How long `ssh` is given to reach a box, in seconds, before it refuses. */
@@ -35,6 +36,14 @@ const DEFAULT_CONNECT_TIMEOUT = 10;
  * listing that never ends is a daemon whose startup never ends either.
  */
 const MARGIN_MS = 10_000;
+
+/**
+ * How much longer the server check is given than a plain command.
+ *
+ * `docker info` and `virsh list` each wait on a daemon of their own, which a
+ * box that has one stopped can take a while to refuse.
+ */
+const CHECK_MARGIN_MS = 10_000;
 
 /** The word a box that answered is written as, in a listing and in `state`. */
 const RUNNING = 'running';
@@ -176,9 +185,11 @@ const lastLine = (said: string): string => {
  * and a key of their own, so the daemon's environment is what an ssh already
  * works with, and the option is the one place an extra variable is said.
  */
-const ran = (options: SshOptions, args: string[], timeout: number): Promise<Ran> => new Promise((resolve, reject) => {
+const ran = (options: SshOptions, args: string[], timeout: number, input?: string): Promise<Ran> => new Promise((resolve, reject) => {
   const child = spawn(options.command ?? 'ssh', [...(options.args ?? []), ...args], {
-    stdio: ['ignore', 'pipe', 'pipe'],
+    // Stdin only for a script sent to the box's `sh`: anything else has
+    // nothing to read, and an open pipe would be one it waits on.
+    stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
     env: { ...process.env, ...(options.env ?? {}) },
     // On Windows a daemon has no console, so each `ssh.exe` would open a
     // window of its own for every listing and check.
@@ -197,6 +208,12 @@ const ran = (options: SshOptions, args: string[], timeout: number): Promise<Ran>
   // A program that is not installed is an error rather than an exit code, and
   // it is the one failure a caller most needs to read.
   child.on('error', (error) => { clearTimeout(timer); reject(error); });
+  if (input !== undefined) {
+    // A box that closed early is answered by the exit code below, not by a
+    // write that failed on the way.
+    child.stdin?.on('error', () => {});
+    child.stdin?.end(input);
+  }
   child.on('close', (code) => {
     clearTimeout(timer);
     resolve({ code: code ?? 0, stdout, stderr, timedOut });
@@ -456,6 +473,28 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
       if (held.code !== 0) return undefined;
       return statsFrom(held.stdout);
     },
+
+    /*
+     * What the box can run, from the server check sent to its `sh`.
+     *
+     * The box's own `sh` rather than its login shell, so the script reads the
+     * same whatever shell the account logs in with. A box that does not
+     * answer, or whose `sh` failed, is a sentence naming it, because a report
+     * of nothing would read as a box that has nothing.
+     */
+    check: async (id) => {
+      const machine = machines[id];
+      if (machine === undefined) return undefined;
+      return checkServer(async () => {
+        const held = await ran(options, argv(machine, SERVER_CHECK.command), bound + CHECK_MARGIN_MS, SERVER_CHECK.script);
+        if (held.timedOut) throw new Error(`${id} did not answer the server check within ${bound + CHECK_MARGIN_MS}ms`);
+        if (held.code !== 0) {
+          throw new Error(`${id} did not answer the server check: ${lastLine(held.stderr) || lastLine(held.stdout) || `ssh exited ${held.code}`}`);
+        }
+        return held.stdout;
+      });
+    },
+    checks: (id) => machines[id] !== undefined,
 
     capabilities: () => CAPABILITIES,
 

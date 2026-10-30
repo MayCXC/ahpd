@@ -12,6 +12,7 @@ import { raise } from '../../sdk/src/plugins/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { closeAll, keeping } from './support/closing.js';
 import { isRunning } from '../src/runtime.js';
+import { routed } from '../src/router.js';
 import { STATS, quote, sshRuntime, statsFrom } from '../src/ssh.js';
 import type { SshMachine } from '../src/ssh.js';
 import type { Agent } from '../../sdk/src/types/agent.js';
@@ -351,7 +352,7 @@ it('refuses to make, start, stop or remove a box, and says what it can do', asyn
   // Nothing was run to find that out: not starting a box is not a command.
   expect(existsSync(log())).toBe(false);
 
-  expect(one.capabilities()).toEqual({ runtime: 'ssh', actions: ['exec'], resources: ['status', 'capabilities', 'stats'] });
+  expect(one.capabilities()).toEqual({ runtime: 'ssh', actions: ['exec'], resources: ['status', 'capabilities', 'stats', 'server'] });
   expect(one.kind).toBe('ssh');
   // A box is another host, so a backend's process there is reached over a
   // connection rather than by a command on this one.
@@ -455,6 +456,60 @@ it('serves a box in the computer: scheme, and refuses to put it in a state', asy
 
   // A machine that is not configured is not in the scheme at all.
   await expect(provider.list('computer://ssh.web1')).rejects.toThrow(/No computer resource at computer:\/\/ssh.web1/);
+});
+
+it('lists a server leaf under a box, and answers the check there with its fixes', async () => {
+  const check = join(temp(), 'check.txt');
+  writeFileSync(check, 'os_id=debian\nos_name=Debian GNU/Linux 13 (trixie)\narch=x86_64\nuser=softov\n');
+  const { options, problems } = await load(
+    { machines: { dev02: { destination: 'dev02' } } },
+    { env: { SSH_FAKE_CHECK: check } },
+  );
+  expect(problems).toEqual([]);
+  const provider = providerOf(options) as ReturnType<typeof providerOf> & {
+    read(uri: string): Promise<{ data: string }>;
+  };
+
+  expect((await provider.list('computer://ssh.dev02')).map((one) => one.name)).toContain('server');
+  const report = JSON.parse((await provider.read('computer://ssh.dev02/server')).data) as {
+    items: Record<string, { ok: boolean; fix: string[] }>;
+  };
+  expect(report.items.os?.ok).toBe(true);
+  expect(report.items.docker).toEqual({ ok: false, found: 'not installed', fix: [
+    'sudo apt install docker.io',
+    'sudo usermod -aG docker softov',
+    '# log in to the box again, so the new group applies',
+  ] });
+});
+
+it('lists no server leaf for a machine of a runtime that has no check', () => {
+  // A runtime whose machines are made here, which has neither verb.
+  const made = boxes({});
+  delete made.check;
+  delete made.checks;
+  const runtime = routed({
+    docker: made,
+    ssh: boxes({ dev02: { destination: 'dev02' } }),
+  }, 'docker');
+  expect(runtime.checks?.('ssh.dev02')).toBe(true);
+  expect(runtime.checks?.('box')).toBe(false);
+  expect(runtime.checks?.('ssh.web1')).toBe(false);
+});
+
+it('refuses the check of a box that never answers once the bound is past', async () => {
+  // A program that takes the ssh call and never ends, which is a box that
+  // accepted the connection and then hung.
+  const runtime = sshRuntime({
+    command: process.execPath,
+    args: ['-e', 'setTimeout(() => {}, 1e9)'],
+    machines: { dev02: { destination: 'dev02' } },
+    connectTimeout: 0,
+  });
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  const asked = runtime.check?.('dev02');
+  const failed = expect(asked).rejects.toThrow('dev02 did not answer the server check within 20000ms');
+  await vi.advanceTimersByTimeAsync(20_001);
+  await failed;
 });
 
 // POSIX-only: the scripted ssh stands in for a Linux box by running the

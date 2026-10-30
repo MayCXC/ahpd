@@ -16,6 +16,7 @@ import { mountParts } from './manifest.js';
 import { archiveOf, FILLED_MARKER, firstFileOf, IMAGE_PATH, MACHINE_PARTS, once, partsLabel, partsSaid, pathWith, volumeOf } from './parts.js';
 import type { ArchiveEntry, MadePart, Tarball } from './parts.js';
 import type { Cli, CliOptions, Reach } from './devcontainer.js';
+import type { ServerReport } from './servercheck.js';
 
 /**
  * What a machine is, and what a runtime does with one.
@@ -661,6 +662,21 @@ export interface ComputerRuntime {
   restart(id: string): Promise<void>;
   /** What one machine is using right now, or nothing when it is not running. */
   stats(id: string): Promise<MachineStats | undefined>;
+  /**
+   * What the box one machine is can run, from the server check.
+   *
+   * Only a runtime whose machines are boxes an operator set up has it: a
+   * machine this host made is the image it was made from, and there is nothing
+   * on it to install. `undefined` for a machine that is not there.
+   */
+  check?(id: string): Promise<ServerReport | undefined>;
+  /**
+   * Whether `check` answers for this machine, without reaching it.
+   *
+   * Asked for a listing, which must not cost a reach per machine, and which
+   * a runtime serving several asks of the one the id names.
+   */
+  checks?(id: string): boolean;
   capabilities(): RuntimeCapabilities;
   /** Whether one image is already here, which is the answer that skips a build. */
   hasImage(tag: string): Promise<boolean>;

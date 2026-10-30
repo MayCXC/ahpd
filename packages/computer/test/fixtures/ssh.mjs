@@ -17,6 +17,10 @@
  * call. A box that goes down between two listings is what an environment cannot
  * say - it is fixed when the host is loaded - and a file is what a test rewrites
  * in between.
+ *
+ * `SSH_FAKE_CHECK` names a file whose text is the box's answer to the server
+ * check: a remote `sh -s` reads the script on stdin and prints that file in its
+ * place, so a test says what a box has without this host having it.
  */
 
 import { spawn } from 'node:child_process';
@@ -82,11 +86,28 @@ if (held.destination === undefined || unreachable.includes(held.destination)) {
   process.exit(255);
 }
 
-// One command and no tty: the remote string goes to `sh -c` as it was written,
-// and this process is the pipes between that shell and whoever called ssh.
-const child = spawn('/bin/sh', ['-c', held.remote.join(' ')], { stdio: ['inherit', 'inherit', 'inherit'] });
-child.on('close', (code) => process.exit(code ?? 0));
-child.on('error', (error) => {
-  process.stderr.write(`${error.message}\n`);
-  process.exit(127);
-});
+/** The server check's answer: the script on stdin is read and dropped, and the file printed. */
+const answerCheck = (file) => {
+  process.stdin.resume();
+  process.stdin.on('end', () => {
+    process.stdout.write(readFileSync(file, 'utf8'));
+    process.exit(0);
+  });
+};
+
+/**
+ * One command and no tty: the remote string goes to `sh -c` as it was written,
+ * and this process is the pipes between that shell and whoever called ssh.
+ */
+const runRemote = () => {
+  const child = spawn('/bin/sh', ['-c', held.remote.join(' ')], { stdio: ['inherit', 'inherit', 'inherit'] });
+  child.on('close', (code) => process.exit(code ?? 0));
+  child.on('error', (error) => {
+    process.stderr.write(`${error.message}\n`);
+    process.exit(127);
+  });
+};
+
+const check = process.env.SSH_FAKE_CHECK;
+if (check !== undefined && check !== '' && held.remote.join(' ') === 'sh -s') answerCheck(check);
+else runRemote();

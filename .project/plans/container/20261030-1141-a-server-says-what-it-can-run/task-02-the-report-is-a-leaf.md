@@ -1,6 +1,6 @@
 ---
 title: The report is a leaf of the ssh machine
-status: todo
+status: done
 depends: [task-01-the-check-runs-on-a-box.md]
 layer: "computer"
 refs:
@@ -38,3 +38,7 @@ A machine of another runtime has no `server` leaf.
 - `pnpm -s typecheck` passes, and the touched tests pass.
 
 ## Resume
+
+- Done on 2026-10-30.
+- The runtime has two optional members: `check(id)` runs the check, and `checks(id)` says whether `server` is listed.
+- The bound is `connectTimeout` plus 20 seconds, tested with fake timers.
