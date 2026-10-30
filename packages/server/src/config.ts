@@ -290,6 +290,14 @@ export interface Config {
    */
   archiveDirtyWorktree?: 'keep' | 'commit';
   /**
+   * What a session on a joined node does when that node's `ahpd join` restarts.
+   *
+   * `end`, the default, ends the session with a sentence naming the node, and
+   * the next turn resumes it by the inner host's id. `reconnect` keeps it and
+   * opens it again on the socket the node dials when it comes back.
+   */
+  nodeRestart?: 'end' | 'reconnect';
+  /**
    * How the pass that archives and deletes merged sessions learns the state of
    * a pull request.
    *

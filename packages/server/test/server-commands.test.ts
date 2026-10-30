@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRegistry } from '@cofold/commands';
 import type { AuthorizeRequest, Output } from '@cofold/commands';
 import { manifestFrom } from '@cofold/remote';
-import { fileUsage, fileUsers } from '@ahpd/sdk';
+import { fileNodes, fileUsage, fileUsers } from '@ahpd/sdk';
 import { fileVault } from '../src/vault.js';
 import type { Named, Users } from '@ahpd/sdk';
 import type { Options } from '../src/commands/options.js';
@@ -124,6 +124,9 @@ describe('the command registry', () => {
     expect(scopes('automation.export')).toEqual(['automation:list']);
     expect(scopes('automation.list')).toEqual(['automation:list']);
     expect(scopes('automation.import')).toEqual(['automation:create']);
+    // A joined host is its own subject, so listing one is not managing people.
+    expect(scopes('node.list')).toEqual(['node:read']);
+    for (const id of ['node.add', 'node.rm']) expect(scopes(id)).toEqual(['node:write']);
   });
 
   it('refuses each verb without its own subject, and allows it with that one', async () => {
@@ -735,6 +738,10 @@ describe('teams, projects and memberships', () => {
     expect(inputs('user.list')).toEqual([]);
     expect(inputs('team.rm')).toEqual(['id']);
     expect(inputs('project.rm')).toEqual(['id']);
+    // A node is named and never given a token: the hub mints it.
+    expect(inputs('node.rm')).toEqual(['id']);
+    expect(inputs('node.add')).toEqual(['id']);
+    expect(inputs('node.list')).toEqual([]);
     // What a request may set is what the verb writes, and no more.
     expect(inputs('user.add')).toEqual(['id', 'issuer', 'membership', 'primary', 'role']);
     expect(inputs('user.token')).toEqual(['id', 'url']);
@@ -761,6 +768,104 @@ describe('teams, projects and memberships', () => {
  * served declaration that is new, or that changed, has to be given a row here.
  * The table is daemon 16 task 04's.
  */
+describe('nodes that join this host', () => {
+  let file: string;
+  let nodesFile: string;
+
+  beforeEach(() => {
+    file = join(root, 'users.json');
+    // The nodes file has no name of its own: it sits beside the users file.
+    nodesFile = join(root, 'users.nodes.json');
+    writeFileSync(file, JSON.stringify({ roles: {}, teams: [], projects: [], users: [] }));
+  });
+
+  /** A command run as the terminal runs it, against this case's users file. */
+  const cli = async (id: string, input: Record<string, unknown> = {}): Promise<Output> =>
+    (await registry.execute(registry.find(id)!, {
+      surface: 'cli',
+      input: { configFile: config, users: file, ...input },
+    })) as Output;
+
+  /** What a command printed, whether it spent anything printing it. */
+  const plain = async (id: string, input: Record<string, unknown> = {}): Promise<string> => {
+    const said = (await cli(id, input)).plain;
+    return typeof said === 'function' ? said() : String(said);
+  };
+
+  it('adds a node with a token it shows once and stores only the hash', async () => {
+    const token = (await plain('node.add', { id: 'box' })).trim();
+    expect(token).not.toBe('');
+    // What the file keeps is a hash and never the token itself.
+    const kept = readFileSync(nodesFile, 'utf8');
+    expect(kept).not.toContain(token);
+    expect(kept).toContain('sha256:');
+    expect(await plain('node.list')).toBe('box\n');
+    // The token names the node at the join door and nowhere else: the people
+    // directory has never heard of it.
+    expect(await fileNodes({ path: nodesFile }).verify(token)).toBe('box');
+    expect(await fileUsers({ path: file }).verify(token)).toBeUndefined();
+    expect(await plain('node.list')).toBe('box\n');
+  });
+
+  it('replaces the token of a node that is already there', async () => {
+    const first = (await plain('node.add', { id: 'box' })).trim();
+    const again = (await plain('node.add', { id: 'box' })).trim();
+    expect(again).not.toBe(first);
+    // The old one is refused from the write on, and the node is listed once.
+    expect(await fileNodes({ path: nodesFile }).verify(first)).toBeUndefined();
+    expect(await fileNodes({ path: nodesFile }).verify(again)).toBe('box');
+    expect(await plain('node.list')).toBe('box\n');
+  });
+
+  it('takes a node out, and refuses its token afterwards', async () => {
+    const token = (await plain('node.add', { id: 'box' })).trim();
+    expect(await plain('node.rm', { id: 'box' })).toBe('Removed node box. Its token is refused from now on.\n');
+    expect(await plain('node.list')).toContain('no nodes in');
+    expect(await fileNodes({ path: nodesFile }).verify(token)).toBeUndefined();
+    await expect(cli('node.rm', { id: 'box' })).rejects.toThrow('No node called box.');
+  });
+
+  it('refuses a name a line or a machine id cannot carry', async () => {
+    await expect(cli('node.add', { id: 'two words' })).rejects.toThrow('cannot name a node');
+    await expect(cli('node.add', { id: '--box' })).rejects.toThrow('node add takes a');
+  });
+
+  it('says where the nodes would be kept when no users file is named', async () => {
+    const bare = async (id: string): Promise<Output> => (await registry.execute(registry.find(id)!, {
+      surface: 'cli',
+      input: { configFile: join(root, 'empty.json') },
+    })) as Output;
+    writeFileSync(join(root, 'empty.json'), '{}\n');
+    await expect(bare('node.list')).rejects.toThrow('No users file, so there is nowhere for the nodes file to sit');
+  });
+
+  it('holds a served add to a node grant, which does not reach the people', async () => {
+    const people = join(root, 'people.json');
+    writeFileSync(people, JSON.stringify({ roles: {}, teams: [], projects: [], users: [] }));
+    const caller = (grants: string[]) => ({ id: 'sam', roles: ['holder'], can: (grant: string) => grants.includes(grant) });
+    const ask = async (id: string, input: Record<string, unknown>, grants: string[]): Promise<number> => {
+      const served = servedRegistry({
+        options: { users: people } as Options,
+        configFile: config,
+        users: fileUsers({ path: people }),
+        running: () => ({ pid: process.pid, url: 'ws://127.0.0.1:9350', host: '127.0.0.1', port: 9350, paths: [], startedAt: '' }),
+        turning: () => [],
+        restart: () => {},
+      });
+      const command = served.find(id);
+      expect(command, id).toBeDefined();
+      return registry.execute(command!, { surface: 'remote', input, request: { actor: caller(grants) } })
+        .then(() => 200, (error: { status?: number }) => error.status ?? 500);
+    };
+    expect(await ask('node.list', {}, ['node:read'])).toBe(200);
+    expect(await ask('node.list', {}, ['user:read'])).toBe(403);
+    expect(await ask('node.add', { id: 'box' }, ['node:write'])).toBe(200);
+    expect(await ask('node.add', { id: 'box2' }, ['user:write'])).toBe(403);
+    expect(await ask('node.rm', { id: 'box' }, ['node:write'])).toBe(200);
+    expect(await ask('node.rm', { id: 'box2' }, ['node:read'])).toBe(403);
+  });
+});
+
 describe('what a served command says it does', () => {
   it('declares the effect and the resource of every command the daemon serves', () => {
     const people = join(root, 'people.json');
@@ -788,6 +893,11 @@ describe('what a served command says it does', () => {
       ['daemon.restart', 'change', null],
       ['daemon.status', 'read', null],
       ['daemon.update', 'change', null],
+      // A node is added with a token the hub mints, so `add` creates one and
+      // `rm` takes the row it names away.
+      ['node.add', 'add', { kind: 'node' }],
+      ['node.list', 'read', { kind: 'node' }],
+      ['node.rm', 'remove', { kind: 'node', key: 'id' }],
       // A folder is served or it is not, so `add` creates one; a `remove` takes
       // one out of the list and takes nothing off the disk, so it changes the row
       // it names rather than removing it.

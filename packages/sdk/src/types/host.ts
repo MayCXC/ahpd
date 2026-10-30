@@ -17,7 +17,7 @@ import type { ConnectorRef, ServedAdapter } from './connectors.js';
 import type { AgentOwner, ServedEngine } from './agents.js';
 import type { ConnectorsChannel } from '../connectors/channel.js';
 import type { SessionStore } from './sessions.js';
-import type { ComputerPort } from './computers.js';
+import type { ComputerPort, NestedStart, NestedStarted } from './computers.js';
 import type { ContainerPort } from './containers.js';
 import type { ClientPlugins } from './clientplugins.js';
 import type { Usage } from './usage.js';
@@ -74,6 +74,47 @@ export interface DirectoryFacts {
  */
 export type { ResourceProvider, ResourceStore } from './resources.js';
 export type { TerminalStore } from './terminals.js';
+
+/** A host that joined this one, as the registry of joins holds it. */
+export interface JoinedNode {
+  /** The node's name, as `ahpd node add` minted its token. */
+  id: string;
+  /**
+   * The folder the node said its sessions start in.
+   *
+   * A path on the node, which is not a path here: it is handed over as the
+   * folder the host inside works in, so this host's own folder never reaches it.
+   */
+  workdir: string;
+}
+
+/** A node that dialled this host, or one that stopped being connected. */
+export type NodeChange =
+  | { id: string; joined: true; workdir: string }
+  | { id: string; joined: false };
+
+/**
+ * The hosts that joined this one, and how a session reaches one.
+ *
+ * Read-only for a plugin: adding, verifying and removing a node is the node
+ * commands' work, since a token is shown once and a node's name is not a
+ * plugin's to choose. What a plugin does here is list the nodes as machines
+ * and start a session in one.
+ */
+export interface NodeRegistry {
+  /** The nodes connected now, in the order they dialled. */
+  joined(): JoinedNode[];
+  /**
+   * The socket a session in a named node runs on, or `undefined` for an id
+   * this registry does not serve.
+   *
+   * An id it does serve that has not dialled is a session that cannot start,
+   * so the answer is a refusal rather than `undefined`.
+   */
+  connect(id: string, asked: NestedStart): Promise<NestedStarted | undefined>;
+  /** Called on each join and each departure, until the handle is closed. */
+  watch(onChange: (change: NodeChange) => void): { close(): void };
+}
 
 /** How to construct a host. */
 export interface HostOptions {
@@ -343,6 +384,23 @@ export interface HostOptions {
    * depending on the package that made it.
    */
   computers?: ComputerPort;
+  /**
+   * The hosts that joined this one, and the socket a session in one runs on.
+   *
+   * Taken from the registry the daemon keeps, so a plugin lists the nodes as
+   * machines without knowing which hub it is on. Left out, this host is one no
+   * node joined, and no plugin can offer one.
+   */
+  nodes?: NodeRegistry;
+  /**
+   * What a session does when the node it runs on restarts its `ahpd join`.
+   *
+   * `end`, the default, ends the session where it ran, with a sentence naming
+   * the node, and the next turn resumes it by the inner host's id. `reconnect`
+   * keeps the session and opens it again on the socket the node dials when it
+   * comes back.
+   */
+  nodeRestart?: 'end' | 'reconnect';
   /**
    * How this host runs another host inside a container, and carries its frames.
    *

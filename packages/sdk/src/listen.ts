@@ -1,9 +1,9 @@
 import { createPeer, receive } from './rpc.js';
 import type {
-  Admission, Bounds, Connected, Door, DoorOptions, Listener, ListenOptions, NodeRequestListener, OnConnect, RequestHandler, RequestsListener, RequestsOptions, Runtime, StdioOptions, Tap,
+  Admission, Bounds, Connected, Door, DoorOptions, Listener, ListenOptions, NodeRequestListener, OnConnect, Opened, Raw, RequestHandler, RequestsListener, RequestsOptions, Runtime, StdioOptions, Tap,
 } from './types/listen.js';
 import type { Principal } from './types/users.js';
-import type { Bounding } from './types/rpc.js';
+import type { Bounding, Peer } from './types/rpc.js';
 
 /**
  * Accepts WebSocket connections on Node, Bun or Deno.
@@ -35,9 +35,26 @@ export const runtime = (): Runtime => {
 /** What a runtime's socket has to look like once it is wired up. */
 interface Bound {
   peer: ReturnType<typeof createPeer>;
-  connected: Connected;
+  connected: Connected | Raw;
   seen: ReturnType<typeof tapping>;
 }
+
+/**
+ * One message in, wherever it goes.
+ *
+ * A raw connection is its own wire and is handed the message as it arrived; a
+ * connected one is where this host parses the frame and answers its requests.
+ */
+const take = (held: Connected | Raw, peer: Peer, text: string): void => {
+  if ('raw' in held) held.raw(text);
+  else receive(text, peer, (request) => held.handle(request));
+};
+
+/** Where a connection came in and which node it is, as the connection handler is told it. */
+const openedOf = (url: string | undefined, node: string | undefined): Opened => ({
+  ...(url === undefined ? {} : { url }),
+  ...(node === undefined ? {} : { node }),
+});
 
 /**
  * The token a connection presented, if it presented one.
@@ -95,6 +112,18 @@ const boundingOf = (options: Bounds): Bounding | undefined => options.clientQueu
   : { limit: options.clientQueueBytes, ...(options.log === undefined ? {} : { log: options.log }) };
 
 /**
+ * The path of a request's URL, whichever runtime asked.
+ *
+ * Node hands a path and a query; Bun and Deno hand a whole URL. Resolved
+ * against a base that is never reached, both read the same.
+ */
+const pathOf = (url: string | undefined): string => {
+  if (url === undefined) return '';
+  try { return new URL(url, 'ws://localhost').pathname; }
+  catch { return ''; } // A URL nothing can parse is not the join path.
+};
+
+/**
  * The door: who, if anyone, a request's token carries.
  *
  * The deployment's own token admits the socket and is the host, which is
@@ -113,8 +142,18 @@ const boundingOf = (options: Bounds): Bounding | undefined => options.clientQueu
  */
 export const doorOf = (options: DoorOptions): Door => {
   const token = options.token;
+  const join = options.join;
   return async (url, authorization) => {
     const held = presented(url, authorization);
+    /*
+     * The join path, decided by a node's own token and by nothing else. A node
+     * holding the deployment's key would be a node holding every key, so that
+     * token is not asked about here even where the two paths meet.
+     */
+    if (join !== undefined && pathOf(url) === join.path) {
+      const node = held === undefined || held === '' ? undefined : await join.verify(held);
+      return node === undefined ? { admitted: false } : { admitted: true, node };
+    }
     if (token === undefined) {
       const arrival = held === undefined || held === '' || options.identify === undefined
         ? undefined
@@ -198,9 +237,9 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
         if (!identity.admitted) {
           return new Response(TOKEN_REQUIRED, { status: 401 });
         }
-        // The principal rides on the socket, because Bun's `open` is handed
-        // the socket and not the request this answer came from.
-        if (server_.upgrade(request, { data: { principal: identity.principal, root: identity.root } })) return undefined;
+        // What the door decided rides on the socket, because Bun's `open` is
+        // handed the socket and not the request this answer came from.
+        if (server_.upgrade(request, { data: { principal: identity.principal, root: identity.root, node: identity.node, url: request.url } })) return undefined;
         return new Response(SPEAKS_AHP, { status: 426, headers: PLAIN_HEADERS });
       },
       websocket: {
@@ -212,15 +251,19 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
             isOpen: () => ws.readyState === 1,
             buffered: () => ws.getBufferedAmount(),
           }, bounding);
-          const arrival = ws.data as { principal?: Principal; root?: boolean } | undefined;
-          bound.set(ws, { peer, connected: onConnect(peer, arrival?.principal, arrival?.root), seen });
+          const arrival = ws.data as { principal?: Principal; root?: boolean; node?: string; url?: string } | undefined;
+          bound.set(ws, {
+            peer,
+            connected: onConnect(peer, arrival?.principal, arrival?.root, openedOf(arrival?.url, arrival?.node)),
+            seen,
+          });
         },
         message(ws: BunSocket, raw: string | Uint8Array) {
           const held = bound.get(ws);
           if (!held) return;
           const text = typeof raw === 'string' ? raw : new TextDecoder().decode(raw);
           held.seen.in(text);
-          receive(text, held.peer, (request) => held.connected.handle(request));
+          take(held.connected, held.peer, text);
         },
         close(ws: BunSocket) {
           const held = bound.get(ws);
@@ -274,14 +317,14 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
         }, bounding);
         // Closed over rather than carried on the socket: this handler already
         // has the answer the upgrade was decided on.
-        held = { peer, connected: onConnect(peer, identity.principal, identity.root), seen };
+        held = { peer, connected: onConnect(peer, identity.principal, identity.root, openedOf(request.url, identity.node)), seen };
       };
       socket.onmessage = (event) => {
         const open = held;
         if (!open) return;
         const text = String(event.data);
         open.seen.in(text);
-        receive(text, open.peer, (request_) => open.connected.handle(request_));
+        take(open.connected, open.peer, text);
       };
       socket.onclose = () => { sockets.delete(socket); held?.peer.close(); held?.connected.close(); held = undefined; };
       return response;
@@ -319,7 +362,7 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
    * it is the key. A `WeakMap` rather than a `Map` because nothing has to be
    * cleaned up when a handshake is refused.
    */
-  const decided = new WeakMap<object, { principal?: Principal | undefined; root?: boolean | undefined }>();
+  const decided = new WeakMap<object, { principal?: Principal | undefined; root?: boolean | undefined; node?: string | undefined }>();
   // `ws` answers a rejected handshake with the status this passes back, so an
   // unauthorised client reads 401 rather than a socket that opened and then
   // closed for no stated reason.
@@ -329,7 +372,7 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
   ): void => {
     void identityOf(info.req.url, info.req.headers.authorization ?? null).then((identity) => {
       if (identity.admitted) {
-        decided.set(info.req, { principal: identity.principal, root: identity.root });
+        decided.set(info.req, { principal: identity.principal, root: identity.root, node: identity.node });
         accept(true);
         return;
       }
@@ -367,12 +410,12 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
       buffered: () => socket.bufferedAmount,
     }, bounding);
     const arrival = decided.get(request);
-    const connected = onConnect(peer, arrival?.principal, arrival?.root);
+    const connected = onConnect(peer, arrival?.principal, arrival?.root, openedOf(request.url, arrival?.node));
     decided.delete(request);
     socket.on('message', (raw) => {
       const text = typeof raw === 'string' ? raw : raw.toString('utf8');
       seen.in(text);
-      receive(text, peer, (request) => connected.handle(request));
+      take(connected, peer, text);
     });
     socket.on('close', () => { peer.close(); connected.close(); });
   });
@@ -557,7 +600,8 @@ export async function overStdio(options: StdioOptions, onConnect: OnConnect): Pr
     // question a socket's queue answers.
     buffered: () => output.writableLength,
   }, boundingOf(options));
-  const connected: Connected = onConnect(peer, undefined, options.root !== false);
+  // Never raw: there is no join path over a pipe, so nothing here is a node's.
+  const connected = onConnect(peer, undefined, options.root !== false);
 
   /** The one ending, so a close and an end cannot both release the connection. */
   const finish = (): void => {
@@ -571,7 +615,7 @@ export async function overStdio(options: StdioOptions, onConnect: OnConnect): Pr
   const frame = (line: string): void => {
     if (line.trim() === '') return;
     seen.in(line);
-    receive(line, peer, (request) => connected.handle(request));
+    take(connected, peer, line);
   };
 
   input.setEncoding('utf8');

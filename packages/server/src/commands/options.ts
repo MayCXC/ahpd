@@ -96,6 +96,8 @@ export interface Options {
   closedChats: 'hidden' | 'delete';
   /** What archiving a session does with a working tree that has changes nobody committed. */
   archiveDirtyWorktree: 'keep' | 'commit';
+  /** What a session on a joined node does when that node's `ahpd join` restarts. */
+  nodeRestart: 'end' | 'reconnect';
   /** How the merged sessions pass learns the state of a pull request. */
   pullRequestLookup: 'url' | 'branch';
   /** How long a call a client runs may wait, absent when the deployment said nothing. */
@@ -606,6 +608,11 @@ export const serverFields = {
     type: 'string',
     enum: ['keep', 'commit'],
     description: 'What archiving a session does with a working tree that has uncommitted changes: keep leaves the tree, commit commits the changes on its branch and removes the tree.',
+  },
+  nodeRestart: {
+    type: 'string',
+    enum: ['end', 'reconnect'],
+    description: 'What a session on a joined node does when that node\'s "ahpd join" restarts: end ends it with a sentence, and the next turn resumes it by id; reconnect keeps it and opens it again on the socket the node dials when it comes back. Default end.',
   },
   pullRequestLookup: {
     type: 'string',
@@ -1246,6 +1253,7 @@ const noCwd = input['noCwd'] === true;
     sessionToolsProviders: given('sessionToolsProviders') ?? [],
     closedChats: given('closedChats') ?? 'hidden',
     archiveDirtyWorktree: given('archiveDirtyWorktree') ?? 'keep',
+    nodeRestart: given('nodeRestart') ?? 'end',
     pullRequestLookup: given('pullRequestLookup') ?? 'url',
     ...(clientToolTimeoutMs === undefined ? {} : { clientToolTimeoutMs }),
     ...(shellEnv === undefined ? {} : { shellEnv }),

@@ -36,7 +36,6 @@
  */
 
 import { spawn as startProcess } from 'node:child_process';
-import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 import { AhpClient, RpcError } from '@microsoft/agent-host-protocol/client';
 import type { AhpTransport, Subscription, TransportFrame } from '@microsoft/agent-host-protocol/client';
@@ -52,7 +51,7 @@ import { computerId } from '../machines/computers.js';
 import type { Agent, Start } from '../types/agent.js';
 import type { BackgroundTask } from '../types/background.js';
 import type { Bag } from '../types/common.js';
-import type { ComputerPort } from '../types/computers.js';
+import type { ComputerPort, NestedHost, NestedStarted } from '../types/computers.js';
 import type { Chosen, MessageFrom, Session, SubagentChat } from '../types/session.js';
 
 /** How many of the inner host's own lines are kept for a failure's sentence. */
@@ -102,14 +101,12 @@ const NO_AGENT = -32001;
 /** The session actions about one chat in the session's catalogue. */
 const CATALOGUE = new Set(['session/chatAdded', 'session/chatUpdated', 'session/chatRemoved', 'session/defaultChatChanged']);
 
-/**
- * The inner host's two streams and its end.
- *
- * Narrower than a child process on purpose: what the proxy needs is a line in
- * and a line out, and a test hands it a pair of in-memory streams instead of a
- * process. `start` is the only place that knows which it is.
+/*
+ * What a started inner host is is the port's, not this file's: `connect` answers
+ * one over a socket, and `NestedHost` is what both roads hand back. Re-exported
+ * here because this is where a caller of the proxy looks for it.
  */
-export type NestedHost = Pick<ChildProcessWithoutNullStreams, 'stdin' | 'stdout' | 'stderr' | 'on' | 'kill'>;
+export type { NestedHost, NestedStarted };
 
 /** What the proxy asks for a host inside a machine. */
 export interface NestedAsked {
@@ -121,17 +118,6 @@ export interface NestedAsked {
   cwd?: string;
   /** The session's port, which is where the default `start` asks. */
   computers?: ComputerPort;
-}
-
-/**
- * A started inner host, and the path inside the machine its session works at.
- *
- * `workingDirectory` is the session folder as the machine sees it, through its
- * mounts; absent, the inner session is created at the folder this host named.
- */
-export interface NestedStarted {
-  host: NestedHost;
-  workingDirectory?: string;
 }
 
 /** How one session of this backend runs nested. */
@@ -148,14 +134,28 @@ export interface NestedOptions {
   /** How long a question to the inner host waits. Default `ANSWER_TIMEOUT`. */
   timeoutMs?: number;
   /**
-   * Start the inner host, for a caller that is not this host's `computers`
-   * port. A test hands in in-memory streams; the default asks the port for a
-   * spawn and runs it here. Answers the host alone, or the host with the path
-   * inside the machine its session works at.
+   * Start the inner host, where the port has a road the default does not take.
+   *
+   * A test hands in in-memory streams, and a host whose port can `connect`
+   * hands back the socket the machine opened for this session. Answers the
+   * host alone, or the host with the path inside the machine its session works
+   * at, or nothing for a machine this caller does not serve: nothing falls back
+   * to the default, which asks the port for a spawn here.
    */
-  start?: (asked: NestedAsked) => NestedHost | NestedStarted | Promise<NestedHost | NestedStarted>;
+  start?: (asked: NestedAsked) => NestedHost | NestedStarted | undefined | Promise<NestedHost | NestedStarted | undefined>;
   /** One line worth keeping. Nothing is logged without one. */
   log?: (line: string) => void;
+  /**
+   * What the session does when a host that `start` answered goes while it is ready.
+   *
+   * `end` stops the session with a sentence, and the next turn resumes it by
+   * the inner host's id. `reconnect` keeps it, and opens it again through the
+   * same `start` - which is how a session on a node survives the node's
+   * `ahpd join` restarting: the node dials the hub again, and the port hands
+   * this session a socket on the other side. Left out, or for a host the
+   * default started, the session ends for good, as a machine's does.
+   */
+  restart?: 'end' | 'reconnect';
 }
 
 /**
@@ -385,6 +385,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
   const log = options.log ?? ((): void => { /* nothing is kept without one */ });
   const timeoutMs = options.timeoutMs ?? ANSWER_TIMEOUT;
   const plugins = options.plugins;
+  const restart = options.restart;
   const said = start.settings?.computer;
   const id = computerId(said);
   if (id === undefined) {
@@ -411,12 +412,39 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
   let exited = false;
   /** Resolves when the process has gone - its own `exit`, its pipes closing, or an error - so a caller can wait for the process and not the request. */
   let onGone: () => void = () => { /* nothing waits before one is started */ };
-  const gone = new Promise<void>((resolve) => { onGone = resolve; });
+  /**
+   * Resolves when the process has gone, and is armed again for each one opened.
+   *
+   * A session that came back on a second host has a second process, and a
+   * close that waited on the first one being gone would wait on nothing.
+   */
+  let gone = new Promise<void>((resolve) => { onGone = resolve; });
   let root: RootState | undefined;
   let session: SessionState | undefined;
   let chat: ChatState | undefined;
   let ready = false;
+  /**
+   * Whether the session inside is to be resumed rather than made.
+   *
+   * True from the start for a session this host was asked to resume, and true
+   * again once the host inside has gone and the session is opened on the id it
+   * already has.
+   */
+  let resuming = start.resume !== undefined;
+  /** Whether the host inside is being opened again, so one gone host starts one. */
+  let reopening = false;
+  /** Whether the host inside is one `start` answered, which is the only kind `restart` applies to. */
+  let answered = false;
+  /** The sentence this session ended with, gone for good: the host refuses what follows. */
   let ended: string | undefined;
+  /**
+   * The sentence the session stopped with, while it can still be opened again.
+   *
+   * A session whose node went under `end` is shown as failed with this
+   * sentence, and the next turn opens it again at its own id - so it is not
+   * `ended`, which is a session that refuses everything that follows.
+   */
+  let halted: string | undefined;
   let closed = false;
   /** The request that makes the session inside, while it is in flight. */
   let making: Promise<unknown> | undefined;
@@ -472,6 +500,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
   const fail = (message: string): void => {
     if (ended !== undefined || closed) return;
     ended = message;
+    halted = undefined;
     log(`${provider} in computer://${id}: ${message}`);
     start.emit('session', { type: 'session/creationFailed', error: { errorType: 'sessionStartFailed', message } });
     if (turn !== undefined) {
@@ -484,6 +513,87 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       turn = undefined;
     }
     stop();
+  };
+
+  /**
+   * Stop the session where it ran, in a sentence, and leave it openable again.
+   *
+   * This is what `end` - the default - does when the node a session runs on
+   * restarts its `ahpd join`: the session is shown as failed with the sentence
+   * naming the machine, and the next turn opens it again at the inner host's
+   * id. It is not `fail`, because the host refuses every later action on a
+   * session that answered `ended()` - which would be this one refusing the very
+   * turn that resumes it.
+   */
+  const halt = (message: string): void => {
+    if (ended !== undefined || halted !== undefined || closed) return;
+    halted = message;
+    ready = false;
+    log(`${provider} in computer://${id}: ${message}`);
+    start.emit('session', { type: 'session/creationFailed', error: { errorType: 'sessionStartFailed', message } });
+    if (turn !== undefined) {
+      start.emit('chat', {
+        type: 'chat/error',
+        turnId: turn,
+        duration: 0,
+        part: { kind: 'error', error: { errorType: 'turnFailed', message } },
+      });
+      turn = undefined;
+    }
+  };
+
+  /**
+   * What the host inside going means for the session.
+   *
+   * Before it ever came up, it is a start that failed, and its own sentence is
+   * the useful one. Once it is ready, a host `start` answered goes as
+   * `restart` says: `end` stops the session where it ran, and the next turn
+   * opens it again by the inner host's id; `reconnect` keeps it and opens it
+   * again through the same `start`, which is how a session on a node outlives
+   * the node's `ahpd join` restarting. Any other host going ends the session.
+   */
+  const lost = (why: string): void => {
+    if (ended !== undefined || closed) return;
+    if (!ready) {
+      fail(`${provider}'s host inside computer://${id} ended before its session started${why === '' ? '' : ` (${why})`}.${lastWords()}`);
+      return;
+    }
+    if (restart === undefined || !answered) {
+      fail(`${provider}'s host inside computer://${id} ended${why === '' ? '' : `: ${why}`}.${lastWords()}`);
+      return;
+    }
+    if (restart === 'reconnect') {
+      void reopen(why);
+      return;
+    }
+    halt(`${provider}'s host inside computer://${id} ended${why === '' ? '' : `: ${why}`}.${lastWords()}`);
+  };
+
+  /**
+   * The same session, on the host the node started for it now.
+   *
+   * The socket that carried it is gone and the node is dialling again; `start`
+   * is what asks the port for the new one, and a port with a node in the
+   * middle waits a bounded time for it rather than failing at the moment the
+   * node is about to be back. A reopen that fails ends the session in a
+   * sentence saying so, which is the same end `end` gives straight away.
+   */
+  const reopen = async (why: string): Promise<void> => {
+    if (closed || reopening) return;
+    reopening = true;
+    ready = false;
+    exited = false;
+    resuming = true;
+    log(`${provider} in computer://${id} lost the host it was running on${why === '' ? '' : ` (${why})`}; opening the session again there`);
+    try {
+      await bringUp();
+    }
+    catch (error) {
+      fail(`${provider}'s session in computer://${id} could not be opened again after its host ended: ${reason(error)}.${lastWords()}`);
+    }
+    finally {
+      reopening = false;
+    }
   };
 
   /** Each inner chat this session serves, by its inner URI, to the outer URI it is served under. */
@@ -798,7 +908,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       }
     }
     catch (error) {
-      if (ended === undefined && !closed) {
+      if (ended === undefined && halted === undefined && !closed) {
         fail(`${provider}'s host inside computer://${id} stopped answering: ${reason(error)}${lastWords()}`);
       }
     }
@@ -851,10 +961,14 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       ...(start.workingDirectory === undefined ? {} : { cwd: start.workingDirectory }),
       ...(start.computers === undefined ? {} : { computers: start.computers }),
     };
-    const answer = options.start !== undefined ? await options.start(asked) : await startInside(asked);
+    const offered = options.start === undefined ? undefined : await options.start(asked);
+    answered = offered !== undefined;
+    const answer = offered ?? await startInside(asked);
     const started: NestedStarted = 'stdin' in answer ? { host: answer } : answer;
     const opened = started.host;
     host = opened;
+    gone = new Promise<void>((resolve) => { onGone = resolve; });
+    exited = false;
     opened.on('close', () => { exited = true; onGone(); });
     opened.on('error', () => { exited = true; onGone(); });
     /*
@@ -878,17 +992,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
         tail.push(line);
       },
       (why) => {
-        if (ended !== undefined || closed) return;
-        /*
-         * An exit before the session existed is the start failing, and its own
-         * sentence is more use than the request timeout that would follow - a
-         * program that was never there, or one that refused the host.
-         */
-        if (!ready) {
-          fail(`${provider}'s host inside computer://${id} ended before its session started${why === '' ? '' : ` (${why})`}.${lastWords()}`);
-          return;
-        }
-        fail(`${provider}'s host inside computer://${id} ended${why === '' ? '' : `: ${why}`}.${lastWords()}`);
+        lost(why);
       },
     );
     const held = new AhpClient(transport, { requestTimeoutMs: timeoutMs });
@@ -962,9 +1066,9 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
      * listing its catalogue first, which is a listing of the machine's
      * transcripts and not always the same set it can read.
      */
-    if (start.resume === undefined) await make();
+    if (!resuming) await make();
     const lead = await held.subscribe(innerSession).catch(async (error: unknown) => {
-      if (start.resume === undefined || !(error instanceof RpcError) || error.code !== NO_AGENT) throw error;
+      if (!resuming || !(error instanceof RpcError) || error.code !== NO_AGENT) throw error;
       log(`the host inside computer://${id} holds no session ${sessionId} to resume, so one was made`);
       await make();
       return await held.subscribe(innerSession);
@@ -978,6 +1082,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
     void pump(lead.subscription, 'session');
     void pump(talk.subscription, 'chat');
     ready = true;
+    halted = undefined;
     log(`${provider} runs in computer://${id} as ${innerProvider} through ${plugins.join(', ')}`);
     for (const run of waiting.splice(0)) run();
   };
@@ -1055,8 +1160,9 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
         ...shown,
         ...(typeof held.defaultChat === 'string' && !outerOf.has(held.defaultChat) ? { defaultChat: start.chatUri } : {}),
         ...(Array.isArray(held.workingDirectories) ? { workingDirectories: (held.workingDirectories as string[]).map(outerDir) } : {}),
-        // Said in the snapshot too, for a client that subscribes after the end.
-        ...(ended === undefined ? {} : { lifecycle: 'failed', creationError: { errorType: 'sessionStartFailed', message: ended } }),
+        // Said in the snapshot too, for a client that subscribes after the end,
+        // and while the session is stopped and the next turn would open it again.
+        ...(ended === undefined && halted === undefined ? {} : { lifecycle: 'failed', creationError: { errorType: 'sessionStartFailed', message: ended ?? halted } }),
         resource: start.uri,
       };
     },
@@ -1064,6 +1170,16 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
 
     begin: (turnId: string, text: string, model?: Chosen, from?: MessageFrom): void => {
       turn = turnId;
+      /*
+       * A turn after the session stopped is the turn that resumes it: the
+       * session inside is opened again at its own id, and the action waits
+       * behind the gate until the inner host holds that session, so the client
+       * that said one more thing gets the conversation it had.
+       */
+      if (halted !== undefined && !closed) {
+        halted = undefined;
+        void reopen('');
+      }
       deliver('chat', {
         type: 'chat/turnStarted',
         turnId,
@@ -1076,6 +1192,12 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       });
     },
     queue: (queueId: string, text: string, model?: Chosen, from?: MessageFrom): void => {
+      // A message queued on a session that stopped resumes it the way a turn
+      // does: it is a turn waiting, and the host inside is where it waits.
+      if (halted !== undefined && !closed) {
+        halted = undefined;
+        void reopen('');
+      }
       deliver('chat', {
         type: 'chat/pendingMessageSet',
         kind: 'queued',

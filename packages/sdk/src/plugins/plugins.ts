@@ -16,7 +16,7 @@ import type { AgentOwner, ServedEngine } from '../types/agents.js';
 import type { SessionConfigAnswerer } from '../types/completions.js';
 import type { ServedAdapter } from '../types/connectors.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from '../types/events.js';
-import type { HostOptions, HostTool } from '../types/host.js';
+import type { HostOptions, HostTool, NodeRegistry } from '../types/host.js';
 import type { ChannelHandle, Contribution, LoaderContext, Alert, InstallAnswer, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedBindings, ServedCanvases, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
 import type { CollectionOptions, RecordCollection, RecordStore } from '../types/records.js';
 import type { SessionStore } from '../types/sessions.js';
@@ -952,6 +952,14 @@ export interface HostRecordingOptions {
    * no folder gives nothing at all.
    */
   install?: (spec: string) => Promise<InstallAnswer>;
+  /**
+   * The hosts that joined this one, handed through as `host.nodes`.
+   *
+   * A value rather than a function because the registry belongs to the daemon
+   * and is one object for its whole life: a node joining or leaving is the
+   * registry's own event, not a port another plugin may register.
+   */
+  nodes?: NodeRegistry;
 }
 
 /**
@@ -1190,6 +1198,9 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     // Empty rather than absent on a host with no agents channel: every agent
     // there is the daemon's own, which is what a map with no entry says.
     agentOwners: () => options.agentOwners?.() ?? new Map(),
+    // Absent rather than empty on a host no node joined: a plugin asks whether
+    // there is a registry before it offers a machine from one.
+    ...(options.nodes === undefined ? {} : { nodes: options.nodes }),
     /*
      * Read from the live port rather than a snapshot, and dropped rather than
      * thrown when there is none: a host nobody asked to keep usage on is not a

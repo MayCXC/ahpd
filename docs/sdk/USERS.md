@@ -89,13 +89,13 @@ Every operation is in one of the two groups, with one exception: `plugin:install
 
 The host advertises every subject a grant may name in `_meta['ahpd.grants']` on
 the handshake and on the root state, so a client reads the operations from the
-wire rather than from this page. That map holds the fourteen the host decides and,
+wire rather than from this page. That map holds the fifteen the host decides and,
 beside them, every scheme this host serves - `user`, `team`, `project`, `role`,
 `policy`, `usage` and any plugin's - each under its own name, with the
 operations its provider implements and the groups those fall into. A client
 drawing a role editor reads that one key and has every subject there is.
 
-The subjects the host decides are these fourteen:
+The subjects the host decides are these fifteen:
 
 | Subject | Read group | Write group | What they cover |
 | --- | --- | --- | --- |
@@ -110,6 +110,7 @@ The subjects the host decides are these fourteen:
 | `agent` | `list`, `all` | `put`, `remove`, `host` | The engines plugins register, and the agents made from records of them. `list` reads the caller's own agents, their teams' and the host's; `all` reads every agent and lets a remove take any of them, whoever owns it; `host` lets a put or a remove change an agent owned by `host` |
 | `diagnostics` | `logs`, `network`, `fetch` | - | Logs and network details for troubleshooting |
 | `container` | - | `connect`, `disconnect`, `relay`, `stop`, `remove` | Connecting to dev containers, and stopping or removing one |
+| `node` | `list` | `add`, `remove` | The hosts that joined this one. `node:read` lists them; `node:write` adds a node and mints its token, which is shown once, and takes one away, which refuses its token and drops its connection |
 | `proxy` | `models` | `call` | The model proxy under `/v1` ([PROXY.md](../server/PROXY.md)). `proxy:call` calls a model, which spends this host's provider keys; `proxy:models` lists the model names |
 | `trust` | - | `push` | Pushing a window's answer about a folder to this host, which decides what that window's sessions load from the project. A window answers for every folder at once ([Trusted folders](AUTHENTICATION.md#trusted-folders)) |
 | `account` | `status` | - | The account each agent's harness is signed in as, published on the root config under `vscode.codexAccount` for Codex and `ahpd.<provider>Account` for the rest. The email is the operator's own, so a connection that does not hold `account:read` is shown no account value at all ([Agent accounts](AUTHENTICATION.md#agent-accounts)) |
