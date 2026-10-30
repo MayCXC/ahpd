@@ -63,12 +63,11 @@ export interface ChargeOptions {
   /** The instant to read the totals at. Defaults to now. */
   at?: Date;
   /**
-   * What each key used in this minute, and where an allowed work is counted.
+   * What each key used in this minute, which a `minute` limit reads.
    *
-   * A `minute` limit reads its figure here, because the store keeps no total
-   * finer than a day. An allowed call adds 1 to each of its `calls` and `turns`
-   * keys before it runs, which is what stops a burst passing an amount.
-   * Absent, a `minute` limit reads zero and no call is counted.
+   * The store keeps no total finer than a day, so a limit on a minute reads its
+   * figure here. Absent, a `minute` limit reads zero. The walk never counts into
+   * the meter: the caller counts once, through `countCall`.
    */
   meter?: MinuteMeter;
 }
@@ -305,8 +304,10 @@ const refusalOf = (row: Policy, limit: LimitFigure): ChargeRefusal => {
  *
  * The check is before the work and the record after it, so two pieces of work
  * that start together can both pass an amount in `usd` or `tokens`. A `calls`
- * or `turns` key is counted when the work is allowed, so a burst cannot pass
- * one of those.
+ * or `turns` key is counted by the caller when the work is allowed, through
+ * `countCall`, so a burst cannot pass one of those. The walk itself counts
+ * nothing, because one piece of work may walk more than once: the proxy asks
+ * the policy of every entry a name is served by.
  */
 export async function chargeFor(
   decision: Extract<Decision, { allowed: true }>,
@@ -389,16 +390,29 @@ export async function chargeFor(
     return { allowed: false, refusal: refusalOf(firstClosed.row, firstClosed.limit) };
   }
 
-  /*
-   * The work is allowed, so each call and turn it is charged to is counted now.
-   * A minute limit on one of those keys reads the count at the next check, and
-   * a call that has started but not ended is already in it.
-   */
-  if (options.meter !== undefined) {
-    for (const key of pools) {
-      if (COUNTED_AT_CALL.some((measure) => key.endsWith(`/${measure}`))) options.meter.add(key, 1, at);
-    }
-  }
-
   return { allowed: true, pools };
 }
+
+/**
+ * Count one piece of work once, in the `calls` and `turns` keys it is charged.
+ *
+ * The walk counts nothing, because a caller may walk it more than once for one
+ * piece of work: the proxy asks the policy of every entry a name is served by,
+ * and falls back to the next candidate when the first does not answer. The
+ * caller counts the keys of the candidate it sends to, once, before it sends,
+ * so a fallback is not a second call and a turn is one turn.
+ *
+ * A minute limit on one of those keys reads the count at the next check, and
+ * work that has started but not ended is already in it. A key named twice is
+ * counted once.
+ */
+export const countCall = (keys: Iterable<string>, meter: MinuteMeter | undefined, at?: Date): void => {
+  if (meter === undefined) return;
+  const counted = new Set<string>();
+  for (const key of keys) {
+    if (counted.has(key)) continue;
+    if (!COUNTED_AT_CALL.some((measure) => key.endsWith(`/${measure}`))) continue;
+    counted.add(key);
+    meter.add(key, 1, at);
+  }
+};

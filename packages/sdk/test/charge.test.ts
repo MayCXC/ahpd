@@ -8,7 +8,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { chargeFor, limitsOf } from '../src/usage/charge.js';
+import { chargeFor, countCall, limitsOf } from '../src/usage/charge.js';
 import type { Charge, PayOrder } from '../src/usage/charge.js';
 import { createMinuteMeter } from '../src/usage/minute.js';
 import type { MinuteMeter } from '../src/usage/minute.js';
@@ -97,7 +97,7 @@ const TODAY = new Date('2026-10-20T00:00:00.000Z');
 
 const at = (day: string): Date => new Date(`${day}T00:00:00.000Z`);
 
-/** `decide` then `chargeFor`, which is the pair the host runs for one piece of work. */
+/** `decide` then `chargeFor`, then the count a caller makes, which is the pair the host runs for one piece of work. */
 const charged = async (
   kind: PolicyKind,
   principal: Principal,
@@ -111,12 +111,14 @@ const charged = async (
 ): Promise<Charge> => {
   const decision = await decide(store, principal, scope, kind, asked, moment);
   if (!decision.allowed) throw new Error(`the check refused it: ${decision.refusal.message}`);
-  return chargeFor(decision, kind, principal, scope, usage, {
+  const walked = await chargeFor(decision, kind, principal, scope, usage, {
     zone: 'UTC',
     at: moment,
     ...(payOrder === undefined ? {} : { payOrder }),
     ...(meter === undefined ? {} : { meter }),
   });
+  if (walked.allowed) countCall(walked.pools, meter, moment);
+  return walked;
 };
 
 /** The keys of an answer the walk allowed. */
@@ -438,6 +440,21 @@ describe('a minute limit', () => {
     meter.add('policy:T1/tokens', 100, TODAY);
     expect(refusalOf(await charged('model', alice, undefined, { model: 'anthropic/sonnet-5' }, usage, TODAY, undefined, store, meter)).message)
       .toBe('T1 has no room: 100 / 100 tokens this minute');
+  });
+
+  it('does not count a walk, and counts a key named twice once', async () => {
+    const store = await BURST();
+    const meter = createMinuteMeter();
+    const decision = await decide(store, alice, undefined, 'model', { model: 'anthropic/sonnet-5' }, TODAY);
+    if (!decision.allowed) throw new Error(decision.refusal.message);
+    const walked = await chargeFor(decision, 'model', alice, undefined, memoryUsage(), { zone: 'UTC', at: TODAY, meter });
+    const pools = poolsOf(walked);
+    expect(pools).toEqual(['policy:R1/calls']);
+    // The walk only reads the minute: one piece of work may walk more than once.
+    expect(meter.sum('policy:R1/calls', TODAY)).toBe(0);
+    // One count, though the caller names the key twice.
+    countCall([...pools, ...pools], meter, TODAY);
+    expect(meter.sum('policy:R1/calls', TODAY)).toBe(1);
   });
 
   it('answers a minute figure with where it begins and resets, in UTC', async () => {

@@ -19,7 +19,7 @@
 
 import type { RequestHandler } from '@cofold/remote';
 import {
-  chargeFor, decide, keyRowOf, type ConnectorModel, type ConnectorModels, type Cost, type MinuteMeter, type ModelPricing, type ModelUse, type Owner, type PayOrder, type Policies, type ProviderConnector,
+  chargeFor, countCall, decide, keyRowOf, type ConnectorModel, type ConnectorModels, type Cost, type MinuteMeter, type ModelPricing, type ModelUse, type Owner, type PayOrder, type Policies, type ProviderConnector,
   type ProviderModel, type Scope, type Usage, type Users,
 } from '@ahpd/sdk';
 import { foreign, guarded, isUnder, json, originRefusal, PROXY_PREFIX, type ApiOrigins } from '../http.js';
@@ -529,10 +529,10 @@ interface EntryCheck {
  * walk chose are kept for the entry, because the record is written for the
  * candidate that answered rather than for the name. With no usage store there
  * is no total to read, so no key is chosen and nothing is refused on a limit.
- * An allowed entry's `calls` key is counted in this minute at once, so a burst
- * of calls cannot pass one. A listing passes `zone` as `undefined`: it asks only
- * whether the policy allows the name, so a model at its limit stays listed and
- * its call is refused.
+ * The walk counts nothing: the request counts its `calls` key once, on the
+ * candidate it sends to, so a name served by two entries is one call. A listing
+ * passes `zone` as `undefined`: it asks only whether the policy allows the
+ * name, so a model at its limit stays listed and its call is refused.
  */
 const policyFor = (options: ProxyOptions, charged: Charged, name: string, zone: string | undefined): EntryCheck | undefined => {
   const store = options.policies;
@@ -809,8 +809,20 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
       options.note?.(connector, outcome);
     };
 
+    /*
+     * One request is one call, however many entries and candidates the policy
+     * walk judged, so the `calls` figure is counted once, on the keys of the
+     * candidate the request is sent to first. A fallback to the next candidate
+     * is the same call, and a candidate the walk kept no keys for counts
+     * nothing.
+     */
+    let counted = false;
     for (const [index, candidate] of routed.candidates.entries()) {
       const last = index === routed.candidates.length - 1;
+      if (!counted) {
+        counted = true;
+        if (check !== undefined) countCall(check.keysOf(candidate.entry) ?? [], options.meter);
+      }
       const tried = await attempt(request, dialect, read, candidate);
       if (tried.kind === 'failed') {
         // A call that never went out is not the connector's failure.

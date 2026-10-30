@@ -248,6 +248,40 @@ describe('a call at a limit', () => {
     expect(third.json).toMatchObject({ error: { type: 'permission_error', message: 'burst has no room: 2 / 2 calls this minute' } });
   });
 
+  it('counts one request once when a name is served by two connectors', async () => {
+    const remote = await fakeProvider(answerJson(200, COMPLETION));
+    fakes.push(remote);
+    const meter = pinned();
+    const served = await serveProxy({
+      users: who.users,
+      // One name, two connectors, so the policy walk judges two entries and the
+      // request sends to the first of them. That is still one call.
+      proxy: {
+        models: { 'local/twin': [{ provider: 'one', id: 'twin' }, { provider: 'two', id: 'twin' }] },
+      },
+      providers: [
+        { id: 'one', adapter: 'openai-compatible', endpoint: remote.endpoint, key: null },
+        { id: 'two', adapter: 'openai-compatible', endpoint: remote.endpoint, key: null },
+      ],
+      usage: () => memoryUsage(),
+      policies: await rows(MINUTE_CALLS),
+      policiesCheck: true,
+      meter,
+    });
+    open.push(served);
+    const headers = { 'x-api-key': who.ana };
+    const body = { model: 'local/twin' };
+    expect((await send(served.port, CHAT, { headers, body })).status).toBe(200);
+    // Two entries were walked and one candidate was sent to, so the count is 1.
+    expect(meter.sum('policy:burst/calls')).toBe(1);
+    expect((await send(served.port, CHAT, { headers, body })).status).toBe(200);
+    expect(meter.sum('policy:burst/calls')).toBe(2);
+    const third = await send(served.port, CHAT, { headers, body });
+    expect(third.status).toBe(403);
+    expect(isOpenAiError(third.json)).toBe(true);
+    expect(third.json).toMatchObject({ error: { type: 'permission_error', message: 'burst has no room: 2 / 2 calls this minute' } });
+  });
+
   it('writes the check\'s key on an allowed call\'s record, beside the owner, team and project', async () => {
     const usage = keeping({ 'policy:budget/usd': { usd: 1 } });
     const { served } = await limited(usage);

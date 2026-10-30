@@ -89,7 +89,7 @@ export { secretRef, fromEnvRef, scopeOf, readSecret, readSecrets } from './acces
 export type { SecretScope } from './access/vault.js';
 export { decide, keyRowOf } from './access/decide.js';
 export type { Asked, Decision } from './access/decide.js';
-export { chargeFor, COUNTED, keysOf, limitsOf } from './usage/charge.js';
+export { chargeFor, countCall, COUNTED, keysOf, limitsOf } from './usage/charge.js';
 export type { Charge, ChargeOptions, ChargeRefusal, LimitFigure, LimitMember, PayOrder } from './usage/charge.js';
 export { fileUsers, grantProblem, signInRecord } from './access/users.js';
 export type { FileUserOptions } from './access/users.js';

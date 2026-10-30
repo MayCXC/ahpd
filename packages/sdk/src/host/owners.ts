@@ -1,5 +1,5 @@
 import { namesOf, scopeFor } from '../usage/scopes.js';
-import { chargeFor } from '../usage/charge.js';
+import { chargeFor, countCall } from '../usage/charge.js';
 import { decide } from '../access/decide.js';
 import { idOf } from '../sessions/catalog.js';
 import { zoneOf } from '../usage/periods.js';
@@ -222,9 +222,10 @@ export function createOwners(ctx: HostContext): Owners {
    *
    * `charge` names the kind whose allowed decision is then walked for room: a
    * turn asks for `agent` and keeps the keys for its records; a session asks
-   * for none, so nothing is limited at its creation. With no usage store there
-   * is nothing to read the walk's totals from, so no key is chosen and nothing
-   * is refused on a limit.
+   * for none, so nothing is limited at its creation. The turn's keys are
+   * counted in the meter once, after the walk, so a turn is one turn. With no
+   * usage store there is nothing to read the walk's totals from, so no key is
+   * chosen and nothing is refused on a limit.
    *
    * A store that cannot be read refuses the work rather than letting it through,
    * because a check that failed open is not a check.
@@ -256,6 +257,7 @@ export function createOwners(ctx: HostContext): Owners {
         return { refusal: `no policy could be read, so ${one.kind} is refused: ${error instanceof Error ? error.message : String(error)}` };
       }
     }
+    if (pools !== undefined) countCall(pools, options.meter);
     return pools === undefined ? {} : { pools };
   };
 
