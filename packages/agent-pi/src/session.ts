@@ -1401,7 +1401,7 @@ export function piSession(
      */
     confirm: (toolCallId, approved) => {
       const held = pending.get(toolCallId);
-      if (held === undefined) return;
+      if (held === undefined) return false;
       pending.delete(toolCallId);
       emit('session', { type: 'session/inputNeededRemoved', id: held.id });
       const toolCall = bag(held.entry.toolCall);
@@ -1439,6 +1439,7 @@ export function piSession(
       if (approved) held.open?.();
       held.settle(approved ? undefined : { block: true, reason: DECLINED });
       touch();
+      return true;
     },
     answer: () => false,
 

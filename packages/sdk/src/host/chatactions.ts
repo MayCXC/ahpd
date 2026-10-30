@@ -1420,13 +1420,20 @@ export function chatAction(
         ? action.order.filter((id): id is string => typeof id === 'string')
         : []);
       break;
-    case 'chat/toolCallConfirmed':
-      session.confirm(
-        String(action.toolCallId ?? ''),
+    case 'chat/toolCallConfirmed': {
+      const toolCallId = String(action.toolCallId ?? '');
+      const confirmed = session.confirm(
+        toolCallId,
         action.approved === true,
         typeof action.selectedOptionId === 'string' ? action.selectedOptionId : undefined,
       );
+      // A confirmation of a call that is not in `pending-confirmation` MUST be
+      // rejected (the protocol's chat-channel.md, "Server Validation of Client
+      // Actions"), so the client that sent it lets go of a change this host
+      // never made.
+      if (!confirmed) no(`${toolCallId} is not a call this chat is waiting to have confirmed`);
       break;
+    }
     case 'chat/inputCompleted': {
       /*
        * `response`, which is the field the action has.
@@ -1451,9 +1458,15 @@ export function chatAction(
       const taken = session.answer(requestId, accepted, (typeof action.answers === 'object' && action.answers !== null
         ? action.answers
         : {}) as Record<string, unknown>, kind);
-      // An answer to a request this chat is not waiting on is a no-op, as the
-      // protocol has it: nothing to say back, and nothing refused.
-      if (!taken) break;
+      // An answer to a request this chat is not waiting on SHOULD be rejected
+      // (the protocol's chat-channel.md, "Server Validation of Client
+      // Actions"). Left unsaid, the client that sent it holds it as a change
+      // this host never made, and a client that sends its unechoed actions
+      // again after a reconnect sends this one every time.
+      if (!taken) {
+        no(`${requestId} is not a question this chat is waiting on`);
+        break;
+      }
       /*
        * Said back to every client of the chat, the answering one included,
        * so each one's `inputRequest` part carries the response now rather

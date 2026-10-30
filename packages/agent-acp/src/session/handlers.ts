@@ -888,7 +888,7 @@ export function createHandlers(ctx: SessionContext): Handlers {
    */
   const confirm: Session['confirm'] = (toolCallId, approved, optionId) => {
     const held = permissions.get(toolCallId);
-    if (held === undefined) return;
+    if (held === undefined) return false;
     permissions.delete(toolCallId);
     emit('session', { type: 'session/inputNeededRemoved', id: held.requestId });
     const picked = held.offered.find((one) => one.id === optionId && one.kind === (approved ? 'approve' : 'deny'));
@@ -926,6 +926,7 @@ export function createHandlers(ctx: SessionContext): Handlers {
     held.settle(chosen === undefined ? 'cancelled' : { optionId: chosen });
     doing(approved ? 'Running' : 'Thinking');
     touch();
+    return true;
   };
 
   return {

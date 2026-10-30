@@ -1114,6 +1114,13 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
     return held.kind === 'inputRequest' && held.request?.id === requestId && held.response === undefined;
   });
 
+  /** Whether a tool call of the running turn waits on a confirmation. */
+  const confirming = (toolCallId: string): boolean => (chat?.activeTurn?.responseParts ?? []).some((part) => {
+    const held = part as { kind?: unknown; toolCall?: { toolCallId?: unknown; status?: unknown } };
+    return held.kind === 'toolCall' && held.toolCall?.toolCallId === toolCallId
+      && held.toolCall.status === 'pending-confirmation';
+  });
+
   /** The inner session's declaration of one config key, or nothing. */
   const declared = (key: string): Bag | undefined => {
     const properties = (session?.config?.schema as { properties?: Record<string, Bag> } | undefined)?.properties;
@@ -1236,8 +1243,11 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       if (turn === turnId) turn = undefined;
       deliver('chat', { type: 'chat/turnCancelled', turnId });
     },
-    confirm: (toolCallId: string, approved: boolean, optionId?: string): void => {
+    /* Taken only for a tool call of the running inner turn that waits on a confirmation. */
+    confirm: (toolCallId: string, approved: boolean, optionId?: string): boolean => {
+      if (!confirming(toolCallId)) return false;
       deliver('chat', { type: 'chat/toolCallConfirmed', toolCallId, approved, ...(optionId === undefined ? {} : { selectedOptionId: optionId }) });
+      return true;
     },
     /* Taken only for an input request the inner session has open. */
     answer: (requestId: string, accepted: boolean, answers: Bag): boolean => {

@@ -1050,12 +1050,13 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
        */
       confirm: (toolCallId, approved, optionId) => {
         const held = open;
-        if (held === undefined) return;
+        if (held === undefined) return false;
         const asked = held.asked.find((one) => {
           const call = one.part['toolCall'] as Bag | undefined;
-          return one.part['kind'] === 'toolCall' && call?.['toolCallId'] === toolCallId;
+          return one.part['kind'] === 'toolCall' && call?.['toolCallId'] === toolCallId
+            && call['status'] === 'pending-confirmation';
         });
-        if (asked === undefined) return;
+        if (asked === undefined) return false;
         const toolCall = asked.part['toolCall'] as Bag;
         if (approved) {
           Object.assign(toolCall, {
@@ -1084,6 +1085,7 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
           });
         }
         handle.onConfirm?.(toolCallId, approved, optionId);
+        return true;
       },
       answer: (requestId, accepted, answers, response) => {
         const held = open;
