@@ -1,6 +1,6 @@
 ---
 title: A machine on another Docker takes no bind mount
-status: todo
+status: done
 depends: [task-01-a-profile-names-its-docker.md]
 layer: "computer"
 refs:
@@ -40,3 +40,9 @@ p12 task 03 covers copies and env together.
 - A cofold session in `state: volume` mode on another Docker is refused naming `cofoldState`, and no seed is copied.
 
 ## Resume
+
+- **Done:** 2026-10-30. `manifestOf` reads `profile.server`. It refuses a profile or body mount of a host path, leaves out the plugin's `mounts`, and turns directory and file needs into copies. A need with `hostCredential` is refused, naming the need and its agent.
+- **Departure:** the switch is `profile.server` in `manifestOf`, not a `ManifestDefaults.remote` field. A remote `dockerRuntime` also refuses a host-path mount in `run`, as a second guard.
+- **Departure:** the spec keeps `folder`, for the workdir and for task 03. A remote runner drops only the folder's bind and the git directory mount.
+- **Departure:** `resolveNeeds` sets `ResolvedNeed.hostCredential` on a `credential` need that takes the agent's own default. A state need gets it when it has a seed.
+- **Tests:** three tests in [`computer-far-docker.test.ts`](../../../../packages/computer/test/computer-far-docker.test.ts), one in [`machine-needs.test.ts`](../../../../packages/sdk/test/machine-needs.test.ts). [`agent-machine-needs.test.ts`](../../../../packages/sdk/test/agent-machine-needs.test.ts) expects the cofold marks.

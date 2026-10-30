@@ -16,6 +16,8 @@ import { cofoldAgent, harnessConfig, harnessConfigPath, modelOf, resourceOf } fr
  */
 
 let home: string;
+/** The variables the harness reads on top of its file. */
+const VARIABLES = ['COFOLD_BASE_URL', 'COFOLD_API_KEY', 'COFOLD_MODEL'];
 let had: string | undefined;
 
 beforeEach(() => {
@@ -23,11 +25,13 @@ beforeEach(() => {
   had = process.env.XDG_CONFIG_HOME;
   process.env.XDG_CONFIG_HOME = home;
   delete process.env.COFOLD_CONFIG;
+  for (const name of VARIABLES) delete process.env[name];
 });
 
 afterEach(() => {
   if (had === undefined) delete process.env.XDG_CONFIG_HOME; else process.env.XDG_CONFIG_HOME = had;
   delete process.env.COFOLD_CONFIG;
+  for (const name of VARIABLES) delete process.env[name];
   rmSync(home, { recursive: true, force: true });
 });
 
@@ -69,6 +73,35 @@ it('answers nothing rather than failing when the file is absent or partly wrong'
   expect(harnessConfig().providers).toEqual([]);
   put({ providers: [{ id: 'no-url' }, 7, { baseUrl: 'https://has-no-id/v1' }] });
   expect(harnessConfig().providers).toEqual([]);
+});
+
+it('reads a provider called default from the variables the harness reads, on top of the file', () => {
+  // No file at all: the variables alone are a provider, which is how a machine
+  // gets a key from the vault with no file holding it.
+  process.env.COFOLD_BASE_URL = 'https://openrouter.ai/api/v1';
+  process.env.COFOLD_API_KEY = 'v';
+  process.env.COFOLD_MODEL = 'qwen3';
+  expect(harnessConfig()).toMatchObject({
+    providers: [{ id: 'default', baseUrl: 'https://openrouter.ai/api/v1', apiKey: 'v' }],
+    model: 'default/qwen3',
+  });
+
+  // With a file, the variables replace its `default` and keep its others, and
+  // a model with a slash is taken as it is.
+  put({ ...CONFIG, providers: [{ id: 'default', baseUrl: 'http://old/v1' }, ...CONFIG.providers] });
+  process.env.COFOLD_MODEL = 'open_router/x';
+  const found = harnessConfig();
+  expect(found.providers.map((one) => [one.id, one.baseUrl])).toEqual([
+    ['default', 'https://openrouter.ai/api/v1'],
+    ['open_router', 'https://openrouter.ai/api/v1'],
+  ]);
+  expect(found.model).toBe('open_router/x');
+
+  // A key with no URL names no provider.
+  delete process.env.COFOLD_BASE_URL;
+  delete process.env.COFOLD_MODEL;
+  expect(harnessConfig().providers.map((one) => one.id)).toEqual(['default', 'open_router']);
+  expect(harnessConfig().providers[0]?.baseUrl).toBe('http://old/v1');
 });
 
 it('splits a model reference on the first slash, never the last', () => {

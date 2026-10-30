@@ -1,7 +1,7 @@
 ---
 title: A profile's machines may live on another server's Docker
 domain: container
-status: planned
+status: built
 priority: medium
 created: 2026-09-26
 revalidated: 2026-10-30
@@ -37,7 +37,7 @@ refs:
 A profile names `server: "dev02"`, an entry of `ssh.machines`, and its machines are made on that box's Docker.
 State volumes and copies live there, and the session's code arrives by clone, because the folder is on this host's disk.
 By default the machine clones a bundle this host makes, so no credential reaches the box.
-A profile may instead have the machine clone from `origin`, with a git credential named from the vault.
+A profile may instead have the machine fetch from `origin` over https, which works only for a public repository.
 A session in one runs through a nested host, since its terminals and files are the other box's.
 The test is against dev02's Docker.
 A VM on a server is [its own plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md).
@@ -58,7 +58,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 profile.server -> requireOn(server, docker, dockerAccess) -> [new] one docker runner per profile, env DOCKER_HOST=ssh://<destination> -> router id docker-<profile>.<name>
 session on disposable:<profile> -> create on that Docker: no bind mounts, copies by docker cp
   -> [new] code: bundle (default): git bundle here -> docker cp in -> cloned inside, origin set to the repo's remote
-  -> [new] code: clone: git clone <origin> inside, credential by name from the vault
+  -> [new] code: clone: git fetch <origin, https form> inside, no credential
   -> port.remote(id) -> nested: DOCKER_HOST=... docker exec -i <name> ahpd --stdio
   -> the result comes back: git bundle inside -> docker cp out -> fetched into the session's worktree branch
 
@@ -93,15 +93,16 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 | A need marked `credential: true`, a file or a volume seed, is refused on a remote runner, unless the profile gives that need its own value; cofold's `cofoldConfig` and `cofoldState` both carry the mark | Softov, 2026-10-30, chose "File and volume seeds"; `cofoldState` seeds a volume from the same config file at [`code://packages/agent-cofold/src/agent.ts#L785-L789`](../../../../packages/agent-cofold/src/agent.ts#L785-L789) | 02 |
 | The work comes back through host/67's bring-back: a bundle on `docker exec`'s stdout, fetched into `refs/ahpd/machines/<machine>/<branch>` and moved by its rules; a machine whose work did not come back is not removed | Softov, 2026-10-30, chose "Reuse host/67's"; [`code://packages/computer/src/runtime.ts#L2455-L2580`](../../../../packages/computer/src/runtime.ts#L2455-L2580) | 03 |
 | A session with `isolation: folder` on a remote profile is not refused: a branch the folder is not on moves as a ref, and work that is not a fast-forward waits under `refs/ahpd/machines/<machine>/<branch>` | follows host/67's rules, which Softov chose to reuse on 2026-10-30 | 03 |
-| `gitCredential` is `secretAtUse`, read with `host.secret` at create for the machine's owner, and a missing one fails only that create | Softov, 2026-10-03, asked "when a `$secret` in a plugin's options can't be read at load, what fails?": "Only its item" | 07 |
 | The plugin's `env.DOCKER_HOST` stays the whole plugin's Docker and is treated as this host's | it works today, and an operator who set it chose that | 01 |
 | A machine's id records which Docker made it | two Dockers can hold the same name | 01 |
 | The session's code reaches the machine by clone | Softov, 2026-10-02, asked "How does a session's code reach a machine on another box?": "clone everywhere.. but leave open for future case with virtiofs on local libvirt" | 03 |
 | A machine on another Docker takes no bind mount; a copy-in still works | `docker cp` streams through the Docker API, a bind mount names a path on the Docker's own host | 02 |
 | Every session in such a machine runs nested | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 04 |
 | The test target is dev02's Docker | Softov, 2026-10-02, asked "Which box is the test target?": "ssh to softov@dev02.example.com worked." | 05 |
-| Both ways in exist, chosen per profile with `code` (for now the option's name and its two values): `bundle` (default), a git bundle of the session's branch made here, copied in with `docker cp` and cloned inside with `origin` set to the repository's remote, with no credential in the box; and `clone`, the machine cloning from `origin` with a git credential named from the vault as `gitCredential: { "$secret": ... }`; one function picks the route | Softov, 2026-10-03, asked "where does the clone come from and get its credentials?": "Both, a profile option"; "one or another is not a valid choise" | 03, 07 |
+| Both ways in exist, chosen per profile with `code` (for now the option's name and its two values): `bundle` (default), a git bundle of the session's branch made here, copied in with `docker cp` and cloned inside with `origin` set to the repository's remote, with no credential in the box; and `clone`, the machine fetching from `origin`; one function picks the route | Softov, 2026-10-03, asked "where does the clone come from and get its credentials?": "Both, a profile option"; "one or another is not a valid choise" | 03, 07 |
 | For now this host fetches the work back, and the machine never pushes | Softov, 2026-10-03, asked "does the machine push the branch back, or does this host fetch it?": "as proposed" | 03 |
+| A `clone` machine holds no ssh key and no token, so it fetches `origin` by its https form and works only for a public repository; private repositories are deferred | Softov, 2026-10-30: a key in the machine is one "all will see", and "for now only works on public.. deferred to work on private repositories" | 07 |
+| cofold reads `COFOLD_BASE_URL`, `COFOLD_API_KEY` and `COFOLD_MODEL` on top of its file, as papo does, and a machine declares them as variables with no default, so a profile names the key from the vault and no file holds it; a credential seed whose file is missing carries no credential | Softov, 2026-10-30: "cofold is wrong.. it need to accept a key like ENV or something alike" | 05 |
 | A vault-named variable works on a remote Docker: p9's refusal applies only to a runtime that puts variables in a command line, as ssh does | Softov, 2026-10-30, chose "Allow on remote Docker"; `noVaultInline` at [`code://packages/computer/src/plugin.ts#L1296-L1300`](../../../../packages/computer/src/plugin.ts#L1296-L1300) | 04 |
 | For now a machine on a profile's Docker is `docker-<profile>.<name>`, spelled and parsed by p9 task 01's functions; a profile named like a runtime value is refused | Softov, 2026-10-03, answered in p9: "put runtime.name" | 01 |
 
@@ -117,13 +118,13 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A profile names its Docker, and its machines' ids say which](task-01-a-profile-names-its-docker.md) | todo | server check 03 |
-| [02 - A machine on another Docker takes no bind mount](task-02-no-bind-mount-on-another-docker.md) | todo | 01 |
-| [03 - The session's code arrives by bundle and returns as a branch](task-03-the-code-arrives-by-clone.md) | todo | 02 |
-| [04 - Sessions in a machine on another Docker run nested](task-04-sessions-there-run-nested.md) | todo | 01 |
-| [05 - dev02's Docker runs a session](task-05-dev02s-docker-runs-a-session.md) | todo | 03, 04, 07 |
-| [06 - Docs](task-06-docs.md) | todo | 05, 07 |
-| [07 - A profile may have its machine clone from origin](task-07-a-profile-may-clone-from-origin.md) | todo | 03, vault/01-p1 task 04 |
+| [01 - A profile names its Docker, and its machines' ids say which](task-01-a-profile-names-its-docker.md) | done | server check 03 |
+| [02 - A machine on another Docker takes no bind mount](task-02-no-bind-mount-on-another-docker.md) | done | 01 |
+| [03 - The session's code arrives by bundle and returns as a branch](task-03-the-code-arrives-by-clone.md) | done | 02 |
+| [04 - Sessions in a machine on another Docker run nested](task-04-sessions-there-run-nested.md) | done | 01 |
+| [05 - dev02's Docker runs a session](task-05-dev02s-docker-runs-a-session.md) | done | 03, 04, 07 |
+| [06 - Docs](task-06-docs.md) | done | 05, 07 |
+| [07 - A profile may have its machine clone from a public origin](task-07-a-profile-may-clone-from-origin.md) | done | 03 |
 | [08 - dev02 runs libvirt and qemu](task-08-dev02-runs-libvirt.md) | dropped | - |
 | [09 - A machine with an address is reached by ssh, with this host's own key](task-09-an-address-is-reached-by-ssh.md) | dropped | - |
 | [10 - libvirt makes a machine from a template, and destroys it](task-10-libvirt-makes-a-machine.md) | dropped | 03, 08, 09 |
@@ -139,18 +140,17 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 
 ## Resume state
 
-- **Done so far:** no task; planned 2026-10-02. Main has parts of tasks 01, 03 and 04 from other plans, checked 2026-10-30. `claimOf` reads through the router, p9 spells the ids, and the router bounds `list`. The `ahpd.host` label exists, host/67 brings work back, and `spawnEnvOf` puts the runtime's `env` in the descriptor. Tasks 08 to 13 moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md) on 2026-10-30.
-- **Next action:** [task-01-a-profile-names-its-docker.md](task-01-a-profile-names-its-docker.md), after the server check's task 03.
+- **Done so far:** every task is done or dropped (2026-10-30). Tasks 08 to 13 moved to [the VM plan](../20261030-1141-a-vm-is-made-on-a-server/plan.md). Task 05 ran on dev02 by both routes; its Resume has what was found.
+- **Next action:** none; see [implemented.md](implemented.md).
 - **Open questions:** none; the `isolation: folder` question is answered by host/67's rules (2026-10-30).
-- **Watch out for:** the `clone` route puts a git credential in the box for the clone command only.
-It needs the vault (vault/01-p1 task 04) to name it. The `bundle` route needs neither. A folder that is not a repository has no clone, and this plan refuses it.
+- **Watch out for:** the `clone` route puts no credential in the box, so it fetches only a public repository. A folder that is not a repository has no clone, and this plan refuses it.
 Copying it in stays in [the idea](../../../ideas/more-computer-runtimes.md). p7's git directory mount does not apply on another Docker. Task 02 refuses a credential need from this host, so no key of this host reaches dev02.
 
 ## Final verification checklist
 
-- [ ] A disposable session on a profile with `server: "dev02"` answers a turn, and its commit reaches this host's repository as a branch, with `code: "bundle"` and with `code: "clone"`.
-- [ ] No git credential is in any argv on either host, and none is left in the machine after a `clone` route's clone.
-- [ ] A local profile and a dev02 profile list their machines side by side with distinct ids, and both are metered.
-- [ ] A profile on another Docker with a bind mount is refused with a sentence.
-- [ ] `pnpm test`, `pnpm typecheck` green.
-- [ ] `docs/plugins/COMPUTERS.md` updated.
+- [x] A disposable session on a profile with `server: "dev02"` answers a turn, and its commit reaches this host's repository as a branch, with `code: "bundle"` and with `code: "clone"`.
+- [x] No git credential reaches the machine on either route.
+- [x] A local profile and a dev02 profile list their machines side by side with distinct ids, and both are metered.
+- [x] A profile on another Docker with a bind mount is refused with a sentence.
+- [x] `pnpm test`, `pnpm typecheck` green.
+- [x] `docs/plugins/COMPUTERS.md` updated.

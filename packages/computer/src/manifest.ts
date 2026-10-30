@@ -4,6 +4,7 @@ import { RpcError } from '@ahpd/sdk';
 import { bodyText, machinePathOf, partTarget, resolveNeeds } from '@ahpd/sdk';
 import { hasDefinition } from './devcontainer.js';
 import { withRequires } from './parts.js';
+import type { CodeRoute } from './clone.js';
 import type { SessionTree } from './gitdir.js';
 import { allowedBy, patternOf } from './reference.js';
 import type { Reference } from './reference.js';
@@ -59,6 +60,12 @@ export interface Profile {
    * rather than failing later in the runtime's own words.
    */
   server?: string;
+  /**
+   * How a machine on another box's Docker is given the session's code:
+   * `bundle`, the default, sends a bundle of the tree from this host; `clone`
+   * has the machine fetch the session's branch from the tree's `origin`.
+   */
+  code?: CodeRoute;
   mounts?: string[];
   workdir?: string;
   /**
@@ -995,7 +1002,25 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
     }
     sourceOf(mount, `the profile's mount ${mount}`);
   }
-  for (const mount of defaults.mounts ?? []) sourceOf(mount, `the plugin's mount ${mount}`);
+  /*
+   * A profile with a `server` makes its machines on that box's Docker, where
+   * no path on this host is. A mount of one, the profile's or the body's, is
+   * refused naming it; the plugin's own mounts are this host's and do not
+   * apply; and a directory or file need is copied in rather than mounted.
+   */
+  const server = profile.server;
+  if (server !== undefined) {
+    const named = [
+      ...(profile.mounts ?? []).map((one) => ({ mount: one, whose: 'the profile' })),
+      ...(asked ?? []).map((one) => ({ mount: one, whose: 'the body' })),
+    ];
+    const bound = named.find((one) => absoluteOnHost(mountParts(one.mount).source));
+    if (bound !== undefined) {
+      throw new RpcError(-32602, `profile ${picked ?? ''} makes its machines on ${server}'s Docker, and ${bound.whose}'s mount ${bound.mount} is a path on this host`);
+    }
+  }
+  const pluginMounts = server === undefined ? defaults.mounts ?? [] : [];
+  for (const mount of pluginMounts) sourceOf(mount, `the plugin's mount ${mount}`);
   /*
    * The folder a session in this machine works in, mounted at the same path.
    *
@@ -1040,6 +1065,8 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
     ...(defaults.for === undefined ? [] : [defaults.for]),
   ])];
   const declared: ResolvedNeed[] = [];
+  // The agent that declared each need, for a refusal that names it.
+  const needOwners = new Map<string, string>();
   // The agents that declared each variable, which a vault-filled value reaches.
   const variableOwners = new Map<string, Set<string>>();
   // The parts the session's own agent needs, for a machine made for a session.
@@ -1060,6 +1087,7 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
       }, homedir(), profile.state ?? 'volume');
       // A state need's volume is named by the agent that declared it.
       declared.push(...own.map((one) => (one.kind === 'state' ? { ...one, provider } : one)));
+      for (const one of own) if (!needOwners.has(one.name)) needOwners.set(one.name, provider);
       for (const one of own.filter((need) => need.kind === 'env')) {
         variableOwners.set(one.target, (variableOwners.get(one.target) ?? new Set()).add(provider));
       }
@@ -1081,19 +1109,30 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
     return secret === undefined ? [] : [[one.target, { need: one.name, variable: one.target, secret, providers }] as const];
   })).values()];
   /*
-   * The mounts each need becomes, and the two deliveries that are not mounts
-   * here: a variable set in the machine, and a path copied into it.
+   * A credential on another box is the one need a copy cannot carry: the
+   * agent's own default is this host's sign-in or keys, and a copy would put
+   * them on that box. A profile names a file written for it instead.
    */
+  const credential = server === undefined ? undefined : resolved.find((one) => one.hostCredential === true);
+  if (credential !== undefined) {
+    throw new RpcError(-32602, `profile ${picked ?? ''} makes its machines on ${server}'s Docker, and need ${credential.name} of ${needOwners.get(credential.name) ?? 'its agent'} is this host's own credential; give it a value of its own in the profile's needs`);
+  }
+  /*
+   * The mounts each need becomes, and the two deliveries that are not mounts
+   * here: a variable set in the machine, and a path copied into it. On
+   * another box's Docker a directory or file need is a copy as well.
+   */
+  const bindsNeeds = server === undefined;
   const needMounts = resolved
-    .filter((one) => one.kind === 'directory' || one.kind === 'file')
+    .filter((one) => bindsNeeds && (one.kind === 'directory' || one.kind === 'file'))
     .map((one) => `${one.source}:${one.target}${one.readOnly === true ? ':ro' : ''}`);
   const env = Object.fromEntries(
     resolved.filter((one) => one.kind === 'env').map((one) => [one.target, one.source]),
   );
   const copies = resolved
-    .filter((one) => one.kind === 'copy')
+    .filter((one) => one.kind === 'copy' || (!bindsNeeds && (one.kind === 'directory' || one.kind === 'file')))
     .map((one) => ({ source: one.source, target: one.target }));
-  const mounts = [...new Set([...(defaults.mounts ?? []), ...(profile.mounts ?? []), ...(asked ?? []), ...needMounts])];
+  const mounts = [...new Set([...pluginMounts, ...(profile.mounts ?? []), ...(asked ?? []), ...needMounts])];
   // Each state directory, which whoever makes the machine gives a named volume.
   const states = resolved
     .filter((one) => one.kind === 'state')
@@ -1117,7 +1156,8 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
    * build: the first need to name one for a part is the one used.
    */
   const partFallbacks: PartFallback[] = [];
-  for (const one of resolved) {
+  // A fallback is a host mount, so a machine on another box has none.
+  for (const one of bindsNeeds ? resolved : []) {
     const stand = one.kind === 'part' ? one.fallback : undefined;
     if (stand === undefined || (stand.kind !== 'file' && stand.kind !== 'directory')) continue;
     if (partFallbacks.some((held) => held.part === one.source)) continue;
@@ -1138,13 +1178,13 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
    * nothing of the folder's under `copy`, where the machine's own volume holds
    * the tree instead.
    */
-  const mountedAt = defaults.sessionTree === 'copy' ? undefined : defaults.repository ?? folder;
+  const mountedAt = defaults.sessionTree === 'copy' || !bindsNeeds ? undefined : defaults.repository ?? folder;
   oneMountEach([
-    ...(defaults.mounts ?? []).map((one) => ({ mount: one, target: targetOf(one), said: `the plugin's mount ${one}` })),
+    ...pluginMounts.map((one) => ({ mount: one, target: targetOf(one), said: `the plugin's mount ${one}` })),
     ...(profile.mounts ?? []).map((one) => ({ mount: one, target: targetOf(one), said: `the profile's mount ${one}` })),
     ...(asked ?? []).map((one) => ({ mount: one, target: targetOf(one), said: `the body's mount ${one}` })),
     ...resolved
-      .filter((one) => one.kind === 'directory' || one.kind === 'file')
+      .filter((one) => bindsNeeds && (one.kind === 'directory' || one.kind === 'file'))
       .map((one) => ({
         mount: `${one.source}:${one.target}${one.readOnly === true ? ':ro' : ''}`,
         target: one.target,
@@ -1205,6 +1245,7 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
     ...(agents.length === 0 ? {} : { agents }),
     ...(folder === undefined ? {} : { folder }),
     ...(workdir === undefined ? {} : { workdir }),
+    ...(profile.code === undefined ? {} : { code: profile.code }),
     // Who the machine is, which nothing in the body can say: the host hands it
     // down and the machine keeps it.
     ...(defaults.owner === undefined ? {} : { owner: defaults.owner }),

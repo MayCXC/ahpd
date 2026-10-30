@@ -161,6 +161,33 @@ it('resolves a part need\'s fallback mount with it, and drops one whose host pat
   expect(resolveNeeds(needs(join(dir, 'gone')))).toEqual([{ name: 'claudePart', kind: 'part', source: 'claude', target: '/opt/ahpd/claude' }]);
 });
 
+it('marks a credential need read from the agent\'s own default as this host\'s, and one a profile gave as not', () => {
+  const dir = temp();
+  const own = join(dir, 'own.json');
+  const given = join(dir, 'given.json');
+  writeFileSync(own, '{}');
+  writeFileSync(given, '{}');
+  const needs: Record<string, MachineNeed> = {
+    config: { file: own, target: '/ahpd/tool/config.json', credential: true },
+    plain: { file: own, target: '/ahpd/tool/plain.json' },
+  };
+  const marked = (values: Record<string, string> = {}): string[] => resolveNeeds(needs, { profile: values }, dir)
+    .filter((one) => one.hostCredential === true).map((one) => one.name);
+  expect(marked()).toEqual(['config']);
+  expect(marked({ config: given })).toEqual([]);
+
+  // A state need's seed is always the agent's own, so a credential one with a seed is this host's.
+  const state = (seed: boolean): boolean | undefined => resolveNeeds({
+    held: { state: '/ahpd/tool', ...(seed ? { seed: [{ source: own }] } : {}), credential: true },
+  }, {}, dir)[0]?.hostCredential;
+  expect(state(true)).toBe(true);
+  expect(state(false)).toBeUndefined();
+  // A seed whose source is not there copies nothing, so it carries no credential either.
+  expect(resolveNeeds({
+    held: { state: '/ahpd/tool', seed: [{ source: join(dir, 'gone.json') }], credential: true },
+  }, {}, dir)[0]?.hostCredential).toBeUndefined();
+});
+
 it('keeps the needs of the mode a machine is made in, and a need without `when` in both', () => {
   const dir = temp();
   const needs: Record<string, MachineNeed> = {

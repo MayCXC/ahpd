@@ -767,6 +767,11 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
      * with that file at the same relative path; the read-only mount of the
      * host's file is for a profile that keeps state on the host.
      *
+     * A provider may instead come from `COFOLD_BASE_URL`, `COFOLD_API_KEY` and
+     * `COFOLD_MODEL`, which have no default: a profile names them, the key as a
+     * vault secret, so a machine on another box gets a key with no file
+     * holding it.
+     *
      * The nested host this backend runs in is `ahpd` from the `ahpd` part,
      * which carries this plugin and puts `ahpd` on the machine's `PATH`, so the
      * image needs nothing installed.
@@ -785,6 +790,7 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
         cofoldState: {
           state: configDir,
           seed: [{ source: read, target: 'cofold/config.json' }],
+          credential: true,
           description: 'The cofold configuration, which holds the provider endpoints and their keys, kept in a volume.',
         },
         cofoldConfig: {
@@ -793,12 +799,26 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
           readOnly: true,
           required: true,
           when: 'host',
+          credential: true,
           description: 'The cofold configuration, which holds the provider endpoints and their keys.',
         },
         cofoldConfigPath: {
           name: 'COFOLD_CONFIG',
           default: `${configDir}/cofold/config.json`,
           description: 'Where the harness looks for its configuration inside the machine.',
+        },
+        cofoldBaseUrl: {
+          name: 'COFOLD_BASE_URL',
+          description: 'The endpoint of a provider called default, read on top of the configuration.',
+        },
+        cofoldApiKey: {
+          name: 'COFOLD_API_KEY',
+          credential: true,
+          description: 'The key for the default provider, best named from the vault.',
+        },
+        cofoldModel: {
+          name: 'COFOLD_MODEL',
+          description: 'The model to run on, as provider/model or a model of default.',
         },
         ...ahpd,
       };

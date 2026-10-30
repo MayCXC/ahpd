@@ -19,7 +19,8 @@ import type { ComputerRuntime, DockerOptions, Machine, MachineSpec } from './run
 import { routed, parseMachineId, spellMachineId } from './router.js';
 import type { Routed } from './router.js';
 import { machinesOf, sshRuntime } from './ssh.js';
-import type { SshOptions } from './ssh.js';
+import type { SshMachine, SshOptions } from './ssh.js';
+import { serverGate } from './servercheck.js';
 import { NODE_RUNTIME, nodeRuntime } from './node.js';
 import { claimAdopted, claimOwned, forgetOwned, keepMadeNeeds, keepProbe, madeNeedsOf, ownedOf, probeOf } from './owners.js';
 import { computerTools } from './tools.js';
@@ -117,6 +118,8 @@ export const profilesOf = (value: unknown): Record<string, Profile> | undefined 
       // The box from `ssh.machines` its machines are made on, checked against
       // that option once both are read.
       ...(text('server') === undefined ? {} : { server: text('server') as string }),
+      // How a machine there is given the session's code.
+      ...(said.code === 'bundle' || said.code === 'clone' ? { code: said.code } : {}),
       ...(text('workdir') === undefined ? {} : { workdir: text('workdir') as string }),
       ...(words(said.mounts) === undefined ? {} : { mounts: words(said.mounts) as string[] }),
       // The agents a profile prepares for, and any value it gives their needs.
@@ -277,6 +280,13 @@ export const listingMeter = (
 });
 
 /**
+ * The Docker on a box, as `DOCKER_HOST` names it: `ssh://<destination>`, with
+ * the box's port when it sets one.
+ */
+export const dockerAddressOf = (box: SshMachine): string =>
+  `ssh://${box.destination}${box.port === undefined ? '' : `:${box.port}`}`;
+
+/**
  * Whether a runtime makes machines, from the actions it says it has.
  *
  * A runtime that only lists answers no `create`, and it is metered from what a
@@ -413,8 +423,8 @@ export const apply: Plugin['apply'] = (host, options) => {
     delete profiles?.[key];
   }
   /*
-   * A `secretUnreadable`, `state`, `stateScope`, `gitGuard`, `sessionTree` or
-   * `nestedDelete` that is not one of its answers is fatal here rather than
+   * A `secretUnreadable`, `state`, `stateScope`, `gitGuard`, `sessionTree`,
+   * `nestedDelete` or `code` that is not one of its answers is fatal here rather than
    * dropped: the loader's check does not reach into a profile, and a value read
    * as the default would make a machine other than the one its operator asked
    * for.
@@ -431,6 +441,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     ['gitGuard', ['fetch', 'open', 'bind']],
     ['sessionTree', ['shared', 'copy']],
     ['nestedDelete', ['inside', 'record']],
+    ['code', ['bundle', 'clone']],
   ];
   const asList = (values: string[]): string =>
     values.length < 3 ? values.join(' or ') : `${values.slice(0, -1).join(', ')} or ${values[values.length - 1] as string}`;
@@ -593,6 +604,61 @@ export const apply: Plugin['apply'] = (host, options) => {
   const sshed = ssh === undefined ? undefined : sshRuntime({ ...ssh, ...(env === undefined ? {} : { env }) });
 
   /*
+   * One Docker for each profile that names a box, reached through Docker's own
+   * `ssh://` transport, by the value its machines' ids are spelled with.
+   *
+   * A box with an `identity` is left out with its profile: Docker's transport
+   * takes no key, so the key is named in ssh's own configuration instead. A
+   * box whose address is the plugin's own Docker gets no second runner, since
+   * its machines would be listed twice; the profile makes them on that one.
+   */
+  const farValues: Record<string, string> = {};
+  const farDockers: Record<string, ComputerRuntime> = {};
+  for (const [key, one] of Object.entries(profiles ?? {})) {
+    const box = one.server === undefined ? undefined : ssh?.machines[one.server];
+    if (box === undefined) continue;
+    if (key.includes('.')) {
+      host.log(`${name}: profiles.${key} names a server, and a dot in its name would read as part of its machines' ids, so the profile is left out`);
+      delete profiles?.[key];
+      continue;
+    }
+    if (box.identity !== undefined) {
+      host.log(`${name}: profiles.${key} names the server ${one.server}, whose identity Docker cannot be given; name the key for ${box.destination} in ssh's own configuration instead, so the profile is left out`);
+      delete profiles?.[key];
+      continue;
+    }
+    const address = dockerAddressOf(box);
+    if (address === (env?.DOCKER_HOST ?? '')) {
+      host.log(`${name}: profiles.${key} names the server ${one.server}, whose Docker is this plugin's own, so its machines are made on that one`);
+      continue;
+    }
+    const value = `${dockered.kind}-${key}`;
+    farValues[key] = value;
+    farDockers[value] = dockerRuntime({
+      ...dockeredOptions,
+      env: { ...env, DOCKER_HOST: address },
+      remote: true,
+      profile: key,
+      ...(host.hostId === undefined ? {} : { hostId: host.hostId }),
+    });
+  }
+  /*
+   * How long a box's Docker is given for a question about its machines: as
+   * long as `ssh` is given for one command to a box.
+   */
+  const farTimeout = (ssh?.connectTimeout ?? 10) * 1000 + 10_000;
+
+  /*
+   * The box a profile's machines are made on, checked for a Docker this
+   * account can reach before each one is made. The report is kept a minute.
+   */
+  const gate = sshed === undefined ? undefined : serverGate(async (server) => {
+    const report = await sshed.check?.(server);
+    if (report === undefined) throw new Error(`${server} is not a box this host reaches over ssh`);
+    return report;
+  });
+
+  /*
    * The hosts that joined this one, built only where this daemon has a join
    * path.
    *
@@ -617,8 +683,36 @@ export const apply: Plugin['apply'] = (host, options) => {
     [dockered.kind]: dockered,
     ...(sshed === undefined ? {} : { [sshed.kind]: sshed }),
     ...(noded === undefined ? {} : { [noded.kind]: noded }),
+    ...farDockers,
   };
-  const computerRouter = routed(runtimes, runtime, { log: noted });
+  /*
+   * The runners whose machines were never adopted, because their startup
+   * listing did not answer, and what adopts them once the startup is over.
+   */
+  const unadopted = new Set<string>();
+  let adoptLate: ((found: Machine[]) => Promise<void>) | undefined;
+  const computerRouter = routed(runtimes, runtime, {
+    log: noted,
+    timeouts: Object.fromEntries(Object.keys(farDockers).map((value) => [value, farTimeout])),
+    makerFor: (spec) => {
+      const key = spec.disposable?.profile ?? spec.profile;
+      return key === undefined ? undefined : farValues[key];
+    },
+    listed: (value, rows) => {
+      if (rows === undefined) {
+        if (adoptLate === undefined && !unadopted.has(value)) {
+          unadopted.add(value);
+          noted(`the ${value} runtime's machines are adopted at the next listing that reaches it`);
+        }
+        return;
+      }
+      if (adoptLate !== undefined && unadopted.delete(value)) {
+        void adoptLate(rows).catch((error: unknown) => {
+          noted(`the ${value} runtime's machines were not adopted: ${error instanceof Error ? error.message : String(error)}`);
+        });
+      }
+    },
+  });
 
   /*
    * Read one need's value when it names a secret.
@@ -833,16 +927,28 @@ export const apply: Plugin['apply'] = (host, options) => {
     list: async () => meterRows(await computerRouter.list()),
     run: async (asked: MachineSpec) => {
       /*
+       * A machine made on a box's Docker waits for the box to have a Docker
+       * this account can reach, and is refused with the fix lines when not.
+       */
+      const key = asked.disposable?.profile ?? asked.profile;
+      const server = key === undefined || farValues[key] === undefined ? undefined : profiles?.[key]?.server;
+      if (server !== undefined && gate !== undefined) await gate.requireOn(server, ['docker', 'dockerAccess']);
+      /*
        * The parts the machine asks for, built before it is made. One that will
        * not build is left out with a line naming it and the build's reason,
        * and the machine is made with the rest: only a session needing the part
        * is refused, by the label that does not name it. A machine made for one
        * session whose own agent needs the part is not made at all, as
        * `refusedWithout` decides.
+       *
+       * Built on the Docker that mounts them: a machine on a box's Docker
+       * mounts a part by its image there, which this host's Docker cannot give.
        */
       let spec = asked;
       if (asked.partsAsked !== undefined && asked.partsAsked.length > 0) {
-        const built = await ensureParts(asked.partsAsked, { runtime: dockered });
+        const far = key === undefined ? undefined : farValues[key];
+        const builder = far === undefined ? dockered : computerRouter.runtimes[far] ?? dockered;
+        const built = await ensureParts(asked.partsAsked, { runtime: builder });
         /*
          * A failed part whose need names a fallback has that host mount in its
          * place, and the machine counts it as had: it is labelled `<id>@host`
@@ -1157,7 +1263,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    * first would be dropped, and the machine armed by this listing would then
    * be removed out from under the session running in it.
    */
-  const listing = made.list().then(async (found) => {
+  const adopt = async (found: Machine[]): Promise<void> => {
     for (const one of found) {
       /*
        * A machine made under the guard this plan replaced, which `madeUnderBind`
@@ -1218,7 +1324,11 @@ export const apply: Plugin['apply'] = (host, options) => {
         ? `${name}: found the disposable machine ${one.id} left behind; it is held for ${one.session}`
         : `${name}: found the disposable machine ${one.id} left behind; it goes ${delay}ms from now`);
     }
-  }).catch(() => {}).then(() => catalogue.refresh());
+  };
+  const listing = made.list().then(adopt).catch(() => {}).then(() => {
+    adoptLate = adopt;
+    return catalogue.refresh();
+  });
 
   const scheme = computerProvider(made, {
     image,
@@ -1322,6 +1432,9 @@ export const apply: Plugin['apply'] = (host, options) => {
    */
   const offHost = (id: string): boolean => made.runtimeFor(id)?.remote === true;
 
+  /** Whether a command into this machine carries its variables in its command line. */
+  const inCommand = (id: string): boolean => made.runtimeFor(id)?.envInCommand === true;
+
   /**
    * A value read from the vault, refused for a machine this host reaches over ssh.
    *
@@ -1341,7 +1454,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    */
   const noVaultInline = (id: string, named: Record<string, string>): void => {
     const variables = Object.keys(named);
-    if (variables.length === 0 || !offHost(id)) return;
+    if (variables.length === 0 || !inCommand(id)) return;
     throw new Error(`${id} is off this host, and ${variables.join(', ')} comes from the vault: a command over ssh carries its variables in the remote command, where the box reads them; give the box a value of its own, or run this command on the host`);
   };
 
@@ -1397,11 +1510,11 @@ export const apply: Plugin['apply'] = (host, options) => {
     if (held === undefined) return undefined;
     const host = await made.hostCommand(id) ?? hostDefault;
     const [program, ...before] = host;
-    const away = offHost(id);
+    const away = inCommand(id);
     /*
      * The record of an agent made from a record, which the host inside serves.
-     * It goes in the environment, which the runtime gives by name; a machine
-     * off this host gets the copy with no secret field, for the reason below.
+     * It goes in the environment, which the runtime gives by name; a box over
+     * ssh gets the copy with no secret field, for the reason below.
      */
     const record = asked.record === undefined ? undefined : away ? asked.record.bare : asked.record.whole;
     const startWith = {
@@ -1413,11 +1526,12 @@ export const apply: Plugin['apply'] = (host, options) => {
       ...(record === undefined ? {} : { env: { [AGENT_RECORD_VARIABLE]: JSON.stringify(record) } }),
     };
     /*
-     * A machine off this host is handed nothing of this host's vault: the ahpd
+     * A box reached over ssh is handed nothing of this host's vault: the ahpd
      * on the box holds what it was given by hand there, and a value read from
      * the vault would be written into the remote command that starts it, which
      * also keeps a session in such a machine clear of the refusal above, since
-     * it never reaches it.
+     * it never reaches it. A machine on another box's Docker is given its
+     * values by name, as one on this host's is.
      */
     const spawn = away ? await made.how(id, startWith) : await reach(id, startWith);
     if (spawn === undefined) return undefined;
@@ -1426,7 +1540,7 @@ export const apply: Plugin['apply'] = (host, options) => {
      * machine's mounts, as `-w` is, or the machine's own directory. The inner
      * session is created there, since the host inside knows only its own paths.
      */
-    const inside = (asked.cwd === undefined ? undefined : within(held, asked.cwd)) ?? machineDirectory(held);
+    const inside = (asked.cwd === undefined || offHost(id) ? undefined : within(held, asked.cwd)) ?? machineDirectory(held);
     return { ...spawn, ...(inside === undefined ? {} : { workingDirectory: inside }) };
   };
 
@@ -1789,14 +1903,16 @@ export const apply: Plugin['apply'] = (host, options) => {
       // this host holds.
       // The count and the create are one turn, so a second session starting
       // while this one is making its machine counts the machine being made.
-      await inTurn(made, async () => {
+      // The id the router spells, which names the runtime a machine made on a
+      // box's Docker is on: the name alone would be this host's Docker's.
+      const machine = await inTurn(made, async () => {
         const full = roomFor(await made.list(), max);
         if (full !== undefined) {
           throw new Error(`This host holds ${max} computers already, and ${id} would be one more`);
         }
         // The runtime's own sentence is kept: it is the only thing that says
         // what Docker refused, and the session reads it as its creation error.
-        await making(async () => made.run({
+        return making(async () => made.run({
           ...spec,
           label,
           // The repository the session's folder belongs to, behind a gate of
@@ -1813,8 +1929,8 @@ export const apply: Plugin['apply'] = (host, options) => {
       });
       // Watched before the host says the session entered, so a session that
       // never starts still leaves a machine that goes.
-      watch(id, key, delay);
-      return id;
+      watch(machine.id, key, delay);
+      return machine.id;
     },
     /*
      * The count, which only a session starting or a session gone moves.

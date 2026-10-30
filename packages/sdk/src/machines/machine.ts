@@ -193,6 +193,8 @@ export function resolveNeeds(
       continue;
     }
     const about = need.description === undefined ? {} : { description: need.description };
+    // A credential the agent's own default reads from this host's home.
+    const host = need.credential === true && where === 'default' && !('state' in need) ? { hostCredential: true } : {};
     // A part is an id rather than a host path, so it is neither expanded nor
     // looked for here; whatever makes the machine builds it.
     if ('part' in need) {
@@ -209,7 +211,16 @@ export function resolveNeeds(
         throw new Error(`machine need ${name} is ${said} (from ${from(where)}), and a state directory is an absolute path inside the machine`);
       }
       const seed = seedsOf(name, need.seed ?? [], home);
-      resolved.push({ name, kind: 'state', source: said, target: said, ...(seed.length === 0 ? {} : { seed }), ...about });
+      resolved.push({
+        name,
+        kind: 'state',
+        source: said,
+        target: said,
+        ...(seed.length === 0 ? {} : { seed }),
+        // A seed whose source is not there copies nothing, so it carries no credential.
+        ...(need.credential === true && seed.some((one) => existsSync(one.source)) ? { hostCredential: true } : {}),
+        ...about,
+      });
       continue;
     }
     const value = expandHome(said, home);
@@ -235,7 +246,7 @@ export function resolveNeeds(
       if (!existsSync(value)) {
         throw new Error(`machine need ${name} points at ${value} (from ${from(where)}), and that path is not there`);
       }
-      resolved.push({ name, kind: 'copy', source: value, target: need.target, ...about });
+      resolved.push({ name, kind: 'copy', source: value, target: need.target, ...host, ...about });
       continue;
     }
     if (!existsSync(value)) {
@@ -247,6 +258,7 @@ export function resolveNeeds(
       source: value,
       target: need.target,
       ...(need.readOnly === true ? { readOnly: true } : {}),
+      ...host,
       ...about,
     });
   }

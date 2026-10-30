@@ -15,7 +15,14 @@
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, statSync, writeFileSync } from 'node:fs';
 
-const state = process.env.DOCKER_FAKE_STATE;
+/*
+ * A Docker on another box is another daemon, so a `DOCKER_HOST` keeps its own
+ * file beside the one named: two runners on one test hold two sets of
+ * machines, as two daemons would.
+ */
+const given = process.env.DOCKER_FAKE_STATE;
+const far = process.env.DOCKER_HOST;
+const state = given === undefined || far === undefined || far === '' ? given : `${given}.${encodeURIComponent(far)}`;
 if (state === undefined) {
   process.stderr.write('DOCKER_FAKE_STATE is not set\n');
   process.exit(2);
@@ -279,6 +286,11 @@ const envPair = (said) => {
 };
 
 if (verb === 'ps') {
+  // A daemon that is not there, as Docker says it.
+  if (held.failPs === true) {
+    process.stderr.write('Cannot connect to the Docker daemon. Is the docker daemon running?\n');
+    process.exit(1);
+  }
   /*
    * The label filter, honoured rather than ignored.
    *

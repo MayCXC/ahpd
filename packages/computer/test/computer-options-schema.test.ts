@@ -50,6 +50,7 @@ const EVERY_FIELD: Record<string, unknown> = {
   stateScope: 'shared',
   gitGuard: 'open',
   nestedDelete: 'record',
+  code: 'clone',
 };
 
 /** The properties a profile declares. */

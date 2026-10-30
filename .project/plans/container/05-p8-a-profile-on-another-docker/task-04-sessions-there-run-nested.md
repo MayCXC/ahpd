@@ -1,6 +1,6 @@
 ---
 title: Sessions in a machine on another Docker run nested
-status: todo
+status: done
 depends: [task-01-a-profile-names-its-docker.md]
 layer: "computer"
 refs:
@@ -36,3 +36,8 @@ The port says a machine from a remote runner is `remote`, so every backend runs 
 - A command with a vault-named variable runs on a remote Docker machine, and is still refused on an ssh machine.
 
 ## Resume
+
+- **Done:** 2026-10-30. Task 01 already passed `remote: true` to a profile's runner, so `remote` answers true for `docker-<profile>.<name>`. `nested` starts the inner host with `docker exec -i`, and `DOCKER_HOST` and the vault's values are in the descriptor's `env`.
+- **Departure:** `ComputerRuntime.envInCommand` says a runtime puts variables in the command line. Only ssh sets it. `noVaultInline` and `nested`'s vault choice read it, in place of `remote`.
+- **Departure:** `within` is unchanged. Its callers skip it for a remote machine: `startIn` in the runtime and `nested` in the plugin.
+- **Tests:** one in [`computer-far-docker.test.ts`](../../../../packages/computer/test/computer-far-docker.test.ts). The ssh refusal tests in [`computer-ssh.test.ts`](../../../../packages/computer/test/computer-ssh.test.ts) still pass.

@@ -476,6 +476,7 @@ export function claude(options: ClaudeOptions): Agent {
           target: configDir,
           required: true,
           when: 'host',
+          credential: true,
           description: 'The Claude Code configuration directory, which holds the sign-in and the settings.',
         },
         claudeConfigJson: {
@@ -483,6 +484,7 @@ export function claude(options: ClaudeOptions): Agent {
           target: `${configDir}/.claude.json`,
           required: true,
           when: 'host',
+          credential: true,
           description: 'The Claude Code configuration file beside that directory.',
         },
       };

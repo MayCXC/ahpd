@@ -1,6 +1,6 @@
 ---
 title: The session's code arrives by bundle and returns as a branch
-status: todo
+status: done
 depends: [task-02-no-bind-mount-on-another-docker.md]
 layer: "computer | sdk"
 refs:
@@ -48,3 +48,10 @@ Task 07 adds `code: "clone"` behind the same interface.
 
 ## Resume
 
+- **Done:** 2026-10-30. A remote runtime makes a session machine `sessionTree: copy` with guard `fetch`. Its repository is a Docker volume at the tree's path. `seedGit` copies a bundle of the tree's `HEAD` in with `docker cp` and fetches it into `refs/ahpd/seed`. The bundle is removed on both sides. `origin` is the host's origin, without a user or password on an http(s) address.
+- **Departure:** [`clone.ts`](../../../../packages/computer/src/clone.ts) has `bundleOfTree` and `originOf`, and no `codeRouteOf` yet. Only `bundle` exists, so task 07 adds the route picker with `clone`.
+- **Departure:** the machine fetches the bundle into its volume repository, not `git clone`. The layout is the one `seedGit` already makes, so bring-back reads it unchanged.
+- **Departure:** bring-back measures from `refs/ahpd/seed` when the machine lacks the host's commit. A host commit after the seed would otherwise make the bundle fail.
+- **Departure:** the disposable create in [`plugin.ts`](../../../../packages/computer/src/plugin.ts) now watches the id the router spells. It watched the bare name, so a far disposable machine was removed on this host's Docker.
+- **Departure:** the router does not bound `bringBack`. A big bundle over ssh can take more than the read bound, and a cut bring-back refuses the removal every time.
+- **Tests:** four in [`computer-far-git.test.ts`](../../../../packages/computer/test/computer-far-git.test.ts) on a real Docker, three in [`computer-disposable.test.ts`](../../../../packages/computer/test/computer-disposable.test.ts) with the fake, one in [`computer-runtimes.test.ts`](../../../../packages/computer/test/computer-runtimes.test.ts).

@@ -230,3 +230,40 @@ it('reads whether a runtime makes machines from what it says it can do', () => {
   // and what is not known is not a listing runtime.
   expect(makesMachines(undefined)).toBe(true);
 });
+
+it('makes a machine on the runtime its spec picks, under that runtime\'s id', async () => {
+  const docker = faker(BARE);
+  const far = faker('docker-far');
+  const one = routed({ [BARE]: docker, 'docker-far': far }, BARE, {
+    makerFor: (spec) => (spec.profile === 'far' ? 'docker-far' : undefined),
+  });
+  expect((await one.run({ name: 'box', image: 'node:22', profile: 'far' } as MachineSpec)).id).toBe('docker-far.box');
+  expect((await one.run({ name: 'here', image: 'node:22' } as MachineSpec)).id).toBe('here');
+});
+
+it('bounds a hung runtime\'s listing and reads by its own timeout, and tells what each runtime answered', async () => {
+  const never = new Promise<never>(() => {});
+  const docker = faker(BARE, { list: async () => [row('here')] });
+  const far = faker('docker-far', { list: () => never, inspect: () => never });
+  const lines: string[] = [];
+  const answered: [string, string[] | undefined][] = [];
+  const one = routed({ [BARE]: docker, 'docker-far': far }, BARE, {
+    log: (line) => { lines.push(line); },
+    timeouts: { 'docker-far': 20 },
+    listed: (value, rows) => { answered.push([value, rows?.map((machine) => machine.id)]); },
+  });
+
+  expect((await one.list()).map((machine) => machine.id)).toEqual(['here']);
+  expect(lines).toEqual(['the docker-far runtime did not list its machines, so they are left out: the docker-far runtime did not answer within 20ms']);
+  expect(answered.sort()).toEqual([['docker', ['here']], ['docker-far', undefined]]);
+  await expect(one.inspect('docker-far.box')).rejects.toThrow('the docker-far runtime did not answer within 20ms');
+});
+
+it('gives a bring-back on a box the time it takes, past the bound on its reads', async () => {
+  const far = faker('docker-far', {
+    bringBack: () => new Promise((resolve) => { setTimeout(() => { resolve({ moved: true }); }, 60); }),
+  });
+  const one = routed({ [BARE]: faker(BARE), 'docker-far': far }, BARE, { timeouts: { 'docker-far': 20 } });
+  expect(await one.bringBack('docker-far.box')).toEqual({ moved: true });
+  expect(await one.bringBack('nowhere.box')).toBeUndefined();
+});

@@ -1,6 +1,6 @@
 ---
 title: A profile names its Docker, and its machines' ids say which
-status: todo
+status: done
 depends: []
 layer: "computer"
 refs:
@@ -50,3 +50,8 @@ The runner is registered with p9's router under its own prefix, and listing, ins
 - A startup listing that fails for `far` logs one line naming it, and `far`'s disposable machines are adopted at the next listing that reaches it.
 
 ## Resume
+
+- **Done:** 2026-10-30. Each profile with `server` has a `dockerRuntime` registered as `docker-<key>`, with `DOCKER_HOST` from `dockerAddressOf`. A create on it passes `serverGate` for `docker` and `dockerAccess` first.
+- **Departure:** the per-runner timeout bounds the listing and the reads (`inspect`, `state`, `agents`, `parts`, `owner`, `how`, `hostCommand`, `bringBack`, `stats`, `check`). A run, an exec, a copy, a stop or a remove is not bounded, because a pull or a command takes what it takes.
+- **Departure:** a box with `identity`, or a profile key with a dot, leaves the profile out with a line, as an unknown `server` does. A profile whose Docker is the plugin's own keeps its profile and makes its machines on the plugin's runner.
+- **Tests:** [`computer-far-docker.test.ts`](../../../../packages/computer/test/computer-far-docker.test.ts) and two router tests in [`computer-runtimes.test.ts`](../../../../packages/computer/test/computer-runtimes.test.ts). The scripted `docker` keeps one state file per `DOCKER_HOST`, and `failPs` makes `ps` refuse. A Docker that hangs is tested at the router, with a fake runtime and a 20 ms bound.
