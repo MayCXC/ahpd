@@ -45,10 +45,11 @@ A session then resumes on its next turn, or reopens on the socket the node dials
 ## Departures from the plan
 
 - Task 05's `end` is a halt, not an ending: `ended` is left unset, because the host refuses every later action on a session whose `ended()` answers, the resuming turn included. A separate `halted` state shows the failure and lets the next turn reopen the session.
+- The halt and the reopen apply only to a session whose host came from a node's socket. Any other nested session whose host goes ends for good, as before, so `nested-proxy.test.ts` and `nested-process.test.ts` keep their cases.
+- On a running hub, `ahpd node rm` and a new token from `ahpd node add` drop the node's open connection. A removed node keeps no access until the hub restarts.
 - `HostOptions.nodeRestart` in `packages/sdk/src/types/host.ts`, and the one line in `spawn.ts` that passes it, are files the plan's task 05 did not list. The choice has to reach `nestedAgent`, and no port option does.
 - `packages/sdk/test/users-host.test.ts` had two failing cases that task 03 left behind: both lists of host subjects left `node` out. Both now carry it, and the file passes.
 
 ## Left for later
 
 - Nothing the plan named waits, see [deferred.md](deferred.md) for what was set aside before it.
-- Six files are in the working tree and not in any commit, because `git add` is denied in don't-ask mode: `packages/sdk/src/nodes.ts`, `packages/sdk/test/nodes.test.ts`, `packages/server/src/commands/join.ts`, `packages/server/src/commands/nodes.ts`, `packages/server/test/join.test.ts` and `packages/computer/src/node.ts`.
