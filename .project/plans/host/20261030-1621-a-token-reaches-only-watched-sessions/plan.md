@@ -1,7 +1,7 @@
 ---
 title: A token reaches only the sessions its connection watches
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -76,7 +76,7 @@ expire -> auth/required on channelAwaiting(resource), the first session on the h
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A token stays with its connection's sessions](task-01-a-token-stays-with-its-sessions.md) | todo | - |
+| [01 - A token stays with its connection's sessions](task-01-a-token-stays-with-its-sessions.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -87,7 +87,7 @@ expire -> auth/required on channelAwaiting(resource), the first session on the h
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-30.
-- **Next action:** [task-01-a-token-stays-with-its-sessions.md](task-01-a-token-stays-with-its-sessions.md).
+- **Done so far:** planned and built 2026-10-30. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a client may watch a session under an older spelling, so a check by the held name alone misses it.

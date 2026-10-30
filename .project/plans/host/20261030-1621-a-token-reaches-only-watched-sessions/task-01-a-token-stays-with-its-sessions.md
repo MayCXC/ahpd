@@ -1,6 +1,6 @@
 ---
 title: A token stays with its connection's sessions
-status: todo
+status: done
 depends: []
 layer: host
 refs:
@@ -47,3 +47,5 @@ A token reaches only the sessions its connection watches, under any spelling, wi
 
 ## Resume
 
+Done 2026-10-30.
+Every step is built, and the test files and the type check pass.
