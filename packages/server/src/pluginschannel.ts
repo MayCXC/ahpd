@@ -18,8 +18,8 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync 
 import { dirname, join } from 'node:path';
 import { check } from '@cofold/commands';
 import type { JsonSchema } from '@cofold/commands';
-import { isRecordSlug, RECORD_SLUG, recordsChannel, RpcError, scopeOf, secretRef } from '@ahpd/sdk';
-import type { Alert, Grant, Loaded, PluginMethod, PluginSpec, RecordsChannel, RecordsSource } from '@ahpd/sdk';
+import { formIn, HOST_CATALOGS, isRecordSlug, RECORD_SLUG, recordsChannel, RpcError, scopeOf, secretRef, translated } from '@ahpd/sdk';
+import type { Alert, Bag, Catalogs, Grant, Loaded, PluginMethod, PluginSpec, RecordsChannel, RecordsSource } from '@ahpd/sdk';
 import type { Applied } from './applyplugins.js';
 import { maskOption, SET, withoutSpecSecrets, withoutUserinfoIn } from './commands/config.js';
 import {
@@ -222,6 +222,14 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     }
   };
 
+  /**
+   * Each row's catalogs, by the row's id, kept beside the record and never in it.
+   *
+   * The record is what a diff compares, so it stays in English; a reader's
+   * copy is translated on the way out.
+   */
+  const catalogsByName = new Map<string, Catalogs>();
+
   /** One configured plugin, as a client lists it. */
   const rowOf = async (spec: PluginSpec): Promise<{ id: string; record: Record<string, unknown> }> => {
     // The id read before the row, because the schema the options are masked
@@ -235,6 +243,9 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     const manifest = loaded?.manifest ?? row.manifest;
     // What this plugin's row carries, masked as every other answer is.
     const alerts = options.alerts()[row.name] ?? [];
+    const catalogs = loaded?.i18n ?? row.i18n;
+    if (catalogs === undefined) catalogsByName.delete(withoutUserinfoIn(row.name));
+    else catalogsByName.set(withoutUserinfoIn(row.name), catalogs);
     return {
       id: withoutUserinfoIn(row.name),
       record: {
@@ -301,8 +312,35 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     },
   };
 
+  /**
+   * One row in a reader's locale: its title, its manifest's description and
+   * both copies of its options form. The plugin's own catalogs come first,
+   * then the host's; the name, spec, state, version, problem and alerts are
+   * left as they are.
+   */
+  const translate = (record: Record<string, unknown>, locale: string): Record<string, unknown> => {
+    const catalogs = typeof record.name === 'string' ? catalogsByName.get(record.name) : undefined;
+    const text = (path: string[], english: string): string => translated(path, english, locale, catalogs, HOST_CATALOGS);
+    const form = (schema: unknown): unknown => {
+      const properties = object(object(schema)?.['properties']);
+      return properties === undefined ? schema : { ...object(schema), properties: formIn(properties as Bag, 'options', locale, () => [catalogs, HOST_CATALOGS]) };
+    };
+    const out: Record<string, unknown> = { ...record };
+    if (typeof record.title === 'string') out.title = text(['meta', 'title'], record.title);
+    if (record.optionsSchema !== undefined) out.optionsSchema = form(record.optionsSchema);
+    const manifest = object(record.manifest);
+    if (manifest !== undefined) {
+      const copy: Record<string, unknown> = { ...manifest };
+      if (typeof manifest.description === 'string') copy.description = text(['meta', 'description'], manifest.description);
+      if (manifest.optionsSchema !== undefined) copy.optionsSchema = form(manifest.optionsSchema);
+      out.manifest = copy;
+    }
+    return out;
+  };
+
   const channel = recordsChannel(SCHEME, source, {
     grant: 'plugin:list' as Grant,
+    translate,
     describe: () => ({ title: 'Plugins', description: 'What the configuration names, and what a run would load.' }),
     ...(options.onProblem === undefined ? {} : { onProblem: options.onProblem }),
   });

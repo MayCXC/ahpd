@@ -32,6 +32,7 @@ import type { Bag } from './common.js';
 import type { SessionConfigAnswerer } from './completions.js';
 import type { ShellEnv } from '../machines/shellenv.js';
 import type { CommandSplitter } from '../access/commandautoapprover.js';
+import type { Catalogs } from '../i18n.js';
 
 /**
  * What a host can say about a directory beyond its path.
@@ -581,6 +582,19 @@ export interface HostOptions {
    * host may set it directly for a control of its own.
    */
   sessionConfigCompletions?: Record<string, SessionConfigAnswerer>;
+  /**
+   * The catalogs a plugin ships, by what it put on the form.
+   *
+   * The fold fills this from each plugin's `ahpd.i18n`, so a key's text is
+   * looked up in the catalogs of the plugin that declared it before the
+   * host's own.
+   */
+  catalogs?: {
+    /** By session setting, the catalogs of the plugin that registered the key. */
+    sessionConfig?: Record<string, Catalogs>;
+    /** By provider, the catalogs of the plugin that registered the agent. */
+    agents?: Record<string, Catalogs>;
+  };
   /**
    * Whether the tools that declare they need advanced permission are offered.
    *
@@ -1175,6 +1189,13 @@ export interface Connection {
    */
   protocolVersion?: string;
   /**
+   * The BCP 47 tag the client sent as `locale` at `initialize` or `reconnect`.
+   *
+   * What text answered for this client alone is translated into. Absent when
+   * the client sent none, and that client reads English.
+   */
+  locale?: string;
+  /**
    * Channel URIs this client subscribed to.
    *
    * Per connection: two clients can watch one channel, and dropping one must
@@ -1343,6 +1364,8 @@ export interface Host {
   };
   /** How many clients are currently connected. */
   connections(): number;
+  /** The last locale a client sent, by client id, or `undefined` when it sent none. */
+  localeOf(clientId: string): string | undefined;
   /**
    * The sessions with a turn running or waiting on a person, by URI.
    *

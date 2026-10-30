@@ -43,6 +43,7 @@
   "files": [
     "dist",
     "src",
+    "i18n",
     "icon.svg",
     "icon-dark.svg",
     "README.md"
@@ -62,6 +63,7 @@
   },
   "ahpd": {
     "entry": "./dist/index.js",
+    "i18n": "i18n",
     "title": "Dev Tunnel",
     "description": "A Dev Tunnel that forwards the bound port, so a client reaches the daemon from anywhere.",
     "categories": [],

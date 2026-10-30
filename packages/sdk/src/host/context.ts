@@ -1,4 +1,5 @@
 import type { Agent } from '../types/agent.js';
+import type { Catalogs } from '../i18n.js';
 import type { Connection, HostOptions, HostTool, ResourceProvider } from '../types/host.js';
 import type { PublishOptions } from '../types/plugin.js';
 import type { Peer } from '../types/rpc.js';
@@ -93,6 +94,22 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
    * saying so is the point - see the refusal in `reconnect`.
    */
   known: Set<string>;
+  /**
+   * The last locale each client sent, by client id.
+   *
+   * Kept beside `known` and for the same span, because a records channel reads
+   * a reader by client id rather than by connection.
+   */
+  locales: Map<string, string>;
+  /** The last locale a client sent, or `undefined` when it sent none. */
+  localeOf: (clientId: string) => string | undefined;
+  /**
+   * The catalogs a session setting's text is looked up in, in order.
+   *
+   * The plugin that registered the key, or else the plugin that registered
+   * the agent `provider`, and then the host's own.
+   */
+  catalogsOf: (key: string, provider: string) => readonly (Catalogs | undefined)[];
   /** The last `REPLAY` action envelopes, oldest first. */
   replayable: { channel: string; action: Record<string, unknown>; serverSeq: number; origin: Origin | undefined; audience?: PublishOptions }[];
   /** Live sessions, by their own uri. */

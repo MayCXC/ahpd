@@ -45,6 +45,7 @@
   "files": [
     "dist",
     "src",
+    "i18n",
     "icon.svg",
     "icon-dark.svg",
     "README.md"
@@ -64,6 +65,7 @@
   },
   "ahpd": {
     "entry": "./dist/index.js",
+    "i18n": "i18n",
     "title": "Push",
     "description": "Delivers push notifications to connected devices when agent sessions require user attention.",
     "categories": [],

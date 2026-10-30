@@ -66,6 +66,15 @@ export interface RecordsChannelOptions {
   describe?(): { title: string; description?: string };
   /** Where a refresh that could not read the store is said. */
   onProblem?(message: string): void;
+  /**
+   * One record in the locale of the client it is sent to.
+   *
+   * Called on each record sent and on each snapshot, never on the record the
+   * channel keeps: a diff compares the store's own records, so a locale never
+   * makes a change of its own. Absent, every reader gets the record as the
+   * store holds it, and so does a client that sent no locale.
+   */
+  translate?(record: Record<string, unknown>, locale: string): Record<string, unknown>;
 }
 
 /** One record as the channel sends it. */
@@ -176,6 +185,10 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
     return entries;
   };
 
+  /** One record in `locale`, or as it is when there is no locale or no `translate`. */
+  const inLocale = (record: Record<string, unknown>, locale: string | undefined): Record<string, unknown> =>
+    locale === undefined || options.translate === undefined ? record : options.translate(record, locale);
+
   /** Run one read of the store after every one queued before it. */
   const exclusive = <T>(work: () => Promise<T>): Promise<T> => {
     const done = tail.then(work);
@@ -212,7 +225,9 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
         return record !== undefined && options.ownerOf?.(action.id, record) === owner;
       },
     };
-    handle?.publish(asked, action, audience);
+    // In the reader's locale on the way out; `visible` above reads the record as stored.
+    const locale = handle?.localeOf?.(client);
+    handle?.publish(asked, record === undefined || locale === undefined ? action : { ...action, record: inLocale(record, locale) }, audience);
   };
 
   /** Update `last` from `now`, and send each waiting subscription but `skip` what it gained, changed and lost. */
@@ -300,7 +315,8 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
           apply(watching(), now, key);
           const records = owner === null ? [] : now.filter((one) => shownTo(asked, reader, one));
           sent.set(key, new Set(records.map((one) => one.id)));
-          return { records };
+          const locale = handle?.localeOf?.(client);
+          return { records: locale === undefined ? records : records.map((one) => ({ id: one.id, record: inLocale(one.record, locale) })) };
         });
       },
       left: (client) => {
@@ -419,6 +435,7 @@ export const servedRecords = (by: string, channels: RecordsChannel[], methods: R
     one.bind({
       publish: (uri, action, options = {}) => { entry.publish?.(uri, action, options); },
       subscribers: (uri) => entry.subscribers?.(uri) ?? [],
+      localeOf: (client) => entry.localeOf?.(client),
     });
     served[one.scheme] = entry;
   }

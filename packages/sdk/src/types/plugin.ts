@@ -27,6 +27,7 @@ import type { ResourceProvider } from './resources.js';
 import type { Owner, UsageEntry } from './usage.js';
 import type { Grant, Principal } from './users.js';
 import type { SecretWork } from './vault.js';
+import type { Catalogs } from '../i18n.js';
 
 /**
  * A kind of trigger a plugin offers, in the protocol's own words.
@@ -369,6 +370,12 @@ export interface ChannelHandle {
    * over the plugin.
    */
   subscribers(uri: string): ChannelSubscriber[];
+  /**
+   * The last locale a client sent, or `undefined` when it sent none or no
+   * host is built over the plugin yet. What a channel translates one reader's
+   * records into.
+   */
+  localeOf?(client: string): string | undefined;
 }
 
 /**
@@ -390,6 +397,8 @@ export interface ServedChannel {
   publish?: (uri: string, action: Record<string, unknown>, options: PublishOptions) => void;
   /** Who is subscribed, set by the host once it exists. */
   subscribers?: (uri: string) => ChannelSubscriber[];
+  /** The last locale a client sent, set by the host once it exists. */
+  localeOf?: (client: string) => string | undefined;
 }
 
 /**
@@ -1517,6 +1526,8 @@ export interface Contribution {
    * Absent, the plugin's `name` stands for it.
    */
   spec?: string;
+  /** The catalogs the plugin ships in `ahpd.i18n`, by locale, when it ships any. */
+  i18n?: Catalogs;
   /** Backends to append, in registration order. */
   agents: Agent[];
   /** Tools to append, in registration order. */
@@ -1665,6 +1676,8 @@ export interface Loaded {
   title?: string;
   /** What the plugin declares about itself, from its package.json or its module. */
   manifest?: PluginManifest;
+  /** The catalogs `ahpd.i18n` names, by locale. */
+  i18n?: Catalogs;
   /** The options `apply` is given. */
   options: Record<string, unknown>;
   /** The module's plugin object. */

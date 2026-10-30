@@ -19,6 +19,7 @@ import type { Agent } from '../types/agent.js';
 import type { Session } from '../types/session.js';
 import type { Claimed, Held, LiveSubagent } from './state.js';
 import type { ConnectionContext, HostContext } from './context.js';
+import { formIn, hostCatalogs } from './formlocale.js';
 
 /**
  * The backends whose session config schema has been walked.
@@ -1588,14 +1589,20 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * nothing in its `enum` is a control with no label for the value it
        * is already holding.
        */
+      // In the caller's language, and translated before `seeded` fills the
+      // dynamic keys, so an answerer's labels are never read as text.
+      const locale = ctx.localeOf(connection.clientId);
       const contributed = await seeded(
-        (typeof theirs.properties === 'object' && theirs.properties !== null ? theirs.properties : {}) as Bag,
+        formIn(
+          (typeof theirs.properties === 'object' && theirs.properties !== null ? theirs.properties : {}) as Bag,
+          'session', locale, (key) => ctx.catalogsOf(key, provider),
+        ),
         { provider, ...(asked === undefined ? {} : { workingDirectory: asked }), config: answered },
         agent.completions,
       );
-      const hostProperties = (typeof mine.schema.properties === 'object' && mine.schema.properties !== null
+      const hostProperties = formIn((typeof mine.schema.properties === 'object' && mine.schema.properties !== null
         ? mine.schema.properties
-        : {}) as Bag;
+        : {}) as Bag, 'session', locale, hostCatalogs);
       /*
        * In the order the form reads: the computer, then this host's own keys,
        * then whatever else the backend and another plugin offered. Only the
@@ -1603,7 +1610,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * then the scoped one.
        */
       const properties = formOrdered(
-        { ...contributed, ...hostProperties, ...scoped.properties },
+        { ...contributed, ...hostProperties, ...formIn(scoped.properties, 'session', locale, hostCatalogs) },
         [...Object.keys(hostProperties), ...Object.keys(scoped.properties)],
       );
       // Iterative, as a real host's is: what has been answered comes back

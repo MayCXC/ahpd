@@ -1,7 +1,7 @@
 ---
 title: The host's text comes in the client's language
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -83,11 +83,11 @@ x-ahpd-plugins send to a reader -> translate(record, locale of the client) -> th
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host keeps each client's locale](task-01-the-host-keeps-each-clients-locale.md) | todo | - |
-| [02 - The host and each plugin carry a catalog](task-02-the-host-and-each-plugin-carry-a-catalog.md) | todo | 01 |
-| [03 - The new session form comes in the locale](task-03-the-new-session-form-comes-in-the-locale.md) | todo | 02 |
-| [04 - The plugins screen comes in the locale](task-04-the-plugins-screen-comes-in-the-locale.md) | todo | 02 |
-| [05 - The first catalogs ship in pt and es](task-05-the-first-catalogs-ship-in-pt-and-es.md) | todo | 03, 04 |
+| [01 - The host keeps each client's locale](task-01-the-host-keeps-each-clients-locale.md) | done | - |
+| [02 - The host and each plugin carry a catalog](task-02-the-host-and-each-plugin-carry-a-catalog.md) | done | 01 |
+| [03 - The new session form comes in the locale](task-03-the-new-session-form-comes-in-the-locale.md) | done | 02 |
+| [04 - The plugins screen comes in the locale](task-04-the-plugins-screen-comes-in-the-locale.md) | done | 02 |
+| [05 - The first catalogs ship in pt and es](task-05-the-first-catalogs-ship-in-pt-and-es.md) | done | 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -98,8 +98,8 @@ x-ahpd-plugins send to a reader -> translate(record, locale of the client) -> th
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-host-keeps-each-clients-locale.md](task-01-the-host-keeps-each-clients-locale.md).
+- **Done so far:** tasks 01 to 05, recorded in [implemented.md](implemented.md).
+- **Next action:** the checks by hand in the final verification checklist.
 - **Open questions:** none.
 - **Watch out for:** `seeded` adds labels from answerers; translate the properties before `seeded` runs, never after.
 

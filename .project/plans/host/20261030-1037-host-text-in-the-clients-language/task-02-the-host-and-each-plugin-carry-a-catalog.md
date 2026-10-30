@@ -1,6 +1,6 @@
 ---
 title: The host and each plugin carry a catalog
-status: todo
+status: done
 depends: [task-01-the-host-keeps-each-clients-locale.md]
 layer: sdk, server
 refs:

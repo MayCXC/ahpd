@@ -36,6 +36,11 @@ jobs:
       - name: The packages import only what they declare
         run: pnpm boundary
 
+      # A catalog is keyed by field path, so a renamed field leaves an entry
+      # nothing reads.
+      - name: Each catalog path names a field
+        run: pnpm i18n
+
       - run: pnpm typecheck
 
       # Bounded, because a job that runs into the runner's own timeout is

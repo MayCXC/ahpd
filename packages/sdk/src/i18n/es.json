@@ -1,0 +1,41 @@
+{
+  "session": {
+    "isolation": {
+      "title": "Aislamiento",
+      "description": "Dónde debe hacer los cambios el agente",
+      "enum": { "folder": "Carpeta", "worktree": "Worktree" }
+    },
+    "branch": {
+      "title": "Rama",
+      "description": "Rama base desde la que parte el worktree"
+    },
+    "worktreeIncludeFiles": {
+      "title": "Archivos que se llevan",
+      "description": "Patrones, en sintaxis de .gitignore, de archivos ignorados por git que se copian al worktree, como .env",
+      "items": { "title": "Patrón" }
+    },
+    "worktreeSymlinkFolders": {
+      "title": "Carpetas compartidas",
+      "description": "Patrones, en sintaxis de .gitignore, de carpetas ignoradas por git que se enlazan en el worktree, como node_modules",
+      "items": { "title": "Patrón" }
+    },
+    "worktreeBranchPrefix": {
+      "title": "Prefijo de rama",
+      "description": "Se antepone al nombre de la rama creada para el worktree."
+    },
+    "worktreeCreateNewBranch": {
+      "title": "Crear una rama",
+      "description": "Crea una rama para el worktree, o usa la rama elegida tal como está.",
+      "enum": { "true": "Crear una", "false": "Seguir en la rama elegida" }
+    },
+    "worktreeBranchTrack": {
+      "title": "Seguir el upstream",
+      "description": "Si la rama creada sigue el upstream de la rama de la que partió.",
+      "enum": { "true": "Seguirlo", "false": "Dejarla sin seguimiento" }
+    },
+    "scope": {
+      "title": "Equipo y proyecto",
+      "description": "A qué equipo y proyecto se atribuye el trabajo de esta sesión"
+    }
+  }
+}

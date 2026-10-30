@@ -42,6 +42,7 @@
   "files": [
     "dist",
     "src",
+    "i18n",
     "icon.svg",
     "icon-dark.svg",
     "README.md",
@@ -62,6 +63,7 @@
   },
   "ahpd": {
     "entry": "./dist/index.js",
+    "i18n": "i18n",
     "title": "Webhook",
     "description": "A URL that talks to a bot or fires an automation, with a secret per endpoint.",
     "categories": ["connector"],

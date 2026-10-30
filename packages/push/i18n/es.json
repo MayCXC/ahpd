@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "title": "Push",
+    "description": "Envía notificaciones push a los dispositivos conectados cuando una sesión de agente necesita la atención de alguien."
+  },
+  "options": {
+    "title": {
+      "description": "El título de una notificación. Sin él, el nombre del propio daemon."
+    },
+    "accessToken": {
+      "description": "Un token de acceso de Expo, cuando el proyecto tiene activada la seguridad de push. Se puede dar un nombre en lugar del token, como {\"$secret\": \"host:expo\"}."
+    }
+  }
+}

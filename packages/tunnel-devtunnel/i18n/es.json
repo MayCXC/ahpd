@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "title": "Dev Tunnel",
+    "description": "Un Dev Tunnel que reenvía el puerto en uso, para que un cliente llegue al daemon desde cualquier lugar."
+  },
+  "options": {
+    "name": {
+      "description": "Cómo se llama el túnel en la lista de un cliente. Por defecto, el hostname de esta máquina."
+    },
+    "keep": {
+      "description": "Si el túnel sigue existiendo cuando el daemon se detiene. true por defecto."
+    },
+    "anonymous": {
+      "description": "Si alguien que no inició sesión en esta cuenta puede acceder. false por defecto."
+    }
+  }
+}

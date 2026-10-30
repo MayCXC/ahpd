@@ -41,6 +41,7 @@
   "files": [
     "dist",
     "src",
+    "i18n",
     "icon.svg",
     "README.md",
     "LICENSE"
@@ -76,6 +77,7 @@
   },
   "ahpd": {
     "entry": "./dist/index.js",
+    "i18n": "i18n",
     "title": "Activepieces connectors",
     "description": "Each installed Activepieces piece is an adapter, and each of its actions is a host tool.",
     "categories": ["connector"],

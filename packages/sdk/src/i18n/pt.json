@@ -1,0 +1,41 @@
+{
+  "session": {
+    "isolation": {
+      "title": "Isolamento",
+      "description": "Onde o agente deve fazer as alterações",
+      "enum": { "folder": "Pasta", "worktree": "Worktree" }
+    },
+    "branch": {
+      "title": "Branch",
+      "description": "Branch base de onde a worktree parte"
+    },
+    "worktreeIncludeFiles": {
+      "title": "Arquivos a levar",
+      "description": "Padrões, na sintaxe do .gitignore, de arquivos ignorados pelo git que são copiados para a worktree, como .env",
+      "items": { "title": "Padrão" }
+    },
+    "worktreeSymlinkFolders": {
+      "title": "Pastas a compartilhar",
+      "description": "Padrões, na sintaxe do .gitignore, de pastas ignoradas pelo git que são vinculadas na worktree, como node_modules",
+      "items": { "title": "Padrão" }
+    },
+    "worktreeBranchPrefix": {
+      "title": "Prefixo da branch",
+      "description": "Vai no início do nome da branch criada para a worktree."
+    },
+    "worktreeCreateNewBranch": {
+      "title": "Criar uma branch",
+      "description": "Cria uma branch para a worktree, ou usa a branch escolhida como está.",
+      "enum": { "true": "Criar uma", "false": "Continuar na branch escolhida" }
+    },
+    "worktreeBranchTrack": {
+      "title": "Acompanhar o upstream",
+      "description": "Se a branch criada acompanha o upstream da branch de onde partiu.",
+      "enum": { "true": "Acompanhar", "false": "Não acompanhar" }
+    },
+    "scope": {
+      "title": "Time e projeto",
+      "description": "A qual time e projeto o trabalho desta sessão é atribuído"
+    }
+  }
+}

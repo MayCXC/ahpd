@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "title": "Agente Cofold",
+    "description": "Ejecuta el runtime de agentes Cofold, con acceso a endpoints de API compatibles con OpenAI."
+  },
+  "options": {
+    "model": {
+      "description": "El id del modelo que usa un registro que no indica ninguno."
+    },
+    "baseUrl": {
+      "description": "El endpoint compatible con OpenAI que usa un registro que no indica ninguno."
+    },
+    "instructions": {
+      "description": "El prompt de sistema con el que se crea un registro que no indica ninguno."
+    },
+    "computerConfigDir": {
+      "description": "La carpeta de configuración que lee el harness dentro de una máquina. Por defecto, /ahpd/cofold; false deja la de la propia imagen."
+    },
+    "store": {
+      "description": "La carpeta donde vive el almacenamiento de archivos de cofold de cada registro, una carpeta por registro. Por defecto, la carpeta de datos de la propia herramienta."
+    },
+    "memory": {
+      "description": "true para guardar el almacenamiento de cada registro en memoria, para una prueba."
+    },
+    "tools": {
+      "description": "Qué capacidades ejecuta una sesión, de dónde toma web_search sus proveedores, y si una escritura exige leer antes el archivo."
+    },
+    "strictTools": {
+      "description": "false somete la opción tools a la comprobación flexible, y una clave que el harness no conoce se descarta en lugar de rechazarse."
+    },
+    "apiKey": {
+      "description": "La clave del propio daemon, para un registro que no indica ninguna."
+    },
+    "resource": {
+      "description": "El recurso protegido ante el que se autentica un cliente."
+    },
+    "autoCompactTokens": {
+      "description": "El tamaño estimado del historial en el que una sesión se compacta, nunca por encima del 80% del contexto indicado del modelo, o de 32000. Por defecto, ese 80%."
+    }
+  },
+  "session": {
+    "baseUrl": {
+      "title": "Endpoint",
+      "description": "Una URL base compatible con OpenAI, como https://api.deepseek.com/v1."
+    },
+    "instructions": {
+      "title": "Instrucciones",
+      "description": "El prompt de sistema con el que se ejecuta este agente."
+    },
+    "permissionMode": {
+      "title": "Aprobaciones",
+      "description": "Cómo gestiona el agente la aprobación de herramientas.",
+      "enum": {
+        "default": "Preguntar antes de editar",
+        "acceptEdits": "Editar automáticamente",
+        "plan": "Modo plan",
+        "auto": "Modo automático",
+        "bypassPermissions": "Omitir permisos",
+        "dontAsk": "No preguntar"
+      }
+    },
+    "effortLevel": {
+      "title": "Esfuerzo",
+      "description": "Cuánto piensa antes de responder.",
+      "enum": {
+        "off": "Desactivado",
+        "low": "Bajo",
+        "medium": "Medio",
+        "high": "Alto"
+      }
+    }
+  }
+}

@@ -47,6 +47,7 @@
   "files": [
     "dist",
     "src",
+    "i18n",
     "icon.svg",
     "icon-dark.svg",
     "README.md"
@@ -69,6 +70,7 @@
   },
   "ahpd": {
     "entry": "./dist/index.js",
+    "i18n": "i18n",
     "title": "Agent ACP",
     "description": "Connects any ACP-compatible agent, including Copilot, Codex, Gemini, and custom ACP servers.",
     "categories": ["agent"],

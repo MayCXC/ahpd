@@ -113,7 +113,8 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
       const schemas = served === undefined ? undefined : await schemasFor(options.plugins);
       const rows = [];
       for (const { key, spec } of keys) {
-        const row = await describePlugin(spec, { configDir: configDir(), cwd: process.cwd() });
+        // The catalogs translate the plugins channel's rows; the listing prints the row as written.
+        const { i18n: _catalogs, ...row } = await describePlugin(spec, { configDir: configDir(), cwd: process.cwd() });
         rows.push(served === undefined ? row : {
           ...row,
           spec: withoutSpecSecrets(row.spec, schemas?.get(key)),
