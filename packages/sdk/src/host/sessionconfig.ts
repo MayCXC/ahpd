@@ -13,6 +13,7 @@ export interface SessionConfig {
     chosen?: string,
   ) => Promise<{ schema: Bag; defaults: Record<string, unknown>; repository?: string }>;
   mergedConfig(uri: string, theirs: unknown, mine: Record<string, unknown>): Bag;
+  formOrdered(properties: Bag, hosts: string[]): Bag;
   propertyOf(agent: Agent | undefined, key: string): { sessionMutable?: boolean; scope?: string } | undefined;
   sessionSchema(agent: Agent): Bag;
   runningSchema(agent: Agent): Bag;
@@ -205,6 +206,27 @@ export function createSessionConfig(ctx: HostContext): SessionConfig {
   };
 
   /**
+   * A form's properties, in the order a person fills them in.
+   *
+   * `computer` comes first: it is the machine the session runs on, and every
+   * other answer is about a session on it. This host's own keys come next, in
+   * the order `hosts` gives them, and everything else keeps the order it
+   * arrived in - another plugin's keys, then the backend's own.
+   *
+   * `hosts` is the caller's because only it knows which keys this host
+   * declared: the isolation keys come from the worktree port and are absent on
+   * a host without one.
+   */
+  const formOrdered = (properties: Bag, hosts: string[]): Bag => {
+    const head = [...new Set(['computer', ...hosts])].filter((key) => Object.hasOwn(properties, key));
+    const moved = new Set(head);
+    return Object.fromEntries([
+      ...head.map((key) => [key, properties[key]] as const),
+      ...Object.entries(properties).filter(([key]) => !moved.has(key)),
+    ]);
+  };
+
+  /**
    * A session's config with this host's own answers folded in.
    *
    * The schema as well as the values: a client draws a control from the
@@ -220,9 +242,13 @@ export function createSessionConfig(ctx: HostContext): SessionConfig {
       ? schema.properties
       : {}) as Bag;
     const values = (typeof held.values === 'object' && held.values !== null ? held.values : {}) as Bag;
+    const hostProperties = hostSchema(uri, mine);
     return {
       ...held,
-      schema: { ...schema, properties: { ...properties, ...hostSchema(uri, mine) } },
+      schema: {
+        ...schema,
+        properties: formOrdered({ ...properties, ...hostProperties }, Object.keys(hostProperties)),
+      },
       values: { ...values, ...mine },
     };
   };
@@ -565,7 +591,7 @@ export function createSessionConfig(ctx: HostContext): SessionConfig {
   );
 
   return {
-    isolating, mergedConfig, propertyOf, sessionSchema, runningSchema, seeded,
+    isolating, mergedConfig, formOrdered, propertyOf, sessionSchema, runningSchema, seeded,
     contributedDefaults, storedConfig, mineOf,
   };
 }
