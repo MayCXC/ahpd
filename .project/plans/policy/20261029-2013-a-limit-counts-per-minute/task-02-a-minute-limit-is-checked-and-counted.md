@@ -34,7 +34,7 @@ A call counts once, on the keys of the candidate it is sent to, before it is sen
 1. Add `meter` to `ChargeOptions` and to the options `limitsOf` takes.
 2. In `limitsOf`, read `meter.sum(key, now)` for a `minute` limit, in place of the store's total.
 3. Make `refusalOf` say `this minute` for a `minute` limit.
-4. Add `countCall` beside `chargeFor`, which counts the `calls` and `turns` keys it is given once.
+4. Add `countCall` beside `chargeFor`: it adds 1 to every `calls` and `turns` key the caller passes, once for that caller.
 5. In `run.ts`, make one meter beside `fileUsage`, and pass it to the store and the proxy options.
 6. Pass the same meter to the host options that reach the turn check in `owners.ts`.
 7. Write the tests and the docs.
