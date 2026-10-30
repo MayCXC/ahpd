@@ -177,6 +177,18 @@ it('makes a profile\'s machine on its box\'s Docker, lists it by that runner and
   expect(usage.entries[0]).toMatchObject({ computer: 'docker-far.box', owner: 'user:ana' });
 });
 
+it('builds a far profile\'s parts on its box\'s Docker, which mounts them, and none on this host\'s', async () => {
+  const at = files();
+  const { problems, provider } = await load(at, { far: { server: 'dev02', parts: ['node'] } });
+  expect(problems).toEqual([]);
+
+  await provider.write('computer://box', said(JSON.stringify({ image: 'node:22', profile: 'far' })), 'user:ana');
+  const far = held(farFile(at.local)) as Held & { builds?: { tag: string }[] };
+  expect(far.builds?.map((one) => one.tag.split(':')[0])).toEqual(['ahpd-part/node']);
+  expect(far.machines.map((one) => one.name)).toEqual(['box']);
+  expect((held(at.local) as Held & { builds?: unknown[] }).builds ?? []).toEqual([]);
+});
+
 it('refuses to make a machine on a box with no Docker, with the fix lines', async () => {
   const at = files();
   writeFileSync(at.check, ready.replace(/^docker.*$/gmu, ''));

@@ -940,10 +940,15 @@ export const apply: Plugin['apply'] = (host, options) => {
        * is refused, by the label that does not name it. A machine made for one
        * session whose own agent needs the part is not made at all, as
        * `refusedWithout` decides.
+       *
+       * Built on the Docker that mounts them: a machine on a box's Docker
+       * mounts a part by its image there, which this host's Docker cannot give.
        */
       let spec = asked;
       if (asked.partsAsked !== undefined && asked.partsAsked.length > 0) {
-        const built = await ensureParts(asked.partsAsked, { runtime: dockered });
+        const far = key === undefined ? undefined : farValues[key];
+        const builder = far === undefined ? dockered : computerRouter.runtimes[far] ?? dockered;
+        const built = await ensureParts(asked.partsAsked, { runtime: builder });
         /*
          * A failed part whose need names a fallback has that host mount in its
          * place, and the machine counts it as had: it is labelled `<id>@host`
