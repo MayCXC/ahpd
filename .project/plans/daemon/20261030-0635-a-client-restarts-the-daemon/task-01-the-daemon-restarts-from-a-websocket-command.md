@@ -1,6 +1,6 @@
 ---
 title: The daemon restarts from a websocket command
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -44,3 +44,10 @@ Only the host's own connection may call it.
 
 ## Resume
 
+Implemented 2026-10-30.
+`servedRestart(served, force)` holds the served checks: the record must name this daemon, and a turn running refuses unless the caller forces. `restartMethod(served)` wraps it for AHP with `config:write`, the `root:` owner check and `deploymentOnly`, and `run.ts` registers `x-ahpd/restart` beside `x-ahpd/update`.
+
+- `packages/server/src/commands/restart.ts` - `ServedRestartAnswer`, `servedRestart` and `restartMethod`. The served branch of `declareRestart` calls `servedRestart`.
+- `packages/server/src/commands/run.ts` - `x-ahpd/restart` registered with `by: 'ahpd'`.
+- `packages/server/test/host-restart-method.test.ts` - seven cases: the two owner refusals, the root restart, the busy refusal, a forced restart, the foreground refusal and the params.
+- `docs/server/RUN.md` and `docs/updates/v0_14.md` - the command, its grant and its answer.
