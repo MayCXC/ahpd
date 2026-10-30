@@ -19,7 +19,7 @@ Current progress and pending items only, as of 2026-10-30.
   - #151: container/05 p8, a profile's machines on another server's Docker.
 - The last code merge on main is #151 (`f3495654`).
 - #158 was based on the #157 branch, so its merge went into that branch and never reached main. #159 took the same head into main. Check `baseRefName` before you merge a stacked fork PR.
-- Disposing a session that this process does not hold leaves its disposable machine behind. The `held === undefined` branch in `lifecycle.ts` never calls `leaveForgotten`. It is on main from before p8, and a small plan of its own fixes it.
+- Disposing a session that this process does not hold leaves its disposable machine behind. The `held === undefined` branch in `lifecycle.ts` never calls `leaveForgotten`. It is on main from before p8: [problems/a-disposed-session-not-held-leaves-its-machine.md](../problems/a-disposed-session-not-held-leaves-its-machine.md).
 - The README is rewritten for people who run ahpd (`a22c1934`). The brief it came from is `ahp-review/ahpd-review/ahpd-readme-2026-10-27/`.
 - `/github/ahpd` is on main with one local commit that is not pushed: `1965724e` (briefs: send an empty writable directory, and reload skills with agents). Softov wrote it. Leave it for him.
 - Fetch, and check the base before you cut a build worktree.
@@ -33,8 +33,7 @@ Current progress and pending items only, as of 2026-10-30.
 ## Waiting for Softov
 
 - host/114, host/116 and x-ahpd/me: review. x-ahpd/me gives `kind` a third value, `plugin`, which the plan did not name.
-- A daemon restart, to serve #156, #157, #159, #160, #161 and #151.
-- After the daemon restart, open a terminal in ahpw and in ahpc. `supportsCommandDetection` is now false until the shell prints its first mark.
+- After the daemon restart for #156 to #161 and #151, open a terminal in ahpw and in ahpc. `supportsCommandDetection` is now false until the shell prints its first mark.
 - host/126: review. ahpc and ahpw must create `ahp-session:` sessions.
 - daemon/29: the final checklist in its plan.
 - host/121: the checks by hand in its plan's Resume state.
@@ -56,7 +55,6 @@ Current progress and pending items only, as of 2026-10-30.
 
 ## Next builds
 
-- The fix for the disposable machine left behind, as a small plan and PR.
 - The VM plan `20261030-1141-a-vm-is-made-on-a-server`, the last part of container/05 p8.
 - container/05 p10 (task 03 next).
 - The ahpw Connect button for plugin/71 is ahpw plan plugins/09, planned.
