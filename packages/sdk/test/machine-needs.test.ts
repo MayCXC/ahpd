@@ -182,6 +182,10 @@ it('marks a credential need read from the agent\'s own default as this host\'s, 
   }, {}, dir)[0]?.hostCredential;
   expect(state(true)).toBe(true);
   expect(state(false)).toBeUndefined();
+  // A seed whose source is not there copies nothing, so it carries no credential either.
+  expect(resolveNeeds({
+    held: { state: '/ahpd/tool', seed: [{ source: join(dir, 'gone.json') }], credential: true },
+  }, {}, dir)[0]?.hostCredential).toBeUndefined();
 });
 
 it('keeps the needs of the mode a machine is made in, and a need without `when` in both', () => {

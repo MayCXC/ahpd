@@ -70,17 +70,21 @@ const word = (value: unknown): string | undefined =>
  * session config are then the only sources. A file that is there and wrong
  * about one provider drops that provider rather than the whole file, so one
  * bad entry does not take the others down with it.
+ *
+ * `COFOLD_BASE_URL`, `COFOLD_API_KEY` and `COFOLD_MODEL` are read on top of the
+ * file, as the harness itself reads them: the URL adds or replaces a provider
+ * called `default`, and a model with no slash is a model of `default`. They
+ * are how a machine is given a key with no file holding it.
  */
 export const harnessConfig = (env: NodeJS.ProcessEnv = process.env, home: string = homedir()): HarnessConfig => {
   const path = harnessConfigPath(env, home);
-  let found: Record<string, unknown>;
+  let found: Record<string, unknown> = {};
   try {
     const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return { providers: [], path };
-    found = parsed as Record<string, unknown>;
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) found = parsed as Record<string, unknown>;
   }
   catch {
-    return { providers: [], path };
+    // No file is no file's values; the variables below may still name a provider.
   }
 
   const providers: HarnessProvider[] = [];
@@ -102,7 +106,14 @@ export const harnessConfig = (env: NodeJS.ProcessEnv = process.env, home: string
     });
   }
 
-  const model = word(found.model);
+  const baseUrl = word(env['COFOLD_BASE_URL']);
+  if (baseUrl !== undefined) {
+    const apiKey = word(env['COFOLD_API_KEY']);
+    const fromEnv: HarnessProvider = { id: 'default', baseUrl, ...(apiKey === undefined ? {} : { apiKey }) };
+    providers.splice(0, providers.length, fromEnv, ...providers.filter((provider) => provider.id !== 'default'));
+  }
+  const named = word(env['COFOLD_MODEL']);
+  const model = named === undefined ? word(found.model) : named.includes('/') ? named : `default/${named}`;
   const instructions = word(found.instructions);
   return {
     providers,

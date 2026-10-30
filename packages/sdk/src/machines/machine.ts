@@ -217,7 +217,8 @@ export function resolveNeeds(
         source: said,
         target: said,
         ...(seed.length === 0 ? {} : { seed }),
-        ...(need.credential === true && seed.length > 0 ? { hostCredential: true } : {}),
+        // A seed whose source is not there copies nothing, so it carries no credential.
+        ...(need.credential === true && seed.some((one) => existsSync(one.source)) ? { hostCredential: true } : {}),
         ...about,
       });
       continue;

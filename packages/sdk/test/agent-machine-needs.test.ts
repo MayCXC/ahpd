@@ -105,7 +105,12 @@ it('cofold declares its harness configuration, wherever it is read from', () => 
     expect(needs.cofoldConfigPath).toMatchObject({ name: 'COFOLD_CONFIG', default: '/ahpd/cofold/cofold/config.json' });
     // The nested host runs from the ahpd part.
     expect(needs.ahpdPart).toMatchObject({ part: 'ahpd', required: true });
-    expect(Object.keys(needs)).toEqual(['cofoldState', 'cofoldConfig', 'cofoldConfigPath', 'ahpdPart']);
+    // A provider by variable has no default, so only a profile gives one, the key from the vault.
+    expect(needs.cofoldBaseUrl).toMatchObject({ name: 'COFOLD_BASE_URL' });
+    expect(needs.cofoldApiKey).toMatchObject({ name: 'COFOLD_API_KEY', credential: true });
+    expect(needs.cofoldModel).toMatchObject({ name: 'COFOLD_MODEL' });
+    expect([needs.cofoldBaseUrl, needs.cofoldApiKey, needs.cofoldModel].some((one) => one !== undefined && 'default' in one)).toBe(false);
+    expect(Object.keys(needs)).toEqual(['cofoldState', 'cofoldConfig', 'cofoldConfigPath', 'cofoldBaseUrl', 'cofoldApiKey', 'cofoldModel', 'ahpdPart']);
 
     // Inside a machine the source is the mounted one, so the file the host
     // carries is read from the path its own variable names.

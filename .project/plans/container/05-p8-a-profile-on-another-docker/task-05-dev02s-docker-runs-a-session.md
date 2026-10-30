@@ -18,9 +18,12 @@ A disposable profile with `server: "dev02"` runs a cofold session on dev02, and 
 ## Steps
 
 1. Build an image with ahpd and the agent plugins on dev02's Docker.
-2. A profile with that image and `server`, and `needs.cofoldConfig` naming a cofold config written for dev02 with dev02's own key (task 02 refuses the host's own); start a disposable session, commit, leave; check the branch on this host. Once with the default `code: "bundle"`, once with `code: "clone"` on a public repository.
-3. Restart this host mid-session and continue.
-4. Run it again with the vault's key absent: the session is refused with a sentence naming the key, and no other profile or session is affected.
+2. Write a profile with that image and `server`, and name `cofoldApiKey` from the vault.
+3. Start a disposable session, commit, leave, and check the branch on this host.
+4. Do step 3 once with `code: "bundle"` and once with `code: "clone"` on a public repository.
+5. Restart this host mid-session and continue.
+6. Remove the key from the vault and start a session again.
+7. Check that the refusal names the key and that no other profile or session is affected.
 
 ## Validation
 
