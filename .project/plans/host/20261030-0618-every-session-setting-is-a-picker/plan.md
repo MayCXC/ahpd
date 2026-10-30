@@ -1,7 +1,7 @@
 ---
 title: Every session setting with known values is a picker
 domain: host
-status: planned
+status: implemented
 priority: medium
 created: 2026-10-30
 revalidated: 2026-10-30
@@ -78,10 +78,10 @@ client opens a picker -> sessionConfigCompletions(property) -> answerer by name 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A harness answers its own setting](task-01-a-harness-answers-its-own-setting.md) | todo | - |
-| [02 - The bot chat offers its bots](task-02-the-bot-chat-offers-its-bots.md) | todo | 01 |
-| [03 - ACP approvals list the known modes](task-03-acp-approvals-list-known-modes.md) | todo | - |
-| [04 - Computer and isolation come first](task-04-computer-and-isolation-come-first.md) | todo | - |
+| [01 - A harness answers its own setting](task-01-a-harness-answers-its-own-setting.md) | implemented | - |
+| [02 - The bot chat offers its bots](task-02-the-bot-chat-offers-its-bots.md) | implemented | 01 |
+| [03 - ACP approvals list the known modes](task-03-acp-approvals-list-known-modes.md) | implemented | - |
+| [04 - Computer and isolation come first](task-04-computer-and-isolation-come-first.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -91,8 +91,8 @@ client opens a picker -> sessionConfigCompletions(property) -> answerer by name 
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-harness-answers-its-own-setting.md](task-01-a-harness-answers-its-own-setting.md).
+- **Done so far:** all four tasks; a harness answers a key of its own schema, marked `enumDynamic`, seeded and asked by provider, the Bot chat offers its bots that way, an ACP harness lists the modes its agent's source names, replaced by the modes a session hears, and a session's settings come in the order computer, isolation and branch, then the rest.
+- **Next action:** none - the plan is implemented, and `implemented.md` names what was verified.
 - **Open questions:** none.
 - **Watch out for:** VS Code draws its own Approvals picker only for Claude's five modes. An ACP harness gets the plain picker, as expected.
 

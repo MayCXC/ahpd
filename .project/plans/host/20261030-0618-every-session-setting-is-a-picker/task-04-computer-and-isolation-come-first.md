@@ -1,6 +1,6 @@
 ---
 title: Computer and isolation come first
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -39,3 +39,10 @@ The new session form and a running session's schema use the same order.
 
 ## Resume
 
+Implemented 2026-10-30.
+`formOrdered` in `packages/sdk/src/host/sessionconfig.ts` puts `computer` first, then the host keys it is given, then the rest in the order they arrived.
+`mergedConfig` and `resolveSessionConfig` both call it, so a new session form and a running session's schema read the same order: `computer`, `isolation`, `branch`, the worktree companions and `scope`, then another plugin's keys, then the backend's.
+Only the order moved. The host's value still wins over a plugin's, the scoped value still wins over both, and the values and defaults are untouched.
+`sessionSchema` needed no change: its fold already puts a plugin's keys before the backend's, and `formOrdered` reads that order for the rest.
+`packages/sdk/test/session-config-order.test.ts` covers the new form with and without a computer plugin and the running session; it is not committed, because `git add` is refused in this session.
+`docs/updates/v0_14.md` has the line.
