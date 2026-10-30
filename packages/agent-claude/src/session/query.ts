@@ -962,6 +962,7 @@ export function createQuery(ctx: SessionContext): Query {
             : str(message.subtype) !== 'success'
               ? `The turn ended ${str(message.subtype) ?? 'without succeeding'}`
               : undefined);
+          if (wrong === undefined) ctx.answered();
           /*
            * The prompts this result answered, which the CLI no longer owes,
            * and the turns they belong to.

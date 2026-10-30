@@ -885,6 +885,32 @@ it('keeps a call a host part notes as the last call, and cuts its error to 500 c
   await close();
 });
 
+it('keeps a call the plugin of the connector\'s adapter notes, and refuses a note from anyone else', async () => {
+  const { host, users, connectors, close } = await served();
+  const ha = await as(host, users, 'ha');
+  await ha.call('x-ahpd/connectors/put', { id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a' } });
+  const iv = await as(host, users, 'iv');
+  // The principal the `webhook` plugin's own connection is served as.
+  const plugin: Principal = { id: 'plugin:webhook', plugin: 'webhook', roles: [], can: () => true };
+  const error = 'rate_limit: limit reached; back at 2026-10-30T18:00:00.000Z';
+
+  await onFakeClock(async () => {
+    await connectors.methods['x-ahpd/connectors/note']!.handle({ id: 'shared', ok: false, error }, plugin, 'webhook');
+  });
+  expect((await iv.rows())['shared']).toMatchObject({
+    health: {
+      check: { result: 'ok' },
+      lastCall: { ok: false, error, at: expect.any(String) },
+      lastFailure: { ok: false, error, at: expect.any(String) },
+    },
+  });
+
+  // Somebody who may put the connector is not the plugin that makes its calls.
+  expect(await ha.call('x-ahpd/connectors/note', { id: 'shared', ok: true })).toMatchObject({ code: -32009 });
+  expect((await iv.rows())['shared']).toMatchObject({ health: { lastCall: { ok: false, error } } });
+  await close();
+});
+
 it('sends at most one refresh a second for the outcomes note keeps', async () => {
   const { host, users, connectors, close } = await served();
   const cy = await as(host, users, 'cy');
