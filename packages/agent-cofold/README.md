@@ -44,7 +44,7 @@ In the configuration file, with the plugin's own options as the defaults every r
 
 With no model named anywhere, the providers, keys and model come from cofold's own configuration file, `$COFOLD_CONFIG` or `$XDG_CONFIG_HOME/cofold/config.json` or `~/.config/cofold/config.json`. Inside a machine the first of those is what finds it.
 
-`COFOLD_BASE_URL`, `COFOLD_API_KEY` and `COFOLD_MODEL` are read on top of that file, as cofold's own CLI reads them: the URL adds or replaces a provider called `default` with the key as its key, and a model with no slash is a model of `default`. A machine profile names them as the needs `cofoldBaseUrl`, `cofoldApiKey` and `cofoldModel`, the key from the vault, so a machine on another box gets a provider with no file holding the key.
+`COFOLD_BASE_URL`, `COFOLD_API_KEY` and `COFOLD_MODEL` are read on top of that file, as cofold's own CLI reads them: the URL adds or replaces a provider called `default` with the key as its key, and a model with no slash is a model of `default`. A model id with a slash of its own, as OpenRouter's are, is written after `default/`, because the first slash ends the provider: `default/deepseek/deepseek-chat`. A machine profile names them as the needs `cofoldBaseUrl`, `cofoldApiKey` and `cofoldModel`, the key from the vault, so a machine on another box gets a provider with no file holding the key.
 
 Every provider in the cofold file is asked for its models, each with its own key. Each id is offered as `<provider id>/<model id>`, such as `open_router/moonshotai/kimi-k3.1-pro`. The backend's own id is the prefix only for an explicit `baseUrl` or for the local endpoint when the file names no provider.
 

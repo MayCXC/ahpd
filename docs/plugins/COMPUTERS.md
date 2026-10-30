@@ -280,7 +280,7 @@ The path inside the machine is fixed and `COFOLD_CONFIG` points at the file, so 
 
 `XDG_CONFIG_HOME` is not touched, and that is the point: it is the nested `ahpd`'s own folder as well, and a machine's mount point is root-owned, so pointing it at `/ahpd/cofold` stops any image that does not run as root from starting at all - `EACCES: permission denied, mkdir '/ahpd/cofold/ahpd/usage'` on the way in. Every other program in the machine keeps its own XDG configuration.
 
-The three variables are read on top of the file, as cofold's own CLI reads them: `COFOLD_BASE_URL` adds or replaces a provider called `default` with `COFOLD_API_KEY` as its key, and a `COFOLD_MODEL` with no slash is a model of `default`. They have no default, so a machine gets them only from a profile, and a profile that names the key from the vault gives a machine a provider with no file holding the key. That is the way to run cofold on [another box](#profiles), where this host's own file is refused.
+The three variables are read on top of the file, as cofold's own CLI reads them: `COFOLD_BASE_URL` adds or replaces a provider called `default` with `COFOLD_API_KEY` as its key, and a `COFOLD_MODEL` with no slash is a model of `default`. A model id with a slash of its own, as OpenRouter's are, is written after `default/`, because the first slash ends the provider: `default/deepseek/deepseek-chat`. They have no default, so a machine gets them only from a profile, and a profile that names the key from the vault gives a machine a provider with no file holding the key. That is the way to run cofold on [another box](#profiles), where this host's own file is refused.
 
 **The configuration holds keys.** Unlike Claude's sign-in, cofold's keys are in the file it seeds, so anything running in a machine that carries it can read them. Use a profile to decide which machines get it, and treat the file as shared for now.
 
@@ -593,7 +593,7 @@ The names are published in the create schema as an `enum` with titles and descri
       "code": "bundle",
       "needs": {
         "cofoldBaseUrl": "https://openrouter.ai/api/v1",
-        "cofoldModel": "deepseek/deepseek-chat",
+        "cofoldModel": "default/deepseek/deepseek-chat",
         "cofoldApiKey": { "$secret": "host:openrouter" }
       }
     }
