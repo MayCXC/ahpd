@@ -42,6 +42,12 @@ const until = async (check: () => boolean | Promise<boolean>, times = 4000): Pro
     if (await check()) return;
     await new Promise((r) => { setTimeout(r, 1); });
   }
+  throw new Error(`still waiting after ${times} tries`);
+};
+
+/** Lets `times` timer ticks pass, for a check that something did not happen. */
+const pause = async (times: number): Promise<void> => {
+  for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 1); });
 };
 
 type Note = { channel: string; action: Bag };
@@ -218,7 +224,7 @@ it('takes the row down once when the agent releases the terminal', async () => {
 
   // The release ends the process too, and the exit behind it must not say the
   // same removal again.
-  await until(() => removals(p, chatUri).length > 1, 200);
+  await pause(200);
   expect(sets(p, chatUri)).toHaveLength(1);
   expect(removals(p, chatUri)).toHaveLength(1);
 });

@@ -89,6 +89,7 @@ const until = async (check: () => boolean, times = 1000): Promise<void> => {
     if (check()) return;
     await new Promise((r) => { setTimeout(r, 5); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 /** The one a case waited for, which nothing hands back without one. */

@@ -117,6 +117,7 @@ const until = async (check: () => boolean, times = 1200): Promise<void> => {
     if (check()) return;
     await new Promise((r) => { setTimeout(r, 5); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 it('a session\'s host on the other side of the relay is a real one', async () => {

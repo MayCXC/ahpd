@@ -31,6 +31,7 @@ const until = async (check: () => boolean, times = 2000): Promise<void> => {
     if (check()) return;
     await new Promise((done) => { setTimeout(done, 0); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 /** What the fake pi was asked to prompt, in the order it was asked. */

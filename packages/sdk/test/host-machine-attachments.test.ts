@@ -49,6 +49,7 @@ const settle = async (times = 20): Promise<void> => {
 
 const until = async (ready: () => boolean, tries = 400): Promise<void> => {
   for (let i = 0; i < tries && !ready(); i++) await settle(1);
+  if (!ready()) throw new Error(`still waiting after ${tries} tries`);
 };
 
 /** The one a case waited for, which nothing hands back without one. */

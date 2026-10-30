@@ -333,6 +333,7 @@ const until = async (check: () => boolean, times = 400): Promise<void> => {
     if (check()) return;
     await new Promise((done) => { setTimeout(done, 5); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 it('puts a record, lists it ready, and answers with no config of another engine', async () => {

@@ -64,6 +64,7 @@ const until = async (check: () => boolean, ms = WAIT_MS): Promise<void> => {
     if (check()) return;
     await new Promise((r) => { setTimeout(r, 1); });
   }
+  throw new Error(`still waiting after ${ms} ms`);
 };
 
 const actions = (p: ReturnType<typeof peer>, channel: string) => p.notes

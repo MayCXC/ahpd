@@ -43,6 +43,12 @@ const until = async (check: () => boolean, times = 3000): Promise<void> => {
     if (check()) return;
     await new Promise((resolve) => { setTimeout(resolve, 1); });
   }
+  throw new Error(`still waiting after ${times} tries`);
+};
+
+/** Lets `times` timer ticks pass, for a check that something did not happen. */
+const pause = async (times: number): Promise<void> => {
+  for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 1); });
 };
 
 /** A session of `command`, with every action it emits kept. */
@@ -93,7 +99,7 @@ it('rejects the handshake with a sentence naming a missing command', async () =>
   const connection = connectAcp({ command: MISSING, handlers: { update: () => {} } });
   await expect(connection.initialize()).rejects.toThrow(`${MISSING} was not found`);
   connection.close();
-  await until(() => false, 20);
+  await pause(20);
   expect(escaped).toEqual([]);
 });
 
@@ -102,7 +108,7 @@ it('answers a listing with the watched sessions when the command is missing', as
   const agent = acpAgent({ command: MISSING, provider: 'acp-missing-list' });
   const listed = await agent.list?.() ?? [];
   expect(listed.map((row) => row.id)).toEqual(['kept']);
-  await until(() => false, 20);
+  await pause(20);
   expect(escaped).toEqual([]);
 });
 

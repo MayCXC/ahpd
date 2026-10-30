@@ -160,6 +160,7 @@ const until = async (check: () => boolean, times = 1000): Promise<void> => {
     if (check()) return;
     await wait(5);
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 // POSIX-only: the scripted ssh stands in for a Linux box by running the
