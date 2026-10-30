@@ -32,7 +32,6 @@ A client now draws the Bot chat's bot and an ACP harness's approvals as pickers 
 - Task 03 says to add `modes` only where the agent's own source lists them. Codex, Gemini and Qwen carry one. Every other row carries none, so its approvals stay a text box until a session hears the server's list. Gemini's `plan` is left out, because its server names that mode only where plan mode is enabled.
 - The plan's *Final verification checklist* asks for a running host and a client. Those checks are manual and were not run here. The tests cover the same keys without a window.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by the wire suite and left uncommitted, as asked.
-- The two new test files are untracked, because `git add` is refused in this session.
 
 ## Left for later
 
