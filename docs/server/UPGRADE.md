@@ -6,6 +6,8 @@ ahpd update
 
 `ahpd update` installs the newest `@ahpd/server` where this one is installed. It moves every plugin to the new `@ahpd/sdk` and starts the daemon again. It refuses before it installs anything when the result would be a daemon that cannot start, or a plugin that cannot load.
 
+What a release changes, and what to do before you take it, is in its *Upgrading* section in [the release notes](../updates/archive.md).
+
 | Flag | Does |
 | --- | --- |
 | `--check` | Say the running and the latest version, and whether the update may run. Installs nothing |

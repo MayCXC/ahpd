@@ -20,8 +20,10 @@ There is no package and no test: a document is correct when it describes the cod
 ## Contracts
 
 - `code://docs/README.md` - the index: one table for each folder, with one line on each file, and the "All documents" page of the site.
-- `code://docs/index.md` - the home page of the site, and the only page with front matter.
-- `code://docs/.vitepress/config.mts` - the site: its sidebar, its search, the base path from `DOCS_BASE` and the rewrite of a link that leaves `docs/`.
+- `code://docs/index.md` - the home page of the site.
+- `code://docs/updates/` - the release notes: one `v<major>_<minor>.md` page for each minor release, with `title` and `date` front matter, and `archive.md`, which lists them by year.
+- `code://docs/.vitepress/releases.ts` - reads the release pages, for the releases sidebar, the nav and the archive.
+- `code://docs/.vitepress/config.mts` - the site: its two sidebars, one for the docs and one for the release notes, its search, the base path from `DOCS_BASE` and the rewrite of a link that leaves `docs/`.
 - `code://docs/.vitepress/theme/` - the default theme, with the brand colour in `custom.css`.
 - `code://.github/workflows/deploy-docs.yml` - builds the site and deploys it to GitHub Pages.
 - `code://docs/sdk/AGENT.md` - writing a backend: the `Agent` interface, and what a backend owes it.

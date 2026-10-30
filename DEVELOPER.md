@@ -126,8 +126,9 @@ Change it in both.
 Every package here is versioned together and one git tag releases them.
 
 1. Bump `version` to the same `X.Y.Z` in every `packages/*/package.json`. The root manifest is private and does not move.
-2. Commit.
-3. Tag it and push the tag:
+2. Date the release's section in `docs/updates/vX_Y.md`. A new minor release gets a new page, with `title`, `date` and *The good stuff*; the site lists it from the file.
+3. Commit.
+4. Tag it and push the tag:
 
 ```bash
 git tag vX.Y.Z
