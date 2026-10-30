@@ -81,7 +81,7 @@ import { filesOf, lineFor, writerFor } from '../wire.js';
 import { MAX_AGE_MS, checkingUpdates, readUpdate, refreshUpdate, registry as npmRegistry, stale, updateLine } from '../update.js';
 import { manifest, version } from '../version.js';
 import { conflict, namedOptionsFrom, secret, flagFields, stop } from './options.js';
-import { FORCED_SIGNAL, RESTART_SIGNAL, answerRestartSignal, checkedRestart, lifecycle, successorTakes } from './restart.js';
+import { FORCED_SIGNAL, RESTART_SIGNAL, answerRestartSignal, checkedRestart, lifecycle, restartMethod, successorTakes } from './restart.js';
 import type { Options } from './options.js';
 
 /**
@@ -1320,6 +1320,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * this daemon so the restart is its own and waits for the answer to go.
      */
     'x-ahpd/update': { by: 'ahpd', name: 'x-ahpd/update', method: updateMethod(facts) },
+    /*
+     * The restart a client asks for over AHP: the command's own checks, served
+     * by this daemon so the restart is its own and waits for the answer to go.
+     */
+    'x-ahpd/restart': { by: 'ahpd', name: 'x-ahpd/restart', method: restartMethod(facts) },
   };
 
   /*

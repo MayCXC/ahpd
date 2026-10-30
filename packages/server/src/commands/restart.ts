@@ -15,12 +15,15 @@ import { spawn } from 'node:child_process';
 import { statSync } from 'node:fs';
 import { output } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
+import { INTERNAL_ERROR, RpcError } from '@ahpd/sdk';
+import type { PluginMethod } from '@ahpd/sdk';
 import { daemonLog } from '../config.js';
 import { READY_TIMEOUT_MS, deliver, logSince, running, throughPipe } from '../daemon.js';
 import type { ControlledSignal, Running } from '../daemon.js';
 import { realManager } from '../service.js';
 import type { Manager, Service } from '../service.js';
 import { conflict } from './options.js';
+import { deploymentOnly } from './scopes.js';
 import type { ServedFacts } from './served.js';
 
 /**
@@ -693,6 +696,64 @@ export async function restartAtTerminal(force: boolean, steps: AtTerminal): Prom
  */
 export const restartFromTerminal = (force: boolean): Promise<Running> => restartAtTerminal(force, realTerminal());
 
+/** What a restart asked of the daemon serving it answers, over the API and over AHP. */
+export interface ServedRestartAnswer {
+  restarting: true;
+  pid: number;
+}
+
+/**
+ * The restart the daemon runs when the caller is the one that reaches it.
+ *
+ * The checks are `ahpd restart`'s own: the record must name this daemon, and a
+ * turn running refuses the restart unless the caller forces it. The restart
+ * itself is `served.restart`, which defers it until the answer in hand has
+ * gone, as it does for an update.
+ */
+export const servedRestart = async (served: ServedFacts, force: boolean): Promise<ServedRestartAnswer> => {
+  const self = served.running();
+  const record = running();
+  const refused = notRestartable(record, self.pid);
+  if (refused !== undefined) conflict(refused);
+  const turning = served.turning();
+  if (turning.length > 0 && !force) conflict(busy(turning));
+  await served.restart((record as Running).argv as string[], force);
+  return { restarting: true, pid: self.pid };
+};
+
+/** The code this host refuses a caller with, as `updateMethod` and the usage methods do. */
+const REFUSED = -32009;
+
+/**
+ * `x-ahpd/restart`, the daemon's own restart for a client of its AHP.
+ *
+ * The grant lets in whoever holds `config:write`, and the owner is what decides:
+ * a restart ends the running turns of every person on the host, so it is the
+ * host's own connection and never one of its people. A host with no users
+ * directory has no owner to name, and every connection it admits is the host
+ * itself, so only an owner that names somebody else is refused - with the words
+ * the API refuses the same person with.
+ *
+ * The answer is `{ restarting, pid }`, as the API answers, because
+ * `served.restart` defers the restart until the answer has gone.
+ */
+export const restartMethod = (served: ServedFacts): PluginMethod => ({
+  grant: 'config:write',
+  describe: () => ({ title: 'Restart the daemon', description: 'Stop the daemon and start it again with the line it was started with.' }),
+  handle: async (params, reader, _client, owner) => {
+    if (reader !== undefined || (owner !== undefined && !owner.startsWith('root:'))) {
+      throw new RpcError(REFUSED, deploymentOnly(reader?.id ?? owner ?? 'This caller', 'restart the daemon'));
+    }
+    try {
+      return await servedRestart(served, params.force === true);
+    }
+    catch (error) {
+      if (error instanceof RpcError) throw error;
+      throw new RpcError(INTERNAL_ERROR, wordsOf(error));
+    }
+  },
+});
+
 export const declareRestart = (registry: Registry<object>, served?: ServedFacts): Command => registry.action({
   id: 'daemon.restart',
   summary: 'Stop it and start it again with the line it was started with',
@@ -720,13 +781,7 @@ export const declareRestart = (registry: Registry<object>, served?: ServedFacts)
         text + `ahpd on ${begun.url} (pid ${String(begun.pid)}), restarted from pid ${String(before?.pid)}\n`,
       );
     }
-    const self = served.running();
-    const record = running();
-    const refused = notRestartable(record, self.pid);
-    if (refused !== undefined) conflict(refused);
-    const turning = served.turning();
-    if (turning.length > 0 && !context.flag('force')) conflict(busy(turning));
-    await served.restart((record as Running).argv as string[], context.flag('force'));
-    return output({ restarting: true, pid: self.pid }, `Restarting ${self.url} (pid ${String(self.pid)}).\n`);
+    const answer = await servedRestart(served, context.flag('force'));
+    return output(answer, `Restarting ${served.running().url} (pid ${String(answer.pid)}).\n`);
   },
 });
