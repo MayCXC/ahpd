@@ -44,6 +44,7 @@ const settle = async (times = 8): Promise<void> => {
 /** Settle until something is true, rather than a fixed number of times. */
 const until = async (ready: () => boolean, tries = 80): Promise<void> => {
   for (let i = 0; i < tries && !ready(); i++) await settle(2);
+  if (!ready()) throw new Error(`still waiting after ${tries} tries`);
 };
 
 /** A port with one machine called `box`, saying everything it was asked. */
@@ -217,7 +218,7 @@ it('logs a machine that could not be brought back, and the turn still ends', asy
     method: 'dispatchAction',
     params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hello' } } },
   });
-  await until(() => lines.some((one) => one.includes('bringBack')));
+  await until(() => lines.some((one) => one.includes('bringing the work of box back')));
   // A turn that could not have its work fetched is still a turn that ended:
   // the failure is a line a person reads, not a turn left running.
   expect(lines.some((one) => one

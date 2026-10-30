@@ -84,6 +84,12 @@ const until = async (check: () => boolean, times = 1000): Promise<void> => {
     if (check()) return;
     await new Promise((r) => { setTimeout(r, 5); });
   }
+  throw new Error(`still waiting after ${times} tries`);
+};
+
+/** Lets `times` timer ticks pass, for a check that something did not happen. */
+const pause = async (times: number): Promise<void> => {
+  for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 5); });
 };
 
 /**
@@ -369,7 +375,7 @@ it('leaves another daemon\'s disposable machine alone: it is neither removed nor
 
   // Nothing is armed for it, so nothing removes it. Waited for rather than
   // asserted at once, because the delay is a millisecond of real time.
-  await until(() => dockerHeld(held).calls.some((one) => one[0] === 'rm'), 200);
+  await pause(200);
   expect(dockerHeld(held).calls.some((one) => one[0] === 'rm')).toBe(false);
   expect(dockerHeld(held).machines.map((one) => one.name)).toEqual([box]);
 

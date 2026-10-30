@@ -62,7 +62,7 @@ export const until = async (p: ReturnType<typeof watching>, uri: string, text: s
     if (said(p, uri).includes(text)) return said(p, uri);
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
-  return said(p, uri);
+  throw new Error(`still waiting for ${JSON.stringify(text)}, said: ${said(p, uri)}`);
 };
 
 /** A directory whose tokens are decided by hand, so a role is one array. */

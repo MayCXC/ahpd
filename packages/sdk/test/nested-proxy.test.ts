@@ -44,6 +44,7 @@ const until = async (check: () => boolean, times = 600): Promise<void> => {
     if (check()) return;
     await new Promise((resolve) => { setTimeout(resolve, 5); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 /** A peer that keeps what the host told it, for the host-level case. */

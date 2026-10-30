@@ -53,6 +53,7 @@ const settle = async (times = 8): Promise<void> => {
 
 const until = async (ready: () => boolean, tries = 200): Promise<void> => {
   for (let i = 0; i < tries && !ready(); i++) await settle(1);
+  if (!ready()) throw new Error(`still waiting after ${tries} tries`);
 };
 
 /** What a case sets on the sessions the backend makes, and reads back from them. */

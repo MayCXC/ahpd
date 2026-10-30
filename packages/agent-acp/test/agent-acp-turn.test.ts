@@ -47,6 +47,7 @@ const until = async (check: () => boolean | Promise<boolean>, times = 2000): Pro
     if (await check()) return;
     await new Promise((r) => { setTimeout(r, 1); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 type Note = { channel: string; action: Record<string, unknown> };

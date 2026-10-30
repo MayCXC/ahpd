@@ -30,6 +30,7 @@ const until = async (check: () => boolean, times = 600): Promise<void> => {
     if (check()) return;
     await new Promise((resolve) => { setTimeout(resolve, 5); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 /** What a session emitted, in order, with the channel it came out on. */

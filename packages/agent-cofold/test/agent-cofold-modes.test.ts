@@ -25,6 +25,7 @@ const until = async (check: () => boolean, times = 400): Promise<void> => {
     if (check()) return;
     await new Promise((r) => { setTimeout(r, 0); });
   }
+  throw new Error(`still waiting after ${times} tries`);
 };
 
 type Note = { channel: 'session' | 'chat' | 'terminal'; action: Bag };

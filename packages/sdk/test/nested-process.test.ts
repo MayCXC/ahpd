@@ -97,6 +97,7 @@ const until = async (check: () => boolean, ms = PATIENCE): Promise<void> => {
     if (check()) return;
     await new Promise((resolve) => { setTimeout(resolve, 10); });
   }
+  throw new Error(`still waiting after ${ms} ms`);
 };
 
 /** What a session emitted, in order, with the channel it came out on. */
