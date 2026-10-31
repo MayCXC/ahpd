@@ -751,20 +751,22 @@ export function createHost(options: HostOptions): Host {
   /**
    * The echoes a backend still owes, by the action and what it names.
    *
-   * A turn begun or stopped, and a message queued, are said back by the
-   * backend, and a backend says it when it is ready: once a policy check or a
-   * machine has answered, once Claude has switched models, once pi, cofold or
-   * ACP has let the cancelled prompt go, once the host inside a machine has
-   * answered the proxy. The turn id, or the queued message's own id, is the
-   * one thing that action carries that names the client's dispatch, the way
-   * `senders` follows a turn by its id. Let go of once said, once refused, and
-   * once the turn has ended.
+   * A turn begun or stopped, a message queued, and a client's result for a
+   * tool call it runs are said back by the backend, and a backend says it when
+   * it is ready: once a policy check or a machine has answered, once Claude
+   * has switched models, once pi, cofold or ACP has let the cancelled prompt
+   * go, once the host inside a machine has answered the proxy, once the
+   * harness has written the tool's result. The turn id, the queued message's
+   * own id, or the tool call's, is the one thing that action carries that
+   * names the client's dispatch, the way `senders` follows a turn by its id.
+   * Let go of once said, once refused, and once the turn has ended.
    */
   const owed = new Map<string, Dispatched>();
   const owedKey = (type: string, name: string): string => `${type}\n${name}`;
   /**
    * Where the dispatch an action says back is owed: under the action's kind
-   * and the queued message it is, or the turn it names.
+   * and the queued message it is, the tool call it completes, or the turn it
+   * names.
    *
    * A queued message is also what a client's turn of the same id became. A
    * command sent as a turn while another turn runs waits behind it as a queued
@@ -774,7 +776,9 @@ export function createHost(options: HostOptions): Host {
    */
   const owedUnder = (action: Record<string, unknown>): string | undefined => {
     const queued = action.type === 'chat/pendingMessageSet';
-    const named = queued ? action.id : action.turnId;
+    const named = queued ? action.id
+      : action.type === 'chat/toolCallComplete' ? action.toolCallId
+        : action.turnId;
     if (typeof named !== 'string' || named === '') return undefined;
     const own = owedKey(String(action.type ?? ''), named);
     const turn = owedKey('chat/turnStarted', named);
@@ -887,6 +891,9 @@ export function createHost(options: HostOptions): Host {
       const turnId = String(action.turnId ?? '');
       owed.delete(owedKey('chat/turnStarted', turnId));
       owed.delete(owedKey('chat/turnCancelled', turnId));
+      for (const [key, held] of owed) {
+        if (held.action.type === 'chat/toolCallComplete' && held.action.turnId === turnId) owed.delete(key);
+      }
     }
     /*
      * A session's customizations are two halves, and one action carries both.
