@@ -664,6 +664,77 @@ describe('a shell on this machine', () => {
     expect(root.snapshot.state.terminals?.find((one) => one.resource === uri)?.lifecycle)
       .toEqual({ status: 'running' });
   });
+
+  /*
+   * Every terminal action a client sends is answered, its echo or its refusal.
+   * Input is side-effect only, so the protocol's reducer changes nothing on it,
+   * and a title set to the one it has changes nothing either: each is answered
+   * to the client that sent it, and to nobody else.
+   * https://github.com/microsoft/agent-host-protocol/blob/v1.0.0/docs/guide/reconciliation.md
+   */
+  const watched = async (uri: string) => {
+    const opened_ = await opened();
+    await opened_.client.handle({
+      method: 'createTerminal',
+      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(tmpdir()) },
+    });
+    await opened_.client.handle({ method: 'subscribe', params: { channel: uri } });
+    const other = peer();
+    const watching = opened_.host.accept(other);
+    await watching.handle(hello(['0.9.0']));
+    await watching.handle({ method: 'subscribe', params: { channel: uri } });
+    const send = (clientSeq: number, action: Record<string, unknown>) =>
+      opened_.client.handle({ method: 'dispatchAction', params: { channel: uri, clientSeq, action } });
+    return { ...opened_, other, send };
+  };
+
+  it('answers what it is sent to the client that sent it, and to nobody else', async () => {
+    const uri = 'ahp-terminal:/answered';
+    const { peer: p, other, send } = await watched(uri);
+    await send(3, { type: 'terminal/input', data: 'echo answered-input\n' });
+    await spoken(p, uri, 'answered-input');
+
+    const mine = actions(p, uri).filter((e) => e.action.type === 'terminal/input');
+    expect(mine.map((e) => [e.origin?.clientSeq, e.rejectionReason])).toEqual([[3, undefined]]);
+    expect(actions(other, uri).filter((e) => e.action.type === 'terminal/input')).toEqual([]);
+  });
+
+  it('refuses what it is sent once the shell has gone', async () => {
+    const uri = 'ahp-terminal:/gone';
+    const { peer: p, send } = await watched(uri);
+    await send(4, { type: 'terminal/input', data: 'exit 0\n' });
+    for (const until = Date.now() + WAIT_MS; Date.now() < until;) {
+      await new Promise((r) => { setTimeout(r, 50); });
+      if (actions(p, uri).some((e) => e.action.type === 'terminal/exited')) break;
+    }
+    await send(5, { type: 'terminal/input', data: 'echo too-late\n' });
+    await settle();
+
+    const late = actions(p, uri).find((e) => e.action.type === 'terminal/input' && e.origin?.clientSeq === 5);
+    expect(late?.rejectionReason).toBeDefined();
+  });
+
+  it('answers a title it already has to its sender alone, and tells everyone a new one', async () => {
+    const uri = 'ahp-terminal:/titled';
+    const { peer: p, other, send } = await watched(uri);
+    await send(6, { type: 'terminal/titleChanged', title: 'build' });
+    await send(7, { type: 'terminal/titleChanged', title: 'build' });
+    await settle();
+
+    const mine = actions(p, uri).filter((e) => e.action.type === 'terminal/titleChanged');
+    expect(mine.map((e) => [e.origin?.clientSeq, e.rejectionReason])).toEqual([[6, undefined], [7, undefined]]);
+    expect(actions(other, uri).filter((e) => e.action.type === 'terminal/titleChanged')).toHaveLength(1);
+  });
+
+  it('refuses a claim that names nobody', async () => {
+    const uri = 'ahp-terminal:/unclaimed';
+    const { peer: p, send } = await watched(uri);
+    await send(8, { type: 'terminal/claimed', claim: {} });
+    await settle();
+
+    const refused = actions(p, uri).find((e) => e.action.type === 'terminal/claimed' && e.origin?.clientSeq === 8);
+    expect(refused?.rejectionReason).toBeDefined();
+  });
 });
 
 /*

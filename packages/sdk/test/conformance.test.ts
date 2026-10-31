@@ -550,7 +550,9 @@ it('reduces a terminal, from the bytes a shell wrote', async () => {
   });
   const first = await client.handle({ method: 'subscribe', params: { channel: uri } }) as { snapshot: { state: unknown } };
   dispatch(client, uri, { type: 'terminal/input', data: 'echo conformance-marker\n' });
+  // What the shell wrote back: the input itself is answered to this client too.
   const heard = (): boolean => p.notes.some((n) => n.method === 'action'
+    && (n.params as { action: { type?: string } }).action.type === 'terminal/data'
     && JSON.stringify((n.params as { action: unknown }).action).includes('conformance-marker'));
   // Windows PowerShell takes seconds to start, so the shell is given the case's budget.
   for (const until = Date.now() + WAIT_MS; !heard() && Date.now() < until;) await new Promise((r) => { setTimeout(r, 20); });

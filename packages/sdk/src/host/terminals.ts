@@ -296,6 +296,8 @@ export function createTerminals(ctx: HostContext): Terminals {
       const uri = `ahp-terminal:/${crypto.randomUUID()}`;
       let title = asked.title;
       let claim: Claim = { kind: 'session', session: sessionUri, chat: asked.chat };
+      let cols = 80;
+      let rows = 24;
       let content = '';
       let exitCode: number | undefined;
       let done = false;
@@ -320,8 +322,8 @@ export function createTerminals(ctx: HostContext): Terminals {
           : { status: 'running' }),
         state: () => ({
           title,
-          cols: 80,
-          rows: 24,
+          cols,
+          rows,
           // One part: there are no command boundaries to divide an output
           // somebody else already ended.
           content: content === '' ? [] : [{ type: 'unclassified', value: content }],
@@ -333,18 +335,23 @@ export function createTerminals(ctx: HostContext): Terminals {
             : { status: 'running' as const },
           ...(exitCode === undefined ? {} : { exitCode }),
         }),
-        // A client typing into an output is not a client typing into a
-        // process: there is nothing on the other end to receive it.
-        write: () => {},
-        resize: () => {},
+        // Input has no process to reach, and says so. A size is kept, since
+        // the state reports one and a client draws to it.
+        write: () => `${uri} shows what a command wrote, and has no process to send input to`,
+        resize: (nextCols, nextRows) => {
+          cols = nextCols;
+          rows = nextRows;
+          dispatch(uri, { type: 'terminal/resized', cols, rows });
+        },
         clear: () => {
           content = '';
           dispatch(uri, { type: 'terminal/cleared' });
         },
         setTitle: (next) => {
-          if (title === next) return;
+          if (title === next) return false;
           title = next;
           dispatch(uri, { type: 'terminal/titleChanged', title });
+          return true;
         },
         setClaim: (next) => {
           claim = next;

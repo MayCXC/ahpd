@@ -103,21 +103,28 @@ export interface Terminal {
    */
   state(): OnWire<TerminalState> & { exitCode?: number };
 
-  /** Send input. Ignored once the process has exited. */
-  write(data: string): void;
-  /** Record a new size. Nothing is signalled: there is no pseudoterminal. */
+  /**
+   * Send input: `true` when it reached the process, otherwise the sentence
+   * that says why it did not, a process that has exited or none behind the
+   * terminal at all.
+   */
+  write(data: string): true | string;
+  /**
+   * Record a new size and say it. A pseudoterminal behind the terminal is
+   * told, and sends SIGWINCH itself.
+   */
   resize(cols: number, rows: number): void;
   /**
    * Throw away the scrollback, keeping everything else.
    *
-   * The size, the title and the claim survive: a client clears a terminal to
-   * stop reading what is already there, not to give it up. Nothing reaches
-   * the process - there is no pseudoterminal to send anything to, and a shell
-   * has no notion of its own output having been discarded.
+   * The size, the title and the claim survive, since a client clears a
+   * terminal to stop reading what is already there and goes on using it.
+   * Nothing reaches the process, which has no notion of its own output having
+   * been discarded.
    */
   clear(): void;
-  /** Rename it. */
-  setTitle(title: string): void;
+  /** Rename it, `true` when the title moved and `false` when it was the title already. */
+  setTitle(title: string): boolean;
   /** Hand it to somebody else. */
   setClaim(claim: Claim): void;
   /** Kill the process and let go. */
