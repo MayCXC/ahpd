@@ -70,7 +70,7 @@ Current progress and pending items only, as of 2026-10-31.
 - The VM plan `20261030-1141-a-vm-is-made-on-a-server` has its code merged. It waits on the checks by hand above.
 - container/05 p10 (task 03 next).
 - The ahpw Connect button for plugin/71 is ahpw plan plugins/09, planned.
-- [briefs/an-installed-ahpd-is-found-outside-bash.md](../briefs/an-installed-ahpd-is-found-outside-bash.md): the install script's PATH line, its uninstall, and npm beside `process.execPath`. It waits for Softov to say plan it.
+- [daemon/20261031-0555-ahpd-is-found-outside-bash](../plans/daemon/20261031-0555-ahpd-is-found-outside-bash/plan.md): the install script's PATH line in the login file, the uninstall prefix, and npm beside `process.execPath`. It is planned, and I build it next.
 
 ## Outside this repository
 
