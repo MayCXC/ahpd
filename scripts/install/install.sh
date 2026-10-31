@@ -599,47 +599,111 @@ path_line() {
   fi
 }
 
-write_path() {
-  local rc line
-  rc="$(rc_path)"
-  line="$(path_line)"
-  # A prefix that is already on the PATH, as /usr/local is in a container,
-  # needs no line of its own.
-  case ":$PATH:" in
-    *":$BIN:"*) return 0 ;;
+# The file a login shell of this kind reads. A desktop session that starts
+# through the login shell, as GNOME does, reads it too. fish reads config.fish
+# in every shell, so it has none.
+login_path() {
+  local file
+  case "$(shell_name)" in
+    fish) return 1 ;;
+    zsh) printf '%s\n' "$HOME/.zprofile" ;;
+    bash)
+      # A login bash reads only the first of these that exists.
+      for file in "$HOME/.bash_profile" "$HOME/.bash_login"; do
+        if [ -f "$file" ]; then
+          printf '%s\n' "$file"
+          return 0
+        fi
+      done
+      printf '%s\n' "$HOME/.profile"
+      ;;
+    *) printf '%s\n' "$HOME/.profile" ;;
   esac
-  if [ -f "$rc" ] && grep -Fq "$MARKER" "$rc"; then
-    return 0
+}
+
+# Every file this script can write its PATH line into, under any shell.
+path_files() {
+  printf '%s\n' \
+    "$HOME/.bashrc" \
+    "$HOME/.zshrc" \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/fish/config.fish" \
+    "$HOME/.profile" \
+    "$HOME/.bash_profile" \
+    "$HOME/.bash_login" \
+    "$HOME/.zprofile"
+}
+
+has_marker() {
+  [ -f "$1" ] && grep -Fq "$MARKER" "$1"
+}
+
+# Writes the marker and the line into a file that has no marker yet. Fails
+# when there is nothing to write.
+add_path_line() {
+  local file="$1" line="$2"
+  if has_marker "$file"; then
+    return 1
   fi
   if [ "$DRY_RUN" -eq 1 ]; then
-    say "would add $BIN to PATH in $rc"
+    say "would add $BIN to PATH in $file"
     return 0
   fi
-  mkdir -p "$(dirname "$rc")"
-  printf '\n%s\n%s\n' "$MARKER" "$line" >> "$rc"
-  say "Added $BIN to PATH in $rc."
+  mkdir -p "$(dirname "$file")"
+  printf '\n%s\n%s\n' "$MARKER" "$line" >> "$file"
+  say "Added $BIN to PATH in $file."
+}
+
+write_path() {
+  local rc login file marked=0
+  rc="$(rc_path)"
+  login="$(login_path || true)"
+  if [ "$login" = "$rc" ]; then
+    login=''
+  fi
+  # A prefix that is already on the PATH, as /usr/local is in a container,
+  # needs no line of its own. One that is there through a line of this script
+  # still gets the line in the files that lack it, so an update of an older
+  # install adds the login file.
+  case ":$PATH:" in
+    *":$BIN:"*)
+      while IFS= read -r file; do
+        if has_marker "$file"; then
+          marked=1
+        fi
+      done <<EOF
+$(path_files)
+EOF
+      if [ "$marked" -eq 0 ]; then
+        return 0
+      fi
+      ;;
+  esac
+  add_path_line "$rc" "$(path_line)" || true
+  if [ -n "$login" ] && add_path_line "$login" "$(printf 'export PATH="%s:$PATH"' "$BIN")"; then
+    say 'Desktop apps find ahpd from your next login.'
+  fi
 }
 
 remove_path() {
-  local rc temp
-  rc="$(rc_path)"
-  if [ ! -f "$rc" ]; then
-    return 0
-  fi
-  if ! grep -Fq "$MARKER" "$rc"; then
-    return 0
-  fi
-  if [ "$DRY_RUN" -eq 1 ]; then
-    say "would remove the PATH line from $rc"
-    return 0
-  fi
-  temp="$rc.ahpd.$$"
-  awk -v marker="$MARKER" 'skip { skip=0; next } $0 == marker { skip=1; next } { print }' "$rc" > "$temp"
-  # Written back into the file rather than moved over it, so a linked rc file
-  # stays a link and keeps its mode.
-  cat "$temp" > "$rc"
-  rm -f "$temp"
-  say "Removed the PATH line from $rc."
+  local file temp
+  while IFS= read -r file; do
+    if ! has_marker "$file"; then
+      continue
+    fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+      say "would remove the PATH line from $file"
+      continue
+    fi
+    temp="$file.ahpd.$$"
+    awk -v marker="$MARKER" 'skip { skip=0; next } $0 == marker { skip=1; next } { print }' "$file" > "$temp"
+    # Written back into the file rather than moved over it, so a linked file
+    # stays a link and keeps its mode.
+    cat "$temp" > "$file"
+    rm -f "$temp"
+    say "Removed the PATH line from $file."
+  done <<EOF
+$(path_files)
+EOF
 }
 
 purge_config() {
@@ -785,7 +849,7 @@ do_install() {
 }
 
 do_uninstall() {
-  local found target bun
+  local found target bun prefix
 
   if [ "$RUNTIME" = bun ]; then
     BIN="${BUN_INSTALL:-$HOME/.bun}/bin"
@@ -828,7 +892,13 @@ do_uninstall() {
     if [ -z "${NPM:-}" ]; then
       fail 1 'npm was not found. Install Node 22.18 or later, then run this again.'
     fi
-    run_cmd "$NPM" uninstall -g "$target"
+    # The prefix that holds the package, which for an install under
+    # ~/.npm-global is not npm's own.
+    if [ -n "$AHPD" ] && prefix="$(ahpd_prefix "$AHPD")"; then
+      run_cmd "$NPM" uninstall -g --prefix "$prefix" "$target"
+    else
+      run_cmd "$NPM" uninstall -g "$target"
+    fi
   fi
 
   remove_path

@@ -49,6 +49,7 @@ const environment = (): NodeJS.ProcessEnv => {
     XDG_STATE_HOME: join(home, 'state'),
     XDG_CACHE_HOME: join(home, 'cache'),
     PATH: `${FAKE_NPM}:${process.env['PATH'] ?? ''}`,
+    npm_execpath: join(FAKE_NPM, 'npm-cli.js'),
     npm_config_registry: NO_REGISTRY,
     CI: '1',
     NODE_OPTIONS: '--conditions development --import ./scripts/dev.mjs',

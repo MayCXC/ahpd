@@ -20,7 +20,7 @@
 
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, realpathSync } from 'node:fs';
-import { isAbsolute, join, resolve, win32 } from 'node:path';
+import { isAbsolute, join, posix, resolve, win32 } from 'node:path';
 import { readJsonObject, writeJsonAtomic } from '@ahpd/sdk';
 import type { PluginSpec } from '@ahpd/sdk';
 import { asSpec } from './config.js';
@@ -77,24 +77,27 @@ export interface Launch {
 /**
  * How a program is started on `platform`.
  *
- * Away from Windows this is the program by its name and its arguments as they
- * are, which is every call this daemon makes on Linux and macOS. On Windows npm
- * is `npm.cmd`, and Node refuses to spawn a `.cmd` file without a shell - the
- * fix for CVE-2024-27980 - so `npm.cmd` by its name fails with `ENOENT` just as
- * `npm` does. npm is started there as this Node itself, with npm's own
- * `npm-cli.js` as its first argument: no shell to quote for, no `.cmd` for Node
- * to refuse, and the npm that runs is the one this daemon runs under, at
- * whatever version and in whatever folder that is.
+ * Every program but npm is started by its name, with its arguments as they are.
+ * npm is started as this Node itself, with npm's own `npm-cli.js` as its first
+ * argument, so the npm that runs is the one this daemon runs under, at whatever
+ * version and in whatever folder that is, and not the first `npm` on a PATH
+ * that a service manager or a desktop session set. On Windows it is also the
+ * only way to start npm without a shell: npm is `npm.cmd` there, and Node
+ * refuses to spawn a `.cmd` file without one - the fix for CVE-2024-27980 - so
+ * `npm.cmd` by its name fails with `ENOENT` just as `npm` does.
  *
  * The script comes from `npm_execpath` when npm set it and it names
- * `npm-cli.js`, and from npm's usual place beside `execPath` otherwise. Neither
- * there is a Node whose npm is somewhere else, such as a version manager's, and
- * npm is then run through the shell, each argument in double quotes because the
- * shell is what splits the line.
+ * `npm-cli.js`, and from npm's usual place beside `execPath` otherwise:
+ * `node_modules\npm` in Node's folder on Windows, `../lib/node_modules/npm`
+ * from it elsewhere. Away from Windows only a program named `node` or `nodejs`
+ * is taken as Node, since Bun or Deno beside a Node install is not one. Neither
+ * there is a Node whose npm is somewhere else, such as a distribution's, and
+ * npm is then run by its name: on Windows through the shell, each argument in
+ * double quotes because the shell is what splits the line.
  *
- * `platform` decides, but the paths are read as Windows ones either way: the
- * branch that reads them is the Windows one, so a case on Linux hands it the
- * `C:\...` paths a Windows machine would have.
+ * `platform` decides, and the paths are read as that platform's, so a case on
+ * Linux hands the Windows branch the `C:\...` paths a Windows machine would
+ * have.
  */
 export const launch = (
   program: string,
@@ -104,14 +107,20 @@ export const launch = (
   execPath: string,
   exists: (path: string) => boolean,
 ): Launch => {
-  if (platform !== 'win32' || program !== 'npm') return { command: program, args: [...argv], shell: false };
+  if (program !== 'npm') return { command: program, args: [...argv], shell: false };
+  const windows = platform === 'win32';
+  const path = windows ? win32 : posix;
+  const node = windows || /^node(js)?$/.test(posix.basename(execPath));
   const named = env.npm_execpath;
-  const beside = win32.join(win32.dirname(execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
-  const cli = named !== undefined && win32.basename(named) === 'npm-cli.js' && exists(named)
-    ? named
+  const beside = windows
+    ? win32.join(win32.dirname(execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js')
+    : posix.join(posix.dirname(execPath), '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  const cli = !node ? undefined
+    : named !== undefined && path.basename(named) === 'npm-cli.js' && exists(named) ? named
     : exists(beside) ? beside : undefined;
-  if (cli === undefined) return { command: program, args: argv.map((one) => `"${one}"`), shell: true };
-  return { command: execPath, args: [cli, ...argv], shell: false };
+  if (cli !== undefined) return { command: execPath, args: [cli, ...argv], shell: false };
+  if (windows) return { command: program, args: argv.map((one) => `"${one}"`), shell: true };
+  return { command: program, args: [...argv], shell: false };
 };
 
 /** The default runner: the program on PATH, its standard error passed through as it comes. */

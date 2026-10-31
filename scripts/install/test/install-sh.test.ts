@@ -289,6 +289,18 @@ function exportsIn(box: Box): string[] {
   return rcLines(box).filter((line) => line.startsWith('export PATH='));
 }
 
+function linesOf(box: Box, name: string): string[] {
+  const file = join(box.home, name);
+  if (!existsSync(file)) {
+    return [];
+  }
+  return readFileSync(file, 'utf8').split('\n');
+}
+
+function exportsOf(box: Box, name: string): string[] {
+  return linesOf(box, name).filter((line) => line.startsWith('export PATH='));
+}
+
 function configDir(box: Box): string {
   return join(box.home, '.config', 'ahpd');
 }
@@ -513,6 +525,69 @@ describe.skipIf(!posix)('install.sh', () => {
     expect(exportsIn(box)).toEqual([`export PATH="${box.home}/.npm-global/bin:$PATH"`]);
   });
 
+  it('writes the PATH line into ~/.profile as well, which a login shell and a desktop session read', async () => {
+    const box = makeBox();
+    const readonly = join(box.root, 'readonly');
+    mkdirSync(readonly);
+    chmodSync(readonly, 0o555);
+
+    const result = await run(box, ['--no-onboard'], { STUB_NPM_PREFIX: readonly });
+
+    expect(result.code).toBe(0);
+    const line = `export PATH="${box.home}/.npm-global/bin:$PATH"`;
+    expect(exportsIn(box)).toEqual([line]);
+    expect(exportsOf(box, '.profile')).toEqual([line]);
+    expect(linesOf(box, '.profile').filter((entry) => entry === MARKER)).toHaveLength(1);
+    expect(result.stdout).toContain('Desktop apps find ahpd from your next login.');
+  });
+
+  it('writes the login line into ~/.bash_profile when it exists, since bash then skips ~/.profile', async () => {
+    const box = makeBox();
+    writeFileSync(join(box.home, '.bash_profile'), '# my own line\n');
+
+    const result = await run(box, ['--no-onboard']);
+
+    expect(result.code).toBe(0);
+    expect(exportsOf(box, '.bash_profile')).toEqual([`export PATH="${box.prefix}/bin:$PATH"`]);
+    expect(linesOf(box, '.bash_profile')).toContain('# my own line');
+    expect(existsSync(join(box.home, '.profile'))).toBe(false);
+  });
+
+  it('writes ~/.zshrc and ~/.zprofile under zsh', async () => {
+    const box = makeBox();
+
+    const result = await run(box, ['--no-onboard'], { SHELL: '/bin/zsh' });
+
+    expect(result.code).toBe(0);
+    const line = `export PATH="${box.prefix}/bin:$PATH"`;
+    expect(exportsOf(box, '.zshrc')).toEqual([line]);
+    expect(exportsOf(box, '.zprofile')).toEqual([line]);
+    expect(existsSync(rcFile(box))).toBe(false);
+    expect(existsSync(join(box.home, '.profile'))).toBe(false);
+  });
+
+  it('adds the login line when an update finds its PATH line in ~/.bashrc only', async () => {
+    const box = makeBox();
+    const line = `export PATH="${box.prefix}/bin:$PATH"`;
+    writeFileSync(rcFile(box), `\n${MARKER}\n${line}\n`);
+
+    const result = await run(box, ['--no-onboard'], { PATH: withPrefix(box) });
+
+    expect(result.code).toBe(0);
+    expect(exportsIn(box)).toEqual([line]);
+    expect(exportsOf(box, '.profile')).toEqual([line]);
+  });
+
+  it('writes no PATH line when the bin folder is on the PATH and no file has its marker', async () => {
+    const box = makeBox();
+
+    const result = await run(box, ['--no-onboard'], { PATH: withPrefix(box) });
+
+    expect(result.code).toBe(0);
+    expect(existsSync(rcFile(box))).toBe(false);
+    expect(existsSync(join(box.home, '.profile'))).toBe(false);
+  });
+
   it('passes --allow-scripts only from npm 11.16', async () => {
     const old = makeBox();
     await run(old, ['--no-onboard'], { STUB_NPM_VERSION: '11.15.0' });
@@ -532,6 +607,7 @@ describe.skipIf(!posix)('install.sh', () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain('would run:');
     expect(existsSync(rcFile(box))).toBe(false);
+    expect(existsSync(join(box.home, '.profile'))).toBe(false);
     expect(calls(box).some((line) => line.includes(' install '))).toBe(false);
   });
 
@@ -598,6 +674,46 @@ describe.skipIf(!posix)('install.sh --uninstall', () => {
     expect(statSync(target).mode & 0o777).toBe(0o600);
     expect(readFileSync(target, 'utf8')).not.toContain(MARKER);
     expect(readFileSync(target, 'utf8')).toContain('# my own line');
+  });
+
+  it('removes the PATH lines that an install under another shell wrote', async () => {
+    const box = makeBox();
+    writeFileSync(join(box.home, '.profile'), '# my own line\n');
+    await run(box, ['--no-onboard']);
+    writeAhpd(box);
+    expect(exportsOf(box, '.profile')).toHaveLength(1);
+
+    const result = await run(box, ['--uninstall'], { SHELL: '/bin/zsh' });
+
+    expect(result.code).toBe(0);
+    expect(rcLines(box)).not.toContain(MARKER);
+    expect(exportsIn(box)).toEqual([]);
+    expect(linesOf(box, '.profile')).not.toContain(MARKER);
+    expect(exportsOf(box, '.profile')).toEqual([]);
+    expect(linesOf(box, '.profile')).toContain('# my own line');
+  });
+
+  it('removes the package from the prefix that holds the ahpd it finds', async () => {
+    const box = makeBox();
+    installAhpd(box, '0.13.0');
+    const readonly = join(box.root, 'readonly');
+    mkdirSync(readonly);
+
+    const result = await run(box, ['--uninstall'], { PATH: withPrefix(box), STUB_NPM_PREFIX: readonly });
+
+    expect(result.code).toBe(0);
+    expect(calls(box)).toContain(`npm uninstall -g --prefix ${box.prefix} @ahpd/server`);
+  });
+
+  it('prints the uninstall with its prefix under --dry-run and runs nothing', async () => {
+    const box = makeBox();
+    installAhpd(box, '0.13.0');
+
+    const result = await run(box, ['--uninstall', '--dry-run'], { PATH: withPrefix(box) });
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(`/npm uninstall -g --prefix ${box.prefix} @ahpd/server`);
+    expect(calls(box).some((line) => line.startsWith('npm uninstall'))).toBe(false);
   });
 
   it('removes the service, then stops the daemon, then the package', async () => {
