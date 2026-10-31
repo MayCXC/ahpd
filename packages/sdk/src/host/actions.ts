@@ -45,10 +45,10 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
    * read that took one would say so only by being wrong.
    */
   const {
-    agents, cancelRun, changed, channelKind, daemonKey, decided, declaresConfigKey,
-    dir, dirOf, dispatch, homeOf, kept, learned, log, marks, marksOf, meantBy, names, options,
+    agents, cancelRun, changed, changesetAt, channelKind, daemonKey, decided, declaresConfigKey,
+    dir, dispatch, homeOf, kept, learned, log, marks, marksOf, meantBy, names, options,
     ownerFor, owners, past, permitted, presence, relayed, restart, retool,
-    rootConfig, served, sessionFor, sessions, starting, summaryMoved, terminals, toolDefinitions,
+    rootConfig, served, sessionFor, sessions, shown, starting, summaryMoved, terminals, toolDefinitions,
     value, waitingFor,
   } = ctx;
 
@@ -491,24 +491,66 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
         if (lookup === 'url' || lookup === 'branch') ctx.pullRequestLookup = lookup;
       });
     }
+    /*
+     * A review, applied as the protocol's reducer applies it: to the files the
+     * changeset holds, and to nothing else.
+     *
+     * Those are the files its watchers were last told, or the ones a read
+     * finds when nobody has been told any. A review that moves nothing is
+     * answered to its sender alone, so a client ticking a file already ticked
+     * does not have every other client redraw, and one the source keeps no
+     * review for is refused in its words. What moved goes to every watcher,
+     * and is what they hold from then on.
+     * https://github.com/microsoft/agent-host-protocol/blob/v1.0.0/docs/guide/changesets.md
+     */
     if (type === 'changeset/filesReviewChanged') {
-      const cut = channel.indexOf('/changeset/');
-      const owner = cut > 0 ? channel.slice(0, cut) : '';
-      const scope = cut > 0 ? channel.slice(cut + '/changeset/'.length) : '';
-      const dir = owner === '' ? undefined : dirOf(owner);
+      const at = changesetAt(channel);
       const files = Array.isArray(action.files)
         ? action.files.filter((one): one is string => typeof one === 'string')
         : [];
       const on = action.reviewed === true;
-      if (dir === undefined || files.length === 0) {
+      if (at === undefined || files.length === 0) {
         no(`${channel} is not a changeset, or no files were named`);
         return;
       }
-      // Only when it moved. A client ticking a file already ticked would
-      // otherwise have every other client redraw for nothing.
-      if (options.changes?.review?.(dir, owner, scope, files, on) !== true) return;
-      dispatch(channel, { type, files, reviewed: on });
-      return;
+      const review = options.changes?.review;
+      if (review === undefined) {
+        no(`${channel} is not reviewable`);
+        return;
+      }
+      return (async () => {
+        const holding = shown.get(channel)?.files
+          ?? (await options.changes?.state(at.dir, at.owner, at.scope, at.base))?.files;
+        if (holding === undefined) {
+          no(`No changeset at ${channel}`);
+          return;
+        }
+        const held = new Set(holding.map((file) => file.id));
+        const named = new Set(files.filter((file) => held.has(file)));
+        const moved = review(at.dir, at.owner, at.scope, [...named], on);
+        if (typeof moved === 'string') {
+          no(moved);
+          return;
+        }
+        if (!moved) {
+          echoTo(connection.peer, channel, action, origin);
+          return;
+        }
+        // As the next read gives them: a cleared file carries no `reviewed`,
+        // which the protocol reads as not reviewed.
+        const was = shown.get(channel);
+        if (was) {
+          shown.set(channel, {
+            ...was,
+            files: was.files.map((file) => {
+              if (!named.has(file.id)) return file;
+              const { reviewed: _reviewed, ...rest } = file;
+              return on ? { ...rest, reviewed: true } : rest;
+            }),
+          });
+        }
+        dispatch(channel, { type, files: [...named], reviewed: on }, origin);
+      })();
     }
 
     /*
