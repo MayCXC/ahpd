@@ -338,7 +338,7 @@ A canvas is opened, updated and closed by a plugin, through its own three calls
 | `changeset/statusChanged` | host | ✅ | When only the status moved and the files did not. `recomputing` goes out before a changeset is read again, so a client keeps the files it has. `ready` follows when the read comes back, and a read that gives nothing puts the previous status back. |
 | `changeset/fileSet` | host | ✅ | Chosen when fewer actions than files moved. |
 | `changeset/fileRemoved` | host | ✅ | The same choice, for a file that left the set. |
-| `changeset/filesReviewChanged` | client | ✅ | A client marking files reviewed. The one changeset action a client originates. |
+| `changeset/filesReviewChanged` | client | ✅ | A client marking files reviewed. The one changeset action a client originates. Applied as the protocol's reducer applies it, to the files the changeset holds; a changeset that keeps no review, the working tree's among them, is refused. A turn that changes a file again takes the tick off its row in the session's changeset, the branch's and the turn's own. |
 | `changeset/contentChanged` | host | ✅ | Chosen when the whole set is the smaller thing to send. It reduces to the same state as the per-file pair, which is what makes choosing between them safe. |
 | `changeset/operationsChanged` | host | ✅ | The verbs the source advertises, with this host's own answer to whether each may be pressed now. |
 | `changeset/operationStatusChanged` | host | ✅ | While one runs, and when it finishes or fails. |
@@ -758,6 +758,10 @@ So is a working directory. A set of a folder the set holds already, a removal
 of one it does not hold, and a replacement of one it does not hold change
 nothing, on a session or on a chat, and the sender alone is answered. An action
 of these that names no folder is refused.
+
+A review is the same case. `changeset/filesReviewChanged` ticking files
+already ticked, or naming only files the changeset does not hold, moves
+nothing, and the sender alone is answered.
 
 ### The snapshot and the actions have to agree
 
