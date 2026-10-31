@@ -1169,3 +1169,67 @@ describe("a browsed session's _meta", () => {
     expect(opened.snapshot.state._meta).toEqual({ 'ahpd.model': 'opus' });
   });
 });
+
+describe('what a backend offers, asked again', () => {
+  it('probes again when the backend says its answer changed, and stops asking when the host closes', async () => {
+    let changed: (() => void) | undefined;
+    let stopped = 0;
+    let seeds = [{ id: 'skill:review', type: 'skill', name: 'review' }];
+    const host = createHost({
+      path: '/home/softov',
+      agents: [{
+        ...echo({ path: '/home/softov', pace: 0 }),
+        provider: 'probed',
+        probe: async () => ({ models: [], commands: [], customizations: [...seeds] }),
+        probeChanged: (onChange) => {
+          changed = onChange;
+          return () => { stopped += 1; };
+        },
+      }],
+      ...machine(),
+    });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    await settle();
+    type Offering = { provider: string; customizations?: { id: string }[] }[];
+    const idsIn = (agents: Offering): unknown[] =>
+      (agents.find((one) => one.provider === 'probed')?.customizations ?? []).map((one) => one.id);
+    // The first answer came before the client did, so it is in the snapshot.
+    const root = (await client.handle({ method: 'subscribe', params: { channel: 'ahp-root://' } }) as {
+      snapshot: { state: { agents: Offering } };
+    }).snapshot.state;
+    expect(idsIn(root.agents)).toEqual(['skill:review']);
+    /** The ids the root was last told this backend offers. */
+    const offered = (): unknown[] => idsIn(
+      (actions(p, 'ahp-root://').filter((one) => one.action.type === 'root/agentsChanged').at(-1)?.action.agents ?? []) as Offering,
+    );
+    // Asked after the first answer, and once.
+    expect(changed).toBeDefined();
+
+    seeds = [...seeds, { id: 'agent:scout', type: 'agent', name: 'scout' }];
+    changed?.();
+    await settle();
+    expect(offered()).toEqual(['skill:review', 'agent:scout']);
+
+    await host.close();
+    expect(stopped).toBe(1);
+  });
+
+  it('stops asking a backend a fold removed', async () => {
+    let stopped = 0;
+    const probed: Agent = {
+      ...echo({ path: '/home/softov', pace: 0 }),
+      provider: 'probed',
+      probe: async () => ({ models: [], commands: [], customizations: [] }),
+      probeChanged: () => () => { stopped += 1; },
+    };
+    const options = { path: '/home/softov', agents: [probed, echo({ path: '/home/softov', pace: 0 })], ...machine() };
+    const host = createHost(options);
+    await settle();
+    expect(host.replace({ ...options, agents: [echo({ path: '/home/softov', pace: 0 })] })).toBeUndefined();
+    expect(stopped).toBe(1);
+    await host.close();
+    expect(stopped).toBe(1);
+  });
+});

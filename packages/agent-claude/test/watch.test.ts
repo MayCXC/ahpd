@@ -114,6 +114,18 @@ describe('the watcher of the Claude folders', () => {
     expect(calls()).toBe(0);
   });
 
+  it('watches the home folder\'s .claude once, as the personal folder', async () => {
+    const root = fresh();
+    mkdirSync(join(root, '.claude', 'agents'), { recursive: true });
+    const { calls } = await watched({ configDir: join(root, '.claude'), cwd: root });
+    writeFileSync(join(root, '.claude', 'agents', 'scout.md'), '---\nname: scout\n---\n');
+    await until(calls, 1);
+    writeFileSync(join(root, 'CLAUDE.md'), '# Home\n');
+    await until(calls, 2);
+    await pause(700);
+    expect(calls()).toBe(2);
+  });
+
   it('throws nothing for folders it cannot watch', () => {
     const root = fresh();
     const stop = watchFolders({ configDir: join(root, 'no', 'such'), cwd: join(root, 'missing') }, () => undefined);

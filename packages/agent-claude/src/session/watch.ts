@@ -1,6 +1,7 @@
 import { existsSync, watch } from 'node:fs';
 import type { FSWatcher } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
+import { projectDirOf } from './disk.js';
 
 /** The folders a session's customizations are read from. */
 export interface WatchRoots {
@@ -117,14 +118,15 @@ export function watchFolders(roots: WatchRoots, onChange: () => void): () => voi
 
   scope(roots.configDir);
   if (roots.cwd !== undefined) {
-    const project = join(roots.cwd, '.claude');
+    // None in the home folder, whose `.claude` is the personal folder.
+    const project = projectDirOf(roots);
     // The project's `.claude` is watched for by the working directory's own
     // handle, which is open for the memory files anyway.
-    if (existsSync(project)) scope(project);
-    let found = existsSync(project);
+    if (project !== undefined && existsSync(project)) scope(project);
+    let found = project === undefined || existsSync(project);
     opened(roots.cwd, false, (name) => {
       if (name !== null && MEMORY.has(name)) fire();
-      if (!found && name === '.claude' && existsSync(project)) {
+      if (!found && project !== undefined && name === '.claude' && existsSync(project)) {
         found = true;
         scope(project);
         fire();

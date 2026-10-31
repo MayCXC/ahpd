@@ -1,6 +1,6 @@
 ---
 title: The Claude folders are watched
-status: todo
+status: implemented
 depends: []
 layer: agent-claude
 refs:
