@@ -29,8 +29,7 @@ Current progress and pending items only, as of 2026-10-31.
 - #158 was based on the #157 branch, so its merge went into that branch and never reached main. #159 took the same head into main. Check `baseRefName` before you merge a stacked fork PR.
 - Disposing a session that this process does not hold leaves its disposable machine behind. The `held === undefined` branch in `lifecycle.ts` never calls `leaveForgotten`. It is on main from before p8: [problems/a-disposed-session-not-held-leaves-its-machine.md](../problems/a-disposed-session-not-held-leaves-its-machine.md).
 - The README is rewritten for people who run ahpd (`a22c1934`). The brief it came from is `ahp-review/ahpd-review/ahpd-readme-2026-10-27/`.
-- `/github/ahpd` is on main with one local commit that is not pushed: `1965724e`. Softov wrote it. It edits only two briefs that `46596ffa` deleted on main, because their plans cover them. Leave it for him.
-- `/github/ahpd`'s tree has five untracked briefs that are also on main. They block a pull until they are removed.
+- `/github/ahpd` is level with origin/main at `abdecb49`. That commit merges Softov's `1965724e` and keeps the two briefs deleted.
 - Fetch, and check the base before you cut a build worktree.
 - Softov's dev daemon runs from source on port 37537. He restarted it after #114.
 - Code goes through a PR on `softov/ahpd`. Plan-only commits go to main. Run `gh pr checks` with `-R softov/ahpd` outside a repo.
