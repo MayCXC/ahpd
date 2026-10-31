@@ -547,16 +547,6 @@ export function chatAction(
      * one had the form open.
      */
     /*
-     * A directory added to, taken from, or put in place of the session's set.
-     *
-     * The SDK takes its directories when the CLI starts and exposes no
-     * way to add one after, so this starts the backend again *resumed* -
-     * the same conversation, in a wider place - rather than refusing.
-     * Not while a turn is running: a CLI replaced mid-answer is an
-     * answer that stops halfway, and `-32004` is the code for asking a
-     * client to wait.
-     */
-    /*
      * A rename from a client.
      *
      * On a chat channel it names that chat, the way the reference host
@@ -580,6 +570,20 @@ export function chatAction(
       renameChat(uri, byChat.has(channel) ? channel : owner.defaultChat, title);
       break;
     }
+    /*
+     * A folder added to, taken from, or put in place of one in the session's
+     * set, each as the protocol's reducers apply it: a set adds a folder the
+     * set lacks, a removal takes out one it holds, and a replacement puts the
+     * folder `replacement` names where `directory` was, a replacement the set
+     * holds already keeping the earlier of its two places.
+     * https://github.com/microsoft/agent-host-protocol/blob/v1.0.0/types/channels-session/actions.ts
+     *
+     * The SDK takes its directories when the CLI starts, so a change starts the
+     * backend again, resumed: the same conversation in the folders it now has.
+     * Not while a turn is running, since a CLI replaced mid-answer is an answer
+     * that stops halfway. An action that changes nothing is answered to its
+     * sender alone, and one that names no folder is refused.
+     */
     case 'session/workingDirectorySet':
     case 'session/workingDirectoryRemoved':
     case 'session/workingDirectoryReplaced': {
@@ -598,60 +602,70 @@ export function chatAction(
         break;
       }
       const path = (value: unknown): string => localPath(String(value ?? ''));
-      const held = owner.additional ?? [];
-      let after = held;
-      /*
-       * The folder this action puts the session into, and nothing for a
-       * removal: a set adds one, a replace moves the primary slot, and a
-       * removal enters nowhere.
-       *
-       * Worked out before anything is written, because it is what the window
-       * is asked about - and an answer of no means the session never went
-       * there, so the write has to be behind the question.
-       */
-      let entering: string | undefined;
+      const one = path(action.directory);
+      const into = type === 'session/workingDirectoryReplaced' ? path(action.replacement) : one;
+      if (one === '' || into === '') {
+        no(`${type} names no folder`);
+        break;
+      }
+      // The first is the process root, which a removal MUST NOT take out.
+      if (type === 'session/workingDirectoryRemoved' && one === owner.workingDirectory) {
+        no('the first working directory is the one the agent runs in, and cannot be removed');
+        break;
+      }
+      const root = owner.workingDirectory;
+      const was = root === undefined ? owner.additional ?? [] : [root, ...(owner.additional ?? [])];
+      const at = was.indexOf(one);
+      const there = was.indexOf(into);
+      let next = was;
       if (type === 'session/workingDirectorySet') {
-        const one = path(action.directory);
-        if (one === '' || one === owner.workingDirectory || held.includes(one)) break;
-        after = [...held, one];
-        entering = one;
+        if (at < 0) next = [...was, one];
       }
       else if (type === 'session/workingDirectoryRemoved') {
-        const one = path(action.directory);
-        // The first is the process root and the protocol says a client
-        // MUST NOT remove it. Said rather than silently ignored.
-        if (one === owner.workingDirectory) {
-          no('the first working directory is the one the agent runs in, and cannot be removed');
-          break;
-        }
-        if (!held.includes(one)) break;
-        after = held.filter((other) => other !== one);
+        next = was.filter((other) => other !== one);
       }
-      else {
-        // The primary slot, replaced atomically - which is the only way
-        // index 0 may move, and why this host advertises
-        // `primaryReplacement` beside `immutablePrimary`.
-        const one = path(action.directory);
-        if (one === '' || one === owner.workingDirectory) break;
-        entering = one;
+      else if (at >= 0 && there !== at) {
+        // In the entry's place when the replacement is new or held later, and
+        // the entry gone when the replacement is held earlier.
+        const placed = was.map((other, index) => (index === at ? into : other));
+        next = there < 0 ? placed
+          : there > at ? placed.filter((_, index) => index !== there)
+          : was.filter((_, index) => index !== at);
+      }
+      if (next.length === was.length && next.every((entry, index) => entry === was[index])) {
+        echoTo(connection.peer, channel, action, origin);
+        break;
       }
       /*
-       * The window is asked about the folder before the session enters it - the
-       * question a move asks, answered from the same pushed value or by the
-       * same request. A worktree the
-       * restart makes from it needs no question: one the host made is trusted
-       * exactly when its repository is, and the folder just answered for is
-       * where that worktree is cut from.
+       * The folder this action puts the session into, if any: the window is
+       * asked about it before anything is written, the question a move asks,
+       * and an answer of no means the session never went there. A worktree
+       * the restart makes from it needs no question of its own, since one the
+       * host made is trusted exactly when its repository is.
        */
+      const entering = next.find((entry) => !was.includes(entry));
+      const moving = root !== undefined && next[0] !== root;
       const auto = autoApproved({ ...owner.agent.defaults(), ...contributedDefaults(), ...owner.config }, rootConfig);
       void (async () => {
         try {
           if (entering !== undefined) {
             await requireTrust({ folder: entering, sender: connection, autoApproved: auto });
           }
-          owner.additional = after;
-          if (entering !== undefined && type === 'session/workingDirectoryReplaced') owner.workingDirectory = entering;
-          await restart(uri, conn.tokensFor(owner.agent.provider), { additional: after }, connection, undefined, conn.tokensFor);
+          /*
+           * A new first folder is a move, made as `set_workspace` makes one:
+           * the restart starts the session there, in a worktree of it when
+           * the session is isolated, and says where it went. The client's
+           * own action follows as its answer.
+           */
+          owner.additional = root === undefined ? next : next.slice(1);
+          await restart(
+            uri,
+            conn.tokensFor(owner.agent.provider),
+            { additional: owner.additional, ...(moving ? { directory: next[0] } : {}) },
+            connection,
+            undefined,
+            conn.tokensFor,
+          );
           dispatch(uri, action, origin);
         }
         catch (error) {
@@ -1054,15 +1068,28 @@ export function chatAction(
         break;
       }
       const one = localPath(String(action.directory ?? ''));
+      if (one === '') {
+        no(`${type} names no folder`);
+        break;
+      }
       const own = [held.workingDirectory, ...(held.additional ?? [])].filter((entry) => entry !== undefined);
       const had = beside.get(channel) ?? held.additional ?? [];
       let next = had;
+      /*
+       * A folder the chat holds already, the first one included, or one it
+       * does not hold to take out, changes nothing, and the client that sent
+       * it is answered alone.
+       * https://github.com/microsoft/agent-host-protocol/blob/v1.0.0/types/channels-chat/actions.ts
+       */
       if (type === 'chat/workingDirectorySet') {
         if (!own.includes(one)) {
           no(`${one} is not a working directory of ${owner.uri}`);
           break;
         }
-        if (one === held.workingDirectory || had.includes(one)) break;
+        if (one === held.workingDirectory || had.includes(one)) {
+          echoTo(connection.peer, channel, action, origin);
+          break;
+        }
         next = [...had, one];
       }
       else {
@@ -1070,7 +1097,10 @@ export function chatAction(
           no('the first working directory is the one the agent runs in, and cannot be removed');
           break;
         }
-        if (!had.includes(one)) break;
+        if (!had.includes(one)) {
+          echoTo(connection.peer, channel, action, origin);
+          break;
+        }
         next = had.filter((other) => other !== one);
       }
       beside.set(channel, next);

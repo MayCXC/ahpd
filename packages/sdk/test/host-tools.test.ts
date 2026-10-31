@@ -366,7 +366,7 @@ describe('tools the host contributes', () => {
       await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 4 });
       await settle(8);
       const moved = actions(p, uri).find((one) => one.action.type === 'session/workingDirectoryReplaced');
-      expect(moved?.action.directory).toBe(uriOf('/tmp'));
+      expect(moved?.action).toMatchObject({ directory: uriOf('/home/softov'), replacement: uriOf('/tmp') });
       // Restarted there, resumed, and told so in a turn the window will not
       // draw as somebody's request, will list under a label rather than the
       // prompt, and will still credit with the file changes made in it: the
