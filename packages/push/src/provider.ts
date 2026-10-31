@@ -1,24 +1,30 @@
+import { ECDH } from 'node:crypto';
 import { join } from 'node:path';
 import { RpcError, absentResource, bodyText, readJsonObject, splitResource, writeJsonAtomic } from '@ahpd/sdk';
 import type { Entry, Metadata, Owner, Principal, Read, ResourceProvider, SchemeDescription, Write } from '@ahpd/sdk';
+import type { Vapid } from './vapid.js';
 
 /**
  * The devices a host pushes to, served as a resource scheme.
  *
  * A registration is a record under `push://devices/<install id>`: a client
  * writes one with the protocol's own `resourceWrite` and takes it out with
- * `resourceDelete`, which is the whole of the seam.
+ * `resourceDelete`, which is the whole of the seam. A phone registers an Expo
+ * token; a browser registers the subscription its push service gave it, an
+ * endpoint and the two keys a message to it is encrypted with.
  *
- * What a record holds is the push token, the platform it belongs to and, when
- * a device asked for a language, that language. It also holds the id of the
- * client that registered it, which the host hands a provider's `write` and the
- * body cannot name: a notification goes to the devices of the client that
- * created or opened a session, so a device written by a connection that never
- * introduced itself is kept and matches no session.
+ * What a record holds is the platform it belongs to, the person and client it
+ * was registered by, and, when a device asked for a language, that language.
+ * The client is the host's, as the connection named it, and the body cannot
+ * name it: a device with no setting hears the sessions of the client that
+ * opened the session or, when its person is the session's owner, the person's.
  *
  * The devices are one JSON file under the daemon's own configuration folder,
- * written whole and read at load, because a token is a credential to that
- * device's notifications and nothing else on the machine has business in it.
+ * written whole and read at load, because a token and a subscription are
+ * credentials to that device's notifications and nothing else on the machine
+ * has business in them. The host's VAPID key pair is read the same way and
+ * served read-only at `push://vapid`, which is where a browser takes the public
+ * key its subscription is made for.
  */
 
 /** The scheme this provider serves. */
@@ -26,6 +32,23 @@ export const SCHEME = 'push';
 
 /** The one segment under the scheme's root: every device is under it. */
 const DEVICES = 'devices';
+
+/** The read-only record that holds the host's VAPID public key. */
+const VAPID = 'vapid';
+
+/**
+ * The push services of Safari, Chrome, Firefox and Edge.
+ *
+ * An endpoint comes from a client, and a host that sent to any address a client
+ * named would be a host that can be told to make a request anywhere. A pattern
+ * of `*.<domain>` matches every host under that domain.
+ */
+export const WEB_PUSH_HOSTS = [
+  '*.push.apple.com',
+  'fcm.googleapis.com',
+  'updates.push.services.mozilla.com',
+  '*.notify.windows.com',
+] as const;
 
 /**
  * When a device was registered, which this file does not keep.
@@ -36,24 +59,8 @@ const DEVICES = 'devices';
  */
 const EPOCH = '1970-01-01T00:00:00.000Z';
 
-/** The body a write to the scheme's root makes a device from. */
-const MANIFEST = {
-  type: 'object',
-  required: ['token', 'platform'],
-  properties: {
-    token: { type: 'string', description: 'The Expo push token this device answers to.' },
-    platform: { type: 'string', enum: ['ios', 'android'], description: 'Which service the token belongs to.' },
-    lang: { type: 'string', description: 'The language the device asked for, kept with it. Notifications are worded in English.' },
-  },
-  additionalProperties: false,
-} as const;
-
-/** One device, as it was registered. */
-export interface Device {
-  /** The Expo push token. */
-  token: string;
-  /** Which service the token belongs to. */
-  platform: 'ios' | 'android';
+/** The part of a registration both kinds of device share. */
+interface Kept {
   /**
    * The language the device asked for, where the client named one.
    *
@@ -69,7 +76,100 @@ export interface Device {
    * client that registered it.
    */
   client?: string;
+  /**
+   * The person the registration was written for, as the host named them.
+   *
+   * Absent on a host with no users directory, and on a connection that is
+   * neither a person nor the root one. A device with no person hears only the
+   * sessions of its own client, because nobody else's sessions can be shown to
+   * be its person's.
+   */
+  owner?: Owner;
+  /**
+   * Which sessions it hears about. Absent means `person`.
+   *
+   * The person's sessions are every session whose owner the host names the
+   * same, plus every session this device's own client created or opened.
+   */
+  audience?: Audience;
 }
+
+/** A phone or a tablet, which Expo reaches through its token. */
+export interface ExpoDevice extends Kept {
+  /** The Expo push token. */
+  token: string;
+  /** Which service the token belongs to. */
+  platform: 'ios' | 'android';
+}
+
+/** The two keys a browser's subscription is encrypted with, as base64url. */
+export interface SubscriptionKeys {
+  /** The browser's public key, 65 octets: the uncompressed P-256 point. */
+  p256dh: string;
+  /** The 16-octet authentication secret the browser made with it. */
+  auth: string;
+}
+
+/** A browser, which its push service reaches through the subscription's endpoint. */
+export interface WebDevice extends Kept {
+  /** Which service the subscription belongs to. */
+  platform: 'web';
+  /** The capability URL the push service accepts a message at. */
+  endpoint: string;
+  /** The keys a message to this subscription is encrypted with. */
+  keys: SubscriptionKeys;
+}
+
+/** One device, as it was registered. */
+export type Device = ExpoDevice | WebDevice;
+
+/** The body a write to the scheme's root makes a device from. */
+const EXPO_BODY = {
+  type: 'object',
+  required: ['token', 'platform'],
+  properties: {
+    token: { type: 'string', description: 'The Expo push token this device answers to.' },
+    platform: { type: 'string', enum: ['ios', 'android'], description: 'Which service the token belongs to.' },
+    lang: { type: 'string', description: 'The language the device asked for, kept with it. Notifications are worded in English.' },
+    audience: { type: 'string', enum: ['person', 'device'], description: 'Which sessions the device hears about. Every session of its person unless this says device.' },
+  },
+  additionalProperties: false,
+} as const;
+
+const WEB_BODY = {
+  type: 'object',
+  required: ['platform', 'endpoint', 'keys'],
+  properties: {
+    platform: { type: 'string', enum: ['web'], description: 'A browser, reached through its push service.' },
+    endpoint: { type: 'string', description: 'The endpoint a subscription gave, at an https address of a push service the host allows.' },
+    keys: {
+      type: 'object',
+      required: ['p256dh', 'auth'],
+      properties: {
+        p256dh: { type: 'string', description: 'The browser public key, the 65-octet uncompressed point in base64url.' },
+        auth: { type: 'string', description: 'The 16-octet authentication secret in base64url.' },
+      },
+      additionalProperties: false,
+    },
+    lang: { type: 'string', description: 'The language the device asked for, kept with it. Notifications are worded in English.' },
+    audience: { type: 'string', enum: ['person', 'device'], description: 'Which sessions the device hears about. Every session of its person unless this says device.' },
+  },
+  additionalProperties: false,
+} as const;
+
+const MANIFEST = {
+  oneOf: [EXPO_BODY, WEB_BODY],
+} as const;
+
+/**
+ * Which sessions a device hears about.
+ *
+ * `person` is every session its person created or opened, and `device` is only
+ * the ones the client that registered it created or opened. A device without a
+ * setting is a `person` device, which is what a registration written before
+ * this setting existed becomes.
+ */
+export type Audience = 'person' | 'device';
 
 /**
  * The devices one daemon keeps.
@@ -91,22 +191,24 @@ export interface DeviceStore {
 /**
  * Where one URI points, or the refusal a URI of another scheme is owed.
  *
- * Three places and no leaves: the scheme's root, the `devices` directory under
- * it, and a device under that. Anything deeper names nothing, and a URI of
- * another scheme is a client that asked the wrong door rather than a resource
- * that is missing - which is what `splitResource` answers and why it is used
- * here rather than a regular expression of this file's own.
+ * The scheme's root, the `devices` directory under it, a device under that, and
+ * the one read-only record beside `devices`. Anything deeper names nothing, and
+ * a URI of another scheme is a client that asked the wrong door rather than a
+ * resource that is missing - which is what `splitResource` answers and why it is
+ * used here rather than a regular expression of this file's own.
  */
 type Place =
   | { at: 'root' }
   | { at: 'devices' }
-  | { at: 'device'; id: string };
+  | { at: 'device'; id: string }
+  | { at: 'vapid' };
 
 const placeOf = (uri: string): Place => {
   const held = splitResource(uri, SCHEME);
   if (held.id === '' && held.leaf === '') return { at: 'root' };
   if (held.id === DEVICES && held.leaf === '') return { at: 'devices' };
   if (held.id === DEVICES && held.leaf !== '' && !held.leaf.includes('/')) return { at: 'device', id: held.leaf };
+  if (held.id === VAPID && held.leaf === '') return { at: 'vapid' };
   throw absentResource(SCHEME, uri);
 };
 
@@ -114,32 +216,82 @@ const placeOf = (uri: string): Place => {
 const asFile = (data: string): Read => ({ data, encoding: 'utf-8', contentType: 'application/json' });
 
 /**
- * A device as a read answers it: everything but the token.
+ * What a read of one device answers: everything but what reaches it.
  *
- * The token is write-only, because it is a credential to the device's
- * notifications and a role that may read `push:` is not the device.
+ * A token is write-only, because it is a credential to the device's
+ * notifications and a role that may read `push:` is not the device. A web
+ * subscription's endpoint and keys are the same kind of secret: the endpoint is
+ * a capability URL and the keys are what a message to it is sealed with.
  */
-const shownOf = (device: Device): Omit<Device, 'token'> => {
+const shownOf = (device: Device): Record<string, unknown> => {
+  if (device.platform === 'web') {
+    const { endpoint: _endpoint, keys: _keys, ...shown } = device;
+    return shown;
+  }
   const { token: _token, ...shown } = device;
   return shown;
+};
+
+/** Whether a string is base64url, which is how both browser keys arrive. */
+const BASE64URL = /^[A-Za-z0-9_-]+={0,2}$/;
+
+/** Whether `key` is an uncompressed P-256 point, the only key RFC 8291 seals a message for. */
+const isPoint = (key: Buffer): boolean => {
+  if (key.length !== 65 || key[0] !== 0x04) return false;
+  try {
+    ECDH.convertKey(key, 'prime256v1');
+    return true;
+  }
+  catch {
+    return false;
+  }
+};
+
+/** The two keys of a subscription, or nothing when what was there is not a pair of them. */
+const keysOf = (said: unknown): SubscriptionKeys | undefined => {
+  if (typeof said !== 'object' || said === null || Array.isArray(said)) return undefined;
+  const one = said as Record<string, unknown>;
+  const p256dh = one['p256dh'];
+  const auth = one['auth'];
+  if (typeof p256dh !== 'string' || !BASE64URL.test(p256dh)) return undefined;
+  if (typeof auth !== 'string' || !BASE64URL.test(auth)) return undefined;
+  if (!isPoint(Buffer.from(p256dh, 'base64url'))) return undefined;
+  if (Buffer.from(auth, 'base64url').length !== 16) return undefined;
+  return { p256dh, auth };
+};
+
+/** The fields of a registration both kinds of device keep, as they were found. */
+const keptCommon = (one: Record<string, unknown>): Kept => {
+  const lang = one['lang'];
+  const client = one['client'];
+  const owner = one['owner'];
+  const audience = one['audience'];
+  return {
+    ...(typeof lang === 'string' ? { lang } : {}),
+    ...(typeof client === 'string' ? { client } : {}),
+    ...(typeof owner === 'string' && owner !== '' ? { owner: owner as Owner } : {}),
+    ...(audience === 'person' || audience === 'device' ? { audience } : {}),
+  };
 };
 
 /** A device read back from the file, or nothing when what was there is not one. */
 const kept = (said: unknown): Device | undefined => {
   if (typeof said !== 'object' || said === null || Array.isArray(said)) return undefined;
   const one = said as Record<string, unknown>;
-  const token = one['token'];
-  if (typeof token !== 'string' || token === '') return undefined;
+  const common = keptCommon(one);
   const platform = one['platform'];
-  if (platform !== 'ios' && platform !== 'android') return undefined;
-  const lang = one['lang'];
-  const client = one['client'];
-  return {
-    token,
-    platform,
-    ...(typeof lang === 'string' ? { lang } : {}),
-    ...(typeof client === 'string' ? { client } : {}),
-  };
+  if (platform === 'ios' || platform === 'android') {
+    const token = one['token'];
+    if (typeof token !== 'string' || token === '') return undefined;
+    return { token, platform, ...common };
+  }
+  if (platform === 'web') {
+    const endpoint = one['endpoint'];
+    const keys = keysOf(one['keys']);
+    if (typeof endpoint !== 'string' || endpoint === '' || keys === undefined) return undefined;
+    return { platform, endpoint, keys, ...common };
+  }
+  return undefined;
 };
 
 /**
@@ -197,6 +349,10 @@ export const deviceStore = (configDir: string, onProblem: (line: string) => void
 export interface PushProviderOptions {
   /** Where the devices are kept. */
   store: DeviceStore;
+  /** The host's VAPID pair, when it has one, whose public key is served at `push://vapid`. */
+  vapid?: Vapid;
+  /** The hosts a browser's endpoint may be at. The default is every push service of a major browser. */
+  webPushHosts?: readonly string[];
 }
 
 /**
@@ -215,32 +371,78 @@ export interface PushProvider extends ResourceProvider {
   describe(): SchemeDescription;
 }
 
+/** Whether a host matches one of a list of patterns, where `*.<domain>` matches every host under it. */
+const hostAllowed = (host: string, patterns: readonly string[]): boolean => {
+  const said = host.toLowerCase();
+  return patterns.some((pattern) => {
+    const held = pattern.trim().toLowerCase();
+    if (held === '') return false;
+    return held.startsWith('*.') ? said.endsWith(held.slice(1)) : said === held;
+  });
+};
+
 /** The device a write's body describes, or the refusal a body that is not one is owed. */
-const deviceOf = (uri: string, content: Write): Device => {
+const deviceOf = (uri: string, content: Write, webPushHosts: readonly string[]): Device => {
   let said: unknown;
   try {
     said = JSON.parse(bodyText(content));
   }
   catch {
-    throw new RpcError(-32602, `${uri} is made from JSON, an object with a token and a platform`);
+    throw new RpcError(-32602, `${uri} is made from JSON, an object with a token or a subscription`);
   }
   if (typeof said !== 'object' || said === null || Array.isArray(said)) {
-    throw new RpcError(-32602, `${uri} is made from a JSON object, with a token and a platform`);
+    throw new RpcError(-32602, `${uri} is made from a JSON object, with a token or a subscription`);
   }
   const body = said as Record<string, unknown>;
-  const token = body['token'];
-  if (typeof token !== 'string' || token.trim() === '') {
-    throw new RpcError(-32602, `${uri} needs a token: a device is registered with its push token`);
-  }
-  const platform = body['platform'];
-  if (platform !== 'ios' && platform !== 'android') {
-    throw new RpcError(-32602, `${uri} needs a platform of ios or android`);
-  }
+
   const lang = body['lang'];
   if (lang !== undefined && (typeof lang !== 'string' || lang.trim() === '')) {
     throw new RpcError(-32602, `${uri} has a lang that is not a language`);
   }
-  return { token, platform, ...(typeof lang === 'string' ? { lang } : {}) };
+  const audience = body['audience'];
+  if (audience !== undefined && audience !== 'person' && audience !== 'device') {
+    throw new RpcError(-32602, `${uri} has an audience of person or device`);
+  }
+  const common: Kept = {
+    ...(typeof lang === 'string' ? { lang } : {}),
+    ...(audience === 'person' || audience === 'device' ? { audience } : {}),
+  };
+
+  const platform = body['platform'];
+  if (platform === 'ios' || platform === 'android') {
+    const token = body['token'];
+    if (typeof token !== 'string' || token.trim() === '') {
+      throw new RpcError(-32602, `${uri} needs a token: a device is registered with its push token`);
+    }
+    return { token, platform, ...common };
+  }
+
+  if (platform === 'web') {
+    const endpoint = body['endpoint'];
+    if (typeof endpoint !== 'string' || endpoint.trim() === '') {
+      throw new RpcError(-32602, `${uri} needs an endpoint: a browser is registered with its subscription`);
+    }
+    let address: URL;
+    try {
+      address = new URL(endpoint);
+    }
+    catch {
+      throw new RpcError(-32602, `${uri} has an endpoint that is not a URL`);
+    }
+    if (address.protocol !== 'https:') {
+      throw new RpcError(-32602, `${uri} has an endpoint that is not https`);
+    }
+    if (!hostAllowed(address.hostname, webPushHosts)) {
+      throw new RpcError(-32602, `${uri} has an endpoint at ${address.hostname}, which is not a push service this host allows`);
+    }
+    const keys = keysOf(body['keys']);
+    if (keys === undefined) {
+      throw new RpcError(-32602, `${uri} needs keys: the browser's p256dh of 65 octets and auth of 16, in base64url`);
+    }
+    return { platform, endpoint, keys, ...common };
+  }
+
+  throw new RpcError(-32602, `${uri} needs a platform of ios, android or web`);
 };
 
 /**
@@ -251,19 +453,28 @@ const deviceOf = (uri: string, content: Write): Device => {
  * under the root and nothing under a device.
  */
 export const pushProvider = (options: PushProviderOptions): PushProvider => {
-  const { store } = options;
+  const { store, vapid } = options;
+  const webPushHosts = options.webPushHosts ?? WEB_PUSH_HOSTS;
   const description: SchemeDescription = {
     title: 'Push',
-    description: 'The devices a host tells when a session needs a person.',
+    description: 'The devices a host tells when a session needs a person, and the public key a browser subscribes with.',
     manifest: MANIFEST,
   };
+
+  /** The one record beside `devices`: the public key of the host's pair. */
+  const vapidFile = (): string => JSON.stringify({ publicKey: vapid?.publicKey ?? '' }, null, 2);
 
   return {
     describe: () => description,
 
     list: async (uri) => {
       const place = placeOf(uri);
-      if (place.at === 'root') return [{ name: DEVICES, type: 'directory' }];
+      if (place.at === 'root') {
+        return [
+          { name: DEVICES, type: 'directory' },
+          ...(vapid === undefined ? [] : [{ name: VAPID, type: 'file' as const }]),
+        ];
+      }
       if (place.at === 'devices') return store.ids().map((id): Entry => ({ name: id, type: 'file' }));
       throw absentResource(SCHEME, uri);
     },
@@ -278,6 +489,16 @@ export const pushProvider = (options: PushProviderOptions): PushProvider => {
      */
     resolve: async (uri) => {
       const place = placeOf(uri);
+      if (place.at === 'vapid') {
+        if (vapid === undefined) throw absentResource(SCHEME, uri);
+        return {
+          uri,
+          type: 'file',
+          size: Buffer.byteLength(vapidFile(), 'utf8'),
+          mtime: EPOCH,
+          ctime: EPOCH,
+        } as Metadata;
+      }
       if (place.at !== 'device') return { uri, type: 'directory', mtime: EPOCH, ctime: EPOCH } as Metadata;
       const held = store.get(place.id);
       const body = held === undefined ? '' : JSON.stringify(shownOf(held), null, 2);
@@ -294,6 +515,10 @@ export const pushProvider = (options: PushProviderOptions): PushProvider => {
 
     read: async (uri) => {
       const place = placeOf(uri);
+      if (place.at === 'vapid') {
+        if (vapid === undefined) throw absentResource(SCHEME, uri);
+        return asFile(vapidFile());
+      }
       if (place.at !== 'device') throw absentResource(SCHEME, uri);
       const held = store.get(place.id);
       if (held === undefined) throw absentResource(SCHEME, uri);
@@ -303,15 +528,18 @@ export const pushProvider = (options: PushProviderOptions): PushProvider => {
     /**
      * A device is registered here, and re-registered here.
      *
-     * The body is the token and the platform; the client id is not the body's
-     * to name but the connection's, which is what makes a device the property
-     * of the client that wrote it. `createOnly` is the protocol's own word for
-     * refusing a device that is already there, and it is honoured because a
-     * client that asked for it is a client that did not mean to overwrite a
-     * sibling's registration.
+     * The body is the token and the platform, or a browser's endpoint and keys;
+     * the client id is not the body's to name but the connection's, which is
+     * what makes a device the property of the client that wrote it. `createOnly`
+     * is the protocol's own word for refusing a device that is already there,
+     * and it is honoured because a client that asked for it is a client that
+     * did not mean to overwrite a sibling's registration.
      */
-    write: async (uri, content, _owner, client) => {
+    write: async (uri, content, owner, client) => {
       const place = placeOf(uri);
+      if (place.at === 'vapid') {
+        throw new RpcError(-32602, `${uri} is the host's public key and cannot be written; write a device to ${SCHEME}://${DEVICES}/<id>`);
+      }
       if (place.at !== 'device') {
         throw new RpcError(-32602, `${uri} is not a device; write to ${SCHEME}://${DEVICES}/<id>`);
       }
@@ -319,8 +547,12 @@ export const pushProvider = (options: PushProviderOptions): PushProvider => {
       if (content.createOnly === true && held !== undefined) {
         throw new RpcError(-32010, `${place.id} is already a device here; edit it or choose another id`);
       }
-      const device = deviceOf(uri, content);
-      store.put(place.id, { ...device, ...(client === undefined || client === '' ? {} : { client }) });
+      const device = deviceOf(uri, content, webPushHosts);
+      store.put(place.id, {
+        ...device,
+        ...(client === undefined || client === '' ? {} : { client }),
+        ...(owner === undefined ? {} : { owner }),
+      });
     },
 
     /**
@@ -332,6 +564,9 @@ export const pushProvider = (options: PushProviderOptions): PushProvider => {
      */
     remove: async (uri) => {
       const place = placeOf(uri);
+      if (place.at === 'vapid') {
+        throw new RpcError(-32602, `${uri} is the host's public key and cannot be deleted; delete ${SCHEME}://${DEVICES}/<id>`);
+      }
       if (place.at !== 'device') {
         throw new RpcError(-32602, `${uri} is not a device to delete; delete ${SCHEME}://${DEVICES}/<id>`);
       }

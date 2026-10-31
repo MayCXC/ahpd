@@ -1,7 +1,9 @@
 import { reason, secretRef, str } from '@ahpd/sdk';
-import { deviceStore, pushProvider } from './provider.js';
+import { WEB_PUSH_HOSTS, deviceStore, pushProvider } from './provider.js';
 import { createSender } from './send.js';
-import type { DeviceStore } from './provider.js';
+import { loadVapid } from './vapid.js';
+import { createWebSender } from './webpush.js';
+import type { Device, DeviceStore } from './provider.js';
 import type { PushMessage } from './send.js';
 import type { InputNeededSetEvent, Plugin, TurnEndEvent } from '@ahpd/sdk';
 
@@ -10,8 +12,8 @@ import type { InputNeededSetEvent, Plugin, TurnEndEvent } from '@ahpd/sdk';
  *
  * One provider for the `push:` scheme, keeping its devices beside the daemon's
  * own configuration, and one subscription to the host's own moments: a device
- * hears about a session that the client which registered it created or opened,
- * and about nothing else.
+ * hears about a session its person owns, or one that the client which
+ * registered it created or opened, and about nothing else by default.
  *
  * Which clients those are is what `session_start` and `session_opened` say, and
  * they are the reason this plugin needs no view of a session at all: the host
@@ -31,7 +33,9 @@ export const name = 'push';
 export const title = 'Push';
 
 /** What an option falls back to. */
-export const defaults = {} as const;
+export const defaults = {
+  webPushHosts: [...WEB_PUSH_HOSTS],
+} as const;
 
 /**
  * The kinds of waiting that are a person being asked something.
@@ -53,15 +57,19 @@ const FINISHED = 'A session finished';
 /** The prefix of a worker's chat, whose turns are the session's work and not its end. */
 const WORKER_CHAT = 'ahp-chat://subagent/';
 
-/** One device that should hear about a session, and the token to reach it. */
+/** One device that should hear about a session. */
 interface Reachable {
   id: string;
-  token: string;
+  device: Device;
 }
 
 export const apply: Plugin['apply'] = (host, options) => {
   const store: DeviceStore = deviceStore(host.configDir, (line) => { host.problem(`${name}: ${line}`); });
-  host.registerResourceProvider('push', pushProvider({ store }));
+  const vapid = loadVapid(host.configDir, (line) => { host.log(`${name}: ${line}`); });
+  const webPushHosts = Array.isArray(options['webPushHosts'])
+    ? options['webPushHosts'].filter((one): one is string => typeof one === 'string' && one.trim() !== '')
+    : [...WEB_PUSH_HOSTS];
+  host.registerResourceProvider('push', pushProvider({ store, webPushHosts, ...(vapid === undefined ? {} : { vapid }) }));
 
   const named = str(options['title']);
   const title = named === undefined || named.trim() === '' ? host.hostName : named;
@@ -81,15 +89,25 @@ export const apply: Plugin['apply'] = (host, options) => {
     else held.add(client);
   };
 
-  /** Every device whose client created or opened this session. */
-  const audience = (session: string): Reachable[] => {
+  /**
+   * Every device that should hear about this session.
+   *
+   * A device hears it when its client created or opened the session, which is
+   * the rule it had before a device could choose. A device set to `person`, or
+   * left without a setting, also hears every session whose owner the host
+   * names as the device's own person. A device with no person has no owner to
+   * match, so it keeps the rule of its client alone.
+   */
+  const audience = async (session: string): Promise<Reachable[]> => {
     const clients = opened.get(session);
-    if (clients === undefined || clients.size === 0) return [];
+    const owner = await host.sessionOwner(session);
     const reachable: Reachable[] = [];
     for (const id of store.ids()) {
       const device = store.get(id);
-      if (device === undefined || device.client === undefined) continue;
-      if (clients.has(device.client)) reachable.push({ id, token: device.token });
+      if (device === undefined) continue;
+      const byClient = device.client !== undefined && clients?.has(device.client) === true;
+      const byOwner = device.audience !== 'device' && device.owner !== undefined && owner !== undefined && device.owner === owner;
+      if (byClient || byOwner) reachable.push({ id, device });
     }
     return reachable;
   };
@@ -105,32 +123,63 @@ export const apply: Plugin['apply'] = (host, options) => {
     log: (line) => { host.log(`${name}: ${line}`); },
     gone: (token) => {
       for (const id of store.ids()) {
-        if (store.get(id)?.token === token) store.remove(id);
+        const device = store.get(id);
+        if (device !== undefined && device.platform !== 'web' && device.token === token) store.remove(id);
       }
     },
   });
 
+  const contact = str(options['contact']);
+  const webSender = vapid === undefined ? undefined : createWebSender({
+    log: (line) => { host.log(`${name}: ${line}`); },
+    gone: (id) => { store.remove(id); },
+    vapid,
+    ...(contact === undefined || contact.trim() === '' ? {} : { contact: contact.trim() }),
+  });
+
   /** Send `body` to every device in the session, naming the session and why in `data`. */
   const notify = async (session: string, body: string, kind: string): Promise<void> => {
-    const reachable = audience(session);
+    const reachable = await audience(session);
     if (reachable.length === 0) return;
 
-    let token: string | undefined;
-    try {
-      token = await tokenNow();
-    }
-    catch (error) {
-      host.log(`${name}: accessToken could not be read, so nothing was sent: ${reason(error)}`);
-      return;
+    const phones = reachable.flatMap((one) => (one.device.platform === 'web' ? [] : [one.device]));
+    const browsers = reachable.flatMap((one) => (one.device.platform === 'web' ? [{ id: one.id, device: one.device }] : []));
+
+    if (phones.length > 0) {
+      let token: string | undefined;
+      let sent = true;
+      try {
+        token = await tokenNow();
+      }
+      catch (error) {
+        host.log(`${name}: accessToken could not be read, so no phone was sent to: ${reason(error)}`);
+        sent = false;
+      }
+      if (sent) {
+        const messages: PushMessage[] = phones.map((device) => ({
+          to: device.token,
+          title,
+          body,
+          data: { uri: session, kind },
+        }));
+        await sender.send(messages, token);
+      }
     }
 
-    const messages: PushMessage[] = reachable.map((one) => ({
-      to: one.token,
-      title,
-      body,
-      data: { uri: session, kind },
-    }));
-    await sender.send(messages, token);
+    // A host with no VAPID pair has already said so once, at load, and has no
+    // way to sign a request, so a browser is skipped rather than failed.
+    if (browsers.length > 0 && webSender !== undefined) {
+      await webSender.send(browsers.map((one) => ({
+        id: one.id,
+        endpoint: one.device.endpoint,
+        keys: one.device.keys,
+        title,
+        body,
+        data: { uri: session, kind },
+        session,
+        urgency: kind === 'turnComplete' ? 'normal' : 'high',
+      })));
+    }
   };
 
   host.on('session_start', (event) => {

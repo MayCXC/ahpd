@@ -1,6 +1,6 @@
 ---
 title: A device hears its person's sessions
-status: todo
+status: implemented
 depends: []
 layer: push
 refs:

@@ -333,7 +333,7 @@ describe('a first-party plugin', () => {
       'prefix', 'sessionSetting', 'sessionDefault', 'needs', 'mounts', 'profiles', 'bodyMounts', 'imageMounts',
       'images', 'devcontainer',
     ]],
-    ['push', ['title', 'accessToken']],
+    ['push', ['title', 'accessToken', 'webPushHosts', 'contact']],
     ['tasks', ['requireApproval', 'sweepAfterDays']],
     ['tunnel-devtunnel', ['name', 'keep', 'anonymous']],
     ['webhook', ['syncTimeoutSeconds', 'maxBodyBytes']],
