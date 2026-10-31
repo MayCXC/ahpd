@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
+import { meMethods } from '../../sdk/src/access/me.js';
 import { createHost } from '../../sdk/src/host.js';
 import { raise } from '../../sdk/src/plugins/plugins.js';
 import { idOf } from '../../sdk/src/sessions/catalog.js';
@@ -295,6 +296,27 @@ it('drops one grant that names nothing, keeps the list beside it, and says which
   // And the grant beside it was kept rather than the whole list dropped with
   // it: the same connection started its session.
   await until(() => lines.includes(`${BY} opened ${SESSION}`), 'the plugin to open its session');
+});
+
+it('tells a plugin who it is: its grants, and its own pool', async () => {
+  const users = directory();
+  // Served beside the plugin the way `run.ts` serves it when there is a directory.
+  const methods = Object.fromEntries(Object.entries(meMethods(users)).map(([name, method]) => [name, { by: 'ahpd', name, method }]));
+  const { lines } = await started(
+    { name: SPEC, grants: ['session:read'], options: { act: 'me' } },
+    { users, methods },
+  );
+  const said = (): string | undefined => lines.find((line) => line.startsWith(`${BY} me `));
+  await until(() => said() !== undefined, 'the plugin to ask who it is');
+  expect(JSON.parse(said()!.slice(`${BY} me `.length))).toEqual({
+    principal: `plugin:${BY}`,
+    kind: 'plugin',
+    id: `plugin:${BY}`,
+    roles: [],
+    rolesFromSignIn: [],
+    grants: ['session:read'],
+    pools: [`plugin:${BY}`],
+  });
 });
 
 it('records the work of a plugin as the plugin\'s own', async () => {

@@ -7,7 +7,9 @@
  *
  * The grant is `user:get`, and `authorize` lets in every reader without it,
  * a minted token too: the answer is only ever about the caller. The root
- * connection has no reader and is answered from its owner, `root:<host>`.
+ * connection has no reader and is answered from its owner, `root:<host>`. A
+ * plugin's own connection is answered from its configuration entry, and its
+ * work is charged to `plugin:<name>` alone.
  */
 
 import { RpcError } from '../rpc.js';
@@ -39,7 +41,7 @@ export const meMethods = (directory: Users): Record<string, PluginMethod> => {
     const record = (await directory.list()).find((one) => one.id === reader.id);
     return {
       principal: owner ?? `user:${reader.id}`,
-      kind: reader.plugin === undefined ? 'user' : 'plugin',
+      kind: 'user',
       id: reader.id,
       roles: [...reader.roles],
       rolesFromSignIn: [...(reader.rolesFromSignIn ?? [])],
@@ -53,12 +55,27 @@ export const meMethods = (directory: Users): Record<string, PluginMethod> => {
     };
   };
 
+  /** The answer for a plugin's own connection: no roles, the grants its entry names. */
+  const plugin = (reader: Principal, name: string, owner: string | undefined): Me => {
+    const principal = owner ?? `plugin:${name}`;
+    return {
+      principal,
+      kind: 'plugin',
+      id: reader.id,
+      roles: [],
+      rolesFromSignIn: [],
+      grants: [...(reader.grants ?? [])],
+      pools: [principal],
+    };
+  };
+
   return {
     'x-ahpd/me': {
       grant: 'user:get',
       describe: () => ({ title: 'Who am I', description: 'Who this connection is, what it may do and where its work is charged.' }),
       authorize: async () => true,
       handle: async (_params, reader, _client, owner) => {
+        if (reader?.plugin !== undefined) return plugin(reader, reader.plugin, owner);
         if (reader !== undefined) return await person(reader, owner);
         if (owner?.startsWith('root:')) {
           return {

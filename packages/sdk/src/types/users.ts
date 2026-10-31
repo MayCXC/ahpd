@@ -122,6 +122,13 @@ export interface Principal {
    */
   readonly plugin?: string;
   /**
+   * What a plugin's configuration entry grants it, as `can` holds it to.
+   *
+   * Set only beside `plugin`, so `x-ahpd/me` can list them. A person's grants
+   * come from their roles instead.
+   */
+  readonly grants?: readonly Grant[];
+  /**
    * Whether a local token of theirs signs them in at the door.
    *
    * A record's own token or one they minted names the person on the connection
@@ -181,7 +188,7 @@ export interface Me {
   kind: 'user' | 'plugin' | 'root';
   /** The id on their record. Absent for root, which has none. */
   id?: string;
-  /** The record's roles and the roles their sign-in added. Empty for root. */
+  /** The record's roles and the roles their sign-in added. Empty for root and a plugin. */
   roles: string[];
   /** The roles their sign-in added alone, which `roles` holds too. */
   rolesFromSignIn: string[];
@@ -191,7 +198,7 @@ export interface Me {
   token?: string;
   /** The usage pools their work is charged to. */
   pools: string[];
-  /** The teams and projects their work may be charged to, as written. Absent for root. */
+  /** The teams and projects their work may be charged to, as written. Absent for root and a plugin. */
   memberships?: string[];
   /** The membership work that names no scope of its own is charged to. */
   primary?: string;

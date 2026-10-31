@@ -74,6 +74,7 @@ client -> x-ahpd/me {} -> me method handle(params, reader, client, owner)
 | A connection that names nobody is refused with `-32007` | `(defaulted: there is nobody to answer about)` | 02 |
 | A host with no users directory serves no `x-ahpd/me` | [code://packages/server/src/commands/run.ts#L1267-L1277](../../../../packages/server/src/commands/run.ts#L1267-L1277) | 02 |
 | `@ahpd/sdk` exports the `Me` type | ahpw organization/05 task 07, 2026-10-21 | 02 |
+| A plugin's own connection is answered: `kind` `plugin`, the `grants` of its configuration entry, and `pools` `['plugin:<name>']` | Softov, 2026-10-31: "Answer it, fixed" | 02 |
 
 ## Proposed architecture
 

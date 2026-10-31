@@ -18,7 +18,8 @@ import type { Plugin, PluginHost, PluginPeer } from '@ahpd/sdk';
  * the connection at the wrong moment, to check that a plugin asking then is told
  * rather than handed a connection to nothing. `act: 'automation'` asks its host
  * for an automation after the session is up, which is the request a grant of
- * `session:write` alone does not cover.
+ * `session:write` alone does not cover. `act: 'me'` asks `x-ahpd/me` and logs
+ * the answer as JSON.
  */
 
 export const name = 'plugin-connect';
@@ -132,6 +133,10 @@ const open = async (host: PluginHost, act: string, keep: (conn: PluginPeer) => v
   });
 
   await conn.request('initialize', { clientId: CLIENT, protocolVersions: ['0.9.0'] });
+  if (act === 'me') {
+    host.log(`plugin-connect me ${JSON.stringify(await conn.request('x-ahpd/me', {}))}`);
+    return;
+  }
   /*
    * A session this host refuses is the end of this run: there is no session to
    * subscribe to and no turn to send, and the refusal is already a line.
