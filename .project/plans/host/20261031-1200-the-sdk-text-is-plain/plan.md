@@ -65,7 +65,8 @@ initialize(locale) -> context.locales -> rootState / initialize meta
 | The first slice is the new session form and the sdk's titles and descriptions | Softov, 2026-10-31: "Form and descriptions" | 02, 03 |
 | The rules and the terms go in a docs page | Softov, 2026-10-31: "A docs page" | 01 |
 | Softov reads each rewritten string before it is committed | Softov, 2026-10-31: "Softov reads each string" | 01, 02, 03 |
-| The review is part of each slice, not one pass before all of them | (defaulted: each slice changes the strings it serves) | - |
+| Softov reads all the new strings of tasks 02 and 03 in one list, before any code | Softov, 2026-10-31: "One pass before any code" | 01 |
+| The list is `.project/research/sdk-plain-text-strings.md`, and tasks 02 and 03 copy the approved texts from it | (defaulted: one file to read, and a research note is where a working list goes) | 01, 02, 03 |
 | Refusals, the server's commands, the plugins' texts and the CLI output come in later plans | (defaulted: the first slice is form and descriptions) | - |
 | A command's texts are at `methods.<method>.title` and `.description`; a channel's at `channels.<scheme>`; a scheme's at `schemes.<scheme>` | (defaulted: the field path of the list the text is in) | 03 |
 | A records domain names its put and remove commands with whole sentences, and one that gives none gets "Save a record" and "Remove a record" | (defaulted: the brief's rule "Do not make a sentence from translated parts") | 03 |
@@ -83,7 +84,7 @@ initialize(locale) -> context.locales -> rootState / initialize meta
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The rules and the terms are written](task-01-the-rules-and-the-terms-are-written.md) | todo | - |
+| [01 - The rules, the terms and the strings are written](task-01-the-rules-and-the-terms-are-written.md) | todo | - |
 | [02 - The new session form reads plain](task-02-the-new-session-form-reads-plain.md) | todo | 01 |
 | [03 - The sdk's lists come in the locale](task-03-the-sdks-lists-come-in-the-locale.md) | todo | 01 |
 
@@ -91,7 +92,7 @@ initialize(locale) -> context.locales -> rootState / initialize meta
 
 - A client breaks when it matches a changed title as text.
 - The clients match a method by its name, and task 03 checks each of them.
-- The rewrite of 26 descriptions and the form waits on Softov's reading, so the tasks are slow by design.
+- No code starts until Softov approves the whole list of the form and the 26 descriptions.
 
 ## Resume state
 
@@ -103,6 +104,7 @@ initialize(locale) -> context.locales -> rootState / initialize meta
 ## Final verification checklist
 
 - [ ] `docs/sdk/TEXT.md` has the rules and a term table, and Softov approved it.
+- [ ] Softov approved the list of new strings before task 02 and task 03 started.
 - [ ] The new session form in ahpw reads plain in English, Portuguese and Spanish.
 - [ ] `ahpd.methods`, `ahpd.channels` and `ahpd.resourceProviders` come in Portuguese for a client that sends `pt`.
 - [ ] No title or description in the sdk is built from parts.

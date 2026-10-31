@@ -24,17 +24,12 @@ The keys and the values the form sends do not change.
 
 ## Steps
 
-1. List each title, description and enum label of the form with its key, its English and its Portuguese.
-2. Read the code behind each field before you rewrite its text.
-3. Rewrite each English text with the rules and the terms of `TEXT.md`.
-4. Translate each new English text into Portuguese and Spanish by its meaning.
-5. Show the list, old and new, to Softov, and change it until he approves each string.
-6. Put the approved texts in the code and in both catalogs, in one commit.
-7. Update each test that names one of the old texts.
+1. Take the approved texts of the form from the list in the research note.
+2. Put them in the code and in both catalogs, in one commit.
+3. Update each test that names one of the old texts.
 
 ## Validation
 
-- Softov approves each string.
 - `pnpm vitest run packages/sdk/test` passes.
 - `pnpm typecheck` is clean.
 - By hand, open the new session form in ahpw in English and in Portuguese.

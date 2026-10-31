@@ -40,24 +40,20 @@ A plugin's own texts stay in English until the plugin slice.
 
 ## Steps
 
-1. List each `describe()` text of the sdk with its command, channel or scheme, and its English.
-2. Read the code behind each one before you rewrite its text.
-3. Rewrite each English text with the rules and the terms of `TEXT.md`.
-4. Add optional whole texts for put and remove to the records, and use them in `recordsMethods`.
-5. Give each records domain of the sdk its own whole texts.
-6. Make "Save a record" and "Remove a record" the texts of a domain that gives none.
-7. Translate each new English text into Portuguese and Spanish by its meaning.
-8. Show the list, old and new, to Softov, and change it until he approves each string.
-9. Give each list a `locale` parameter, and look up each text at the paths of the plan's *Answers*.
-10. Pass the locale of the connection from `rootState` and `initialize`.
-11. Check that ahpw, ahpapp and ahpc match each command by its name, not by its title.
-12. Add a test that a client with `pt` gets the Portuguese title of an sdk command.
-13. Add a test that a client with no locale gets the English.
-14. Add a test that a plugin's command keeps its own text.
+1. Take the approved `describe()` texts and their translations from the list in the research note.
+2. Put each English text in its code, and each translation in both catalogs.
+3. Add optional whole texts for put and remove to the records, and use them in `recordsMethods`.
+4. Give each records domain of the sdk its approved whole texts.
+5. Make "Save a record" and "Remove a record" the texts of a domain that gives none.
+6. Give each list a `locale` parameter, and look up each text at the paths of the plan's *Answers*.
+7. Pass the locale of the connection from `rootState` and `initialize`.
+8. Check that ahpw, ahpapp and ahpc match each command by its name, not by its title.
+9. Add a test that a client with `pt` gets the Portuguese title of an sdk command.
+10. Add a test that a client with no locale gets the English.
+11. Add a test that a plugin's command keeps its own text.
 
 ## Validation
 
-- Softov approves each string.
 - `pnpm vitest run packages/sdk/test` passes, with the new cases.
 - `pnpm typecheck` is clean.
 - `rg -n "describe: \(\) => \(\{ title: \`" packages/sdk/src` finds no title built from a variable.
