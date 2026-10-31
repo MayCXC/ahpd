@@ -18,7 +18,10 @@ export const REPO = join(import.meta.dirname, '../../..');
 export const MAIN = 'packages/server/src/main.ts';
 /** A plugin that contributes a backend, which is what lets a run get to its announcement. */
 export const BACKEND = join(import.meta.dirname, 'fixtures', 'plugin-echo');
-/** A directory holding an `npm` that says one line and leaves the code `FAKE_NPM_EXIT` names. */
+/**
+ * A directory holding an `npm` that says one line and leaves the code
+ * `FAKE_NPM_EXIT` names, and the `npm-cli.js` the daemon starts it through.
+ */
 export const FAKE_NPM = join(import.meta.dirname, 'fixtures', 'npm-fake');
 /** A directory holding a `systemctl` that says what it was asked and does what the case names. */
 export const FAKE_SYSTEMCTL = join(import.meta.dirname, 'fixtures', 'systemctl-fake');
@@ -26,6 +29,7 @@ export const FAKE_SYSTEMCTL = join(import.meta.dirname, 'fixtures', 'systemctl-f
 export const NO_REGISTRY = 'http://127.0.0.1:1';
 export const fakeNpm = (code: number): Record<string, string> => ({
   PATH: `${FAKE_NPM}:${process.env['PATH'] ?? ''}`,
+  npm_execpath: join(FAKE_NPM, 'npm-cli.js'),
   npm_config_registry: NO_REGISTRY,
   FAKE_NPM_EXIT: String(code),
 });

@@ -118,13 +118,15 @@ THEN its record holds a named pipe `\\.\pipe\ahpd-<random>` and a random 32-byte
 AND `stop` and `restart` send a JSON line with the key and the signal name through that pipe.
 The reason: Windows cannot send `SIGHUP` or `SIGUSR2`, and its `SIGTERM` is a hard kill.
 
-### Windows runs npm as node
+### npm runs as the daemon's node
 
-WHEN the daemon runs npm on Windows
-THEN it runs `node` with `npm-cli.js`, from `npm_execpath` or from `node_modules/npm/bin` beside node.
+WHEN the daemon runs npm
+THEN it runs its own `node` with `npm-cli.js`, from `npm_execpath` or from beside node.
+AND beside node is `node_modules/npm/bin` on Windows and `../lib/node_modules/npm/bin` on other platforms.
 
-WHEN neither path holds `npm-cli.js`
-THEN it runs npm through the shell, with each argument in double quotes.
+WHEN neither path holds `npm-cli.js`, or the daemon runs under a program that is not node
+THEN on Windows it runs npm through the shell, with each argument in double quotes.
+AND on other platforms it runs `npm` from the `PATH`, with no shell.
 
 ### A remote command needs a token
 

@@ -1,6 +1,6 @@
 ---
 title: The uninstall uses the prefix of the package
-status: todo
+status: implemented
 depends: []
 layer: scripts/install
 refs:

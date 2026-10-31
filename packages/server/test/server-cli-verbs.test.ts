@@ -246,8 +246,7 @@ describe('plugin', () => {
     expect(said.stdout).toContain('plugin');
   });
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('remove says the configuration changed before npm fails', async () => {
     put({ plugins: ['some-plugin'] });
     const said = await cli(['plugin', 'remove', 'some-plugin', '--config-file', config, '--yes'], { env: fakeNpm(1) });
@@ -256,8 +255,7 @@ describe('plugin', () => {
     expect(readFileSync(config, 'utf8')).not.toContain('some-plugin');
   });
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('a failed npm says what failed at the terminal, and npm\'s error only as npm said it', async () => {
     writeFileSync(join(home, 'ahpd', 'package.json'), JSON.stringify({ dependencies: { 'some-plugin': '^1.0.0' } }));
     put({ plugins: ['some-plugin'] });
@@ -275,8 +273,7 @@ describe('plugin', () => {
     }
   }, 30000);
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('update --force installs each package in its own npm call', async () => {
     const dir = join(home, 'ahpd');
     writeFileSync(join(dir, 'package.json'), JSON.stringify({ dependencies: { 'some-plugin': '^1.0.0', 'another-plugin': '^1.0.0' } }));
@@ -292,8 +289,7 @@ describe('plugin', () => {
     ]);
   }, 20000);
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('asks for a restart when an update moved only the sdk', async () => {
     // Every update installs the daemon's own sdk beside the plugins, so a
     // daemon upgraded before its plugins moves the sdk on a call that moves no
@@ -319,8 +315,7 @@ describe('plugin', () => {
     expect(said.stderr).toContain('Restart the daemon to load the change: ahpd restart');
   }, 20000);
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('install --json writes only JSON', async () => {
     const said = await cli(
       ['plugin', 'install', 'some-plugin', '--no-enable', '--json', '--config-file', config],

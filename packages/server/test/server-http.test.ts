@@ -37,6 +37,7 @@ const FAKE_NPM = join(import.meta.dirname, 'fixtures', 'npm-fake');
 const NO_REGISTRY = 'http://127.0.0.1:1';
 const fakeNpm = (extra: Record<string, string> = {}): Record<string, string> => ({
   PATH: `${FAKE_NPM}:${process.env['PATH'] ?? ''}`,
+  npm_execpath: join(FAKE_NPM, 'npm-cli.js'),
   npm_config_registry: NO_REGISTRY,
   ...extra,
 });
@@ -632,8 +633,7 @@ describe('a request signs in', () => {
     expect(asRoot.status).toBe(400);
   }, 30000);
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('runs npm for an install an admin asks for, and names the package', async () => {
     const directory = fileUsers({ path: usersFile });
     await directory.add('root', ['admin']);
@@ -650,8 +650,7 @@ describe('a request signs in', () => {
     expect(await answered.json()).toEqual({ plugins: ['left-pad'] });
   }, 30000);
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('serves a plugin update only to the deployment token, and answers what moved', async () => {
     writeFileSync(join(home, 'ahpd', 'package.json'), JSON.stringify({ dependencies: { 'left-pad': '^1.0.0', 'right-pad': '^1.0.0' } }));
     mkdirSync(join(home, 'ahpd', 'node_modules', 'left-pad'), { recursive: true });
@@ -819,8 +818,7 @@ describe('a request signs in', () => {
     expect(await knocked.text()).toBe('A connection token is required');
   }, 30000);
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('answers while a served install is holding npm', async () => {
     const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret'], fakeNpm({ FAKE_NPM_SLEEP: '2' }));
     const installing = post(`http://127.0.0.1:${String(one.port)}/api/plugin/install`, 'root-secret', { name: ['left-pad'] });
@@ -835,8 +833,7 @@ describe('a request signs in', () => {
     expect((await installing).status).toBe(200);
   }, 30000);
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('runs two served installs one after the other, and names both', async () => {
     const log = join(home, 'npm.log');
     const one = await daemon(
@@ -858,8 +855,7 @@ describe('a request signs in', () => {
     expect(steps).toEqual(['start', 'end', 'start', 'end']);
   }, 30000);
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('keeps npm\'s reason in a served install that fails', async () => {
     const one = await daemon(
       { httpApi: true,plugins: [BACKEND] },
@@ -871,8 +867,7 @@ describe('a request signs in', () => {
     expect((await answered.json() as { message: string }).message).toContain('npm error code E404');
   }, 30000);
 
-  // On Windows the daemon runs the npm beside its own Node, never one off the
-  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  // The stand-in npm is a shell script, which Windows does not run.
   it.skipIf(!posix)('applies a served install at once, with no restart', async () => {
     const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret'], fakeNpm());
     const answered = await post(`http://127.0.0.1:${String(one.port)}/api/plugin/install`, 'root-secret', { name: ['left-pad'] });
