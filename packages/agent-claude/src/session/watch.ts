@@ -65,10 +65,10 @@ export function watchFolders(roots: WatchRoots, onChange: () => void): () => voi
   };
 
   /** One folder watched through the shared wait, or nothing when it cannot be. */
-  const opened = (at: string, recursive: boolean, onName: (name: string | null) => void): FSWatcher | undefined => {
+  const opened = (at: string, recursive: boolean, onName: (name: string | null, event: string) => void): FSWatcher | undefined => {
     if (closed) return undefined;
     let watcher: FSWatcher;
-    try { watcher = watch(at, { recursive }, (_event, name) => onName(name === null ? null : String(name))); }
+    try { watcher = watch(at, { recursive }, (event, name) => onName(name === null ? null : String(name), event)); }
     catch { return undefined; }
     handles.add(watcher);
     // A failed handle takes only itself; an `error` with no listener ends the process.
@@ -102,9 +102,11 @@ export function watchFolders(roots: WatchRoots, onChange: () => void): () => voi
       held.set(name, existsSync(at) ? opened(at, name !== PLUGINS, onName) : undefined);
     };
     const open = (): void => {
-      opened(dir, false, (name) => {
+      opened(dir, false, (name, event) => {
         if (name === null || FILES.has(name)) fire();
-        else if (name === PLUGINS || FOLDERS.includes(name)) {
+        // Only a folder made or removed. Windows also says `change` for a
+        // folder when a file in it is written, and its own watch has that.
+        else if (event === 'rename' && (name === PLUGINS || FOLDERS.includes(name))) {
           folder(name);
           fire();
         }
