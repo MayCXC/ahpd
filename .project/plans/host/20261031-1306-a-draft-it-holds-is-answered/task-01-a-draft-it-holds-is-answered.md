@@ -1,6 +1,6 @@
 ---
 title: A draft the chat already holds is answered
-status: todo
+status: done
 depends: []
 layer: host
 refs:
@@ -33,3 +33,6 @@ A draft set to the one the chat already holds is answered to the client that sen
 - `pnpm run typecheck` and `pnpm run boundary` report no errors.
 
 ## Resume
+
+Done 2026-10-31.
+Every step is built, and the touched suites, the type check and the boundary check pass.
