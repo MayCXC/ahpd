@@ -25,7 +25,7 @@ refs:
   - "[code://packages/sdk/test/ahp-test-cases.test.ts#L481](../../../../packages/sdk/test/ahp-test-cases.test.ts#L481) - `HOST_REFUSED`, the protocol cases the host refuses, with the reason"
   - "[code://docs/sdk/AHP.md#L727-L755](../../../../docs/sdk/AHP.md#L727-L755) - \"An action that changes nothing is not a change\""
   - https://github.com/microsoft/agent-host-protocol/blob/2c37a04f/docs/specification/chat-channel.md - a removal with no matching id and kind SHOULD be rejected, and an absent kind means `queued`
-  - file:///github/ahpd/.project/briefs/a-client-action-always-gets-an-answer.md - the brief this plan covers
+  - git://817615bc:.project/briefs/a-client-action-always-gets-an-answer.md - the brief this plan covers
   - file:///github/ahpc/.project/plans/cli/20261030-0802-a-dispatch-waits-for-the-hosts-answer/plan.md - the ahpc plan that waits for this answer
 ---
 
@@ -35,7 +35,7 @@ A client that removes a pending message gets an answer, and so does a client tha
 A removal of a message the chat does not hold is refused with a reason.
 A flag set again is echoed to its sender only, so the sender drops its pending action and no other client hears it.
 ahpc then exits with the host's answer, not after a 10-second wait.
-The brief is [a-client-action-always-gets-an-answer.md](../../../briefs/a-client-action-always-gets-an-answer.md).
+The brief is `git://817615bc:.project/briefs/a-client-action-always-gets-an-answer.md`.
 
 ## Reconnaissance
 

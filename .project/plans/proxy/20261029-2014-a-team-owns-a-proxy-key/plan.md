@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
 refs:
-  - file:///github/ahpd/.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, part 2
+  - git://817615bc:.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, part 2
   - git://97957653 - the commit of `main` the facts were checked at
   - "[code://packages/sdk/src/types/users.ts#L299-L357](../../../../packages/sdk/src/types/users.ts#L299-L357) - `TokenRecord`, whose `user` becomes one of `user` and `team`"
   - "[code://packages/sdk/src/types/users.ts#L448-L458](../../../../packages/sdk/src/types/users.ts#L448-L458) - `Users.verify`, which answers a person"

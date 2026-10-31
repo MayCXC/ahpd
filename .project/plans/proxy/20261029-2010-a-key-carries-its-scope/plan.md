@@ -6,7 +6,7 @@ priority: high
 created: 2026-10-29
 revalidated: 2026-10-29
 refs:
-  - file:///github/ahpd/.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, part 1
+  - git://817615bc:.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, part 1
   - git://5e2b7003 - the commit of `main` the facts were checked at
   - "[code://packages/sdk/src/types/users.ts#L271-L299](../../../../packages/sdk/src/types/users.ts#L271-L299) - `TokenRecord` and `MintedToken`, which get `scope`"
   - "[code://packages/sdk/src/types/users.ts#L40-L130](../../../../packages/sdk/src/types/users.ts#L40-L130) - `Principal`, which gets the scope of its key"

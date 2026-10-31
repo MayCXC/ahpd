@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
 refs:
-  - file:///github/ahpd/.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, parts 4 and 5
+  - git://817615bc:.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, parts 4 and 5
   - git://2d21e7bd - the commit of `main` the facts were checked at
   - "[code://packages/sdk/src/types/usage.ts#L36-L63](../../../../packages/sdk/src/types/usage.ts#L36-L63) - `UsageBase`, which gets `token` and `meta`"
   - "[code://packages/sdk/src/types/users.ts#L290-L337](../../../../packages/sdk/src/types/users.ts#L290-L337) - `TokenRecord`, which gets `meta`"

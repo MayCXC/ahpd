@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
 refs:
-  - file:///github/ahpd/.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, part 3
+  - git://817615bc:.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, part 3
   - git://5e2b7003 - the commit of `main` the facts were checked at
   - "[code://packages/sdk/src/types/users.ts#L271-L299](../../../../packages/sdk/src/types/users.ts#L271-L299) - `TokenRecord`, which gets `limits`"
   - "[code://packages/sdk/src/types/policies.ts#L25-L100](../../../../packages/sdk/src/types/policies.ts#L25-L100) - `PolicyScope`, `PolicyLimit` and `Policy`"

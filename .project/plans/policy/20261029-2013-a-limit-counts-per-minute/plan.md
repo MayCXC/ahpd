@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-29
 revalidated: 2026-10-29
 refs:
-  - file:///github/ahpd/.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, part 3, the rpm and tpm half
+  - git://817615bc:.project/briefs/a-proxy-key-names-what-it-charges.md - the brief this plan covers, part 3, the rpm and tpm half
   - git://3f4f6a02 - the commit of `main` the facts were checked at
   - "[code://packages/sdk/src/types/policies.ts#L65-L66](../../../../packages/sdk/src/types/policies.ts#L65-L66) - `Period`, which gets `minute`"
   - "[code://packages/sdk/src/access/policies.ts#L44-L52](../../../../packages/sdk/src/access/policies.ts#L44-L52) - `PERIODS`, which the policy scheme lists to a client"

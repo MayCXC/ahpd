@@ -8,7 +8,7 @@ revalidated: 2026-10-28
 requires:
   - plans/plugin/71-a-connector-signs-in-with-its-provider/plan.md
 refs:
-  - file:///github/ahpd/.project/briefs/a-connector-lists-its-models.md - the brief this plan covers, never committed
+  - git://817615bc:.project/briefs/a-connector-lists-its-models.md - the brief this plan covers
   - git://d6b282f9 - the commit of `origin/main` this plan branches from
   - "[code://packages/server/src/proxy/catalog.ts#L109-L163](../../../../packages/server/src/proxy/catalog.ts#L109-L163) - the catalog, which gets `listOf`"
   - "[code://packages/server/src/proxy/listener.ts#L560-L606](../../../../packages/server/src/proxy/listener.ts#L560-L606) - `firstCandidate`, lifted out of `GET /v1/models`, and `connectorModels`"
