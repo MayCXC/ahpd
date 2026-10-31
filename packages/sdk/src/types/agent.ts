@@ -5,7 +5,7 @@ import type { CommandShell } from '../access/commandautoapprover.js';
 import type { Bag } from './common.js';
 import type { FileEdit } from './changes.js';
 import type { WireTurn } from './wire.js';
-import type { Emit, PlanUpdate, Session, SubagentChat, SubagentRequest } from './session.js';
+import type { Emit, Handed, PlanUpdate, Session, SubagentChat, SubagentRequest } from './session.js';
 import type { ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { Account, Offered } from './probe.js';
 import type { ResourceStore } from './resources.js';
@@ -438,6 +438,18 @@ export interface Start {
   seedModels?: { id: string; name: string }[];
   /** Where state actions go. The host routes them to the right channel. */
   emit: Emit;
+  /**
+   * The client's action the host handed this backend, for a backend that
+   * answers it in a later turn of the event loop (`Handed`).
+   *
+   * `action` is what the backend will say back. The host finds the client's
+   * dispatch it answers as it finds the one an echo answers: the dispatch
+   * being applied, when `action` is of its kind and about its turn, or a turn
+   * or a queued message handed over after the host waited on a machine or a
+   * policy check, by the id `action` names. Undefined when `action` answers
+   * no client, as for a call the host makes of its own accord.
+   */
+  handed?: (action: Bag) => Handed | undefined;
   /**
    * Ask the host for a read-only chat for one of this backend's tool calls.
    *
