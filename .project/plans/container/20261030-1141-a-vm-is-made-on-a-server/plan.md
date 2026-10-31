@@ -130,7 +130,7 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 ## Resume state
 
 - **Done so far:** tasks 02, 04 and 07, and the code of tasks 03, 05 and 06. These tasks were tasks 08 to 13 of p8 until 2026-10-30.
-- **Next action:** the PR for the code and the docs. The checks by hand of tasks 03 and 05 on dev02 wait on task 01, and task 01 waits on Softov's hand in [pending/vm-01-dev02-libvirt.md](../../../pending/vm-01-dev02-libvirt.md). The check by hand of task 06 waits until Softov names a Proxmox node.
+- **Next action:** the checks by hand. The code and the docs merged in #162 (`8bc9f19c`). The checks by hand of tasks 03 and 05 on dev02 wait on task 01, and task 01 waits on Softov's hand in [pending/vm-01-dev02-libvirt.md](../../../pending/vm-01-dev02-libvirt.md). The check by hand of task 06 waits until Softov names a Proxmox node.
 - **Open questions:** none.
 - **Watch out for:** p3's `hashOf` is the tag, so a template built before p3 lands has no name. A libvirt on this host could share the folder by virtiofs instead of a clone, which is left open, see [deferred.md](deferred.md).
 

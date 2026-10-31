@@ -10,14 +10,15 @@ Current progress and pending items only, as of 2026-10-30.
 ## Main
 
 - The last release is 0.14.0 (`v0.14.0`). The CHANGELOG holds 0.14.1 as unreleased.
-- On 2026-10-30, six PRs merged on green CI, Windows included:
+- On 2026-10-30, seven PRs merged on green CI, Windows included:
   - #156: a dispatch that throws is refused.
   - #157: a targeted token reaches only its server.
   - #159: a token reaches only the sessions its connection watches (the head of #158).
   - #160: a record agent runs in a machine.
   - #161: only the echo carries the origin.
   - #151: container/05 p8, a profile's machines on another server's Docker.
-- The last code merge on main is #151 (`f3495654`).
+  - #162: the VM plan, a VM made by libvirt or Proxmox. Nothing has run on a real hypervisor yet.
+- The last code merge on main is #162 (`8bc9f19c`).
 - #158 was based on the #157 branch, so its merge went into that branch and never reached main. #159 took the same head into main. Check `baseRefName` before you merge a stacked fork PR.
 - Disposing a session that this process does not hold leaves its disposable machine behind. The `held === undefined` branch in `lifecycle.ts` never calls `leaveForgotten`. It is on main from before p8: [problems/a-disposed-session-not-held-leaves-its-machine.md](../problems/a-disposed-session-not-held-leaves-its-machine.md).
 - The README is rewritten for people who run ahpd (`a22c1934`). The brief it came from is `ahp-review/ahpd-review/ahpd-readme-2026-10-27/`.
@@ -27,7 +28,7 @@ Current progress and pending items only, as of 2026-10-30.
 - Code goes through a PR on `softov/ahpd`. Plan-only commits go to main. Run `gh pr checks` with `-R softov/ahpd` outside a repo.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by every test run. Restore it with `git checkout --` and never print it.
 - On this machine, two Docker tests time out: `computer-devcontainer` and `computer-disposable`. They time out on main too, and CI passes them.
-- The worktrees in `/github/ahpd.worktrees/` are `build-agents-fda88f4a` (the old container/05 p8) and `review-maycxc-union`. The second is merged and waits for Softov's word to remove. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
+- The worktrees in `/github/ahpd.worktrees/` are `build-agents-fda88f4a` (the old container/05 p8), `review-maycxc-union` and `vm`. The last two are merged, and they wait for Softov's word to remove. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
 - The local branch `fork/maycxc-1248-1303-1334` is merged.
 
 ## Waiting for Softov
@@ -47,7 +48,8 @@ Current progress and pending items only, as of 2026-10-30.
 - proxy/04: icon curation, and [pending/proxy-04-move-config-dev.md](../pending/proxy-04-move-config-dev.md).
 - plugin/58: task 05 waits for [pending/plugin-58-icon-curation.md](../pending/plugin-58-icon-curation.md).
 - plugin/50: [pending/plugin-50-first-pieces.md](../pending/plugin-50-first-pieces.md).
-- The VM plan, task 01: [pending/vm-01-dev02-libvirt.md](../pending/vm-01-dev02-libvirt.md).
+- The VM plan, task 01: [pending/vm-01-dev02-libvirt.md](../pending/vm-01-dev02-libvirt.md). The checks by hand of tasks 03 and 05 follow it.
+- The VM plan, task 06: [pending/vm-06-proxmox-node.md](../pending/vm-06-proxmox-node.md), when a Proxmox node is named.
 - The `active` plans with all tasks implemented wait for his review. Each stays `active` until he says his review is done.
 - Three `active` plans look ready to close on his word: host/83, host/99 and plugin/69. The plan host/83 has p1 to p5 built, and host/99 has every task done. PR #104 merged plugin/69 tasks 05 and 06, which are still `implemented`.
 - plugin/71 has no `implemented.md`, though its tasks are implemented.
@@ -56,7 +58,7 @@ Current progress and pending items only, as of 2026-10-30.
 
 ## Next builds
 
-- The VM plan `20261030-1141-a-vm-is-made-on-a-server`, the last part of container/05 p8.
+- The VM plan `20261030-1141-a-vm-is-made-on-a-server` has its code merged. It waits on the checks by hand above.
 - container/05 p10 (task 03 next).
 - The ahpw Connect button for plugin/71 is ahpw plan plugins/09, planned.
 
