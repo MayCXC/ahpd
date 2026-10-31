@@ -67,7 +67,7 @@ chat/turnResume -> chatactions.ts: last part is a resumable error? -> Claude ses
 | What | Source | Task |
 | --- | --- | --- |
 | One plan per agent, each copying the pi logic | Softov, 2026-10-31: "one plan per agent... pi first.. brief for claude, cofold and acp copying logic" | - |
-| A resume cuts back to the end of the turn before, with `resumeSessionAt`, and sends the prompt again; a conversation's first turn starts over | (defaulted: the cut a login move already makes in `moveOn`, so the failed reply leaves the context as pi's does) | 02 |
+| A resume cuts back to the end of the turn before, with `resumeSessionAt`, and sends the prompt again; a conversation's first turn starts over | Softov, 2026-10-31: "go back to the turn before the failure" | 02 |
 | Only a failure a `result` reports is resumable, and only when `cutOf` finds a cut | (defaulted: a turn refused before the CLI, a CLI that is gone and a refused login have nothing to run again on) | 01 |
 | A turn read back after a restart is not resumable | (defaulted: [`code://packages/agent-claude/src/transcript.ts#L51-L68`](../../../../packages/agent-claude/src/transcript.ts#L51-L68) reads no turn back as failed) | - |
 | The host's check that the last part is a resumable error is in this plan | (defaulted: it breaks the host's Claude resume test until Claude marks its errors, so it goes with that change) | 03 |
@@ -101,8 +101,7 @@ chat/turnResume -> chatactions.ts: last part is a resumable error? -> Claude ses
 
 - **Done so far:** drafted 2026-10-31.
 - **Next action:** Softov reviews the draft; then [task-01-a-failed-model-call-is-resumable.md](task-01-a-failed-model-call-is-resumable.md).
-- **Open questions:**
-  1. Cut back to the turn before, and the turn's tool calls run again. Or cut at the failed turn's last entry, and send a short "continue" prompt. Proposed: the turn before, because `moveOn` already makes and tests that cut.
+- **Open questions:** none.
 - **Watch out for:** the cofold plan and the push build do not touch these files. Check `git log origin/main -- packages/agent-claude/src/session` before task 01.
 
 ## Final verification checklist
