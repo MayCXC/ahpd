@@ -67,6 +67,22 @@ jobs:
           done
           echo "Releasing $tagged."
 
+      # The npm dist-tag every package is staged under. A pre-release such as
+      # 0.15.0-rc.1 goes to `next`, so `npm i @ahpd/sdk` keeps installing the
+      # last stable version and testers ask for `@next`. Anything else goes to
+      # `latest`. npm refuses a pre-release staged without a tag, and one given
+      # `latest` would be what everybody installs.
+      - name: The channel the version goes to
+        run: |
+          set -eu
+          version=$(node -p "require('./packages/sdk/package.json').version")
+          case "$version" in
+            *-*) channel=next ;;
+            *) channel=latest ;;
+          esac
+          echo "CHANNEL=$channel" >> "$GITHUB_ENV"
+          echo "$version goes to $channel."
+
       # The same checks CI runs. A release is the one build where a green tick
       # somewhere else is not good enough.
       - run: pnpm boundary
@@ -144,7 +160,7 @@ jobs:
               failed="$failed$full@$version "
               continue
             fi
-            said=$(npm stage publish "${{ runner.temp }}/$stem-$version.tgz" --provenance --access public 2>&1) && code=0 || code=$?
+            said=$(npm stage publish "${{ runner.temp }}/$stem-$version.tgz" --provenance --access public --tag "$CHANNEL" 2>&1) && code=0 || code=$?
             echo "$said"
             if [ "$code" = "0" ]; then continue; fi
             # npm answers E409 "Cannot stage previously published version" for a
@@ -166,7 +182,7 @@ jobs:
       - name: Say what is waiting
         if: ${{ inputs.dry_run != true }}
         run: |
-          echo "Staged. Approve these in order, sdk first:"
+          echo "Staged under $CHANNEL. Approve these in order, sdk first:"
           for package in $PUBLISHED; do
             echo "  https://www.npmjs.com/package/$(node -p "require('./packages/$package/package.json').name")"
           done
@@ -183,7 +199,7 @@ jobs:
           for package in $PUBLISHED; do
             name=$(node -p "require('./packages/$package/package.json').name.replace('@','').replace('/','-')")
             version=$(node -p "require('./packages/$package/package.json').version")
-            said=$(npm stage publish "${{ runner.temp }}/$name-$version.tgz" --dry-run --access public 2>&1) && code=0 || code=$?
+            said=$(npm stage publish "${{ runner.temp }}/$name-$version.tgz" --dry-run --access public --tag "$CHANNEL" 2>&1) && code=0 || code=$?
             echo "$said"
             if [ "$code" = "0" ]; then continue; fi
             if printf '%s' "$said" | grep -qE 'E409|previously published|cannot publish over|already (been )?(staged|published)|EPUBLISHCONFLICT'; then
