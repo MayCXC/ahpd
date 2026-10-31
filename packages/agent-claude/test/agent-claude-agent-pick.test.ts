@@ -209,14 +209,15 @@ describe('the name behind a uri', () => {
     expect(agentNameOf(pathToFileURL(join(dir, 'gone.MD')).href)).toBe('gone');
   });
 
-  it('reads no folder or oversized file, and names it by its file name', () => {
+  it('reads no folder, and only the head of a huge file', () => {
     // A folder is not a regular file, as a device is not, and no two systems
     // spell a device the same way.
     const dir = mkdtempSync(join(tmpdir(), 'ahpd-name-'));
     mkdirSync(join(dir, 'zero'));
     expect(agentNameOf(uriOf(join(dir, 'zero')))).toBe('zero');
+    // The frontmatter is at the top, so the first 64 KB are enough for it.
     writeFileSync(join(dir, 'huge.md'), `---\nname: inside\n---\n${'x'.repeat(70 * 1024)}`);
-    expect(agentNameOf(uriOf(join(dir, 'huge.md')))).toBe('huge');
+    expect(agentNameOf(uriOf(join(dir, 'huge.md')))).toBe('inside');
   });
 
   it('is nothing for an internal uri whose escape is broken', () => {

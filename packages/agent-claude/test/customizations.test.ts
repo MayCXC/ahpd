@@ -1,9 +1,10 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { dirname, join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import { uriOf } from '@ahpd/sdk';
 import { customizationsOf } from '../src/session.js';
+import { diskOf } from '../src/session/disk.js';
 import type { Bag } from '../../sdk/src/types/common.js';
 
 /*
@@ -82,13 +83,14 @@ describe('where a customization came from', () => {
     expect(out.map((one) => one.uri)).toEqual(['cc-plugin-agents-md@builtin', 'cc-plugin-telemetry@builtin', '/plugins/acme']);
   });
 
-  it('answers exactly the three directory containers when the SDK reported no plugins', () => {
+  it('answers the three builtin containers when there is no disk and the SDK reported no plugins', () => {
     const out = customizationsOf({
       commands: [{ name: 'review', description: 'Review the diff' }],
       agents: [{ name: 'helper', description: 'Helps' }],
     }, [], [{ name: 'writing', description: 'How to write' }]);
-    expect(out.map((one) => one.type)).toEqual(['directory', 'directory', 'directory']);
-    expect(out.map((one) => one.name)).toEqual(['skills', 'commands', 'agents']);
+    expect(out.map((one) => one.id)).toEqual(['directory:builtin:skills', 'directory:builtin:commands', 'directory:builtin:agents']);
+    expect(out.map((one) => one.contents)).toEqual(['skill', 'prompt', 'agent']);
+    expect(out.every((one) => one.name === 'builtin' && one.writable === false)).toBe(true);
     expect(byType(out, 'plugin')).toBeUndefined();
   });
 
@@ -99,7 +101,8 @@ describe('where a customization came from', () => {
     ], undefined, [PLUGIN]);
     const plugin = byType(out, 'plugin');
     expect(children(plugin).map((one) => one.name)).toEqual(['acme-skill']);
-    expect(children(plugin)[0]).toMatchObject({ type: 'skill', uri: '/plugins/acme/skills/acme-skill', description: '(acme) A plugin skill' });
+    // `/plugins/acme` is not on this disk, so the skill has no file to name.
+    expect(children(plugin)[0]).toMatchObject({ type: 'skill', uri: 'claude-internal:/skill/acme-skill', description: '(acme) A plugin skill' });
     const directory = byType(out, 'directory');
     expect(children(directory).map((one) => one.name)).toEqual(['user-skill']);
     expect(children(directory).map((one) => one.name)).not.toContain('acme-skill');
@@ -199,7 +202,7 @@ describe('where an agent lives', () => {
   it('keeps the file uri for an agent a person wrote in their own agents folder', () => {
     const { home, restore } = withHome(['Plan']);
     try {
-      const out = customizationsOf({ agents: [{ name: 'Plan' }] }, []);
+      const out = customizationsOf({ agents: [{ name: 'Plan' }] }, [], [], undefined, [], undefined, [], diskOf({ configDir: join(home, '.claude') }));
       expect(agentNamed(out, 'Plan')).toMatchObject({
         type: 'agent', uri: uriOf(join(home, '.claude', 'agents', 'Plan.md')),
       });
@@ -229,5 +232,137 @@ describe('where an agent lives', () => {
       expect(agentNamed(out, 'scribe')).toMatchObject({ uri: join(root, 'agents', 'scribe.md') });
       expect(agentNamed(out, 'ghost')).toMatchObject({ uri: 'claude-internal:/agent/ghost' });
     } finally { restore(); rmSync(root, { recursive: true, force: true }); }
+  });
+});
+
+describe('where each entry\'s file is', () => {
+  const made: string[] = [];
+  afterEach(() => { for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true }); });
+
+  /** A config directory, a working directory and a managed directory, with each file of `files` written under the three. */
+  function roots(files: Record<string, string>): { root: string; config: string; work: string; managed: string } {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-scopes-'));
+    made.push(root);
+    for (const [path, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(root, path)), { recursive: true });
+      writeFileSync(join(root, path), text);
+    }
+    return { root, config: join(root, 'config'), work: join(root, 'work'), managed: join(root, 'managed') };
+  }
+  const skill = (name: string): string => `---\nname: ${name}\n---\n`;
+  const dir = (out: Bag[], id: string): Bag | undefined => out.find((one) => one.id === id);
+  const leaf = (out: Bag[], id: string, name: string): Bag | undefined => children(dir(out, id)).find((one) => one.name === name);
+
+  it('gives a skill its SKILL.md in the directory of its scope, managed first', () => {
+    const { config, work, managed } = roots({
+      'managed/.claude/skills/policy/SKILL.md': skill('policy'),
+      'config/skills/policy/SKILL.md': skill('policy'),
+      'config/skills/writing/SKILL.md': skill('writing'),
+      'work/.claude/skills/build/SKILL.md': skill('build'),
+      'work/.claude/skills/writing/SKILL.md': skill('writing'),
+    });
+    const out = customizationsOf({ commands: [{ name: 'writing' }, { name: 'build' }, { name: 'policy' }] }, [],
+      [{ name: 'policy' }, { name: 'writing' }, { name: 'build' }], undefined, [], undefined, [],
+      diskOf({ configDir: config, cwd: work, managedDir: managed }));
+    expect(leaf(out, 'directory:managed:skills', 'policy')).toMatchObject({ uri: uriOf(join(managed, '.claude', 'skills', 'policy', 'SKILL.md')) });
+    expect(dir(out, 'directory:managed:skills')).toMatchObject({ name: 'managed', writable: false });
+    expect(leaf(out, 'directory:user:skills', 'writing')).toMatchObject({ uri: uriOf(join(config, 'skills', 'writing', 'SKILL.md')) });
+    expect(leaf(out, 'directory:project:skills', 'build')).toMatchObject({ uri: uriOf(join(work, '.claude', 'skills', 'build', 'SKILL.md')) });
+    // One name in two scopes is listed once, in the scope the CLI runs it from.
+    expect(children(dir(out, 'directory:user:skills')).map((one) => one.name)).toEqual(['writing']);
+    expect(children(dir(out, 'directory:project:skills')).map((one) => one.name)).toEqual(['build']);
+  });
+
+  it('matches a synced skill by its namespaced name and by its bare one', () => {
+    const { config } = roots({
+      'config/skills/synced/acct/manifest.json': JSON.stringify({ skills: [{ name: 'docs' }, { name: 'pdf' }] }),
+      'config/skills/synced/acct/docs/SKILL.md': skill('docs'),
+      'config/skills/synced/acct/pdf/SKILL.md': skill('pdf'),
+    });
+    const out = customizationsOf({}, [], [{ name: 'anthropic-skills:docs' }, { name: 'pdf' }], undefined, [], undefined, [], diskOf({ configDir: config }));
+    expect(dir(out, 'directory:synced:skills')).toMatchObject({ name: 'synced', writable: false, uri: uriOf(join(config, 'skills', 'synced')) });
+    expect(children(dir(out, 'directory:synced:skills')).map((one) => [one.name, one.uri])).toEqual([
+      ['anthropic-skills:docs', uriOf(join(config, 'skills', 'synced', 'acct', 'docs', 'SKILL.md'))],
+      ['pdf', uriOf(join(config, 'skills', 'synced', 'acct', 'pdf', 'SKILL.md'))],
+    ]);
+  });
+
+  it('puts a skill, a command and an agent with no file in the builtin directories', () => {
+    const { config } = roots({});
+    const out = customizationsOf({ commands: [{ name: 'code-review' }, { name: 'compact' }], agents: [{ name: 'Explore' }] }, [],
+      [{ name: 'code-review' }], undefined, [], undefined, [], diskOf({ configDir: config }));
+    expect(dir(out, 'directory:builtin:skills')).toMatchObject({ uri: 'claude-internal:/skills', name: 'builtin', writable: false, contents: 'skill' });
+    expect(leaf(out, 'directory:builtin:skills', 'code-review')).toMatchObject({ uri: 'claude-internal:/skill/code-review' });
+    expect(leaf(out, 'directory:builtin:commands', 'compact')).toMatchObject({ uri: 'claude-internal:/command/compact' });
+    expect(leaf(out, 'directory:builtin:agents', 'Explore')).toMatchObject({ uri: 'claude-internal:/agent/Explore' });
+  });
+
+  it('gives a plugin skill its SKILL.md when the plugin has it', () => {
+    const { root } = roots({ 'acme/skills/lint/SKILL.md': skill('lint') });
+    const out = customizationsOf({}, [], [{ name: 'acme:lint' }, { name: 'acme:gone' }], undefined, [{ name: 'acme', path: join(root, 'acme') }]);
+    const plugin = byType(out, 'plugin');
+    expect(children(plugin).map((one) => [one.name, one.uri])).toEqual([
+      ['lint', `${join(root, 'acme')}/skills/lint/SKILL.md`],
+      ['gone', 'claude-internal:/skill/gone'],
+    ]);
+  });
+
+  it('gives a command its file, and leaves out a command a skill has the name of', () => {
+    const { config } = roots({
+      'config/commands/review.md': '# Review\n',
+      'config/skills/writing/SKILL.md': skill('writing'),
+    });
+    const out = customizationsOf({ commands: [{ name: 'review' }, { name: 'writing' }] }, [], [{ name: 'writing' }],
+      undefined, [], undefined, [], diskOf({ configDir: config }));
+    expect(children(dir(out, 'directory:user:commands'))).toEqual([
+      { type: 'prompt', id: 'command:review', name: 'review', uri: uriOf(join(config, 'commands', 'review.md')), enabled: true },
+    ]);
+    expect(leaf(out, 'directory:user:skills', 'writing')).toBeDefined();
+  });
+
+  it('leaves out a file the CLI did not report', () => {
+    const { config } = roots({ 'config/skills/unloaded/SKILL.md': skill('unloaded'), 'config/agents/idle.md': skill('idle') });
+    const out = customizationsOf({}, [], [], undefined, [], undefined, [], diskOf({ configDir: config }));
+    expect(out.flatMap((one) => children(one)).filter((one) => one.type !== 'rule')).toEqual([]);
+  });
+
+  it('sends the writable directories empty too, the project ones first, at their real paths', () => {
+    const { config, work } = roots({});
+    const out = customizationsOf({}, [], [], undefined, [], undefined, [], diskOf({ configDir: config, cwd: work }));
+    expect(out.map((one) => [one.id, one.uri, one.name, one.writable])).toEqual([
+      ['directory:project:agents', uriOf(join(work, '.claude', 'agents')), 'agents', true],
+      ['directory:project:skills', uriOf(join(work, '.claude', 'skills')), 'skills', true],
+      ['directory:project:commands', uriOf(join(work, '.claude', 'commands')), 'commands', true],
+      ['directory:project:rules', uriOf(join(work, '.claude', 'rules')), 'rules', true],
+      ['directory:user:agents', uriOf(join(config, 'agents')), 'agents', true],
+      ['directory:user:skills', uriOf(join(config, 'skills')), 'skills', true],
+      ['directory:user:commands', uriOf(join(config, 'commands')), 'commands', true],
+      ['directory:user:rules', uriOf(join(config, 'rules')), 'rules', true],
+    ]);
+    // The read-only ones are sent only with something in them.
+    expect(dir(out, 'directory:managed:skills')).toBeUndefined();
+    expect(dir(out, 'directory:synced:skills')).toBeUndefined();
+  });
+
+  it('sends no project directories for a session with no working directory', () => {
+    const { config } = roots({});
+    const out = customizationsOf({}, [], [], undefined, [], undefined, [], diskOf({ configDir: config }));
+    expect(out.map((one) => one.id)).toEqual(['directory:user:agents', 'directory:user:skills', 'directory:user:commands', 'directory:user:rules']);
+  });
+
+  it('lists the memory files and the rules of each scope', () => {
+    const { config, work } = roots({
+      'config/CLAUDE.md': '# Me\n',
+      'work/CLAUDE.md': '# Project\n',
+      'work/.claude/rules/api.md': '---\ndescription: The api\npaths:\n  - src/api/**\n---\n',
+    });
+    const out = customizationsOf({}, [], [], undefined, [], undefined, [], diskOf({ configDir: config, cwd: work }));
+    expect(children(dir(out, 'directory:user:rules'))).toEqual([
+      { type: 'rule', id: `rule:user:${join(config, 'CLAUDE.md')}`, uri: uriOf(join(config, 'CLAUDE.md')), name: 'CLAUDE.md', enabled: true, alwaysApply: true },
+    ]);
+    expect(children(dir(out, 'directory:project:rules'))).toEqual([
+      { type: 'rule', id: `rule:project:${join(work, 'CLAUDE.md')}`, uri: uriOf(join(work, 'CLAUDE.md')), name: 'CLAUDE.md', enabled: true, alwaysApply: true },
+      { type: 'rule', id: `rule:project:${join(work, '.claude', 'rules', 'api.md')}`, uri: uriOf(join(work, '.claude', 'rules', 'api.md')), name: 'api.md', enabled: true, description: 'The api', globs: ['src/api/**'] },
+    ]);
   });
 });

@@ -1,6 +1,6 @@
 ---
 title: Each entry names its file
-status: todo
+status: implemented
 depends:
   - task-01-the-disk-read-finds-each-file.md
 layer: agent-claude

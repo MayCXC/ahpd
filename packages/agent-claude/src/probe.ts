@@ -1,5 +1,6 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { customizationsOf, EFFORT_LABELS, EFFORTS } from './session.js';
+import { configDirOf, diskOf, managedDirOf } from './session/disk.js';
 import type { Account, Offered } from '@ahpd/sdk';
 import { bag, isRecord, str } from '@ahpd/sdk';
 
@@ -104,7 +105,8 @@ export async function probe(cwd: string): Promise<Offered> {
     const styles = list(init.available_output_styles).filter((s): s is string => typeof s === 'string');
     const account = accountOf(init.account, at);
     return {
-      customizations: customizationsOf(init, mcp, skills, undefined, plugins),
+      // The personal scope only: a probe has no working directory.
+      customizations: customizationsOf(init, mcp, skills, undefined, plugins, undefined, [], diskOf({ configDir: configDirOf(), managedDir: managedDirOf() })),
       ...(account === undefined ? {} : { account }),
       // Only when the harness has them. An empty list would draw a picker
       // with nothing in it, which is worse than no control.

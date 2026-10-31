@@ -1,11 +1,12 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { existsSync } from 'node:fs';
 import { basename, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { McpServerState } from '@microsoft/agent-host-protocol';
 import { uriOf } from '@ahpd/sdk';
 import type { Bag, OnWire } from '@ahpd/sdk';
 import { bag, list, str } from './common.js';
+import { frontmatterOf } from './disk.js';
+import type { Disk, DiskFile, DiskKind, DiskScope } from './disk.js';
 
 /**
  * RFC 9728 metadata for a server that needs signing in.
@@ -47,7 +48,7 @@ export const rootOf = (plugin: Bag): string => {
  * composer that can only offer them once the conversation has started, which
  * is exactly too late.
  */
-export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = [], wanted?: Map<string, Published>, plugins: unknown[] = [], ours?: Set<string>, off: Bag[] = []): Bag[] {
+export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = [], wanted?: Map<string, Published>, plugins: unknown[] = [], ours?: Set<string>, off: Bag[] = [], disk?: Disk): Bag[] {
   const out: Bag[] = [];
 
   /*
@@ -61,28 +62,73 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
    * for their contents - four failed reads per customization, against a `uri`
    * that was a bare name rather than anything a filesystem could answer.
    *
-   * One container per kind, because `contents` names a single
-   * `ChildCustomizationType`. The directory is the conventional one for that
-   * kind - the CLI reports *what* it loaded and never where it came from, so
-   * this is where a person would go to add one rather than a path this host
-   * read off disk. A built-in the CLI ships has no file of its own and the
-   * path under it will not exist; nothing dereferences it, because a client
-   * reads a directory's `children` rather than walking it.
+   * One container per scope and kind, because `contents` names a single
+   * `ChildCustomizationType` and a scope is where a person goes to add one.
+   * The CLI reports *what* it loaded and never where it came from, so a leaf
+   * names the file the disk read found under the same name, in the order the
+   * CLI prefers them: managed over personal over project. What has no file - a
+   * skill or command the CLI ships, an agent of its own - goes in a read-only
+   * `builtin` container with an internal uri, which says it exists without
+   * claiming a file for it.
+   *
+   * The personal and the project directories are sent with no children too,
+   * so a client has somewhere to offer to write the first one. With no disk
+   * read - a session in a machine, whose CLI reads its own config volume and
+   * not this host's files - there is nowhere here to write, and none is sent.
    */
-  const home = homedir();
-  const folder = (kind: string): string => uriOf(`${home}/.claude/${kind}`);
-  const container = (kind: string, contents: string, children: Bag[]): Bag | undefined =>
-    (children.length === 0 ? undefined : {
-      type: 'directory',
-      id: `directory:${kind}`,
-      uri: folder(kind),
-      name: kind,
-      contents,
-      enabled: true,
-      // The person's own directory, so a client may offer to write one.
-      writable: true,
-      children,
-    });
+  const files = disk?.files ?? [];
+  const folderOf: Record<DiskKind, string> = { agent: 'agents', skill: 'skills', prompt: 'commands', rule: 'rules' };
+  type Placed = DiskScope | 'builtin';
+  /** The directory a scope keeps a kind in, and whether a person may write there. */
+  const whereOf = (scope: Placed, kind: DiskKind): { uri: string; name: string; writable: boolean } | undefined => {
+    const folder = folderOf[kind];
+    if (scope === 'builtin') return { uri: `claude-internal:/${folder}`, name: 'builtin', writable: false };
+    if (disk === undefined) return undefined;
+    if (scope === 'user') return { uri: uriOf(join(disk.configDir, folder)), name: folder, writable: true };
+    if (scope === 'project') return disk.cwd === undefined ? undefined : { uri: uriOf(join(disk.cwd, '.claude', folder)), name: folder, writable: true };
+    if (scope === 'synced') return { uri: uriOf(join(disk.configDir, 'skills', 'synced')), name: 'synced', writable: false };
+    return disk.managedDir === undefined ? undefined : { uri: uriOf(join(disk.managedDir, '.claude', 'skills')), name: 'managed', writable: false };
+  };
+  const directories = new Map<string, Bag>();
+  /** The container for one scope and kind, made the first time it is asked for. */
+  const directoryOf = (scope: Placed, kind: DiskKind): Bag | undefined => {
+    const key = `${scope}:${folderOf[kind]}`;
+    const held = directories.get(key);
+    if (held !== undefined) return held;
+    const where = whereOf(scope, kind);
+    if (where === undefined) return undefined;
+    const made: Bag = { type: 'directory', id: `directory:${key}`, ...where, contents: kind, enabled: true, children: [] };
+    directories.set(key, made);
+    return made;
+  };
+  /** Put one leaf in the directory of its scope. */
+  const place = (scope: Placed, kind: DiskKind, leaf: Bag): void => {
+    (directoryOf(scope, kind)?.children as Bag[] | undefined)?.push(leaf);
+  };
+  /** The writable directories, in the order they are sent, made before anything is put in them. */
+  const writable: Placed[] = disk?.cwd !== undefined ? ['project', 'user'] : disk !== undefined ? ['user'] : [];
+  const sent: [Placed, DiskKind][] = [
+    ...writable.flatMap((scope) => (['agent', 'skill', 'prompt', 'rule'] as DiskKind[]).map((kind) => [scope, kind] as [Placed, DiskKind])),
+    ['managed', 'skill'], ['synced', 'skill'], ['builtin', 'skill'], ['builtin', 'prompt'], ['builtin', 'agent'],
+  ];
+  for (const scope of writable) for (const kind of ['agent', 'skill', 'prompt', 'rule'] as DiskKind[]) directoryOf(scope, kind);
+  /** The file the CLI read a name from, in the order it prefers one scope over another. */
+  const fileOf = (kind: DiskKind, name: string, scopes: DiskScope[]): DiskFile | undefined => {
+    for (const scope of scopes) {
+      const found = files.find((one) => one.kind === kind && one.scope === scope && one.name === name);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  };
+  /**
+   * A skill's file. A synced skill is run as `anthropic-skills:<name>`, and by
+   * its bare name where no other skill takes that name.
+   */
+  const skillFileOf = (name: string): DiskFile | undefined => (name.startsWith(SYNCED)
+    ? fileOf('skill', name.slice(SYNCED.length), ['synced'])
+    : fileOf('skill', name, ['managed', 'user', 'project', 'synced']));
+  /** The uri of a leaf with no file. The name is encoded: it is a path segment here and a URI segment there. */
+  const internal = (kind: string, name: string): string => `claude-internal:/${kind}/${encodeURIComponent(name)}`;
   /*
    * The plugins the SDK reported, each as its own top-level container.
    *
@@ -163,9 +209,6 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
     const held = pluginContainers.get(str(plugin.name) as string);
     if (held !== undefined) (held.children as Bag[]).push(child);
   };
-  const asSkills: Bag[] = [];
-  const asPrompts: Bag[] = [];
-  const asAgents: Bag[] = [];
 
   /*
    * Which of the commands are skills, and which skills a person can invoke.
@@ -199,11 +242,17 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
     const described = str(skill.description) ?? str(bag(command).description);
     const hint = str(skill.argumentHint) ?? str(bag(command).argumentHint);
     const plugin = pluginOf(name);
+    const file = plugin === undefined ? skillFileOf(name) : undefined;
+    const own = plugin === undefined ? name : bare(plugin, name);
+    const inPlugin = plugin === undefined ? '' : `${str(plugin.path) ?? ''}/skills/${own}/SKILL.md`;
     const leaf: Bag = {
       type: 'skill',
       id: `skill:${name}`,
-      name: plugin === undefined ? name : bare(plugin, name),
-      uri: plugin === undefined ? `${folder('skills')}/${name}` : `${str(plugin.path) ?? ''}/skills/${bare(plugin, name)}`,
+      name: own,
+      // Its `SKILL.md`, which is what a client opens, and not the folder it is in.
+      uri: plugin !== undefined
+        ? (existsSync(inPlugin) ? inPlugin : internal('skill', own))
+        : (file !== undefined ? uriOf(file.path) : internal('skill', name)),
       enabled: true,
       ...(command ? {} : { disableUserInvocation: true }),
       ...(described ? { description: described } : {}),
@@ -213,7 +262,7 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
       // and named as one.
       ...(hint ? { _meta: { 'ahpd.argumentHint': hint } } : {}),
     };
-    if (plugin === undefined) asSkills.push(leaf);
+    if (plugin === undefined) place(file?.scope ?? 'builtin', 'skill', leaf);
     else under(plugin, leaf);
   }
 
@@ -222,16 +271,19 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
     // A command of a handed plugin, for the same reason as a skill of one.
     if (handedOf(name) !== undefined) continue;
     const plugin = pluginOf(name);
+    const file = plugin === undefined ? fileOf('prompt', name, ['user', 'project']) : undefined;
     const leaf: Bag = {
       type: 'prompt',
       id: `command:${name}`,
       name: plugin === undefined ? name : bare(plugin, name),
-      uri: plugin === undefined ? `${folder('commands')}/${name}.md` : `${str(plugin.path) ?? ''}/commands/${bare(plugin, name)}.md`,
+      uri: plugin !== undefined
+        ? `${str(plugin.path) ?? ''}/commands/${bare(plugin, name)}.md`
+        : (file !== undefined ? uriOf(file.path) : internal('command', name)),
       enabled: true,
       ...(str(command.description) ? { description: str(command.description) as string } : {}),
       ...(str(command.argumentHint) ? { argumentHint: str(command.argumentHint) as string } : {}),
     };
-    if (plugin === undefined) asPrompts.push(leaf);
+    if (plugin === undefined) place(file?.scope ?? 'builtin', 'prompt', leaf);
     else under(plugin, leaf);
   }
 
@@ -249,9 +301,11 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
     if (name === 'general-purpose') continue;
     const plugin = pluginOf(name);
     const own = plugin === undefined ? name : bare(plugin, name);
-    const path = plugin === undefined
-      ? join(home, '.claude', 'agents', `${name}.md`)
-      : join(str(plugin.path) ?? '', 'agents', `${own}.md`);
+    const file = plugin === undefined ? fileOf('agent', name, ['user', 'project']) : undefined;
+    const inPlugin = plugin === undefined ? undefined : join(str(plugin.path) ?? '', 'agents', `${own}.md`);
+    const at = file !== undefined ? uriOf(file.path)
+      : inPlugin !== undefined && existsSync(inPlugin) ? inPlugin
+        : undefined;
     const leaf: Bag = {
       type: 'agent',
       id: `agent:${name}`,
@@ -266,26 +320,39 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
        * exists without claiming a file for it. The name is encoded, because it
        * is a path segment here and a URI segment there.
        */
-      uri: existsSync(path)
-        ? (plugin === undefined ? uriOf(path) : path)
-        : `${INTERNAL_AGENT}${encodeURIComponent(own)}`,
+      uri: at ?? `${INTERNAL_AGENT}${encodeURIComponent(own)}`,
       enabled: true,
       ...(str(found.description) ? { description: str(found.description) as string } : {}),
     };
-    if (plugin === undefined) asAgents.push(leaf);
+    if (plugin === undefined) place(file?.scope ?? 'builtin', 'agent', leaf);
     else under(plugin, leaf);
   }
 
-  // The plugins first, each with the children that named it; then the
-  // per-kind directories, which hold everything the SDK attributed to nobody.
-  for (const plugin of pluginContainers.values()) out.push(plugin);
+  /*
+   * The rules: the `CLAUDE.md` files and the files of a `rules` folder.
+   *
+   * The CLI does not report them, so every one the disk read found is listed.
+   * One with `paths` applies to the files they match, and any other always.
+   */
+  for (const rule of files.filter((one) => one.kind === 'rule')) {
+    place(rule.scope, 'rule', {
+      type: 'rule',
+      id: `rule:${rule.scope}:${rule.path}`,
+      uri: uriOf(rule.path),
+      name: rule.name,
+      enabled: true,
+      ...(rule.description !== undefined ? { description: rule.description } : {}),
+      ...(rule.globs !== undefined ? { globs: rule.globs } : { alwaysApply: true }),
+    });
+  }
 
-  for (const found of [
-    container('skills', 'skill', asSkills),
-    container('commands', 'prompt', asPrompts),
-    container('agents', 'agent', asAgents),
-  ]) {
-    if (found) out.push(found);
+  // The plugins first, each with the children that named it; then the
+  // directories, which hold everything the SDK attributed to no plugin. A
+  // writable one is sent empty too; a read-only one only with children.
+  for (const plugin of pluginContainers.values()) out.push(plugin);
+  for (const [scope, kind] of sent) {
+    const found = directories.get(`${scope}:${folderOf[kind]}`);
+    if (found !== undefined && (found.writable === true || (found.children as Bag[]).length > 0)) out.push(found);
   }
 
   // Bare, and correctly so: an MCP server is the one leaf the protocol lets a
@@ -366,11 +433,11 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
   return out;
 }
 
+/** The namespace the CLI runs a synced skill under. */
+const SYNCED = 'anthropic-skills:';
+
 /** The uri scheme `customizationsOf` gives an agent the CLI ships itself. */
 export const INTERNAL_AGENT = 'claude-internal:/agent/';
-
-/** The most of an agent file read for its name. */
-const AGENT_FILE_MOST = 64 * 1024;
 
 /**
  * The name the SDK's `agent` option wants, out of a customization's uri.
@@ -401,17 +468,7 @@ export function agentNameOf(uri: string): string | undefined {
   try { path = fileURLToPath(uri); }
   catch { return undefined; }
   const own = basename(path).replace(/\.md$/i, '');
-  // Only a regular file of an agent's size is read: the uri is the client's,
-  // and a device or a huge file would hold the host up for a name.
-  let said: string;
-  try {
-    const held = statSync(path);
-    if (!held.isFile() || held.size > AGENT_FILE_MOST) return own;
-    said = readFileSync(path, 'utf8');
-  }
-  catch { return own; }
-  const front = said.startsWith('---') ? said.split(/^---$/m).slice(1, 2).join('') : '';
-  const named = front.split('\n').find((line) => /^name:/.test(line.trim()));
-  const value = named?.slice(named.indexOf(':') + 1).trim().replace(/^["']|["']$/g, '');
-  return value === undefined || value === '' ? own : value;
+  // The uri is the client's, so the read is the bounded one `frontmatterOf` makes.
+  const named = frontmatterOf(path)?.name;
+  return typeof named === 'string' && named !== '' ? named : own;
 }

@@ -1,6 +1,6 @@
 ---
 title: The rules are listed
-status: todo
+status: implemented
 depends:
   - task-02-each-entry-names-its-file.md
 layer: agent-claude
