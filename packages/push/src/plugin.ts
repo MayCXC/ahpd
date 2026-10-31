@@ -1,7 +1,8 @@
 import { reason, secretRef, str } from '@ahpd/sdk';
 import { deviceStore, pushProvider } from './provider.js';
 import { createSender } from './send.js';
-import type { DeviceStore } from './provider.js';
+import { loadVapid } from './vapid.js';
+import type { Device, DeviceStore } from './provider.js';
 import type { PushMessage } from './send.js';
 import type { InputNeededSetEvent, Plugin, TurnEndEvent } from '@ahpd/sdk';
 
@@ -53,15 +54,16 @@ const FINISHED = 'A session finished';
 /** The prefix of a worker's chat, whose turns are the session's work and not its end. */
 const WORKER_CHAT = 'ahp-chat://subagent/';
 
-/** One device that should hear about a session, and the token to reach it. */
+/** One device that should hear about a session. */
 interface Reachable {
   id: string;
-  token: string;
+  device: Device;
 }
 
 export const apply: Plugin['apply'] = (host, options) => {
   const store: DeviceStore = deviceStore(host.configDir, (line) => { host.problem(`${name}: ${line}`); });
-  host.registerResourceProvider('push', pushProvider({ store }));
+  const vapid = loadVapid(host.configDir, (line) => { host.log(`${name}: ${line}`); });
+  host.registerResourceProvider('push', pushProvider({ store, ...(vapid === undefined ? {} : { vapid }) }));
 
   const named = str(options['title']);
   const title = named === undefined || named.trim() === '' ? host.hostName : named;
@@ -99,7 +101,7 @@ export const apply: Plugin['apply'] = (host, options) => {
       if (device === undefined) continue;
       const byClient = device.client !== undefined && clients?.has(device.client) === true;
       const byOwner = device.audience !== 'device' && device.owner !== undefined && owner !== undefined && device.owner === owner;
-      if (byClient || byOwner) reachable.push({ id, token: device.token });
+      if (byClient || byOwner) reachable.push({ id, device });
     }
     return reachable;
   };
@@ -115,7 +117,8 @@ export const apply: Plugin['apply'] = (host, options) => {
     log: (line) => { host.log(`${name}: ${line}`); },
     gone: (token) => {
       for (const id of store.ids()) {
-        if (store.get(id)?.token === token) store.remove(id);
+        const device = store.get(id);
+        if (device !== undefined && device.platform !== 'web' && device.token === token) store.remove(id);
       }
     },
   });
@@ -123,7 +126,10 @@ export const apply: Plugin['apply'] = (host, options) => {
   /** Send `body` to every device in the session, naming the session and why in `data`. */
   const notify = async (session: string, body: string, kind: string): Promise<void> => {
     const reachable = await audience(session);
-    if (reachable.length === 0) return;
+    // A browser is not sent to yet, so it is left out here rather than read as
+    // an Expo token. The web sender arrives with the subscription that reaches it.
+    const expo = reachable.flatMap((one) => (one.device.platform === 'web' ? [] : [one.device]));
+    if (expo.length === 0) return;
 
     let token: string | undefined;
     try {
@@ -134,8 +140,8 @@ export const apply: Plugin['apply'] = (host, options) => {
       return;
     }
 
-    const messages: PushMessage[] = reachable.map((one) => ({
-      to: one.token,
+    const messages: PushMessage[] = expo.map((device) => ({
+      to: device.token,
       title,
       body,
       data: { uri: session, kind },

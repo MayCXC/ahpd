@@ -1,3 +1,4 @@
+import { createECDH } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +8,7 @@ import { fileResources } from '../../sdk/src/resources/resources.js';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { deviceStore, pushProvider } from '../src/provider.js';
+import { loadVapid } from '../src/vapid.js';
 import type { PushProvider } from '../src/provider.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
@@ -25,6 +27,14 @@ import { posix } from '../../../tools/posix.ts';
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/push/src/index.ts';
 const TOKEN = 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]';
+/** The public key of a fixed P-256 private key, a point a browser could give. */
+const P256DH = (() => {
+  const pair = createECDH('prime256v1');
+  pair.setPrivateKey(Buffer.alloc(32, 7));
+  return pair.getPublicKey().toString('base64url');
+})();
+const AUTH = Buffer.alloc(16, 9).toString('base64url');
+const WEB = { platform: 'web', endpoint: 'https://fcm.googleapis.com/wp/one', keys: { p256dh: P256DH, auth: AUTH } };
 
 /** A temporary directory removed after the test that made it. */
 let loose: string | undefined;
@@ -102,6 +112,63 @@ it('reads a person and an audience back from a device already on disk', async ()
     owner: 'user:ana',
     audience: 'person',
   });
+});
+
+it('keeps a browser subscription, and reads it back without its endpoint and keys', async () => {
+  const provider = over();
+  await provider.write('push://devices/browser-1', body({ ...WEB, lang: 'pt-BR' }), 'user:ana', 'browser');
+  expect(JSON.parse((await provider.read('push://devices/browser-1')).data)).toEqual({
+    platform: 'web',
+    lang: 'pt-BR',
+    client: 'browser',
+    owner: 'user:ana',
+  });
+});
+
+it('refuses a web body that is not a subscription this host can seal a message for', async () => {
+  const provider = over();
+  const refused = [
+    { platform: 'web' },
+    { platform: 'web', endpoint: 'http://fcm.googleapis.com/wp/one', keys: WEB.keys },
+    { platform: 'web', endpoint: 'not a url', keys: WEB.keys },
+    { platform: 'web', endpoint: WEB.endpoint },
+    { platform: 'web', endpoint: WEB.endpoint, keys: { p256dh: P256DH } },
+    { platform: 'web', endpoint: WEB.endpoint, keys: { p256dh: P256DH, auth: AUTH.slice(0, 20) } },
+    // 64 octets, and a p256dh is the 65-octet uncompressed point.
+    { platform: 'web', endpoint: WEB.endpoint, keys: { p256dh: Buffer.alloc(64, 1).toString('base64url'), auth: AUTH } },
+    // 65 octets that start as an uncompressed point and are not on the curve.
+    { platform: 'web', endpoint: WEB.endpoint, keys: { p256dh: Buffer.concat([Buffer.from([0x04]), Buffer.alloc(64, 7)]).toString('base64url'), auth: AUTH } },
+    // 15 octets, and an auth secret is 16.
+    { platform: 'web', endpoint: WEB.endpoint, keys: { p256dh: P256DH, auth: Buffer.alloc(15, 1).toString('base64url') } },
+    { platform: 'web', endpoint: WEB.endpoint, keys: { p256dh: 'not base64url!', auth: AUTH } },
+  ];
+  for (const said of refused) {
+    await expect(provider.write('push://devices/browser-1', body(said), undefined, 'browser')).rejects.toMatchObject({ code: -32602 });
+  }
+  expect(await provider.list('push://devices')).toEqual([]);
+});
+
+it('serves the host public key at push://vapid, and refuses to write or delete it', async () => {
+  const where = dir();
+  const vapid = loadVapid(where, () => {});
+  expect(vapid).toBeDefined();
+  const provider = pushProvider({ store: deviceStore(where, () => {}), ...(vapid === undefined ? {} : { vapid }) });
+
+  expect(await provider.list('push://')).toEqual([{ name: 'devices', type: 'directory' }, { name: 'vapid', type: 'file' }]);
+  const read = await provider.read('push://vapid');
+  expect(read.contentType).toBe('application/json');
+  expect(JSON.parse(read.data)).toEqual({ publicKey: vapid?.publicKey });
+  expect((await provider.resolve('push://vapid')).type).toBe('file');
+
+  await expect(provider.write('push://vapid', body({ platform: 'web' }))).rejects.toMatchObject({ code: -32602 });
+  await expect(provider.remove('push://vapid')).rejects.toMatchObject({ code: -32602 });
+});
+
+it('serves no push://vapid when the host has no pair', async () => {
+  const provider = over();
+  expect(await provider.list('push://')).toEqual([{ name: 'devices', type: 'directory' }]);
+  await expect(provider.read('push://vapid')).rejects.toMatchObject({ code: -32008 });
+  await expect(provider.resolve('push://vapid')).rejects.toMatchObject({ code: -32008 });
 });
 
 it('re-registers a device, and a rotated token is the one kept', async () => {
@@ -210,6 +277,13 @@ it('loads as a plugin, advertises push, and serves a registration through the ho
     }) as { data: string };
     // The client that wrote it is the one the connection named at initialize.
     expect(JSON.parse(read.data)).toEqual({ platform: 'ios', client: 'phone' });
+
+    // A browser reads the public key its subscription is made against here.
+    const vapid = await client.handle({
+      method: 'resourceRead', params: { channel: 'ahp-root://', uri: 'push://vapid' },
+    }) as { data: string };
+    const publicKey = (JSON.parse(vapid.data) as { publicKey: string }).publicKey;
+    expect(Buffer.from(publicKey, 'base64url')).toHaveLength(65);
   }
   finally {
     await host.close();
