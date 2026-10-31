@@ -1055,6 +1055,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     id: `plugin:${by}`,
     plugin: by,
     roles: Object.freeze([]),
+    grants: Object.freeze([...(options.grants ?? [])]),
     can: (grant: Grant) => holds(new Set(options.grants ?? []), grant),
   });
   /*

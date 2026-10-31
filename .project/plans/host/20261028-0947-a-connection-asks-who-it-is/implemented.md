@@ -22,13 +22,15 @@ The object names the principal, its roles, the roles the sign-in added, its gran
 
 ## Verified
 
-- `packages/sdk/test/me-method.test.ts`: 7 tests pass.
+- `packages/sdk/test/me-method.test.ts`: 8 tests pass, with a plugin case.
+- `packages/server/test/plugin-connect.test.ts`: a plugin asks `x-ahpd/me` on its own connection, and gets its grants and its pool.
 - `packages/sdk/test/users-issuer.test.ts`: 46 tests pass, with the new test of `rolesFromSignIn`.
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s test` pass.
 
 ## Departures from the plan
 
 - `kind` has a third value, `plugin`. A plugin connection has a reader with `plugin` set, and its `principal` is the owner, `plugin:<name>`, not `user:<id>`.
+- A plugin's `grants` are the `grants` of its configuration entry, which its `Principal` now carries. Its `pools` is `['plugin:<name>']`, the pool that the meter charges.
 - `meMethods` takes only the directory, not the host name. The root answer reads `root:<host>` from the owner that the host gives `handle`.
 
 ## Left for later

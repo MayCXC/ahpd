@@ -396,7 +396,9 @@ answer is only about the caller. A host with no users file serves no
 A minted token's `grants` is narrowed to the grants the token holds, as every
 check is. Root gets `roles` and `rolesFromSignIn` empty, `grants` as
 `['*:*']`, and `pools` as its own `root:<host>`. `*:*` is the wildcard and not
-the list of every grant. A connection that names nobody is refused with
+the list of every grant. A plugin's own connection gets `roles` and
+`rolesFromSignIn` empty, `grants` as its configuration entry's `grants`, and
+`pools` as its own `plugin:<name>`. A connection that names nobody is refused with
 `-32007`. The command is listed on the handshake under `_meta['ahpd.methods']`
 with `user:get`.
 

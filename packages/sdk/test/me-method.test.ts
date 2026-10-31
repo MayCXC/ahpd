@@ -115,6 +115,19 @@ it('answers the root connection from its owner', async () => {
   await made.close();
 });
 
+it('answers a plugin\'s own connection from its entry, charged to the plugin', async () => {
+  const bot: Principal = { id: 'plugin:bot', plugin: 'bot', roles: [], grants: ['session:read'], can: (grant) => grant === 'session:read' };
+  expect(await ask(bot, 'plugin:bot')).toEqual({
+    principal: 'plugin:bot',
+    kind: 'plugin',
+    id: 'plugin:bot',
+    roles: [],
+    rolesFromSignIn: [],
+    grants: ['session:read'],
+    pools: ['plugin:bot'],
+  });
+});
+
 it('refuses a connection that names nobody with -32007', async () => {
   await expect(ask(undefined)).rejects.toMatchObject({ code: -32007 });
 });
