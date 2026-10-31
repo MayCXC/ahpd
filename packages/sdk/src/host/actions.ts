@@ -757,30 +757,38 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
         /*
          * Input is side-effect only.
          *
-         * The reducer changes nothing on it - what comes back is
-         * `terminal/data`, once the shell has actually said something.
-         * Echoing it here would print every keystroke twice on the
-         * client that typed it and once on the ones that did not.
+         * The protocol's reducer changes nothing on it, and what comes back is
+         * `terminal/data`, once the shell has actually said something. So it
+         * is answered to the client that sent it alone, as any action that
+         * changes no state is, and every client reads what it did in the
+         * `terminal/data` that follows. Input with no process to reach is
+         * refused, in the terminal's words.
          */
-        case 'terminal/input':
-          terminal.write(String(action.data ?? ''));
+        case 'terminal/input': {
+          const taken = terminal.write(String(action.data ?? ''));
+          if (taken === true) echoTo(connection.peer, channel, action, origin);
+          else no(taken);
           break;
+        }
         case 'terminal/resized':
           terminal.resize(Number(action.cols ?? 80), Number(action.rows ?? 24));
           break;
         case 'terminal/cleared':
           terminal.clear();
           break;
+        // A title it has already changes nothing, and is answered to its sender alone.
         case 'terminal/titleChanged':
-          terminal.setTitle(String(action.title ?? ''));
+          if (!terminal.setTitle(String(action.title ?? ''))) echoTo(connection.peer, channel, action, origin);
           break;
+        /*
+         * A claim that names nobody is refused, and the terminal's own claim
+         * stays: set to `{}`, it would tell every other client that nobody
+         * holds the terminal.
+         */
         case 'terminal/claimed': {
-          // A notification, so a malformed one is dropped rather than
-          // refused - and dropped is right: the alternative was setting
-          // the claim to `{}`, which told every other client that
-          // nobody owned it.
           const claimed = claimOf(action.claim);
           if (claimed) terminal.setClaim(claimed);
+          else no('a claim names a client by its id, or a session and its chat');
           break;
         }
         default:

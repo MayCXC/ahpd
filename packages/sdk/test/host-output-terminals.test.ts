@@ -141,4 +141,42 @@ describe('an output terminal', () => {
     await expect(client.handle({ method: 'subscribe', params: { channel: terminal.uri } }))
       .rejects.toThrow();
   });
+
+  /*
+   * A client's action on one is answered, as on any terminal: input has no
+   * process to reach and is refused, and a new size is the size it reads back.
+   * https://github.com/microsoft/agent-host-protocol/blob/v1.0.0/docs/guide/reconciliation.md
+   */
+  it('refuses input, which has no process to reach', async () => {
+    const { client, p, chatUri, out } = await opened();
+    const terminal = out().create({ title: 'a build', chat: chatUri });
+    await client.handle({ method: 'subscribe', params: { channel: terminal.uri } });
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: terminal.uri, clientSeq: 2, action: { type: 'terminal/input', data: 'y\n' } },
+    });
+    await settle();
+
+    const answer = actions(p, terminal.uri).find((one) => one.action.type === 'terminal/input');
+    expect(answer?.origin?.clientSeq).toBe(2);
+    expect(answer?.rejectionReason).toBeDefined();
+  });
+
+  it('takes a new size, and reads it back', async () => {
+    const { client, p, chatUri, out } = await opened();
+    const terminal = out().create({ title: 'a build', chat: chatUri });
+    await client.handle({ method: 'subscribe', params: { channel: terminal.uri } });
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: terminal.uri, clientSeq: 3, action: { type: 'terminal/resized', cols: 120, rows: 40 } },
+    });
+    await settle();
+
+    const answer = actions(p, terminal.uri).find((one) => one.action.type === 'terminal/resized');
+    expect([answer?.origin?.clientSeq, answer?.rejectionReason]).toEqual([3, undefined]);
+    const found = await client.handle({ method: 'subscribe', params: { channel: terminal.uri } }) as {
+      snapshot: { state: { cols?: number; rows?: number } };
+    };
+    expect([found.snapshot.state.cols, found.snapshot.state.rows]).toEqual([120, 40]);
+  });
 });
