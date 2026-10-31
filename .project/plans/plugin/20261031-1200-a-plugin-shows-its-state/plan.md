@@ -1,0 +1,120 @@
+---
+title: A plugin shows its state
+domain: plugin
+status: draft
+priority: medium
+created: 2026-10-31
+revalidated: 2026-10-31
+requires: []
+changes: []
+creates: []
+refs:
+  - git://cb47945e - the commit of ahpd this plan was checked at, and the last one that holds the brief `.project/briefs/a-plugin-shows-its-state.md`
+  - git://cb47945e:.project/briefs/a-plugin-shows-its-state.md - the brief this plan covers
+  - "[code://packages/sdk/src/types/plugin.ts#L799-L851](../../../../packages/sdk/src/types/plugin.ts#L799-L851) - `Alert`, `alert` and `clearAlert`, the calls `showView` and `clearView` copy"
+  - "[code://packages/sdk/src/types/plugin.ts#L522-L546](../../../../packages/sdk/src/types/plugin.ts#L522-L546) - `PluginMethod`, the command a Button calls"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L1184-L1185](../../../../packages/sdk/src/plugins/plugins.ts#L1184-L1185) - the plugin host passes `alert` and `clearAlert` to the loader's sinks"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L1488-L1496](../../../../packages/sdk/src/plugins/plugins.ts#L1488-L1496) - `registerMethod`, which keeps the plugin's methods in `contribution.methods`"
+  - "[code://packages/sdk/src/host/canvases.ts#L137-L156](../../../../packages/sdk/src/host/canvases.ts#L137-L156) - the canvas check of an absolute http(s) URL, to share with the view check"
+  - "[code://packages/server/src/plugins.ts#L1815-L1860](../../../../packages/server/src/plugins.ts#L1815-L1860) - `alerted`, `addAlert` and `dropAlert`, the holding to copy"
+  - "[code://packages/server/src/plugins.ts#L1998-L2003](../../../../packages/server/src/plugins.ts#L1998-L2003) - the sinks of one load, which drop what a stale host says"
+  - "[code://packages/server/src/plugins.ts#L2107](../../../../packages/server/src/plugins.ts#L2107) - `alerts()`, how the holdings serve what they keep"
+  - "[code://packages/server/src/commands/run.ts#L1440-L1448](../../../../packages/server/src/commands/run.ts#L1440-L1448) - `alertsChanged`, which sends the rows again"
+  - "[code://packages/server/src/pluginschannel.ts#L234-L280](../../../../packages/server/src/pluginschannel.ts#L234-L280) - `rowOf`, the row in `x-ahpd-plugins`"
+  - "[code://packages/server/src/pluginschannel.ts#L315-L339](../../../../packages/server/src/pluginschannel.ts#L315-L339) - `translate`, the row in a reader's locale"
+  - "[code://packages/tunnel-devtunnel/src/plugin.ts#L132-L136](../../../../packages/tunnel-devtunnel/src/plugin.ts#L132-L136) - the Dev Tunnel plugin starts `devtunnel host` and says the tunnel id and the port"
+  - "[code://packages/tunnel-devtunnel/src/devtunnel.ts#L184-L196](../../../../packages/tunnel-devtunnel/src/devtunnel.ts#L184-L196) - `host`, which sends each output line to the log"
+  - "[code://docs/plugins/PLUGINS.md#L874](../../../../docs/plugins/PLUGINS.md#L874) - the docs of `alert`"
+  - "[code://docs/plugins/PLUGINS.md#L1397-L1412](../../../../docs/plugins/PLUGINS.md#L1397-L1412) - the fields of a row in `x-ahpd-plugins`"
+  - npm://@softov/scena@^0.5.16 - the renderer of ahpw; `core/converters/a2ui-v0.10.ts` reads `{ root, components }`
+  - https://a2ui.org/specification/v0_10/ - A2UI v0.10, the component format of a view
+---
+
+## Goal
+
+A plugin sends a view, and a client draws it on the plugin's page.
+A view is a small A2UI v0.10 surface: Text, Link, Button and a few layout components.
+The first view is the Dev Tunnel plugin's state: the tunnel URL, the tunnel id, the port and the relay.
+
+## Reconnaissance
+
+The files read and the patterns to reuse are the `refs` in the frontmatter, each with its note.
+
+### Searches performed
+
+- `rg -n "alert|clearAlert" packages/sdk/src packages/server/src` - the one path a plugin's text takes to its row, and the hook that sends the row again.
+- `rg -n "openCanvas|url" packages/sdk/src/host/canvases.ts` - a canvas is a page on a chat with one URL, not a surface of components.
+- `rg -n "Text|Link|Button|action" /github/scena/packages/scena/src/core/converters/a2ui-v0.10.ts` - the shape the converter reads, and the `event` action it turns into `surface:event`.
+- `rg -n "Connect via|relay" packages/tunnel-devtunnel/src` - the plugin reads no line of `devtunnel host`; each goes to the log.
+
+### Runtime path
+
+```
+plugin: host.showView(view) -> sdk check (view.ts) -> loader sink -> server holdings: viewed[id]
+  -> viewsChanged -> pluginLists.refresh() -> x-ahpd-plugins row.view, in the reader's locale
+client: draws row.view -> Button -> request { method: action.event.name, params: action.event.context }
+  -> host checks the method's grant -> PluginMethod.handle
+```
+
+### Gaps
+
+- `PluginHost` has no call that sends more than one sentence.
+- The row has no field for a view.
+- The Dev Tunnel plugin does not read the URL or the relay state.
+
+## Answers
+
+| What | Source | Task |
+| --- | --- | --- |
+| A plugin sends a UI schema, and a client draws it on the plugin's page | Softov, the brief: "Softov wants a plugin to send a UI schema, and a client to draw that schema on the plugin's page" | 01 |
+| The schema is the A2UI v0.10 shape `{ root, components }`, with literal values and no data model | (defaulted: scena's converter reads it, and a plugin sends the whole view again on a change) | 01 |
+| A view has these components only: Text, Link, Button, Card, Row, Column, List, Divider and Icon | (defaulted: a small set that each client can draw) | 01 |
+| `showView(view)` and `clearView()` on `PluginHost`, one view per plugin, and a new view replaces the old one | (defaulted: the same as `alert` and `clearAlert`) | 01 |
+| A Link takes an absolute http(s) URL only | (defaulted: the canvas rule for a URL) | 01 |
+| A view is at most 200 components and 64 KiB of JSON | (defaulted: a page of state, not a document) | 01 |
+| A Button calls a plugin command | Softov, 2026-10-31: "Button calls a plugin command" | 01 |
+| The command is an `x-` method this plugin registered, and the Button's `context` is its params | (defaulted: a client sends a normal request, and the host checks the method's grant) | 01 |
+| The view is a field `view` on the row in `x-ahpd-plugins`, sent again on each change | (defaulted: the path an alert takes) | 02 |
+| A reload or an unload removes the view | (defaulted: the same as alerts) | 02 |
+| The `text` of a Text and the `label` of a Link are translated at `view.<componentId>.<prop>` in the plugin's catalogs | (defaulted: the keys `translate` reads for the title and the form) | 02 |
+| The Dev Tunnel plugin reads the URL and the relay state from the output of `devtunnel host` | (defaulted: the CLI says them only there) | 03 |
+| ahpw draws the view first, in its own plan; ahpapp and ahpc come later | (defaulted: ahpw is the only client that reads `x-ahpd-plugins`) | - |
+
+## Proposed architecture
+
+- **Data flow** - the plugin gives a view; the sdk checks it; the server holds it per plugin and serves it on the row.
+- **Event flow** - a new or cleared view calls `viewsChanged`, which refreshes the plugins channel. A Button is a normal request from the client.
+- **State flow** - the server holds at most one view per plugin, in memory, keyed by the plugin id.
+- **Layer responsibilities** - `sdk` has the type, the calls and the check; `server` holds, serves and translates; `tunnel-devtunnel` makes the first view. docs: `PLUGINS.md`.
+- **Source-of-truth files** - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts)
+
+## Tasks
+
+| Task | Status | Depends on |
+| --- | --- | --- |
+| [01 - A plugin gives a view](task-01-a-plugin-gives-a-view.md) | todo | - |
+| [02 - The row carries the view](task-02-the-row-carries-the-view.md) | todo | 01 |
+| [03 - Dev Tunnel shows its state](task-03-dev-tunnel-shows-its-state.md) | todo | 02 |
+
+## Risks and tradeoffs
+
+- The lines of `devtunnel host` are not a contract. A new CLI version can change them, and the view then shows less.
+- A view sent on each relay change sends the row again to each client that watches. The relay changes rarely, so the cost is small.
+- A Button sends the command with the grant of the person who clicks it. A person without the grant gets the host's refusal.
+
+## Resume state
+
+- **Done so far:** drafted 2026-10-31.
+- **Next action:** Softov reviews the draft; then [task-01-a-plugin-gives-a-view.md](task-01-a-plugin-gives-a-view.md).
+- **Open questions:** none.
+- **Watch out for:** a host that outlives its plugin must not set a view; copy the `current.get(id) === self` check of the alert sink.
+
+## Final verification checklist
+
+- [ ] The Dev Tunnel row in `x-ahpd-plugins` carries a view with the tunnel URL as a Link, the tunnel id, the port and the relay state.
+- [ ] A relay that closes and comes back changes the view, and a client that watches gets the row again.
+- [ ] The sdk refuses a view with an unknown component, a missing child, a cycle, a bad URL or an unknown method.
+- [ ] Each refusal names the rule.
+- [ ] A reload removes the view, and a disabled plugin has none.
+- [ ] A view's texts come in Portuguese for a client that sends `pt`, when the plugin's catalog has them.
+- [ ] `pnpm typecheck` and the sdk, server and tunnel-devtunnel suites pass, and Windows CI is green.

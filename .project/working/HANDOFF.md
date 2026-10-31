@@ -38,7 +38,7 @@ Current progress and pending items only, as of 2026-10-31.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by every test run. Restore it with `git checkout --` and never print it.
 - On Windows CI, `agent-acp-ports` (the pseudoterminal test) fails at times, also before #169. Rerun the failed jobs once; a second failure needs a look.
 - On this machine, two Docker tests time out: `computer-devcontainer` and `computer-disposable`. They time out on main too, and CI passes them.
-- The worktrees in `/github/ahpd.worktrees/` are `briefs-commit` (detached, for plan-only commits), `release-prerelease`, `review-maycxc-union` and `vm`. The last two are merged, and they wait for Softov's word to remove. The old container/05 p8 build `build-agents-fda88f4a` is removed: main does all that it did. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
+- The worktrees in `/github/ahpd.worktrees/` are `briefs-commit` (detached, for plan-only commits), `build-agents-1d669ecf` (the push build), `release-prerelease`, `review-maycxc-union` and `vm`. The last two are merged, and they wait for Softov's word to remove. The old container/05 p8 build `build-agents-fda88f4a` is removed: main does all that it did. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
 - The local branch `fork/maycxc-1248-1303-1334` is merged.
 
 ## Waiting for Softov
@@ -66,8 +66,13 @@ Current progress and pending items only, as of 2026-10-31.
 - plugin/50: [pending/plugin-50-first-pieces.md](../pending/plugin-50-first-pieces.md).
 - The VM plan, task 01: [pending/vm-01-dev02-libvirt.md](../pending/vm-01-dev02-libvirt.md). The checks by hand of tasks 03 and 05 follow it.
 - The VM plan, task 06: [pending/vm-06-proxmox-node.md](../pending/vm-06-proxmox-node.md), when a Proxmox node is named.
-- plugin/20261031-0804, a browser gets a push: review of the draft. Its brief is removed.
-- Two new briefs wait for his word to plan: [briefs/a-plugin-shows-its-state.md](../briefs/a-plugin-shows-its-state.md) and [briefs/the-text-a-person-reads-is-plain.md](../briefs/the-text-a-person-reads-is-plain.md).
+- Five drafts from 2026-10-31 wait for his review:
+  - claude/20261031-1200, a failed Claude turn is resumed. It holds the host's check for every backend. Its open question: cut to the turn before, or cut at the failed turn and send "continue".
+  - cofold/20261031-1200, a failed cofold turn is resumed. It requires the Claude plan. `plans/cofold/00-cofold.md` is the new domain reference.
+  - plugin/20261031-1200, a plugin shows its state: an A2UI view on the plugin's row, and the Dev Tunnel view first.
+  - host/20261031-1200, the sdk's text is plain: the rules and terms page, the new session form, and the sdk's lists in the client's locale.
+  - [ideas/acp-resumable-doubt.md](../ideas/acp-resumable-doubt.md): ACP is not resumable for now.
+- [briefs/the-text-a-person-reads-is-plain.md](../briefs/the-text-a-person-reads-is-plain.md) stays for the server and plugin slices.
 - The `active` plans with all tasks implemented wait for his review. Each stays `active` until he says his review is done.
 - Three `active` plans look ready to close on his word: host/83, host/99 and plugin/69. The plan host/83 has p1 to p5 built, and host/99 has every task done. PR #104 merged plugin/69 tasks 05 and 06, which are still `implemented`.
 - plugin/71 has no `implemented.md`, though its tasks are implemented.
@@ -76,7 +81,7 @@ Current progress and pending items only, as of 2026-10-31.
 
 ## Next builds
 
-- Claude, cofold and ACP resume a failed turn: one plan per agent, from [briefs/claude-cofold-and-acp-resume-a-failed-turn.md](../briefs/claude-cofold-and-acp-resume-a-failed-turn.md). Its open points wait on Softov.
+- plugin/20261031-0804, a browser gets a push, is building as `claude-deepseek-build:/1d669ecf-…` in `build-agents-1d669ecf`. At the last look, its new files in `packages/push` and its `implemented.md` were not committed. The review commits them into their tasks, and renames the branch to `plugin/20261031-0804-a-browser-gets-a-push` before the PR.
 - The VM plan `20261030-1141-a-vm-is-made-on-a-server` has its code merged. It waits on the checks by hand above.
 - container/05 p10 (task 03 next).
 - The ahpw Connect button for plugin/71 is ahpw plan plugins/09, planned.
