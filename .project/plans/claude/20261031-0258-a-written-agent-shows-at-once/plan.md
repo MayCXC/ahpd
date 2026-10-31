@@ -24,7 +24,6 @@ refs:
   - npm://@anthropic-ai/claude-agent-sdk@0.3.301 - the CLI watches the personal and project `agents` and `skills` folders only when they exist at its start, and tells the SDK nothing about an agent
   - https://github.com/microsoft/vscode/blob/171e90619c7/src/vs/platform/agentHost/node/claude/customizations/claudeSessionCustomizationDiscovery.ts#L443-L554 - `ClaudeCustomizationWatcher`, which watches `<scope>/.claude` and the `CLAUDE.md` files and reads again 300 ms after a change
   - https://github.com/microsoft/agent-host-protocol/blob/main/types/channels-session/state.ts - `DirectoryCustomization`: after a client writes into a writable directory, the host surfaces the child through the customization actions
-  - file:///github/ahpd/.project/briefs/a-written-agent-shows-without-a-restart.md - the brief this plan covers, with Softov's edits of 1965724e
 ---
 
 ## Goal

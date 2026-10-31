@@ -26,8 +26,6 @@ refs:
   - https://github.com/microsoft/vscode/blob/171e90619c7/src/vs/platform/agentHost/node/claude/customizations/claudeBuiltinCommands.ts#L162-L180 - the read-only `builtin` directory for an SDK skill with no file
   - https://github.com/microsoft/vscode/blob/171e90619c7/src/vs/platform/agentHost/node/claude/customizations/scan/claudeRuleScan.ts - the `CLAUDE.md` files and `.claude/rules/**/*.md` as rules
   - https://code.claude.com/docs/en/skills - the four places for a skill, and which one wins on the same name
-  - file:///github/ahpd/.project/briefs/a-skill-names-its-own-file.md - the brief this plan covers, with Softov's edits of 1965724e
-  - file:///github/ahpd/.project/briefs/a-written-agent-shows-without-a-restart.md - the reload brief, built after this plan on the same files
 ---
 
 ## Goal
@@ -114,7 +112,7 @@ the CLI's handshake -> initializationResult, reloadSkills, reloadPlugins -> laid
 - **Done so far:** planned 2026-10-31, and tasks 01 to 03 implemented on 2026-10-31. See [implemented.md](implemented.md).
 - **Next action:** review, and the checks by hand in [claude-skill-file-checks.md](../../../pending/claude-skill-file-checks.md).
 - **Open questions:** none.
-- **Watch out for:** the reload plan from [a-written-agent-shows-without-a-restart.md](../../../briefs/a-written-agent-shows-without-a-restart.md) edits `customizations.ts` and `servers.ts` too, so it starts after this plan is merged.
+- **Watch out for:** the reload plan [claude/20261031-0258-a-written-agent-shows-at-once](../20261031-0258-a-written-agent-shows-at-once/plan.md) edits `customizations.ts` and `servers.ts` too, so it starts after this plan is merged.
 
 ## Final verification checklist
 

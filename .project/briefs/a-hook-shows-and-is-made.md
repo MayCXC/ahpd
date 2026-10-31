@@ -18,8 +18,8 @@ refs:
   - https://github.com/microsoft/vscode/blob/171e90619c7/src/vs/workbench/contrib/chat/browser/promptSyntax/hookActions.ts#L585-L707 - the file and folder steps, which ask the window's local `promptsService`
   - https://github.com/microsoft/vscode/blob/171e90619c7/src/vs/workbench/contrib/chat/common/promptSyntax/config/promptFileLocations.ts#L212-L218 - `DEFAULT_HOOK_FILE_PATHS`, the local hook places
   - https://github.com/microsoft/vscode/blob/171e90619c7/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/syncedCustomizationBundler.ts#L51-L60 - local hooks are not synced to an agent host
-  - file:///github/ahpd/.project/briefs/a-skill-names-its-own-file.md - the skills brief, which reads the other customization files from disk in the same way
-  - file:///github/ahpd/.project/briefs/a-written-agent-shows-without-a-restart.md - the reload brief, which makes a written file show without a restart
+  - file:///github/ahpd/.project/plans/claude/20261031-0228-a-skill-names-its-own-file/plan.md - the skills plan, which reads the other customization files from disk in the same way
+  - file:///github/ahpd/.project/plans/claude/20261031-0258-a-written-agent-shows-at-once/plan.md - the reload plan, which makes a written file show without a restart
 ---
 
 # A hook shows and is made
