@@ -142,7 +142,8 @@ git push origin vX.Y.Z
 - It packs each package with `pnpm pack` and refuses a tarball whose manifest still contains `workspace:`.
   pnpm rather than npm is deliberate: the siblings depend on each other with `workspace:^`, and only pnpm rewrites that to a real range on the way out.
   An `npm pack` tarball carries the literal `workspace:^`, which installs here and is broken for everybody else.
-- It runs `npm stage publish --provenance --access public` for every package named in `PUBLISHED`, in that order: `sdk` first, then the agents, `computer` and `tunnel-devtunnel`, then `server`.
+- It runs `npm stage publish --provenance --access public --tag <channel>` for every package named in `PUBLISHED`, in that order: `sdk` first, then the agents, `computer` and `tunnel-devtunnel`, then `server`.
+  The channel is `latest` for a stable version and `next` for a pre-release.
 
 The publish list and the tag check are one list - decision [one tag publishes every package in the workspace](./DEVELOPER.md).
 A package npm has never seen is the one thing the workflow cannot do by itself: npm configures a trusted publisher on a package, so a new name needs one token publish first.
@@ -163,3 +164,11 @@ A tag can be pushed by accident and an npm version cannot be unpublished, which 
 `--provenance` attaches a signed attestation tying each tarball to the commit and to the workflow, which npm shows on the package page.
 
 The daemon's update check reads the `latest` dist-tag, so `ahpd start` and `ahpd status` begin telling people about a release as soon as it is approved.
+
+### Release candidates
+
+A version with a pre-release suffix, such as `0.15.0-rc.1`, is released the same way: bump every package to it, tag `v0.15.0-rc.1` and push the tag.
+The workflow stages it under the `next` dist-tag, so `npm i @ahpd/sdk` and the daemon's update check stay on the last stable version.
+Testers install it with `@next`, for example `npx @ahpd/server@next`.
+A fix goes out as `rc.2`.
+When a candidate is good, bump to `0.15.0` and release that; an npm version cannot be renamed, so the stable release is a new version of the same code.
