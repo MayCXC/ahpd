@@ -1,7 +1,7 @@
 ---
 title: A working directory action is answered as the protocol says
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-31
 revalidated: 2026-10-31
@@ -62,7 +62,7 @@ The files read and the patterns to reuse are the `refs` in the frontmatter, each
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A working directory action is answered as the protocol says](task-01-a-working-directory-action-is-answered.md) | todo | - |
+| [01 - A working directory action is answered as the protocol says](task-01-a-working-directory-action-is-answered.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -71,13 +71,13 @@ The files read and the patterns to reuse are the `refs` in the frontmatter, each
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-31.
-- **Next action:** [task-01-a-working-directory-action-is-answered.md](task-01-a-working-directory-action-is-answered.md).
+- **Done so far:** planned and built 2026-10-31. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a chat's own folders are left as they are when its session's set narrows (the audit's A-D7, which a decided row of host/47-p1 sets).
 
 ## Final verification checklist
 
-- [ ] Each new case fails on `27bfa9b4` for the reason it names, and passes after the change.
-- [ ] The touched suites pass.
-- [ ] `pnpm run typecheck` and `pnpm run boundary` report no errors.
+- [x] Each new case fails on `27bfa9b4` for the reason it names, and passes after the change.
+- [x] The touched suites pass.
+- [x] `pnpm run typecheck` and `pnpm run boundary` report no errors.

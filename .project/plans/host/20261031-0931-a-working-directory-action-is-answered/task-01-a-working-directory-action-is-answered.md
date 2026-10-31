@@ -1,6 +1,6 @@
 ---
 title: A working directory action is answered as the protocol says
-status: todo
+status: done
 depends: []
 layer: host
 refs:
@@ -40,3 +40,6 @@ Each working directory action does what the protocol's reducer does with it, and
 - `pnpm run typecheck` and `pnpm run boundary` report no errors.
 
 ## Resume
+
+Done 2026-10-31.
+Every step is built, and the touched suites, the type check and the boundary check pass.
