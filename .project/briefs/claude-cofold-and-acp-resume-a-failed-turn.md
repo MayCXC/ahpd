@@ -58,7 +58,7 @@ The pi plan is the logic to copy:
 
 ## Who writes
 
-- The pi plan changes `packages/agent-pi` and adds a case to `packages/sdk/test/host-turn.test.ts`. It does not touch these backends.
+- The pi plan changes `packages/agent-pi` and adds a case to `packages/sdk/test/echo-origin.test.ts`. It does not touch these backends.
 - No other branch was checked for these files. Check before each plan.
 
 ## The change

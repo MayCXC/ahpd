@@ -1,6 +1,6 @@
 ---
 title: pi continues from the failed call
-status: todo
+status: implemented
 depends: []
 layer: agent-pi
 refs:

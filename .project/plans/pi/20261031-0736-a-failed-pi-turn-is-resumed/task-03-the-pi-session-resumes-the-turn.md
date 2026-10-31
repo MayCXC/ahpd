@@ -1,6 +1,6 @@
 ---
 title: The pi session resumes the turn
-status: todo
+status: implemented
 depends:
   - task-01-a-failed-model-call-is-resumable.md
   - task-02-pi-continues-from-the-failed-call.md

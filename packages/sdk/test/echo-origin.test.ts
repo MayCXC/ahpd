@@ -168,3 +168,25 @@ it('gives a stop that names no turn its origin, under the turn it stopped', asyn
   expect(stopped?.origin).toEqual({ clientId: 'window', clientSeq: 4 });
   await host.close();
 });
+
+it('gives a resume its origin when the backend says it reopened the turn', async () => {
+  // A backend that reopens the turn and says so while the dispatch is being
+  // applied, as pi does.
+  const resuming = (agent: Agent): Agent => ({
+    ...agent,
+    create: (start: Start): Session => ({
+      ...(agent.create(start) as Session),
+      resume: (turnId: string) => {
+        start.emit('chat', { type: 'chat/turnResume', turnId });
+        return true;
+      },
+    }),
+  });
+  const { host, p, dispatch } = await serving(resuming(echo({ path: dir, pace: 0 })));
+  p.heard.length = 0;
+  await dispatch(9, { type: 'chat/turnResume', turnId: 't1' });
+  await settle();
+  const resumed = p.heard.filter((one) => one.action.type === 'chat/turnResume');
+  expect(resumed.map((one) => one.origin)).toEqual([{ clientId: 'window', clientSeq: 9 }]);
+  await host.close();
+});

@@ -172,6 +172,12 @@ export function piSession(
   let live: PiBackend | undefined;
   /** The entry the conversation ended at when the running turn prompted, which its prompt follows. */
   let promptedAfter: string | undefined;
+  /**
+   * Whether the running turn is one `resume` reopened. Its prompt was named
+   * when it first ended, or it was read from pi's file under that name, so
+   * there is nothing to name again.
+   */
+  let resumed = false;
   /** The one opening, shared by every caller, so one pi is built. */
   let opening: Promise<PiBackend> | undefined;
   /** Whether the tools changed since pi was built, so it is rebuilt next turn. */
@@ -642,7 +648,7 @@ export function piSession(
    * first echo.
    */
   const namePrompt = (): void => {
-    if (active === undefined || live === undefined) return;
+    if (active === undefined || live === undefined || resumed) return;
     const prompt = live.promptAfter(promptedAfter);
     if (prompt !== undefined && prompt !== String(active.id)) start.onTurnRecorded?.(String(active.id), prompt);
   };
@@ -653,8 +659,12 @@ export function piSession(
    * pi says a run is over twice - `agent_end` and then `agent_settled` - and
    * only the second means nothing more is coming, so the turn is closed on
    * the settle and this is called once.
+   *
+   * `resumable` marks an error a client may resume: a failed model call, whose
+   * reply `resume` can take out of the model's context. A failure before pi had
+   * the prompt has no such reply, and is not one.
    */
-  const finish = (ending: 'complete' | 'cancelled' | 'error', why?: string): void => {
+  const finish = (ending: 'complete' | 'cancelled' | 'error', why?: string, resumable = false): void => {
     const turn = active;
     if (turn === undefined) return;
     const turnId = String(turn.id);
@@ -689,15 +699,46 @@ export function piSession(
     else {
       const message = why === undefined || why === '' ? 'pi did not answer' : why;
       failed = message;
-      emit('chat', {
-        type: 'chat/error',
-        turnId,
-        duration,
-        part: { kind: 'error', error: { errorType: 'turnFailed', message } },
-      });
+      const part: Bag = {
+        kind: 'error',
+        error: { errorType: 'turnFailed', message },
+        ...(resumable ? { resumable: true } : {}),
+      };
+      // On the turn as well, so a snapshot holds what a client that watched the
+      // turn end was handed, and a client that reopens the chat can resume it.
+      (turn.responseParts as Bag[]).push(part);
+      emit('chat', { type: 'chat/error', turnId, duration, part });
     }
     touch();
     startNext();
+  };
+
+  /**
+   * End the running turn as its last answer says, once nothing more is coming.
+   *
+   * pi says so with `agent_settled` at the end of its own run. A resumed run is
+   * one `resume` started outside that run, which pi raises no settle for, so
+   * `resume` calls this itself once the run is over.
+   */
+  const settle = (): void => {
+    // Recorded before `finish` seals the turn, so a truncation asked for
+    // the moment the turn appears already has the point it cuts to.
+    if (active !== undefined && live !== undefined) {
+      const at = live.leaf();
+      if (at !== undefined) ends.set(String(active.id), at);
+    }
+    // Before the ending action: a client hangs usage on the turn it is
+    // ending, and the ending is what moves that turn into the history.
+    // The sum of the calls is already what it sent as it stood; what ends
+    // the turn is the whole of it.
+    if (spent !== undefined && active !== undefined) {
+      active.usage = spent;
+      if (watched !== undefined) watched.usage = spent;
+      emit('chat', { type: 'chat/usage', turnId: String(active.id), usage: spent });
+    }
+    if (cancelled) finish('cancelled');
+    else if (answered?.stopReason === 'error') finish('error', answered.errorMessage, true);
+    else finish('complete');
   };
 
   /** Everything pi says while a turn runs, turned into what a client reads. */
@@ -784,24 +825,7 @@ export function piSession(
 
       /** Nothing more is coming. This is where a turn actually ends. */
       case 'agent_settled': {
-        // Recorded before `finish` seals the turn, so a truncation asked for
-        // the moment the turn appears already has the point it cuts to.
-        if (active !== undefined && live !== undefined) {
-          const at = live.leaf();
-          if (at !== undefined) ends.set(String(active.id), at);
-        }
-        // Before the ending action: a client hangs usage on the turn it is
-        // ending, and the ending is what moves that turn into the history.
-        // The sum of the calls is already what it sent as it stood; what ends
-        // the turn is the whole of it.
-        if (spent !== undefined && active !== undefined) {
-          active.usage = spent;
-          if (watched !== undefined) watched.usage = spent;
-          emit('chat', { type: 'chat/usage', turnId: String(active.id), usage: spent });
-        }
-        if (cancelled) finish('cancelled');
-        else if (answered?.stopReason === 'error') finish('error', answered.errorMessage);
-        else finish('complete');
+        settle();
         return;
       }
 
@@ -986,6 +1010,7 @@ export function piSession(
   ): void => {
     failed = undefined;
     cancelled = false;
+    resumed = false;
     answered = undefined;
     spent = undefined;
     const startedAt = new Date().toISOString();
@@ -1338,6 +1363,68 @@ export function piSession(
           });
         });
       touch();
+      return true;
+    },
+
+    /**
+     * The latest turn, failed on a model call, continued without a new message.
+     *
+     * The protocol reopens that turn rather than starting another: it moves
+     * back to `active` with its message, parts and usage, and what the resumed
+     * run writes is added after them. pi continues from the call that failed -
+     * see `PiBackend.resume` - so the calls the turn already ran are not run
+     * again.
+     *
+     * `chat/turnResume` is said here, while the client's action is being
+     * applied, so it goes out as that action's echo.
+     */
+    resume: (turnId) => {
+      if (closed || active !== undefined) return false;
+      const last = turns.at(-1);
+      if (last === undefined || String(last.id) !== turnId || last.state !== 'error') return false;
+      const part = (last.responseParts as Bag[] | undefined)?.at(-1);
+      if (part?.kind !== 'error' || part.resumable !== true) return false;
+      turns.pop();
+      delete last.state;
+      delete last.duration;
+      active = last;
+      failed = undefined;
+      cancelled = false;
+      resumed = true;
+      answered = undefined;
+      spent = last.usage as Bag | undefined;
+      const parts = last.responseParts as Bag[];
+      mapping = {
+        turnId,
+        messages: 0,
+        blocks: new Map(),
+        waiting: new Map(),
+        parts,
+        calls: new Map(),
+        ownerOf: clientOf,
+      };
+      // The transcript's own record of the turn, so what the run adds is read
+      // back with it. A turn read from pi's file is there once the file has been.
+      watched = watchedTurns.find((one) => one.turnId === turnId);
+      if (watched !== undefined) watched.parts = parts;
+      emit('chat', { type: 'chat/turnResume', turnId });
+      activity.say('Thinking');
+      touch();
+
+      void (async () => {
+        try {
+          const backend = await opened();
+          if (!await backend.resume()) {
+            finish('error', 'pi has no failed reply to continue from');
+            return;
+          }
+          // The run is over and pi raises no settle for it, so it is said here.
+          if (active !== undefined && String(active.id) === turnId) settle();
+        }
+        catch (error) {
+          finish('error', reason(error), true);
+        }
+      })();
       return true;
     },
 

@@ -97,6 +97,8 @@ export function fakePi() {
   /** The entry the fake says a turn's prompt went under, or nothing. */
   let prompted: string | undefined;
   let moves = true;
+  /** What `resume` answers, the error it throws, or a run still going. */
+  let resumes: boolean | Error | Promise<boolean> = true;
   /** Whether the model the session is on takes an image, as pi's `input` says. */
   let takes = true;
   const backend: PiBackend = {
@@ -123,6 +125,12 @@ export function fakePi() {
     },
     rename: (title) => { asked.push({ kind: 'rename', title }); },
     rewind: async (entryId) => { asked.push({ kind: 'rewind', entryId }); return moves; },
+    // No settle, as pi raises none for a run outside its own loop.
+    resume: async () => {
+      asked.push({ kind: 'resume' });
+      if (resumes instanceof Error) throw resumes;
+      return await resumes;
+    },
     /*
      * The record's variables, as the session hands them to pi's runtime before
      * each turn. Recorded so a case can read which record a turn was built for.
@@ -141,6 +149,8 @@ export function fakePi() {
     setLeaf: (next: string) => { leaf = next; },
     setPrompted: (next: string | undefined) => { prompted = next; },
     refuseRewind: () => { moves = false; },
+    /** What the next `resume` answers: `false`, an error it throws, or a run that ends later. */
+    resumeWith: (next: boolean | Error | Promise<boolean>) => { resumes = next; },
     /** The session's model takes no image, so a picture goes by its path. */
     noImages: () => { takes = false; },
     open: (async (options: BackendOptions) => { opens.push(options); return backend; }) as OpenPi,

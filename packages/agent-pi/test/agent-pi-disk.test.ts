@@ -48,7 +48,7 @@ it('rebuilds a session it never watched from pi file, with the parts a live turn
     inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, model: 'anthropic/claude-opus-5', _meta: { 'ahpd.cacheWriteTokens': 0 },
   });
   expect(turns?.[1]?.responseParts).toEqual([
-    { kind: 'error', error: { errorType: 'turnFailed', message: '429 rate limited' } },
+    { kind: 'error', error: { errorType: 'turnFailed', message: '429 rate limited' }, resumable: true },
   ]);
 
   // The same turn run live, as pi raises it, reads the same.
@@ -158,6 +158,27 @@ it('reads a turn whose last answer was aborted as cancelled, as a stopped live t
   ] as never);
   expect(turns.map((one) => one.state)).toEqual(['cancelled']);
   expect(turns[0]?.parts).toEqual([{ id: 'u1:1:0', kind: 'markdown', content: 'Start' }]);
+});
+
+it('marks only the last turn read back resumable, when it failed on a model call', async () => {
+  const { replayEntries } = await import('../src/replay.js');
+  const at = new Date().toISOString();
+  const failed = (id: string) => answer([], 'error', { errorMessage: `${id} failed` });
+  const { turns } = replayEntries([
+    { type: 'message', id: 'u1', parentId: null, timestamp: at, message: { role: 'user', content: 'go', timestamp: 0 } },
+    { type: 'message', id: 'a1', parentId: 'u1', timestamp: at, message: failed('a1') },
+    { type: 'message', id: 'u2', parentId: 'a1', timestamp: at, message: { role: 'user', content: 'again', timestamp: 0 } },
+    { type: 'message', id: 'a2', parentId: 'u2', timestamp: at, message: failed('a2') },
+  ] as never);
+  expect(turns.map((one) => one.state)).toEqual(['error', 'error']);
+  expect(turns.map((one) => one.parts.at(-1)?.resumable)).toEqual([undefined, true]);
+  const { turns: ended } = replayEntries([
+    { type: 'message', id: 'u1', parentId: null, timestamp: at, message: { role: 'user', content: 'go', timestamp: 0 } },
+    { type: 'message', id: 'a1', parentId: 'u1', timestamp: at, message: failed('a1') },
+    { type: 'message', id: 'u2', parentId: 'a1', timestamp: at, message: { role: 'user', content: 'again', timestamp: 0 } },
+    { type: 'message', id: 'a2', parentId: 'u2', timestamp: at, message: answer([{ type: 'text', text: 'Fine' }], 'stop') },
+  ] as never);
+  expect(ended.flatMap((one) => one.parts).some((part) => part.resumable !== undefined)).toBe(false);
 });
 
 // The id a session is saved under --------------------------------------------
