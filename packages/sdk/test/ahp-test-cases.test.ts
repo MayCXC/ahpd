@@ -433,18 +433,12 @@ const NOT_REPLAYED = [
   '263-chat-turn-resume-reopens-turn',
   '263-session-customizationtoggled-clears-enablement',
   '264-chat-turn-resume-noop-with-active-turn',
-  '264-session-workingdirectoryreplaced-no-op-when-absent',
   '265-chat-turn-resume-noop-for-unknown-turn',
   '266-chat-turn-resume-noop-for-nonlatest-turn',
-  '266-session-workingdirectoryreplaced-no-op-when-directory-is-absent',
   '267-chat-turn-resume-noop-for-unresumable-error',
-  '267-session-workingdirectoryreplaced-replaces-and-deduplicates',
   '268-chat-turn-resume-preserves-errors-across-retries',
-  '268-session-workingdirectoryreplaced-replaces-primary',
   '269-chat-turn-resume-completes-one-turn',
-  '269-session-workingdirectoryreplaced-replaces-non-primary',
   '270-chat-responsepart-cannot-append-error',
-  '270-session-workingdirectoryreplaced-deduplicates-earlier-replacement',
   '271-chat-changesetschanged-sets-catalogue',
   '271-chat-movablechanged-sets-true',
   '271-turn-end-normalizes-offset-and-rollover',
@@ -509,12 +503,6 @@ const HOST_REFUSED = [
   '247-chat-workingdirectoryset-adds-to-empty-set',
   '248-chat-workingdirectoryset-appends-to-existing-set',
   '249-chat-workingdirectoryset-no-op-when-already-present',
-  '264-session-workingdirectoryreplaced-no-op-when-absent',
-  '266-session-workingdirectoryreplaced-no-op-when-directory-is-absent',
-  '267-session-workingdirectoryreplaced-replaces-and-deduplicates',
-  '268-session-workingdirectoryreplaced-replaces-primary',
-  '269-session-workingdirectoryreplaced-replaces-non-primary',
-  '270-session-workingdirectoryreplaced-deduplicates-earlier-replacement',
   // `<turn> is not a completed turn in <chat>`
   '063-session-truncated-keeps-turns-up-to-turnid',
   '064-session-truncated-keeps-all-when-turnid-is-last',
@@ -716,17 +704,17 @@ describe('the protocol’s root, session and chat cases, through ahpd', () => {
   }
 
   it('names every case it cannot replay, and no other', () => {
-    expect(NOT_REPLAYED).toHaveLength(208);
-    expect(new Set(NOT_REPLAYED).size).toBe(208);
-    expect(HOST_REFUSED).toHaveLength(62);
+    expect(NOT_REPLAYED).toHaveLength(202);
+    expect(new Set(NOT_REPLAYED).size).toBe(202);
+    expect(HOST_REFUSED).toHaveLength(56);
     // The rest of the refused cases are the ones a client may not send, and
     // each of those is checked against the protocol's own answer per case.
     expect(NOT_REPLAYED.length - HOST_REFUSED.length).toBe(146);
     expect(Object.keys(HOST_OWNS)).toHaveLength(14);
-    // And 26 that ran and agreed, which need no entry in either list: they are
+    // And 32 that ran and agreed, which need no entry in either list: they are
     // the coverage this suite is for, and a case joining or leaving them is
     // what moves this number.
-    expect(NOT_REPLAYED.length + Object.keys(HOST_OWNS).length + 26).toBe(hostCases.length);
+    expect(NOT_REPLAYED.length + Object.keys(HOST_OWNS).length + 32).toBe(hostCases.length);
   });
 });
 

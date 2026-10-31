@@ -437,10 +437,12 @@ export interface ChangesetSource {
    *
    * A person's bookkeeping about a diff they are reading, not a change to
    * anything on disk - which is why it is the one thing here a client may
-   * write. Answers whether anything moved, so an idempotent toggle tells
-   * nobody about a state it already had.
+   * write. `files` are the ones the changeset holds. Answers whether anything
+   * moved, so an idempotent toggle tells nobody about a state it already had,
+   * or the sentence that says why the scope keeps no review, which the client
+   * is refused with.
    */
-  review?(dir: string, session: string, scope: string, files: string[], reviewed: boolean): boolean;
+  review?(dir: string, session: string, scope: string, files: string[], reviewed: boolean): boolean | string;
   /**
    * A file an agent is about to change, and the same file once it has.
    *

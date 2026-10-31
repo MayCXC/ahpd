@@ -236,9 +236,9 @@ A client older than 1.140 that still pushes one of the three has that key refuse
 | `session/serverToolsChanged` | host | ✅ | Full replacement, which is what the action means: it carries the new set rather than a difference. Sent to every running session when `host.setTools()` is called. |
 | `session/activeClientSet` | both | ✅ | A client announcing itself, and this host putting the creating client into the session it just made - under the `clientId` it introduced itself with rather than the one in the payload. The `customizations` it carries are read as well: each plugin is copied into this host's own directory and reported on the session. A run announces one of these too, as a client called `Automation`, carrying the copies its template named - which is how a plugin a template named reaches a session nobody is connected to. |
 | `session/activeClientRemoved` | both | ✅ | Host-managed on the way out: a client that unsubscribes, drops without reconnecting in time, or reconnects without resubscribing is removed by this host rather than left in the list. |
-| `session/workingDirectorySet` | client | ✅ | The SDK takes its directories when the CLI starts and offers no way to add one after, so a change starts the backend again *resumed* - the same conversation in a wider place. Refused `-32004` while a turn is running. |
-| `session/workingDirectoryRemoved` | client | ✅ | Index 0 is the process root and the protocol says a client MUST NOT remove it; this host says so out loud rather than ignoring the attempt. |
-| `session/workingDirectoryReplaced` | both | ✅ | The only way index 0 may move, which is why this host advertises `primaryReplacement` beside `immutablePrimary`. Saying it as a removal and an addition would be a client briefly holding a session with no directory at all. |
+| `session/workingDirectorySet` | client | ✅ | The SDK takes its directories when the CLI starts and offers no way to add one after, so a change starts the backend again *resumed*: the same conversation in a wider place. Refused while a turn is running. A folder the set holds already is answered to its sender alone. |
+| `session/workingDirectoryRemoved` | client | ✅ | Index 0 is the process root and the protocol says a client MUST NOT remove it, so this host refuses a removal of it. A folder the set does not hold is answered to its sender alone. |
+| `session/workingDirectoryReplaced` | both | ✅ | `directory` names the entry and `replacement` the folder put in its place, a replacement the set holds already keeping the earlier of its two places, as the protocol's reducer applies it. The only way index 0 may move, which is why this host advertises `primaryReplacement` beside `immutablePrimary`: a new first folder is a move, which this host says from the folder it was to the folder it is, a worktree of it when the session is isolated, before the client's own action comes back. A replacement of a folder the set does not hold is answered to its sender alone. |
 | `session/inputNeededSet` | host | ✅ | Carries `request`, not a bare entry. Four kinds reach it: a chat elicitation, a tool confirmation, a client-executed tool, and a tool blocked on an MCP sign-in. |
 | `session/inputNeededRemoved` | host | ✅ | Carries the `id` alone, which is the upsert key the set half used. |
 | `session/customizationsChanged` | host | ✅ | The whole list, seeded from the boot probe so a session is not empty for its first several seconds, then replaced when its own CLI answers. The plugins a session's clients handed it are laid after the backend's own, here and in the snapshot alike. Each customization carries the decision this host keeps for the folder the session works in, and the one for every session. A decision made in one session therefore reaches a session that has decided nothing. A customization kept off there is said to the backend as well, when that backend reports what it found for itself. |
@@ -279,8 +279,8 @@ A client older than 1.140 that still pushes one of the three has that key refuse
 | `chat/activityChanged` | host | ✅ | What this chat is doing, in the tool's own words while one runs. Sent with no `activity` to clear it. |
 | `chat/isReadChanged` | client | ✅ | Marks one chat read or unread, and only that chat: the session's own read state is `session/isReadChanged`, and a sibling chat's is its own. The bit is kept per chat, so a chat comes back read when a client opens it again, and it survives a restart. It is projected into the chat's `ChatSummary.status` and into its `SessionChatSummary.status`, which is what the protocol asks a host to synchronize. Setting what is already set is answered to its sender only. |
 | `chat/isArchivedChanged` | client | ✅ | Archives one chat, or restores it. On the session's default chat this is the session being archived, which the protocol says to send as `session/isArchivedChanged` - so that is what goes out, on the session channel, and nothing on the chat channel, whose reducer would set the chat's own bit. On any other chat it is that chat's bit, kept beside its title. |
-| `chat/workingDirectorySet` | client | ✅ | A chat may hold any subset of its session's directories and never more; anything outside is refused rather than quietly widening the session. The change starts that one chat again, resumed. |
-| `chat/workingDirectoryRemoved` | client | ✅ | The primary cannot be removed, for the reason the session's cannot: it is where the process is rooted. |
+| `chat/workingDirectorySet` | client | ✅ | A chat may hold any subset of its session's directories and never more, so a folder outside that set is refused. The change starts that one chat again, resumed. A folder the chat holds already is answered to its sender alone. |
+| `chat/workingDirectoryRemoved` | client | ✅ | The primary cannot be removed, for the reason the session's cannot: it is where the process is rooted. A folder the chat does not hold is answered to its sender alone. |
 | `chat/usage` | host | ✅ | Tokens and the model that spent them, at the end of the turn. What the protocol names no field for rides `_meta` where a backend reports it: `ahpd.cacheWriteTokens`, `ahpd.reasoningTokens`, `ahpd.context` (`{ used, size }`) and `ahpd.cost` (`{ amount, currency }`, never the reference host's bare number). |
 | `chat/reasoning` | host | ✅ | Appends to a `reasoning` part. Defined against that kind specifically - the canonical reducer returns the state unchanged for a `chat/delta` naming one, which draws a thinking header with nothing under it. |
 | `chat/pendingMessageSet` | both | ✅ | Both kinds: a `queued` message waits for the running turn, a `steering` one goes into it - the prompt handed to the CLI is a generator that stays open for the life of the session. A steering message Claude's CLI answers after the turn's last answer is answered in that turn, which stays open for it, and reads back there after a restart - [CHATS.md](CHATS.md#turns). |
@@ -320,10 +320,10 @@ A canvas is opened, updated and closed by a plugin, through its own three calls
 | action | origin | ahpd | Notes |
 | --- | :---: | :---: | --- |
 | `terminal/data` | host | ✅ | Every byte the shell wrote except its OSC 133 and OSC 7 marks, which the protocol keeps out of the output, and the same bytes are kept as scrollback so a client subscribing late sees what happened. Capped, because a terminal left running `tail -f` is a host holding a day of output for a client that may never come back. |
-| `terminal/input` | client | ✅ | Under pipes a `^C` is turned into a signal to the process group, because there is no line discipline to do it; under a pseudoterminal the byte is written through and the discipline does it. |
-| `terminal/resized` | both | ✅ | A pseudoterminal is told and sends `SIGWINCH` itself. Without one the size is kept because the state reports it and a client draws to it. |
-| `terminal/claimed` | both | ✅ | Who the terminal belongs to - a client, or a session that opened it for a `!` command. |
-| `terminal/titleChanged` | both | ✅ | Set by a client, or defaulted to the shell's own name. |
+| `terminal/input` | client | ✅ | Under pipes a `^C` is turned into a signal to the process group, the work a line discipline does under a pseudoterminal, where the byte is written through. Side-effect only, so it is answered to its sender alone; input to a shell that has exited, or to a command's output terminal, has no process to reach and is refused. |
+| `terminal/resized` | both | ✅ | A pseudoterminal is told and sends `SIGWINCH` itself. Without one, a command's output terminal included, the size is kept because the state reports it and a client draws to it. |
+| `terminal/claimed` | both | ✅ | Who the terminal belongs to: a client, or a session that opened it for a `!` command. A claim that names neither is refused. |
+| `terminal/titleChanged` | both | ✅ | Set by a client, or defaulted to the shell's own name. The title it already has is answered to its sender alone. |
 | `terminal/cwdChanged` | host | ✅ | Read out of the shell's own OSC 7, so it is a fact rather than a guess. Under a pseudoterminal only. |
 | `terminal/exited` | host | ✅ | Announced when the pipes drain rather than when the process goes: between the two there is output written and not yet read, which is exactly what a `!` command reads back. A terminal a tool call names is still a channel once nothing live answers for it: a subscribe gets the exited state rebuilt from the output this host kept, and nothing after it - [TERMINALS.md](TERMINALS.md#a-terminal-a-tool-result-names). |
 | `terminal/cleared` | both | ✅ | Drops the scrollback and keeps the size, the title and the claim - a client clears a terminal to stop reading what is there, not to give it up. Nothing reaches the process, which has no notion of its own output being discarded. |
@@ -338,7 +338,7 @@ A canvas is opened, updated and closed by a plugin, through its own three calls
 | `changeset/statusChanged` | host | ✅ | When only the status moved and the files did not. `recomputing` goes out before a changeset is read again, so a client keeps the files it has. `ready` follows when the read comes back, and a read that gives nothing puts the previous status back. |
 | `changeset/fileSet` | host | ✅ | Chosen when fewer actions than files moved. |
 | `changeset/fileRemoved` | host | ✅ | The same choice, for a file that left the set. |
-| `changeset/filesReviewChanged` | client | ✅ | A client marking files reviewed. The one changeset action a client originates. |
+| `changeset/filesReviewChanged` | client | ✅ | A client marking files reviewed. The one changeset action a client originates. Applied as the protocol's reducer applies it, to the files the changeset holds; a changeset that keeps no review, the working tree's among them, is refused. A turn that changes a file again takes the tick off its row in the session's changeset, the branch's and the turn's own. |
 | `changeset/contentChanged` | host | ✅ | Chosen when the whole set is the smaller thing to send. It reduces to the same state as the per-file pair, which is what makes choosing between them safe. |
 | `changeset/operationsChanged` | host | ✅ | The verbs the source advertises, with this host's own answer to whether each may be pressed now. |
 | `changeset/operationStatusChanged` | host | ✅ | While one runs, and when it finishes or fails. |
@@ -753,6 +753,15 @@ A flag is the same case too. `session/isReadChanged`,
 `session/isArchivedChanged`, `chat/isReadChanged` and `chat/isArchivedChanged`
 setting a bit to what it already is move nothing, so the catalogue does not
 move and the sender alone is answered.
+
+So is a working directory. A set of a folder the set holds already, a removal
+of one it does not hold, and a replacement of one it does not hold change
+nothing, on a session or on a chat, and the sender alone is answered. An action
+of these that names no folder is refused.
+
+A review is the same case. `changeset/filesReviewChanged` ticking files
+already ticked, or naming only files the changeset does not hold, moves
+nothing, and the sender alone is answered.
 
 ### The snapshot and the actions have to agree
 

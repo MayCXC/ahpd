@@ -52,7 +52,7 @@ import type { Agent, Start } from '../types/agent.js';
 import type { BackgroundTask } from '../types/background.js';
 import type { Bag } from '../types/common.js';
 import type { ComputerPort, HandedAgent, HandedRecord, NestedHost, NestedStarted } from '../types/computers.js';
-import type { Chosen, MessageFrom, Session, SubagentChat } from '../types/session.js';
+import type { Chosen, Handed, MessageFrom, Session, SubagentChat } from '../types/session.js';
 
 /** How many of the inner host's own lines are kept for a failure's sentence. */
 const TAIL = 12;
@@ -470,6 +470,19 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
   const awaited = new Set<string>();
   /** What was asked for before the inner session existed, in order. */
   const waiting: (() => void)[] = [];
+  /** The name this session's client gives itself to the host inside. */
+  const clientId = `ahpd-nested-${id}`;
+  /**
+   * The actions clients outside sent that the host inside has been handed and
+   * has not answered, by the `clientSeq` this session's client sent each with.
+   *
+   * The host inside answers each one on the envelope that carries that
+   * client's origin, with its echo or its rejection, and that answer is the
+   * one the client outside is owed for its own action.
+   */
+  const answering = new Map<number, Handed>();
+  /** The actions clients outside sent that wait, with `waiting`, for the host inside. */
+  const unsent = new Set<Handed>();
   /** The inner host's own last lines, for a failure's sentence. */
   const tail: string[] = [];
   const lastWords = (): string => (tail.length === 0 ? '' : ` It said: ${tail.join(' | ')}`);
@@ -489,14 +502,45 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
     else waiting.push(run);
   };
 
-  const deliver = (channel: 'session' | 'chat', action: Bag): void => {
-    if (closed || ended !== undefined) return;
+  /**
+   * One action for the host inside, and the client action outside it carries
+   * out, when a client sent one: held until the host inside answers it, and
+   * refused when nothing will.
+   */
+  const deliver = (channel: 'session' | 'chat', action: Bag, handed?: Handed): void => {
+    if (closed || ended !== undefined) {
+      handed?.refuse(ended ?? `${provider}'s session in computer://${id} has closed`);
+      return;
+    }
+    if (handed !== undefined) unsent.add(handed);
     gate(() => {
-      try { client?.dispatch(channel === 'chat' ? innerChat : innerSession, action as unknown as StateAction); }
+      // Refused while it waited, and so let go of by the client that sent it.
+      if (handed !== undefined && !unsent.delete(handed)) return;
+      try {
+        const sent = client?.dispatch(channel === 'chat' ? innerChat : innerSession, action as unknown as StateAction);
+        if (sent !== undefined && handed !== undefined) answering.set(sent.clientSeq, handed);
+      }
       catch (error) {
         log(`${provider}: could not reach the host inside computer://${id}: ${reason(error)}`);
+        handed?.refuse(`${provider}'s host inside computer://${id} could not be reached: ${reason(error)}`);
       }
     });
+  };
+
+  /** A client's action, carried to the host inside and answered from there to the client that sent it. */
+  const carry = (channel: 'session' | 'chat', action: Bag): void => { deliver(channel, action, start.handed?.(action)); };
+
+  /**
+   * Refuse every client action the host inside will not answer now.
+   *
+   * Its answers would come over the connection that has gone, or from a
+   * session that has ended, and each client outside holds its action until
+   * it hears one.
+   */
+  const unanswered = (sentence: string): void => {
+    for (const handed of [...answering.values(), ...unsent]) handed.refuse(sentence);
+    answering.clear();
+    unsent.clear();
   };
 
   /**
@@ -511,6 +555,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
     ended = message;
     halted = undefined;
     log(`${provider} in computer://${id}: ${message}`);
+    unanswered(message);
     start.emit('session', { type: 'session/creationFailed', error: { errorType: 'sessionStartFailed', message } });
     if (turn !== undefined) {
       start.emit('chat', {
@@ -539,6 +584,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
     halted = message;
     ready = false;
     log(`${provider} in computer://${id}: ${message}`);
+    unanswered(message);
     start.emit('session', { type: 'session/creationFailed', error: { errorType: 'sessionStartFailed', message } });
     if (turn !== undefined) {
       start.emit('chat', {
@@ -572,6 +618,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       return;
     }
     if (restart === 'reconnect') {
+      unanswered(`${provider}'s host inside computer://${id} ended${why === '' ? '' : `: ${why}`}, and the session is being opened again there`);
       void reopen(why);
       return;
     }
@@ -877,7 +924,27 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
           continue;
         }
         if (event.type !== 'action') continue;
-        const action = event.params.action;
+        const { action, origin, rejectionReason } = event.params;
+        /*
+         * The answer to a client action outside, when it carries this client's
+         * origin: the host inside says the echo of what it was handed, or
+         * rejects it, on the envelope that names the `clientSeq` it came under.
+         */
+        const sentAs = origin?.clientId === clientId ? origin.clientSeq : undefined;
+        const handed = sentAs === undefined ? undefined : answering.get(sentAs);
+        if (sentAs !== undefined) answering.delete(sentAs);
+        /*
+         * A rejection changes nothing, inside or out: the client that sent the
+         * action is refused with the reason the host inside gave, and the
+         * mirror and every other client are left as they were.
+         */
+        if (rejectionReason !== undefined) {
+          if (handed !== undefined) handed.refuse(rejectionReason);
+          else log(`${provider} in computer://${id}: the host inside refused ${action.type}: ${rejectionReason}`);
+          // A turn refused inside never runs, so nothing ends it here either.
+          if (action.type === 'chat/turnStarted' && turn === action.turnId) turn = undefined;
+          continue;
+        }
         /*
          * A background row is reported, not relayed.
          *
@@ -913,7 +980,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
           }
         }
         const shown = served(channel, action as unknown as Bag);
-        if (shown !== undefined) start.emit(channel, shown);
+        if (shown !== undefined) start.emit(channel, shown, handed);
       }
     }
     catch (error) {
@@ -1019,7 +1086,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       throw new Error(`this host publishes no resources to the host inside computer://${id}, so ${method} is not answered`);
     });
     held.connect();
-    const hello = await held.initialize({ clientId: `ahpd-nested-${id}`, protocolVersions: [...SUPPORTED_PROTOCOL_VERSIONS] });
+    const hello = await held.initialize({ clientId, protocolVersions: [...SUPPORTED_PROTOCOL_VERSIONS] });
     if (!SUPPORTED_PROTOCOL_VERSIONS.includes(hello.protocolVersion)) {
       throw new Error(`the host inside computer://${id} speaks ${hello.protocolVersion}, and this host offered ${SUPPORTED_PROTOCOL_VERSIONS.join(', ')}`);
     }
@@ -1199,7 +1266,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
         halted = undefined;
         void reopen('');
       }
-      deliver('chat', {
+      carry('chat', {
         type: 'chat/turnStarted',
         turnId,
         message: {
@@ -1217,7 +1284,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
         halted = undefined;
         void reopen('');
       }
-      deliver('chat', {
+      carry('chat', {
         type: 'chat/pendingMessageSet',
         kind: 'queued',
         id: queueId,
@@ -1230,35 +1297,42 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       });
     },
     unqueue: (queueId: string): void => {
-      deliver('chat', { type: 'chat/pendingMessageRemoved', kind: 'queued', id: queueId });
+      carry('chat', { type: 'chat/pendingMessageRemoved', kind: 'queued', id: queueId });
     },
     reorder: (order: string[]): void => {
-      deliver('chat', { type: 'chat/queuedMessagesReordered', order });
+      carry('chat', { type: 'chat/queuedMessagesReordered', order });
     },
     setDraft: (draft: Bag | undefined): void => {
-      deliver('chat', { type: 'chat/draftChanged', ...(draft === undefined ? {} : { draft }) });
+      carry('chat', { type: 'chat/draftChanged', ...(draft === undefined ? {} : { draft }) });
     },
     /* Taken only while the inner chat has a turn running. */
     steer: (steerId: string, text: string): boolean => {
       if (chat?.activeTurn === undefined) return false;
-      deliver('chat', { type: 'chat/pendingMessageSet', kind: 'steering', id: steerId, message: { text } });
+      carry('chat', { type: 'chat/pendingMessageSet', kind: 'steering', id: steerId, message: { text } });
       return true;
     },
     /* Taken only for the inner chat's last turn, when it failed and nothing runs. */
     resume: (turnId: string): boolean => {
       const last = chat?.turns.at(-1);
       if (chat?.activeTurn !== undefined || last === undefined || last.id !== turnId || last.state !== 'error') return false;
-      deliver('chat', { type: 'chat/turnResume', turnId });
+      carry('chat', { type: 'chat/turnResume', turnId });
       return true;
     },
     cancel: (turnId: string): void => {
       if (turn === turnId) turn = undefined;
-      deliver('chat', { type: 'chat/turnCancelled', turnId });
+      carry('chat', { type: 'chat/turnCancelled', turnId });
     },
     /* Taken only for a tool call of the running inner turn that waits on a confirmation. */
     confirm: (toolCallId: string, approved: boolean, optionId?: string): boolean => {
-      if (!confirming(toolCallId)) return false;
-      deliver('chat', { type: 'chat/toolCallConfirmed', toolCallId, approved, ...(optionId === undefined ? {} : { selectedOptionId: optionId }) });
+      const running = chat?.activeTurn;
+      if (running === undefined || !confirming(toolCallId)) return false;
+      carry('chat', {
+        type: 'chat/toolCallConfirmed',
+        turnId: running.id,
+        toolCallId,
+        approved,
+        ...(optionId === undefined ? {} : { selectedOptionId: optionId }),
+      });
       return true;
     },
     /* Taken only for an input request the inner session has open. */
@@ -1271,7 +1345,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
     /* Taken only for an input request the running inner turn has open. */
     setAnswer: (requestId: string, questionId: string, answer: Bag | undefined): boolean => {
       if (!asking(requestId)) return false;
-      deliver('chat', { type: 'chat/inputAnswerChanged', requestId, questionId, ...(answer === undefined ? {} : { answer }) });
+      carry('chat', { type: 'chat/inputAnswerChanged', requestId, questionId, ...(answer === undefined ? {} : { answer }) });
       return true;
     },
     /*
@@ -1297,12 +1371,12 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
     },
     startMcpServer: async (serverId: string): Promise<boolean> => {
       if (!holds(session?.customizations, serverId)) return false;
-      deliver('session', { type: 'session/mcpServerStartRequested', id: serverId });
+      carry('session', { type: 'session/mcpServerStartRequested', id: serverId });
       return true;
     },
     stopMcpServer: async (serverId: string): Promise<boolean> => {
       if (!holds(session?.customizations, serverId)) return false;
-      deliver('session', { type: 'session/mcpServerStopRequested', id: serverId });
+      carry('session', { type: 'session/mcpServerStopRequested', id: serverId });
       return true;
     },
     /*
@@ -1379,6 +1453,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       closing ??= (async () => {
         closed = true;
         const removing = reason === 'dispose';
+        unanswered(`${provider}'s session in computer://${id} has closed`);
         /*
          * A restart that arrives while the host inside is still coming up has
          * no process to stop yet: `host` is set once `startInside` has answered,

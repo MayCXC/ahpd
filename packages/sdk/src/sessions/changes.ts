@@ -1499,7 +1499,7 @@ export function gitChanges(): ChangesetSource {
          * `before` is the state a tick was about.
          */
         if (phase === 'after') {
-          for (const scope of [turnId, 'session']) {
+          for (const scope of [turnId, 'session', 'branch']) {
             // The same builder the row was minted with, or the tick keeps
             // standing against a URI the tick was never made under.
             reviewed.get(reviewKey(session, scope))?.delete(uriOf(path));
@@ -1661,10 +1661,14 @@ export function gitChanges(): ChangesetSource {
      * The one thing a client may write here, and it writes nothing to disk:
      * it is a reader's note about a diff they are working through. Answers
      * whether it moved, so a client that ticks a file already ticked does not
-     * make every other client redraw.
+     * make every other client redraw. The working tree keeps no ticks, as its
+     * scope says, and a turn's are kept under the turn's id, which is what
+     * its rows are read and reset under.
      */
     review: (_dir, session, scope, files, isReviewed) => {
-      const key = reviewKey(session, scope);
+      if (scope === 'uncommitted')
+        return 'The working tree is not reviewable: a file in it may be rewritten under a tick at any time';
+      const key = reviewKey(session, scope.startsWith('turn/') ? scope.slice('turn/'.length) : scope);
       const ticked = reviewed.get(key) ?? new Set<string>();
       reviewed.set(key, ticked);
       let moved = false;
