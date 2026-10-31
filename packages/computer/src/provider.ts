@@ -149,7 +149,7 @@ const moment = (created: string | undefined): string => {
  * the ones a write takes. A runtime that answers nothing about a machine that
  * is here is answering one that is not running.
  */
-const stateLine = (said: 'running' | 'stopped' | undefined): string => `${said ?? 'stopped'}\n`;
+const stateLine = (said: 'running' | 'stopped' | 'suspended' | undefined): string => `${said ?? 'stopped'}\n`;
 
 export function computerProvider(runtime: ComputerRuntime, options: ProviderOptions): ComputerProvider {
   const capabilities = (): string => JSON.stringify({
@@ -224,6 +224,15 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
    * for a gate to be taught about.
    */
   const STATES = ['running', 'stopped', 'restarted'] as const;
+
+  /**
+   * Whether one machine takes `suspended`, and `running` back from it.
+   *
+   * A machine whose runtime cannot hold it never reads `suspended`, so the
+   * word is refused for it rather than listed with the three.
+   */
+  const suspends = (id: string): boolean =>
+    runtime.suspend !== undefined && runtime.resume !== undefined && runtime.suspends?.(id) === true;
 
   const statsOf = async (id: string, found: Record<string, unknown>): Promise<string> => {
     const used = await runtime.stats(id);
@@ -334,14 +343,28 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
     });
   };
 
-  /** A machine put in one of the three states, as `said` names it. */
+  /**
+   * A machine put in one of the three states, as `said` names it, or in
+   * `suspended` where its runtime can hold it. `running` lets a suspended
+   * machine go on from where it was held.
+   */
   const setState = async (name: string, said: string): Promise<void> => {
     if (await runtime.inspect(name) === undefined) throw absentResource('computer', `computer://${name}/state`);
     const state = said.trim().toLowerCase();
+    if (state === 'suspended') {
+      if (!suspends(name) || runtime.suspend === undefined) {
+        throw new RpcError(-32602, `${name} cannot be suspended: its runtime cannot hold a machine`);
+      }
+      await runtime.suspend(name);
+      return;
+    }
     if (!STATES.includes(state as typeof STATES[number])) {
       throw new RpcError(-32602, `A computer's state is one of ${STATES.join(', ')}, and that body says ${state || 'nothing'}`);
     }
-    if (state === 'running') await runtime.start(name);
+    if (state === 'running' && suspends(name) && runtime.resume !== undefined && await runtime.state(name) === 'suspended') {
+      await runtime.resume(name);
+    }
+    else if (state === 'running') await runtime.start(name);
     else if (state === 'stopped') await runtime.stop(name);
     else await runtime.restart(name);
   };

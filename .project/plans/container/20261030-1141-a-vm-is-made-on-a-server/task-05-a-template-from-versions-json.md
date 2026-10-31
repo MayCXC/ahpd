@@ -1,6 +1,6 @@
 ---
 title: A VM template is built from versions.json and rebuilt when it moves
-status: todo
+status: doing
 depends: [task-03-libvirt-makes-a-machine.md]
 layer: "computer"
 refs:
@@ -28,3 +28,14 @@ The libvirt runtime makes `ahpd-template-<hash>` the first time a VM is asked fo
 - By hand: a VM from the template runs `/opt/ahpd/ahpd/bin/ahpd --version` at this host's version, the path task 03's `hostCommand` answers.
 
 ## Resume
+
+- Code and tests done on 2026-10-30. The check by hand on dev02 waits on task 01.
+- `template.ts` holds the recipe. `templateMaker` makes one template per server and hash, and a second ask waits for the first build.
+- The recipe: boot a helper VM, copy the parts in, run `cloud-init clean --logs --machine-id`, shut the helper down, and keep its disk.
+- libvirt gives the steps. The helper disk backs onto `libvirt.image`, and the helper domain is undefined without its storage.
+- `partsFromDocker` sends `docker cp <id>:/opt/ahpd -` straight to `sudo tar -x -C /opt` in the VM. Nothing is written on this host.
+- The helper installs the joined image's packages: `ca-certificates`, `git` and `ripgrep`.
+- `libvirt.template` still names an operator's own template, which is used as it is and never built.
+- A failed build removes the helper and its disk. An older template is named in the log and kept.
+- Not yet known: whether a command in a VM finds a part's launcher by its bare name. The joined image puts each part's `bin` on `PATH`, and the template does not. The run on dev02 checks it.
+

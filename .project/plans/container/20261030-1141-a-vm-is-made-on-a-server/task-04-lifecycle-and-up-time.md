@@ -1,6 +1,6 @@
 ---
 title: A VM starts, stops, suspends and resumes, and its up time is metered
-status: todo
+status: done
 depends: [task-03-libvirt-makes-a-machine.md]
 layer: "computer"
 refs:
@@ -32,3 +32,11 @@ A runtime may declare `suspend` and `resume` in its capabilities; the `state` le
 - `computer-uptime.test.ts` passes unchanged.
 
 ## Resume
+
+- Done on 2026-10-30.
+- `ComputerRuntime` has optional `suspend`, `resume` and `suspends`. The router refuses either verb in a sentence for a runtime that has none.
+- The `state` leaf takes `suspended` only where `suspends` answers yes. For another machine it refuses the word, and the list of three in its other refusal does not change.
+- `running` written to a suspended machine resumes it. There is no `resumed` word.
+- In `made`, a suspend closes the stretch and a resume opens one.
+- libvirt reads `paused` as `suspended`. Stop asks for `shutdown` and runs `destroy` after 60 s, or at once for a paused VM. A VM already shut off is left as it is. Restart resumes a paused VM before `reboot`.
+- `computer-uptime.test.ts` passes unchanged. The computer suite has 525 passed and 1 skipped.

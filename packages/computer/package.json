@@ -120,6 +120,37 @@
             }
           }
         },
+        "libvirt": {
+          "type": "object",
+          "description": "How a profile with runtime libvirt makes its machines: each is a VM on its server's libvirt, a linked clone of a template disk, reached over ssh through that server.",
+          "properties": {
+            "uri": { "type": "string", "description": "The libvirt connection URI for every server. qemu+ssh://<destination>/system when absent." },
+            "pool": { "type": "string", "description": "The storage pool that holds the template and every VM's disk." },
+            "network": { "type": "string", "description": "The libvirt network a VM is attached to." },
+            "template": { "type": "string", "description": "A template's volume in the pool, which every VM's disk backs onto. When absent, a template is built from image on each server, with the parts this host's Docker builds." },
+            "image": { "type": "string", "description": "The cloud image's volume in the pool, a qcow2 with cloud-init, which a template is built from. A VM is refused when neither this nor template is set." },
+            "user": { "type": "string", "description": "The login a VM is made with. ahpd when absent." },
+            "disk": { "type": "string", "description": "The size of a VM's disk, as virsh vol-create-as reads it. 20G when absent." },
+            "virsh": { "type": "array", "items": { "type": "string" }, "description": "The virsh program and the arguments it starts with. [\"virsh\"] when absent." },
+            "virtInstall": { "type": "array", "items": { "type": "string" }, "description": "The virt-install program and the arguments it starts with. [\"virt-install\"] when absent." }
+          }
+        },
+        "proxmox": {
+          "type": "object",
+          "description": "How a profile with runtime proxmox makes its machines: each is a VM on this node, a linked clone of a template VM, reached over ssh at the address its guest agent reports, through the profile's server when it names one.",
+          "properties": {
+            "url": { "type": "string", "description": "The API's address, https://<node>:8006." },
+            "tokenId": { "type": "string", "description": "The API token's id, <user>@<realm>!<name>." },
+            "secret": { "type": "string", "writeOnly": true, "secretAtUse": true, "description": "The API token's secret. A name may be given instead of the secret, as {\"$secret\": \"host:proxmox\"}." },
+            "node": { "type": "string", "description": "The node every VM is made on." },
+            "storage": { "type": "string", "description": "The storage a template built here is copied onto." },
+            "bridge": { "type": "string", "description": "The bridge a VM's network card is on." },
+            "template": { "type": "string", "description": "The name of a template VM on the node, with cloud-init and the QEMU guest agent, which every VM is a linked clone of. When absent, a template is built from image, with the parts this host's Docker builds." },
+            "image": { "type": "string", "description": "The name of a cloud-init template VM on the node, with the QEMU guest agent, which a template is built from. A VM is refused when neither this nor template is set." },
+            "user": { "type": "string", "description": "The login a VM is made with. ahpd when absent." },
+            "ca": { "type": "string", "description": "A PEM file on this host that the node's certificate is checked against, for a node with its own certificate authority." }
+          }
+        },
         "env": { "type": "object", "additionalProperties": { "type": "string", "writeOnly": true }, "description": "Environment variables merged over the daemon's. A variable is a credential wherever the image keeps one, so each answers <set>." },
         "image": { "type": "string", "description": "The image a machine is made from when a call names none." },
         "cpus": { "type": "string", "description": "A CPU limit for every machine this host makes." },
@@ -142,6 +173,7 @@
               "cpus": { "type": "string", "description": "A CPU limit for its machines, a string. The plugin's cpus when absent." },
               "memory": { "type": "string", "description": "A memory limit for its machines, a string. The plugin's memory when absent." },
               "ociRuntime": { "type": "string", "description": "The OCI runtime Docker starts its machines under, a string. runsc is gVisor. Docker's own default when absent." },
+              "runtime": { "type": "string", "enum": ["docker", "libvirt", "proxmox"], "description": "What makes its machines: docker, a container on the server's Docker; libvirt, a VM on the server's libvirt, as the libvirt option says; proxmox, a VM on the proxmox option's node, reached through the server when one is named. docker when absent." },
               "server": { "type": "string", "description": "The box its machines are made on, by its name in ssh.machines. The box is checked before a machine is made there. This host when absent." },
               "code": { "type": "string", "enum": ["bundle", "clone"], "description": "How a machine on a server is given the session's code: bundle sends the tree's commit from this host; clone has the machine fetch the session's branch from origin over https, so only a public repository. bundle when absent." },
               "workdir": { "type": "string", "description": "Where commands start, a string. folder, or the image's own, when absent." },

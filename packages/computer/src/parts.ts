@@ -942,7 +942,7 @@ export const refusedWithout = (spec: { sessionParts?: string[] }, failed: readon
   (spec.sessionParts === undefined ? [] : failed.filter((id) => spec.sessionParts?.includes(id) === true));
 
 /** What the joined image holds beyond the parts, which is what an agent needs to work. */
-const JOINED = 'ca-certificates git ripgrep';
+export const JOINED_PACKAGES = 'ca-certificates git ripgrep';
 
 /**
  * The Dockerfile of the one image ahpd publishes: a machine with every part in
@@ -957,7 +957,7 @@ const JOINED = 'ca-certificates git ripgrep';
 export const joinedDockerfile = (parts: Part[], tags: ReadonlyMap<string, string>): string => [
   'FROM debian:bookworm-slim',
   `RUN apt-get update \\
- && apt-get install --yes --no-install-recommends ${JOINED} \\
+ && apt-get install --yes --no-install-recommends ${JOINED_PACKAGES} \\
  && rm -rf /var/lib/apt/lists/*`,
   ...parts.map((part) => `COPY --from=${tags.get(part.id)} /opt/ahpd/${part.id} /opt/ahpd/${part.id}`),
   // Every part's launchers on the PATH, so `/opt/ahpd/codex/bin/codex-acp`
