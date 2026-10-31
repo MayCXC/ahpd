@@ -1,6 +1,6 @@
 ---
 title: A terminal action is answered
-status: todo
+status: done
 depends: []
 layer: host
 refs:
@@ -38,3 +38,6 @@ Every terminal action a client sends is answered: input that reaches a process a
 - `pnpm run typecheck` and `pnpm run boundary` report no errors.
 
 ## Resume
+
+Done 2026-10-31.
+Every step is built, and the touched suites, the type check and the boundary check pass.
