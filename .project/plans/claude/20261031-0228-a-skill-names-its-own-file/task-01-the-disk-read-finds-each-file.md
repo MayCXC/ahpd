@@ -1,6 +1,6 @@
 ---
 title: The disk read finds each file
-status: todo
+status: implemented
 depends: []
 layer: agent-claude
 refs:

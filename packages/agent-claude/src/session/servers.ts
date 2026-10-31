@@ -4,6 +4,7 @@ import type { SessionContext } from './context.js';
 import { protectedResource, urlOf } from '../mcp.js';
 import { flagSettingsOf } from '../options.js';
 import { customizationsOf, rootOf } from './customizations.js';
+import { configDirOf, diskOf, managedDirOf } from './disk.js';
 import type { Published } from './customizations.js';
 
 /** What this area offers the rest of the session. */
@@ -88,7 +89,14 @@ export function createServers(ctx: SessionContext): Servers {
     const off = [...switched.values()]
       .filter((one) => !one.enabled)
       .map((one) => ({ name: one.name, path: one.source, source: one.source }));
-    ctx.customizations = customizationsOf(reported.init, reported.mcp, reported.skills, wanted, plugins, handed, off);
+    // Read again each time, so a file written since is the file listed. A
+    // session in a machine reads nothing here: its CLI reads its own volume.
+    const disk = ctx.options.spawn !== undefined ? undefined : diskOf({
+      configDir: configDirOf(ctx.options.env),
+      managedDir: managedDirOf(),
+      ...(ctx.options.cwd !== undefined ? { cwd: ctx.options.cwd } : {}),
+    });
+    ctx.customizations = customizationsOf(reported.init, reported.mcp, reported.skills, wanted, plugins, handed, off, disk);
     if (ctx.customizations.length > 0) {
       ctx.emit('session', { type: 'session/customizationsChanged', customizations: ctx.customizations });
     }

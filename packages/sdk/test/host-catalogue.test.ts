@@ -1115,24 +1115,29 @@ describe('a summary that did not change', () => {
 
   it('sends one summary for however many calls moved nothing', async () => {
     const { client, peer: p } = await running();
+    // The row a session sends once its customizations arrive comes first.
+    await settle();
+    const opened = rowsMoved(p, 'ahp-session:/live').length;
     await retitle(client, 'ahp-session:/live', 'Paging');
-    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(1);
+    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(opened + 1);
 
     // The same title again, and again: a rename a client makes twice, a
     // `rename_chat` the agent calls after its own, and the diff stat a
     // directory reports the same count for - all of it one row, unchanged.
     await retitle(client, 'ahp-session:/live', 'Paging');
     await retitle(client, 'ahp-session:/live', 'Paging');
-    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(1);
+    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(opened + 1);
   });
 
   it('sends again for a title that moved, and for an activity that moved', async () => {
     const { client, peer: p, chatUri } = await running();
+    await settle();
+    const opened = rowsMoved(p, 'ahp-session:/live').length;
     await retitle(client, 'ahp-session:/live', 'Paging');
-    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(1);
+    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(opened + 1);
 
     await retitle(client, 'ahp-session:/live', 'Paging, again');
-    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(2);
+    expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(opened + 2);
     expect(rowsMoved(p, 'ahp-session:/live').at(-1)?.title).toBe('Paging, again');
 
     // Which was the field that moved last in the measurements: a turn
@@ -1253,10 +1258,11 @@ describe('a summary that did not change', () => {
     vi.setSystemTime(new Date('2026-01-01T12:00:00.000Z'));
     try {
       const { client, peer: p, uri } = await running();
-      await retitle(client, uri, 'Paging');
-      expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(1);
-      await retitle(client, uri, 'Paging');
-      expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(1);
+      // The row a session sends once its customizations arrive, which is the
+      // last one this session sends.
+      await settle();
+      const opened = rowsMoved(p, 'ahp-session:/live');
+      expect(opened).not.toHaveLength(0);
 
       await client.handle({ method: 'disposeSession', params: { channel: uri } });
       await settle();
@@ -1265,11 +1271,13 @@ describe('a summary that did not change', () => {
       // The same conversation, under the same name, with nothing on it - and a
       // client that watched it go has an empty row for it. The row it is sent
       // here is byte for byte the row the disposed session last sent.
-      const before = rowsMoved(p, 'ahp-session:/live').length;
+      const before = rowsMoved(p, 'ahp-session:/live');
+      expect(before).toHaveLength(opened.length + 1);
+      expect(before.at(-1)).toEqual(opened.at(-1));
       await retitle(client, uri, 'Paging');
-      expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(before + 1);
+      expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(before.length + 1);
       await retitle(client, uri, 'Paging');
-      expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(before + 1);
+      expect(rowsMoved(p, 'ahp-session:/live')).toHaveLength(before.length + 1);
     }
     finally {
       vi.useRealTimers();

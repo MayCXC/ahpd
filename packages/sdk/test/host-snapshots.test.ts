@@ -150,7 +150,9 @@ describe('what it says it is doing', () => {
       a.handle({ method: 'dispatchAction', params: { channel: peerChat, action: { type: 'session/titleChanged', title: 'Tests' } } });
       await settle();
       // A peer chat's title is said as a chat, not as the session's.
-      expect(actions(pa, uri).find((one) => one.action.type === 'session/chatUpdated')?.action.changes).toEqual({ title: 'Tests' });
+      // The last update, after the rows the session sends once its
+      // customizations arrive.
+      expect(actions(pa, uri).filter((one) => one.action.type === 'session/chatUpdated').at(-1)?.action.changes).toEqual({ title: 'Tests' });
       // The write is coalesced onto the next tick.
       await new Promise((tick) => { setTimeout(tick, 5); });
 

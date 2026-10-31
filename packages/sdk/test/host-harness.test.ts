@@ -191,10 +191,15 @@ describe('what the harness offers', () => {
     // agent. Without it the only way to ask what a harness offers is to create
     // a session, which is the thing somebody is deciding about.
     const offered = root.agents[0]?.customizations ?? [];
-    expect(offered.map((one) => one.id).sort()).toEqual(['directory:skills', 'mcp:gmail']);
+    // The personal folders are there to write in, empty or not, and a skill
+    // no folder has is the CLI's own.
+    expect(offered.map((one) => one.id).sort()).toEqual([
+      'directory:builtin:skills', 'directory:user:agents', 'directory:user:commands',
+      'directory:user:rules', 'directory:user:skills', 'mcp:gmail',
+    ]);
     expect(offered.find((one) => one.id === 'mcp:gmail')?.type).toBe('mcpServer');
     // And the skill is inside the directory, which is where a leaf goes.
-    const held = offered.find((one) => one.id === 'directory:skills') as { children?: { id: string }[] } | undefined;
+    const held = offered.find((one) => one.id === 'directory:builtin:skills') as { children?: { id: string }[] } | undefined;
     expect(held?.children?.map((one) => one.id)).toEqual(['skill:review']);
   });
 
@@ -368,11 +373,12 @@ describe('what the harness offers', () => {
     sdk.init = {};
     const { client, uri } = await running();
     const state = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
-      snapshot: { state: { customizations: unknown[]; lifecycle: string } };
+      snapshot: { state: { customizations: { type: string; children?: unknown[] }[]; lifecycle: string } };
     }).snapshot.state;
-    // An empty list is a real answer. A session that refused to open because
-    // the harness had nothing to say would be a worse one.
-    expect(state.customizations).toEqual([]);
+    // Only the folders to write in, and what the disk has in them, is a real
+    // answer. A session that refused to open because the harness had nothing
+    // to say would be a worse one.
+    expect(state.customizations.every((one) => one.type === 'directory')).toBe(true);
     expect(state.lifecycle).toBe('ready');
   });
 });
@@ -843,11 +849,12 @@ describe('a skill is not a prompt', () => {
      * failed reads apiece against a `uri` that was a bare name.
      */
     expect(top.every((entry) => entry.type === 'directory' || entry.type === 'mcpServer')).toBe(true);
-    const skills = top.find((entry) => entry.contents === 'skill');
-    expect(skills?.type).toBe('directory');
+    const skills = top.filter((entry) => entry.contents === 'skill');
+    expect(skills.every((entry) => entry.type === 'directory')).toBe(true);
     // A directory says what one kind of thing it holds, and holds them.
-    expect((skills?.children as unknown[])?.length).toBeGreaterThan(0);
-    expect(String(skills?.uri)).toMatch(/^file:\/\/.*\/\.claude\/skills$/);
+    expect(skills.some((entry) => (entry.children as unknown[]).length > 0)).toBe(true);
+    // And a folder to write one in is the folder itself.
+    expect(skills.some((entry) => /^file:\/\/.*\/\.claude\/skills$/.test(String(entry.uri)))).toBe(true);
   });
 
   it('calls a command that was loaded as a skill a skill', async () => {
