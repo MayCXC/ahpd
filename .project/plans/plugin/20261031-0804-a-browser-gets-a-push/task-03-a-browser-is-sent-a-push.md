@@ -1,6 +1,6 @@
 ---
 title: A browser is sent a push
-status: todo
+status: implemented
 depends: [task-02-a-browser-registers-under-push.md]
 layer: push
 refs:

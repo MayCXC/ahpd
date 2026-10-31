@@ -1,7 +1,8 @@
 import { reason, secretRef, str } from '@ahpd/sdk';
-import { deviceStore, pushProvider } from './provider.js';
+import { WEB_PUSH_HOSTS, deviceStore, pushProvider } from './provider.js';
 import { createSender } from './send.js';
 import { loadVapid } from './vapid.js';
+import { createWebSender } from './webpush.js';
 import type { Device, DeviceStore } from './provider.js';
 import type { PushMessage } from './send.js';
 import type { InputNeededSetEvent, Plugin, TurnEndEvent } from '@ahpd/sdk';
@@ -32,7 +33,9 @@ export const name = 'push';
 export const title = 'Push';
 
 /** What an option falls back to. */
-export const defaults = {} as const;
+export const defaults = {
+  webPushHosts: [...WEB_PUSH_HOSTS],
+} as const;
 
 /**
  * The kinds of waiting that are a person being asked something.
@@ -63,7 +66,10 @@ interface Reachable {
 export const apply: Plugin['apply'] = (host, options) => {
   const store: DeviceStore = deviceStore(host.configDir, (line) => { host.problem(`${name}: ${line}`); });
   const vapid = loadVapid(host.configDir, (line) => { host.log(`${name}: ${line}`); });
-  host.registerResourceProvider('push', pushProvider({ store, ...(vapid === undefined ? {} : { vapid }) }));
+  const webPushHosts = Array.isArray(options['webPushHosts'])
+    ? options['webPushHosts'].filter((one): one is string => typeof one === 'string' && one.trim() !== '')
+    : [...WEB_PUSH_HOSTS];
+  host.registerResourceProvider('push', pushProvider({ store, webPushHosts, ...(vapid === undefined ? {} : { vapid }) }));
 
   const named = str(options['title']);
   const title = named === undefined || named.trim() === '' ? host.hostName : named;
@@ -123,30 +129,57 @@ export const apply: Plugin['apply'] = (host, options) => {
     },
   });
 
+  const contact = str(options['contact']);
+  const webSender = vapid === undefined ? undefined : createWebSender({
+    log: (line) => { host.log(`${name}: ${line}`); },
+    gone: (id) => { store.remove(id); },
+    vapid,
+    ...(contact === undefined || contact.trim() === '' ? {} : { contact: contact.trim() }),
+  });
+
   /** Send `body` to every device in the session, naming the session and why in `data`. */
   const notify = async (session: string, body: string, kind: string): Promise<void> => {
     const reachable = await audience(session);
-    // A browser is not sent to yet, so it is left out here rather than read as
-    // an Expo token. The web sender arrives with the subscription that reaches it.
-    const expo = reachable.flatMap((one) => (one.device.platform === 'web' ? [] : [one.device]));
-    if (expo.length === 0) return;
+    if (reachable.length === 0) return;
 
-    let token: string | undefined;
-    try {
-      token = await tokenNow();
-    }
-    catch (error) {
-      host.log(`${name}: accessToken could not be read, so nothing was sent: ${reason(error)}`);
-      return;
+    const phones = reachable.flatMap((one) => (one.device.platform === 'web' ? [] : [one.device]));
+    const browsers = reachable.flatMap((one) => (one.device.platform === 'web' ? [{ id: one.id, device: one.device }] : []));
+
+    if (phones.length > 0) {
+      let token: string | undefined;
+      let sent = true;
+      try {
+        token = await tokenNow();
+      }
+      catch (error) {
+        host.log(`${name}: accessToken could not be read, so no phone was sent to: ${reason(error)}`);
+        sent = false;
+      }
+      if (sent) {
+        const messages: PushMessage[] = phones.map((device) => ({
+          to: device.token,
+          title,
+          body,
+          data: { uri: session, kind },
+        }));
+        await sender.send(messages, token);
+      }
     }
 
-    const messages: PushMessage[] = expo.map((device) => ({
-      to: device.token,
-      title,
-      body,
-      data: { uri: session, kind },
-    }));
-    await sender.send(messages, token);
+    // A host with no VAPID pair has already said so once, at load, and has no
+    // way to sign a request, so a browser is skipped rather than failed.
+    if (browsers.length > 0 && webSender !== undefined) {
+      await webSender.send(browsers.map((one) => ({
+        id: one.id,
+        endpoint: one.device.endpoint,
+        keys: one.device.keys,
+        title,
+        body,
+        data: { uri: session, kind },
+        session,
+        urgency: kind === 'turnComplete' ? 'normal' : 'high',
+      })));
+    }
   };
 
   host.on('session_start', (event) => {

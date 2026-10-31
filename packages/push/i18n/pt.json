@@ -9,6 +9,12 @@
     },
     "accessToken": {
       "description": "Um token de acesso do Expo, quando o projeto tem a segurança de push ligada. Pode-se dar um nome no lugar do token, como {\"$secret\": \"host:expo\"}."
+    },
+    "webPushHosts": {
+      "description": "Os hosts em que o endpoint do navegador pode estar, onde um padrão *.<domínio> vale para todo host abaixo dele. Um endpoint em outro host é recusado na escrita."
+    },
+    "contact": {
+      "description": "Uma URI mailto: ou https: enviada como a reivindicação sub do VAPID, que um serviço de push pode usar para contactar o operador. Sem ela, não há reivindicação sub."
     }
   }
 }

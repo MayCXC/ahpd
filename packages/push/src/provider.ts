@@ -37,6 +37,20 @@ const DEVICES = 'devices';
 const VAPID = 'vapid';
 
 /**
+ * The push services of Safari, Chrome, Firefox and Edge.
+ *
+ * An endpoint comes from a client, and a host that sent to any address a client
+ * named would be a host that can be told to make a request anywhere. A pattern
+ * of `*.<domain>` matches every host under that domain.
+ */
+export const WEB_PUSH_HOSTS = [
+  '*.push.apple.com',
+  'fcm.googleapis.com',
+  'updates.push.services.mozilla.com',
+  '*.notify.windows.com',
+] as const;
+
+/**
  * When a device was registered, which this file does not keep.
  *
  * A record here is a token and a platform rather than a thing with a history,
@@ -337,6 +351,8 @@ export interface PushProviderOptions {
   store: DeviceStore;
   /** The host's VAPID pair, when it has one, whose public key is served at `push://vapid`. */
   vapid?: Vapid;
+  /** The hosts a browser's endpoint may be at. The default is every push service of a major browser. */
+  webPushHosts?: readonly string[];
 }
 
 /**
@@ -355,8 +371,18 @@ export interface PushProvider extends ResourceProvider {
   describe(): SchemeDescription;
 }
 
+/** Whether a host matches one of a list of patterns, where `*.<domain>` matches every host under it. */
+const hostAllowed = (host: string, patterns: readonly string[]): boolean => {
+  const said = host.toLowerCase();
+  return patterns.some((pattern) => {
+    const held = pattern.trim().toLowerCase();
+    if (held === '') return false;
+    return held.startsWith('*.') ? said.endsWith(held.slice(1)) : said === held;
+  });
+};
+
 /** The device a write's body describes, or the refusal a body that is not one is owed. */
-const deviceOf = (uri: string, content: Write): Device => {
+const deviceOf = (uri: string, content: Write, webPushHosts: readonly string[]): Device => {
   let said: unknown;
   try {
     said = JSON.parse(bodyText(content));
@@ -406,6 +432,9 @@ const deviceOf = (uri: string, content: Write): Device => {
     if (address.protocol !== 'https:') {
       throw new RpcError(-32602, `${uri} has an endpoint that is not https`);
     }
+    if (!hostAllowed(address.hostname, webPushHosts)) {
+      throw new RpcError(-32602, `${uri} has an endpoint at ${address.hostname}, which is not a push service this host allows`);
+    }
     const keys = keysOf(body['keys']);
     if (keys === undefined) {
       throw new RpcError(-32602, `${uri} needs keys: the browser's p256dh of 65 octets and auth of 16, in base64url`);
@@ -425,6 +454,7 @@ const deviceOf = (uri: string, content: Write): Device => {
  */
 export const pushProvider = (options: PushProviderOptions): PushProvider => {
   const { store, vapid } = options;
+  const webPushHosts = options.webPushHosts ?? WEB_PUSH_HOSTS;
   const description: SchemeDescription = {
     title: 'Push',
     description: 'The devices a host tells when a session needs a person, and the public key a browser subscribes with.',
@@ -517,7 +547,7 @@ export const pushProvider = (options: PushProviderOptions): PushProvider => {
       if (content.createOnly === true && held !== undefined) {
         throw new RpcError(-32010, `${place.id} is already a device here; edit it or choose another id`);
       }
-      const device = deviceOf(uri, content);
+      const device = deviceOf(uri, content, webPushHosts);
       store.put(place.id, {
         ...device,
         ...(client === undefined || client === '' ? {} : { client }),
