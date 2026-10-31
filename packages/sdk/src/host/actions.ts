@@ -739,14 +739,16 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
     if (type === 'session/isReadChanged' || type === 'session/isArchivedChanged') {
       // The session's own bits, kept beside it and never seen by a backend.
       // One function, because `chat/isArchivedChanged` on a session's default
-      // chat is this same act - see `sessionFlag`.
-      sessionFlag(
+      // chat is this same act - see `sessionFlag`. A bit that did not move is
+      // answered to its sender alone, as an unchanged announcement is above.
+      const moved = sessionFlag(
         ctx,
         sessionFor(channel),
         type === 'session/isReadChanged' ? Status.IsRead : Status.IsArchived,
         type === 'session/isReadChanged' ? action.isRead === true : action.isArchived === true,
         action,
       );
+      if (!moved) echoTo(connection.peer, channel, action, origin);
       return;
     }
     const terminal = terminals.get(channel);

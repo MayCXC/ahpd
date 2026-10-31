@@ -290,6 +290,13 @@ const NOT_REPLAYED = [
   '039-set-steering-message',
   '040-replace-existing-steering-message',
   '041-update-steering-message-content-via-set-with-same-id',
+  '042-remove-steering-message',
+  '043-remove-steering-message-is-no-op-for-mismatched-id',
+  '044-remove-steering-message-is-no-op-when-none-exists',
+  '048-remove-a-queued-message',
+  '049-remove-last-queued-message-sets-array-to-undefined',
+  '050-remove-queued-message-is-no-op-for-unknown-id',
+  '051-remove-queued-message-is-no-op-when-array-is-empty',
   '052-steering-and-queued-messages-are-independent',
   '058-session-customizationschanged-replaces-entire-list',
   '059-session-customizationschanged-replaces-existing-customizations',
@@ -487,6 +494,14 @@ const HOST_REFUSED = [
   '040-replace-existing-steering-message',
   '041-update-steering-message-content-via-set-with-same-id',
   '052-steering-and-queued-messages-are-independent',
+  // `<id> is not a <kind> message this chat holds`: no case's pending message is one this chat was sent
+  '042-remove-steering-message',
+  '043-remove-steering-message-is-no-op-for-mismatched-id',
+  '044-remove-steering-message-is-no-op-when-none-exists',
+  '048-remove-a-queued-message',
+  '049-remove-last-queued-message-sets-array-to-undefined',
+  '050-remove-queued-message-is-no-op-for-unknown-id',
+  '051-remove-queued-message-is-no-op-when-array-is-empty',
   // `<directory> is not a working directory of <session>`, and the workspace was never trusted here
   '241-session-workingdirectoryset-adds-to-empty-set',
   '242-session-workingdirectoryset-appends-to-existing-set',
@@ -701,17 +716,17 @@ describe('the protocol’s root, session and chat cases, through ahpd', () => {
   }
 
   it('names every case it cannot replay, and no other', () => {
-    expect(NOT_REPLAYED).toHaveLength(201);
-    expect(new Set(NOT_REPLAYED).size).toBe(201);
-    expect(HOST_REFUSED).toHaveLength(55);
+    expect(NOT_REPLAYED).toHaveLength(208);
+    expect(new Set(NOT_REPLAYED).size).toBe(208);
+    expect(HOST_REFUSED).toHaveLength(62);
     // The rest of the refused cases are the ones a client may not send, and
     // each of those is checked against the protocol's own answer per case.
     expect(NOT_REPLAYED.length - HOST_REFUSED.length).toBe(146);
     expect(Object.keys(HOST_OWNS)).toHaveLength(14);
-    // And 33 that ran and agreed, which need no entry in either list: they are
+    // And 26 that ran and agreed, which need no entry in either list: they are
     // the coverage this suite is for, and a case joining or leaving them is
     // what moves this number.
-    expect(NOT_REPLAYED.length + Object.keys(HOST_OWNS).length + 33).toBe(hostCases.length);
+    expect(NOT_REPLAYED.length + Object.keys(HOST_OWNS).length + 26).toBe(hostCases.length);
   });
 });
 

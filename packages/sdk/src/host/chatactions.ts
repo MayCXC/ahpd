@@ -233,12 +233,18 @@ export function chatAction(
      * the session is archived.
      */
     if (bitOf === Status.IsArchived && sessions.get(flagSession)?.defaultChat === channel) {
-      sessionFlag(ctx, flagSession, Status.IsArchived, on, { type: 'session/isArchivedChanged', isArchived: on });
+      if (!sessionFlag(ctx, flagSession, Status.IsArchived, on, { type: 'session/isArchivedChanged', isArchived: on })) {
+        echoTo(connection.peer, channel, action, origin);
+      }
       return;
     }
     // Said again, a bit that did not move is not a change: it would move the
-    // catalogue and wake every client for a message that said nothing.
-    if (!chatFlag(ctx, flagSession, channel, bitOf, on, action)) return;
+    // catalogue and wake every client for a message that said nothing. Its
+    // sender is holding it all the same, so it is answered, to it alone.
+    if (!chatFlag(ctx, flagSession, channel, bitOf, on, action)) {
+      echoTo(connection.peer, channel, action, origin);
+      return;
+    }
     if (bitOf === Status.IsRead) sessionFollows(ctx, flagSession, channel);
     // A chat filed away is read: nobody is going to come back to it for what
     // is new in it. Taking one back out leaves its read bit as it is.
@@ -1390,11 +1396,28 @@ export function chatAction(
         ? action.draft as Bag
         : undefined);
       break;
-    case 'chat/pendingMessageRemoved':
-      session.unqueue(String(action.id ?? ''));
+    case 'chat/pendingMessageRemoved': {
+      const id = String(action.id ?? '');
+      const kind = action.kind === 'steering' ? 'steering' : 'queued';
+      /*
+       * A removal of a message this chat does not hold SHOULD be rejected (the
+       * protocol's `chat/pendingMessageRemoved`), matched on its id and on its
+       * kind, an absent kind being `queued`. Read from the chat's own state,
+       * which is what every client was told it holds.
+       */
+      const state = session.chatState() as Bag;
+      const held = kind === 'steering'
+        ? (state.steeringMessage as Bag | undefined)?.id === id
+        : Array.isArray(state.queuedMessages) && state.queuedMessages.some((one) => (one as Bag | undefined)?.id === id);
+      if (!held) {
+        no(`${id} is not a ${kind} message this chat holds`);
+        break;
+      }
+      session.unqueue(id);
       // A queued message taken back never becomes a turn to let its sender go.
-      if (action.kind === 'queued') ctx.forgetSender(String(action.id ?? ''));
+      if (action.kind === 'queued') ctx.forgetSender(id);
       break;
+    }
     case 'chat/queuedMessagesReordered':
       session.reorder(Array.isArray(action.order)
         ? action.order.filter((id): id is string => typeof id === 'string')
