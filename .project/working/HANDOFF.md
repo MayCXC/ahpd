@@ -18,12 +18,13 @@ Current progress and pending items only, as of 2026-10-31.
   - #161: only the echo carries the origin.
   - #151: container/05 p8, a profile's machines on another server's Docker.
   - #162: the VM plan, a VM made by libvirt or Proxmox. Nothing has run on a real hypervisor yet.
-- On 2026-10-31, four PRs merged on green CI, Windows included:
+- On 2026-10-31, five PRs merged on green CI, Windows included:
   - #163: CI stages a pre-release under the `next` dist-tag.
   - #164: host/20261031-0211, every client action is answered.
   - #165: claude/20261031-0228, a skill names its own file.
   - #166: claude/20261031-0258, a written agent shows at once.
-- The last code merge on main is #166 (`66ff733e`).
+  - #167: daemon/20261031-0555, an installed ahpd is found outside bash. The install script reaches people at the next release, because ahpio-site copies it from the newest `v*` tag.
+- The last code merge on main is #167 (`f8c27994`).
 - #158 was based on the #157 branch, so its merge went into that branch and never reached main. #159 took the same head into main. Check `baseRefName` before you merge a stacked fork PR.
 - Disposing a session that this process does not hold leaves its disposable machine behind. The `held === undefined` branch in `lifecycle.ts` never calls `leaveForgotten`. It is on main from before p8: [problems/a-disposed-session-not-held-leaves-its-machine.md](../problems/a-disposed-session-not-held-leaves-its-machine.md).
 - The README is rewritten for people who run ahpd (`a22c1934`). The brief it came from is `ahp-review/ahpd-review/ahpd-readme-2026-10-27/`.
@@ -38,10 +39,11 @@ Current progress and pending items only, as of 2026-10-31.
 
 ## Waiting for Softov
 
-- Restart the daemon for #164, #165 and #166. One restart covers all three: a stale removal is refused, Claude sessions list their real files, and a written customization shows without a restart.
+- Restart the daemon for #164 to #167. One restart covers all four: a stale removal is refused, Claude sessions list their real files, a written customization shows without a restart, and npm runs beside the daemon's Node.
 - claude/20261031-0228: [pending/claude-skill-file-checks.md](../pending/claude-skill-file-checks.md).
 - claude/20261031-0258: [pending/claude-reload-checks.md](../pending/claude-reload-checks.md).
-- host/20261031-0211, claude/20261031-0228 and claude/20261031-0258: review. Each is `implemented`.
+- daemon/20261031-0555: [pending/install-path-checks.md](../pending/install-path-checks.md).
+- host/20261031-0211, claude/20261031-0228, claude/20261031-0258 and daemon/20261031-0555: review. Each is `implemented`.
 - host/114, host/116 and x-ahpd/me: review. x-ahpd/me gives `kind` a third value, `plugin`, which the plan did not name.
 - After the daemon restart for #156 to #161 and #151, open a terminal in ahpw and in ahpc. `supportsCommandDetection` is now false until the shell prints its first mark.
 - host/126: review. ahpc and ahpw must create `ahp-session:` sessions.
@@ -70,7 +72,6 @@ Current progress and pending items only, as of 2026-10-31.
 - The VM plan `20261030-1141-a-vm-is-made-on-a-server` has its code merged. It waits on the checks by hand above.
 - container/05 p10 (task 03 next).
 - The ahpw Connect button for plugin/71 is ahpw plan plugins/09, planned.
-- [daemon/20261031-0555-ahpd-is-found-outside-bash](../plans/daemon/20261031-0555-ahpd-is-found-outside-bash/plan.md): the install script's PATH line in the login file, the uninstall prefix, and npm beside `process.execPath`. It is planned, and I build it next.
 
 ## Outside this repository
 
