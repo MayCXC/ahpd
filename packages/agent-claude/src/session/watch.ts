@@ -1,4 +1,4 @@
-import { existsSync, watch } from 'node:fs';
+import { existsSync, statSync, watch } from 'node:fs';
 import type { FSWatcher } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { projectDirOf } from './disk.js';
@@ -30,6 +30,23 @@ const PLUGINS = 'plugins';
  * time it starts, and a call for it starts a probe, whose CLI writes it again.
  */
 const INSTALLED = new Set(['installed_plugins.json', 'installed_plugins_v2.json']);
+
+/**
+ * Whether a change in one of `FOLDERS` is the CLI's own bookkeeping, which
+ * lists nothing. The CLI writes the `manifest.json` and dotfiles of each
+ * `skills/synced` folder each time it starts, with the same content when
+ * nothing changed. A change to a skill also writes the skill's own files.
+ */
+const isBookkeeping = (name: string): boolean => {
+  const file = basename(name);
+  return file.startsWith('.') || (file === 'manifest.json' && name.split(/[\\/]/)[0] === 'synced');
+};
+
+/** Whether `at` is a folder now, which Windows says `change` for when a file in it is written. */
+const isFolder = (at: string): boolean => {
+  try { return statSync(at).isDirectory(); }
+  catch { return false; }
+};
 
 /** The files of a scope a customization is read from. */
 const FILES = new Set(['CLAUDE.md', 'CLAUDE.local.md', 'settings.json', 'settings.local.json']);
@@ -98,7 +115,10 @@ export function watchFolders(roots: WatchRoots, onChange: () => void): () => voi
       const at = join(dir, name);
       const onName = name === PLUGINS
         ? (file: string | null): void => { if (file === null || INSTALLED.has(file)) fire(); }
-        : fire;
+        : (file: string | null, event: string): void => {
+          if (file === null) fire();
+          else if (!isBookkeeping(file) && !(event === 'change' && isFolder(join(at, file)))) fire();
+        };
       held.set(name, existsSync(at) ? opened(at, name !== PLUGINS, onName) : undefined);
     };
     const open = (): void => {

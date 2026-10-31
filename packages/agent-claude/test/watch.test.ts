@@ -87,6 +87,20 @@ describe('the watcher of the Claude folders', () => {
     expect(calls()).toBe(1);
   });
 
+  it('does not call for the files the CLI rewrites in a synced skills folder, and calls for a skill there', async () => {
+    const root = fresh();
+    const bucket = join(root, 'skills', 'synced', 'org_user');
+    mkdirSync(join(bucket, 'docs'), { recursive: true });
+    const { calls } = await watched({ configDir: root });
+    writeFileSync(join(bucket, 'manifest.json'), '{}\n');
+    writeFileSync(join(bucket, '.last-complete-round'), 'round\n');
+    await pause(900);
+    expect(calls()).toBe(0);
+    writeFileSync(join(bucket, 'docs', 'SKILL.md'), '---\nname: docs\n---\n');
+    await until(calls, 1);
+    expect(calls()).toBe(1);
+  });
+
   it('calls once for a burst of changes', async () => {
     const root = fresh();
     mkdirSync(join(root, 'commands'));
