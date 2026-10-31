@@ -206,6 +206,8 @@ The CLI reports the names of the skills, commands and agents it loaded, and not 
 
 A name found in more than one scope takes the managed file first, then the personal one, then the project one. A synced skill is matched by `anthropic-skills:<name>` and by its bare name. A skill, command or agent with no file is one the CLI ships, and goes in a `builtin` directory with a `claude-internal:` uri. A plugin's entries stay under the plugin.
 
+A session started in the home folder has no project scope, because its `.claude` is the personal folder; the home folder's `CLAUDE.md` is then a personal rule.
+
 The project and user directories are sent with nothing in them too, so a client can offer to write the first one there. The read-only directories are sent only with something in them.
 
 The rules are the `CLAUDE.md` files and every `*.md` under a `rules` folder: `<config dir>/CLAUDE.md`, and `CLAUDE.md`, `.claude/CLAUDE.md` and `CLAUDE.local.md` in the working directory. A rule whose frontmatter has `paths` carries them as `globs`; any other rule is `alwaysApply`.
