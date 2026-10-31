@@ -100,7 +100,7 @@ backend input_needed_set or turn_end -> push plugin -> audience by person or by 
 | [01 - A device hears its person's sessions](task-01-a-device-hears-its-persons-sessions.md) | implemented | - |
 | [02 - A browser registers under push](task-02-a-browser-registers-under-push.md) | implemented | 01 |
 | [03 - A browser is sent a push](task-03-a-browser-is-sent-a-push.md) | implemented | 02 |
-| [04 - The plugin is documented](task-04-docs.md) | todo | 03 |
+| [04 - The plugin is documented](task-04-docs.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
@@ -112,8 +112,8 @@ backend input_needed_set or turn_end -> push plugin -> audience by person or by 
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-31; Softov sent it to build the same day. Task 01 is implemented: a device keeps its person and an `audience`, and `audience` reads `sessionOwner` once per send. Task 02 is implemented: a browser registers under `platform: 'web'`, the host keeps a VAPID pair in `push-vapid.json`, and `push://vapid` serves its public key. Task 03 is implemented: `webpush.ts` seals an RFC 8291 `aes128gcm` body (its appendix A vector matches byte for byte) and signs a VAPID ES256 header, `notify` splits phones and browsers, and a 404 or 410 removes the device.
-- **Next action:** [task-04-docs.md](task-04-docs.md).
+- **Done so far:** drafted 2026-10-31; Softov sent it to build the same day. Task 01 is implemented: a device keeps its person and an `audience`, and `audience` reads `sessionOwner` once per send. Task 02 is implemented: a browser registers under `platform: 'web'`, the host keeps a VAPID pair in `push-vapid.json`, and `push://vapid` serves its public key. Task 03 is implemented: `webpush.ts` seals an RFC 8291 `aes128gcm` body (its appendix A vector matches byte for byte) and signs a VAPID ES256 header, `notify` splits phones and browsers, and a 404 or 410 removes the device. Task 04 is implemented: the README and the plugin page name the web body, `push://vapid`, `audience`, `webPushHosts` and `contact`.
+- **Next action:** none; every task is implemented. The manual checks are in `.project/pending/push-web-checks.md`, and `implemented.md` records the build.
 - **Open questions:** none.
 - **Watch out for:** Not checked: whether Apple's push service refuses a VAPID JWT with no `sub`. If it does, `contact` needs a default.
 

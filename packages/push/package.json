@@ -2,7 +2,7 @@
   "name": "@ahpd/push",
   "version": "0.14.0",
   "type": "module",
-  "description": "Expo push notifications for the ahpd daemon: a push: resource provider a device registers with, and the sender that tells it when a session needs a person",
+  "description": "Push notifications for the ahpd daemon: a push: resource provider a phone registers its Expo token with or a browser its Web Push subscription, and the senders that tell a device when a session needs a person",
   "keywords": [
     "ahp",
     "agent-host-protocol",
