@@ -124,7 +124,7 @@ interface ChangesetSource {
   read?(uri): Promise<{ data: string; encoding: string } | undefined>;
   refresh?(dir): Promise<boolean>;
   watch?(dir, onChange): ChangesetWatch | undefined;
-  review?(dir, session, scope, files, reviewed): boolean;
+  review?(dir, session, scope, files, reviewed): boolean | string;
   observe?(dir, session, turnId, path, phase): void;
   operations?(dir, session, scope): ChangesetOperation[];
   invoke?(request): Promise<ChangesetOperationResult>;
@@ -140,6 +140,10 @@ promise that resolves once the source's watchers are armed. A change made
 before then reaches no watcher, so the host reads the directory again when
 `ready` resolves. `gitChanges()` resolves it after its last watcher opens, or
 when it gives up.
+
+`review` is handed the files a client ticked that the changeset holds, and
+answers whether a tick moved, or the sentence the client is refused with when
+the scope keeps no review. `gitChanges()` keeps none for the working tree.
 
 ### `directories`
 
