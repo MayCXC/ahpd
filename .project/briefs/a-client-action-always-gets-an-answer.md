@@ -2,20 +2,23 @@
 title: A client action always gets an answer
 created: 2026-10-30
 refs:
-  - git://8b2f963e - the commit of ahpd the facts were checked at
-  - "[code://packages/sdk/src/host/chatactions.ts#L1413-L1429](../../packages/sdk/src/host/chatactions.ts#L1413-L1429) - `chat/pendingMessageRemoved` and `chat/toolCallConfirmed` call the session and say nothing for an unknown id"
-  - "[code://packages/sdk/src/host/chatactions.ts#L1450-L1456](../../packages/sdk/src/host/chatactions.ts#L1450-L1456) - `chat/inputCompleted` for an unknown request is a no-op, and the comment says the protocol has it so"
-  - "[code://packages/sdk/src/host/chatactions.ts#L1145-L1150](../../packages/sdk/src/host/chatactions.ts#L1145-L1150) - `chat/turnCancelled` with no active turn is refused, the pattern to copy"
-  - "[code://packages/sdk/src/host/chatactions.ts#L33-L42](../../packages/sdk/src/host/chatactions.ts#L33-L42) - `sessionFlag` returns `false` and dispatches nothing when the flag is already set"
-  - "[code://packages/sdk/src/host/actions.ts#L739-L751](../../packages/sdk/src/host/actions.ts#L739-L751) - the caller of `sessionFlag`, which ignores its result"
+  - git://ea86d32c - the commit of ahpd the facts were checked at
+  - git://2f3ff9eb - the commit that refuses a confirmation or an answer nothing waits on, the pattern to copy
+  - "[code://packages/sdk/src/host/chatactions.ts#L1393-L1397](../../packages/sdk/src/host/chatactions.ts#L1393-L1397) - `chat/pendingMessageRemoved` calls `unqueue` and says nothing for an unknown id"
+  - "[code://packages/sdk/src/host/chatactions.ts#L1403-L1415](../../packages/sdk/src/host/chatactions.ts#L1403-L1415) - `chat/toolCallConfirmed` is refused when `confirm` returns `false`"
+  - "[code://packages/sdk/src/host/chatactions.ts#L1417-L1448](../../packages/sdk/src/host/chatactions.ts#L1417-L1448) - `chat/inputCompleted` is refused when `answer` returns `false`"
+  - "[code://packages/sdk/src/host/chatactions.ts#L32-L41](../../packages/sdk/src/host/chatactions.ts#L32-L41) - `sessionFlag` returns `false` and dispatches nothing when the flag is already set"
+  - "[code://packages/sdk/src/host/chatactions.ts#L91-L101](../../packages/sdk/src/host/chatactions.ts#L91-L101) - `chatFlag` has the same guard"
+  - "[code://packages/sdk/src/host/chatactions.ts#L235-L241](../../packages/sdk/src/host/chatactions.ts#L235-L241) - the chat flag caller returns with no answer when the bit did not move"
+  - "[code://packages/sdk/src/host/actions.ts#L739-L750](../../packages/sdk/src/host/actions.ts#L739-L750) - the caller of `sessionFlag`, which ignores its result"
   - "[code://packages/sdk/src/host/actions.ts#L708-L724](../../packages/sdk/src/host/actions.ts#L708-L724) - an `activeClient` that changed nothing is answered to its sender only with `echoTo`, the pattern to copy"
   - "[code://packages/sdk/src/host/actions.ts#L755-L765](../../packages/sdk/src/host/actions.ts#L755-L765) - `terminal/input` is side-effect only and not echoed"
-  - "[code://packages/sdk/src/types/session.ts#L627](../../packages/sdk/src/types/session.ts#L627) - `Session.unqueue` returns `void`"
-  - "[code://packages/sdk/src/types/session.ts#L645](../../packages/sdk/src/types/session.ts#L645) - `Session.confirm` returns `void`"
-  - "[code://packages/sdk/src/types/session.ts#L711](../../packages/sdk/src/types/session.ts#L711) - `Session.answer` returns whether it took the answer"
-  - "[code://packages/agent-claude/src/session/turns.ts#L714-L720](../../packages/agent-claude/src/session/turns.ts#L714-L720) - the claude backend's `unqueue` returns when the id is not queued"
-  - "[code://packages/agent-claude/src/session/asking.ts#L638-L646](../../packages/agent-claude/src/session/asking.ts#L638-L646) - the claude backend's `confirm` returns when no call waits under the id"
-  - https://github.com/microsoft/agent-host-protocol/blob/2c37a04f/docs/specification/chat-channel.md - *Server Validation of Client Actions*, checked at 2c37a04f
+  - "[code://packages/sdk/src/types/session.ts#L631](../../packages/sdk/src/types/session.ts#L631) - `Session.unqueue` returns `void`"
+  - "[code://packages/sdk/src/types/session.ts#L653](../../packages/sdk/src/types/session.ts#L653) - `Session.confirm` returns whether it took the confirmation"
+  - "[code://packages/agent-claude/src/session/turns.ts#L714-L720](../../packages/agent-claude/src/session/turns.ts#L714-L720) - the claude backend's `unqueue` looks only at its queued messages"
+  - "[code://packages/sdk/src/sessions/nested.ts#L1232-L1234](../../packages/sdk/src/sessions/nested.ts#L1232-L1234) - the nested session's `unqueue` sends the removal on to the inner host and cannot tell whether the id is there"
+  - "[code://packages/sdk/src/host/sleep.ts#L106](../../packages/sdk/src/host/sleep.ts#L106) - the host already reads `queuedMessages` from a chat's state"
+  - https://github.com/microsoft/agent-host-protocol/blob/2c37a04f/docs/specification/chat-channel.md - *Server Validation of Client Actions* and *Shared List Mutations and Ordering*, checked at 2c37a04f
   - https://github.com/microsoft/agent-host-protocol/blob/2c37a04f/docs/specification/terminal-channel.md - `terminal/input` is side-effect only
   - https://github.com/microsoft/agent-host-protocol/blob/2c37a04f/docs/guide/reconciliation.md - a client holds its own action as pending until the echo or the rejection comes
   - https://github.com/microsoft/vscode/blob/4f4f516a8b9/src/vs/platform/agentHost/node/agentHostStateManager.ts - `dispatchClientAction` and `rejectClientAction`, checked at 4f4f516a8b9
@@ -27,13 +30,14 @@ refs:
 ahpd answers every action a client sends on a channel it has.
 The answer is an echo when it applies the action, or a `rejectionReason` when it does not.
 A command in ahpc now waits for that answer and exits with it.
-Today an unknown tool call, an unknown queued message, an unknown question and a flag already set get no answer at all.
+Today an unknown queued message and a flag already set get no answer at all.
 ahpc then waits 10 seconds and exits 0, so a typo reads as success.
 
 ## What others do
 
 - The protocol, at 2c37a04f, rejects `chat/toolCallConfirmed` for a call not waiting on a confirmation with a MUST.
-- It rejects `chat/pendingMessageRemoved` for an unknown id and `chat/inputCompleted` for an unknown request with a SHOULD.
+- It rejects `chat/pendingMessageRemoved` with a SHOULD when no pending message has the id and the effective kind. An absent kind means `queued`.
+- It says a host MUST reject a client removal that it can no longer honor after handoff.
 - It allows silence in two cases only: a channel the server does not have, and `terminal/input`, which is side-effect only.
 - The reconciliation guide holds a client's own action as pending until its echo or its rejection arrives.
 - VS Code, at 4f4f516a8b9, sends each accepted client action through `dispatchClientAction`, which applies it and emits it with the client's origin.
@@ -43,37 +47,38 @@ ahpc then waits 10 seconds and exits 0, so a typo reads as success.
 
 | Action | Condition | ahpd today | Spec |
 | --- | --- | --- | --- |
-| `chat/toolCallConfirmed` | no call waits under the id | silent | MUST reject |
-| `chat/pendingMessageRemoved` | no queued message has the id | silent | SHOULD reject |
-| `chat/inputCompleted` | no question waits under the id | silent | SHOULD reject |
+| `chat/toolCallConfirmed` | no call waits under the id | refused, by 2f3ff9eb | MUST reject |
+| `chat/inputCompleted` | no question waits under the id | refused, by 2f3ff9eb | SHOULD reject |
+| `chat/pendingMessageRemoved` | no pending message has the id and kind | silent | SHOULD reject |
 | `session/isReadChanged`, `session/isArchivedChanged` | the flag already has the value | silent | not covered |
+| `chat/isReadChanged`, `chat/isArchivedChanged` | the flag already has the value | silent | not covered |
 | `chat/turnCancelled` | no active turn | refused | MUST reject |
 | `terminal/input` | any | silent | side-effect only |
 
-- `Session.unqueue` and `Session.confirm` return `void`, so the host cannot tell whether the backend took the id.
-- `Session.answer` returns a boolean, and the host already reads it, but it treats `false` as a no-op.
-- The comment on `chat/inputCompleted` says the protocol makes an unknown request a no-op; the spec table says the server SHOULD reject it.
-- `sessionFlag` dispatches nothing when the flag does not change, and its caller does not answer the sender.
-- An `activeClient` that changes nothing is answered to its sender only, with `echoTo`; a flag can use the same answer.
-- Six backends implement `unqueue` and `confirm`: agent-claude, agent-acp, agent-cofold, agent-pi, bot and the nested session.
+- 2f3ff9eb made `Session.confirm` return a boolean, as `answer` does, and changed every backend to match.
+- `Session.unqueue` still returns `void`, and it takes the id only, not the kind.
+- The claude backend's `unqueue` looks only at its queued messages, so a steering removal there finds nothing.
+- The nested session's `unqueue` sends the removal on to the inner host and does not know whether the id is there.
+- The host can read a chat's `queuedMessages` itself, as `sleep.ts` does.
+- `sessionFlag` and `chatFlag` dispatch nothing when the flag does not change, and their callers do not answer the sender.
+- An `activeClient` that changes nothing is answered to its sender only, with `echoTo`. A flag can use the same answer.
+- Eight implement `unqueue`: agent-claude, agent-acp, agent-cofold, agent-pi, bot, the nested session, and the echo and notes examples.
 
 ## Who writes
 
-- `plugin/56-a-steered-bot-message-is-its-own-turn` (PR #143, open) changes `chatactions.ts` at line 1185 and `types/session.ts`. Those lines are in `chat/pendingMessageSet` and do not overlap this change.
-  The two files are the same, so this change waits for #143 or rebases on it.
-- The worktrees `build-agents-b003dc25` and `build-agents-fda88f4a` do not change these files.
-- `maycxc/main` does not change these files.
+- No open PR changes `chatactions.ts`, `host/actions.ts` or `types/session.ts` at ea86d32c.
+- PR #143, which changed `chatactions.ts` and `types/session.ts`, merged as 885ca71d.
 
 ## The change
 
-- `chat/toolCallConfirmed` for a call that does not wait on a confirmation is refused, with the call id in the reason.
-- `chat/pendingMessageRemoved` for an id that is not queued is refused.
-- `chat/inputCompleted` for a request the chat does not wait on is refused, and the comment that calls it a no-op goes.
+- `chat/pendingMessageRemoved` for an id and kind that no pending message has is refused, with the id in the reason.
 - A session flag set to the value it already has is answered to its sender with `echoTo`, as `activeClient` is.
+- A chat flag set to the value it already has is answered the same way.
 - `terminal/input` stays silent, as the spec says.
 - An action on a channel ahpd does not have stays silent, as the spec says.
 
 ## Open points
 
-- Where the host learns that an id is unknown. One way is `Session.unqueue` and `Session.confirm` returning whether they took it, as `answer` does, which changes six backends. The other is the host reading the chat state before it calls the backend, which changes only `chatactions.ts`.
-- Whether VS Code rejects an unknown tool call or queued message was not checked; only its general accept and reject paths were read.
+- Where the host learns that a pending message is unknown. One way is `Session.unqueue` returning whether it took the id, as `confirm` does since 2f3ff9eb. That changes eight implementers, and the nested session cannot answer it.
+- The other way is the host reading the chat's `queuedMessages` for the id and the kind before it calls the backend. That changes only `chatactions.ts`, and it checks the kind as the spec says.
+- Not checked: whether a backend can say that the agent already has a queued message. The spec refuses a removal after that handoff.
