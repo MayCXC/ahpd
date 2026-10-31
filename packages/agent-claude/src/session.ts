@@ -282,6 +282,7 @@ export function createSession(options: ClaudeSessionOptions): Session {
 
     close: () => {
       ctx.closed = true;
+      servers.unwatch();
       ctx.ended.clear();
       ctx.pastLines.clear();
       ctx.answeredInputs.clear();
