@@ -377,6 +377,30 @@ describe('a turn, with the switch on', () => {
     expect(started?.origin).toEqual({ clientId: 'probe', clientSeq: 11 });
   });
 
+  it('gives a queued message its origin when the check that allowed it answers after the dispatch', async () => {
+    const { client, said } = await signedIn(await host(true), 'alice');
+    await makeSession(client, 'queued', 'claude', 'sandbox-alice');
+    const chat = 'ahp-chat:/queued';
+    await client.handle({ method: 'subscribe', params: { channel: chat } });
+    void client.handle({
+      method: 'dispatchAction',
+      params: {
+        channel: chat,
+        clientSeq: 12,
+        action: { type: 'chat/pendingMessageSet', kind: 'queued', id: 'q1', message: { text: 'hello', model: { id: 'anthropic/sonnet-5' } } },
+      },
+    });
+    await settle();
+    expect(rejection(said)).toBeUndefined();
+    const carrying = said.notes
+      .filter((note) => note.method === 'action')
+      .map((note) => note.params as { action?: { type?: string }; origin?: unknown })
+      .filter((params) => params.origin !== undefined);
+    // The echo alone: the turn the message became is the host's own.
+    expect(carrying.map((params) => params.action?.type)).toEqual(['chat/pendingMessageSet']);
+    expect(carrying[0]?.origin).toEqual({ clientId: 'probe', clientSeq: 12 });
+  });
+
   it('refuses example 21: A5 refuses bob\'s turn on fable-5, naming the row', async () => {
     const { client, said } = await signedIn(await host(true), 'bob');
     // The same row that let his session through, because this turn did name the

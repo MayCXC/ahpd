@@ -653,6 +653,92 @@ it('gives a turn on a nested session the origin of the client outside that sent 
   await host.close();
 });
 
+/*
+ * The host outside and one client of it, on a nested session whose host inside
+ * runs `inner`, with what the client was told read back by the action's type.
+ */
+const outside = async (inner: ReturnType<typeof innerHost>) => {
+  const agent = nestedAgent(backend(), { plugins: PLUGINS, start: async () => inner.proc, timeoutMs: 500 });
+  const host = createHost({ path: REPO_ROOT, agents: [agent] });
+  const peer = watching();
+  const client = host.accept(peer);
+  await client.handle({ method: 'initialize', params: { clientId: 'window', protocolVersions: ['1.0.0'] } });
+  await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/outer', provider: PROVIDER, config: { computer: 'computer://box' } } });
+  await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/outer' } });
+  await client.handle({ method: 'subscribe', params: { channel: 'ahp-chat:/outer' } });
+  const dispatch = (clientSeq: number, action: Bag): Promise<unknown> =>
+    client.handle({ method: 'dispatchAction', params: { channel: 'ahp-chat:/outer', clientSeq, action } });
+  const told = (type: string): Bag[] => peer.seen
+    .filter(({ method, params }) => method === 'action' && params?.action?.type === type)
+    .map(({ params }) => params);
+  return { host, dispatch, told };
+};
+
+/*
+ * Every action a client sends a nested session comes back from the host inside,
+ * after the dispatch outside was applied. Each is that client's own echo, under
+ * the clientSeq it sent, however late the host inside says it.
+ */
+it('gives a draft on a nested session the origin of the client outside that sent it', async () => {
+  const { host, dispatch, told } = await outside(innerHost(backend()));
+  await dispatch(4, { type: 'chat/draftChanged', draft: { text: 'half a thought' } });
+  await until(() => told('chat/draftChanged').length > 0 || told('session/creationFailed').length > 0);
+  expect(told('session/creationFailed')).toEqual([]);
+  expect(told('chat/draftChanged')[0]?.origin).toEqual({ clientId: 'window', clientSeq: 4 });
+  await host.close();
+});
+
+it('gives a message queued on a nested session the origin of the client outside that sent it', async () => {
+  const { host, dispatch, told } = await outside(innerHost(backend()));
+  await dispatch(5, { type: 'chat/pendingMessageSet', kind: 'queued', id: 'q1', message: { text: 'and then this' } });
+  await until(() => told('chat/pendingMessageSet').length > 0 || told('session/creationFailed').length > 0);
+  expect(told('session/creationFailed')).toEqual([]);
+  expect(told('chat/pendingMessageSet')[0]?.origin).toEqual({ clientId: 'window', clientSeq: 5 });
+  await host.close();
+});
+
+/*
+ * The host inside refusing what the host outside handed it is a refusal of the
+ * client outside that sent it, with the inside's reason, and the chat stays as
+ * it was. The echo backend takes no message mid-turn.
+ */
+it('refuses to the client outside an action the host inside refused, and changes nothing', async () => {
+  const { host, dispatch, told } = await outside(innerHost(backend(40)));
+  await dispatch(6, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'a long enough answer to steer' } });
+  await until(() => told('chat/responsePart').length > 0 || told('session/creationFailed').length > 0);
+  expect(told('session/creationFailed')).toEqual([]);
+  await dispatch(7, { type: 'chat/pendingMessageSet', kind: 'steering', id: 's1', message: { text: 'shorter' } });
+  await until(() => told('chat/pendingMessageSet').length > 0 || told('chat/turnComplete').length > 0);
+  const steering = told('chat/pendingMessageSet');
+  expect(steering).toHaveLength(1);
+  expect(steering[0]?.origin).toEqual({ clientId: 'window', clientSeq: 7 });
+  expect(steering[0]?.rejectionReason).toBe('This backend cannot take a message mid-turn');
+  await host.close();
+}, 30_000);
+
+/*
+ * A turn reaches the session in a machine once the host outside has set the
+ * machine where its branch is, after the dispatch outside was applied, and the
+ * host inside refusing it is still that client's refusal.
+ */
+it('refuses to the client outside a turn the host inside refused', async () => {
+  const inner = innerHost(backend());
+  inner.host.refuseTurns('The host inside is stopping');
+  const { host, dispatch, told } = await outside(inner);
+  await dispatch(8, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hello' } });
+  await until(() => told('chat/turnStarted').length > 0 || told('session/creationFailed').length > 0);
+  expect(told('session/creationFailed')).toEqual([]);
+  const started = told('chat/turnStarted');
+  expect(started).toHaveLength(1);
+  expect(started[0]?.origin).toEqual({ clientId: 'window', clientSeq: 8 });
+  expect(started[0]?.rejectionReason).toBe('The host inside is stopping');
+  // Nothing ran under the turn, so the session ending fails no turn.
+  inner.crash();
+  await until(() => told('session/creationFailed').length > 0);
+  expect(told('chat/error')).toEqual([]);
+  await host.close();
+});
+
 it('cancel stops the inner turn', async () => {
   const inner = innerHost(backend(30));
   const { seen, emit } = recorder();
