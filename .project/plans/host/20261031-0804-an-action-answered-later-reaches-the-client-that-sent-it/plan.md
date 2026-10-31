@@ -1,7 +1,7 @@
 ---
 title: An action answered later reaches the client that sent it
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-31
 revalidated: 2026-10-31
@@ -92,7 +92,7 @@ dispatchAction -> applyNow -> chatAction (owe turnStarted) -> beginOrRun -> foll
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An action answered later reaches the client that sent it](task-01-an-action-answered-later-reaches-the-client-that-sent-it.md) | todo | - |
+| [01 - An action answered later reaches the client that sent it](task-01-an-action-answered-later-reaches-the-client-that-sent-it.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -102,13 +102,13 @@ dispatchAction -> applyNow -> chatAction (owe turnStarted) -> beginOrRun -> foll
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-31.
-- **Next action:** [task-01-an-action-answered-later-reaches-the-client-that-sent-it.md](task-01-an-action-answered-later-reaches-the-client-that-sent-it.md).
+- **Done so far:** planned and built 2026-10-31. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a toggle and a config change on a nested session still come back without their origin, with the groups that rework them.
 
 ## Final verification checklist
 
-- [ ] Each new case fails on `fff9c888` for the reason it names, and passes after the change.
-- [ ] The touched suites pass.
-- [ ] `pnpm run typecheck` and `pnpm run boundary` report no errors.
+- [x] Each new case fails on `fff9c888` for the reason it names, and passes after the change.
+- [x] The touched suites pass.
+- [x] `pnpm run typecheck` and `pnpm run boundary` report no errors.

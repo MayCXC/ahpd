@@ -1,6 +1,6 @@
 ---
 title: An action answered later reaches the client that sent it
-status: todo
+status: done
 depends: []
 layer: host
 refs:
@@ -54,3 +54,6 @@ The proxy for a nested session answers each client action from what the host ins
 - `pnpm run typecheck` and `pnpm run boundary` report no errors.
 
 ## Resume
+
+Done 2026-10-31.
+Every step is built, and the touched suites, the type check and the boundary check pass.
