@@ -98,7 +98,7 @@ client -> x-ahpd/me {} -> me method handle(params, reader, client, owner)
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-28 from ahpw organization/05 task 07, against main `dfe7d9ce`. Tasks 01 to 03 are implemented on 2026-10-28; see [implemented.md](implemented.md).
+- **Done so far:** drafted 2026-10-28 from ahpw organization/05 task 07, against main `dfe7d9ce`. Tasks 01 to 03 are implemented on 2026-10-28; see [implemented.md](implemented.md). PR #172 merged the answer to a plugin's own connection on 2026-10-31, as `44d90a59`.
 - **Next action:** review by Softov.
 - **Open questions:** none.
 - **Watch out for:** the principal is frozen in `principalOf`, so `rolesFromSignIn` must be frozen with the literal, as `roles` is.

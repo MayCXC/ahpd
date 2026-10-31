@@ -34,7 +34,7 @@ Current progress and pending items only, as of 2026-10-31.
 - `/github/ahpd` is level with origin/main. `abdecb49` merges Softov's `1965724e` and keeps the two briefs deleted.
 - Fetch, and check the base before you cut a build worktree.
 - Softov's dev daemon runs from source on port 37537. He restarted it after #114.
-- Code goes through a PR on `softov/ahpd`. Plan-only commits go to main. Run `gh pr checks` with `-R softov/ahpd` outside a repo.
+- Code goes through a PR on `softov/ahpd`. Plan-only commits go to main. The ruleset restricts updates to main, so a PR merges with `gh pr merge --admin --merge`, only on Softov's word. Run `gh pr checks` with `-R softov/ahpd` outside a repo.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by every test run. Restore it with `git checkout --` and never print it.
 - On Windows CI, `agent-acp-ports` (the pseudoterminal test) fails at times, also before #169. Rerun the failed jobs once; a second failure needs a look.
 - On this machine, two Docker tests time out: `computer-devcontainer` and `computer-disposable`. They time out on main too, and CI passes them.
@@ -43,14 +43,14 @@ Current progress and pending items only, as of 2026-10-31.
 
 ## Waiting for Softov
 
-- Restart the daemon for #164 to #170. One restart covers all seven. A daemon on #166 to #169 probes each Claude variant without end. A stale removal is refused, and Claude sessions list their real files. A written customization shows without a restart, npm runs beside the daemon's Node, and a failed pi turn can be resumed.
+- Restart the daemon for #164 to #172. One restart covers all of them. #172 answers a plugin's own `x-ahpd/me`. A daemon on #166 to #169 probes each Claude variant without end. A stale removal is refused, and Claude sessions list their real files. A written customization shows without a restart, npm runs beside the daemon's Node, and a failed pi turn can be resumed.
 - claude/20261031-0228: [pending/claude-skill-file-checks.md](../pending/claude-skill-file-checks.md).
 - claude/20261031-0258: [pending/claude-reload-checks.md](../pending/claude-reload-checks.md).
 - daemon/20261031-0555: [pending/install-path-checks.md](../pending/install-path-checks.md).
 - pi/20261031-0736: [pending/pi-resume-checks.md](../pending/pi-resume-checks.md).
 - host/20261031-0211, claude/20261031-0228, claude/20261031-0258, daemon/20261031-0555 and pi/20261031-0736: review. Each is `implemented`.
 - host/114 and host/116: review.
-- x-ahpd/me for a plugin: PR #172 (`host/20261028-0947-me-for-a-plugin`) is green, Windows included. It waits for his merge word. ahpw organization/05 task 07 can start now, because x-ahpd/me is on main.
+- x-ahpd/me for a plugin: PR #172 merged as `44d90a59`. The plan host/20261028-0947 stays `implemented` until his review. ahpw organization/05 task 07 can start.
 - ahpw idea `a-plugin-page-draws-its-view` is on ahpw main, for the views of plan D.
 - After the daemon restart for #156 to #161 and #151, open a terminal in ahpw and in ahpc. `supportsCommandDetection` is now false until the shell prints its first mark.
 - host/126: review. ahpc and ahpw must create `ahp-session:` sessions.
@@ -70,8 +70,8 @@ Current progress and pending items only, as of 2026-10-31.
 - The VM plan, task 06: [pending/vm-06-proxmox-node.md](../pending/vm-06-proxmox-node.md), when a Proxmox node is named.
 - Four plans from 2026-10-31, in build order:
   - plugin/20261031-1200, a plugin shows its state: builds in session `claude-deepseek-build:/cffdf8df-…`, worktree `build-agents-cffdf8df`.
-  - maycxc/union, four fork plans of host/20261031 (0804, 0931, 1019, 1118): in review. It merges before the Claude build, because both change `chatactions.ts`.
-  - claude/20261031-1200, a failed Claude turn is resumed: builds after the union merges.
+  - maycxc/union, four fork plans of host/20261031 (0804, 0931, 1019, 1118): PR #173, branch `host/20261031-0804-actions-answered`. The review found no blocker; three small gaps are in the PR text.
+  - claude/20261031-1200, a failed Claude turn is resumed: builds in session `claude-deepseek-build:/ec2bea86-…`, on the #173 branch. Its PR targets that branch until #173 merges.
   - cofold/20261031-1200, a failed cofold turn is resumed: builds after the Claude plan, which it requires.
 - host/20261031-1200, the sdk's text is plain: task 01 wrote [research/sdk-plain-text-strings.md](../research/sdk-plain-text-strings.md). Softov reads it and answers its *Choices to check* before any code.
 - [ideas/acp-resumable-doubt.md](../ideas/acp-resumable-doubt.md): ACP is not resumable for now.
