@@ -1232,4 +1232,54 @@ describe('what a backend offers, asked again', () => {
     await host.close();
     expect(stopped).toBe(1);
   });
+
+  it('probes one at a time, and once more for every change while one runs', async () => {
+    let changed: (() => void) | undefined;
+    let running = 0;
+    let most = 0;
+    let probes = 0;
+    const answers: (() => void)[] = [];
+    const host = createHost({
+      path: '/home/softov',
+      agents: [{
+        ...echo({ path: '/home/softov', pace: 0 }),
+        provider: 'probed',
+        probe: async () => {
+          probes += 1;
+          running += 1;
+          most = Math.max(most, running);
+          await new Promise<void>((done) => answers.push(done));
+          running -= 1;
+          return { models: [], commands: [], customizations: [] };
+        },
+        probeChanged: (onChange) => {
+          changed = onChange;
+          return () => undefined;
+        },
+      }],
+      ...machine(),
+    });
+    await settle();
+    answers.shift()?.();
+    await settle();
+    expect(changed).toBeDefined();
+
+    changed?.();
+    await settle();
+    expect(probes).toBe(2);
+    // Three changes while the second probe runs are one probe after it.
+    changed?.();
+    changed?.();
+    changed?.();
+    await settle();
+    expect(probes).toBe(2);
+    answers.shift()?.();
+    await settle();
+    expect(probes).toBe(3);
+    answers.shift()?.();
+    await settle();
+    expect(probes).toBe(3);
+    expect(most).toBe(1);
+    await host.close();
+  });
 });

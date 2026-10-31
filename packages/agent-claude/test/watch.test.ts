@@ -74,6 +74,19 @@ describe('the watcher of the Claude folders', () => {
     expect(calls()).toBe(0);
   });
 
+  it('calls for the list of installed plugins, and not for the other files the CLI writes beside it', async () => {
+    const root = fresh();
+    mkdirSync(join(root, 'plugins'));
+    const { calls } = await watched({ configDir: root });
+    writeFileSync(join(root, 'plugins', 'known_marketplaces.json'), '{}\n');
+    mkdirSync(join(root, 'plugins', 'marketplaces'));
+    await pause(900);
+    expect(calls()).toBe(0);
+    writeFileSync(join(root, 'plugins', 'installed_plugins.json'), '{}\n');
+    await until(calls, 1);
+    expect(calls()).toBe(1);
+  });
+
   it('calls once for a burst of changes', async () => {
     const root = fresh();
     mkdirSync(join(root, 'commands'));
