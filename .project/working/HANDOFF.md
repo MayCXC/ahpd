@@ -39,7 +39,7 @@ Current progress and pending items only, as of 2026-10-31.
 
 ## Waiting for Softov
 
-- Restart the daemon for #164 to #167. One restart covers all four: a stale removal is refused, Claude sessions list their real files, a written customization shows without a restart, and npm runs beside the daemon's Node.
+- Restart the daemon for #164 to #167. One restart covers all four. A stale removal is refused, and Claude sessions list their real files. A written customization shows without a restart, and npm runs beside the daemon's Node.
 - claude/20261031-0228: [pending/claude-skill-file-checks.md](../pending/claude-skill-file-checks.md).
 - claude/20261031-0258: [pending/claude-reload-checks.md](../pending/claude-reload-checks.md).
 - daemon/20261031-0555: [pending/install-path-checks.md](../pending/install-path-checks.md).
