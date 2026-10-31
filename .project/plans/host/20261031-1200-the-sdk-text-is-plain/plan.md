@@ -84,7 +84,7 @@ initialize(locale) -> context.locales -> rootState / initialize meta
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The rules, the terms and the strings are written](task-01-the-rules-and-the-terms-are-written.md) | todo | - |
+| [01 - The rules, the terms and the strings are written](task-01-the-rules-and-the-terms-are-written.md) | doing | - |
 | [02 - The new session form reads plain](task-02-the-new-session-form-reads-plain.md) | todo | 01 |
 | [03 - The sdk's lists come in the locale](task-03-the-sdks-lists-come-in-the-locale.md) | todo | 01 |
 
@@ -96,8 +96,8 @@ initialize(locale) -> context.locales -> rootState / initialize meta
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-31.
-- **Next action:** Softov reviews the draft; then [task-01-the-rules-and-the-terms-are-written.md](task-01-the-rules-and-the-terms-are-written.md).
+- **Done so far:** drafted 2026-10-31. Task 01 wrote the rules, the terms and the strings in [sdk-plain-text-strings.md](../../../research/sdk-plain-text-strings.md).
+- **Next action:** Softov reads the strings file and answers its *Choices to check*; then `TEXT.md`, task 02 and task 03.
 - **Open questions:** none.
 - **Watch out for:** `pt.json` keeps the old translation when only the English changes; update both in one commit.
 

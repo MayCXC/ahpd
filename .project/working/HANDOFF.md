@@ -50,7 +50,7 @@ Current progress and pending items only, as of 2026-10-31.
 - pi/20261031-0736: [pending/pi-resume-checks.md](../pending/pi-resume-checks.md).
 - host/20261031-0211, claude/20261031-0228, claude/20261031-0258, daemon/20261031-0555 and pi/20261031-0736: review. Each is `implemented`.
 - host/114 and host/116: review.
-- x-ahpd/me: Softov chose to answer a plugin, fixed. The fix gives a plugin its entry's `grants` and the pool `plugin:<name>`. It is in the worktree `/github/ahpd.worktrees/me-plugin`, branch `host/20261028-0947-me-for-a-plugin`, not committed. It waits for Softov's go on the PR.
+- x-ahpd/me for a plugin: PR #172 (`host/20261028-0947-me-for-a-plugin`) is green, Windows included. It waits for his merge word. ahpw organization/05 task 07 can start now, because x-ahpd/me is on main.
 - ahpw idea `a-plugin-page-draws-its-view` is on ahpw main, for the views of plan D.
 - After the daemon restart for #156 to #161 and #151, open a terminal in ahpw and in ahpc. `supportsCommandDetection` is now false until the shell prints its first mark.
 - host/126: review. ahpc and ahpw must create `ahp-session:` sessions.
@@ -68,12 +68,13 @@ Current progress and pending items only, as of 2026-10-31.
 - plugin/50: [pending/plugin-50-first-pieces.md](../pending/plugin-50-first-pieces.md).
 - The VM plan, task 01: [pending/vm-01-dev02-libvirt.md](../pending/vm-01-dev02-libvirt.md). The checks by hand of tasks 03 and 05 follow it.
 - The VM plan, task 06: [pending/vm-06-proxmox-node.md](../pending/vm-06-proxmox-node.md), when a Proxmox node is named.
-- Five drafts from 2026-10-31 wait for his review:
-  - claude/20261031-1200, a failed Claude turn is resumed. It holds the host's check for every backend. Its open question: cut to the turn before, or cut at the failed turn and send "continue".
-  - cofold/20261031-1200, a failed cofold turn is resumed. It requires the Claude plan. `plans/cofold/00-cofold.md` is the new domain reference.
-  - plugin/20261031-1200, a plugin shows its state: an A2UI view on the plugin's row, and the Dev Tunnel view first.
-  - host/20261031-1200, the sdk's text is plain: the rules and terms page, the new session form, and the sdk's lists in the client's locale.
-  - [ideas/acp-resumable-doubt.md](../ideas/acp-resumable-doubt.md): ACP is not resumable for now.
+- Four plans from 2026-10-31, in build order:
+  - plugin/20261031-1200, a plugin shows its state: builds in session `claude-deepseek-build:/cffdf8df-…`, worktree `build-agents-cffdf8df`.
+  - maycxc/union, four fork plans of host/20261031 (0804, 0931, 1019, 1118): in review. It merges before the Claude build, because both change `chatactions.ts`.
+  - claude/20261031-1200, a failed Claude turn is resumed: builds after the union merges.
+  - cofold/20261031-1200, a failed cofold turn is resumed: builds after the Claude plan, which it requires.
+- host/20261031-1200, the sdk's text is plain: task 01 wrote [research/sdk-plain-text-strings.md](../research/sdk-plain-text-strings.md). Softov reads it and answers its *Choices to check* before any code.
+- [ideas/acp-resumable-doubt.md](../ideas/acp-resumable-doubt.md): ACP is not resumable for now.
 - [briefs/the-text-a-person-reads-is-plain.md](../briefs/the-text-a-person-reads-is-plain.md) stays for the server and plugin slices.
 - The `active` plans with all tasks implemented wait for his review. Each stays `active` until he says his review is done.
 - Three `active` plans look ready to close on his word: host/83, host/99 and plugin/69. The plan host/83 has p1 to p5 built, and host/99 has every task done. PR #104 merged plugin/69 tasks 05 and 06, which are still `implemented`.

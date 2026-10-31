@@ -1,6 +1,6 @@
 ---
 title: The rules, the terms and the strings are written
-status: todo
+status: doing
 depends: []
 layer: docs
 refs:
@@ -45,3 +45,5 @@ The task also writes each new string of task 02 and task 03 in one list, and Sof
 - Softov approves each string of the list.
 
 ## Resume
+
+- 2026-10-31: the rules, the terms and the strings are in [sdk-plain-text-strings.md](../../../research/sdk-plain-text-strings.md). They wait for Softov. `TEXT.md` is written after he approves.
