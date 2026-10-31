@@ -37,7 +37,7 @@ refs:
   - https://docs.gitlab.com/cli/configuration/ - glab's token, host, API host, protocol, CA and proxy settings, read on 2026-10-31
   - https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation - a token as the git password, and `Authorization: Bearer` for the API, read on 2026-10-31
   - https://docs.gitlab.com/user/profile/personal_access_tokens/ - a token as the git password, and `PRIVATE-TOKEN` for the API, read on 2026-10-31
-  - file:///github/ahpd/.project/briefs/a-proxy-key-names-what-it-charges.md - the model proxy brief, the sibling a forge proxy copies
+  - git://817615bc:.project/briefs/a-proxy-key-names-what-it-charges.md - the model proxy brief, the sibling a forge proxy copies
 ---
 
 # A machine never holds the git token
