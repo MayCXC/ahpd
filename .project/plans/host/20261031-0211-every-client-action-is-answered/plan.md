@@ -1,7 +1,7 @@
 ---
 title: Every client action is answered
 domain: host
-status: planned
+status: implemented
 priority: medium
 created: 2026-10-31
 revalidated: 2026-10-31
@@ -90,8 +90,8 @@ dispatchAction chat/isReadChanged -> chatFlag -> dispatch to every client, or re
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An unknown removal is refused](task-01-an-unknown-removal-is-refused.md) | todo | - |
-| [02 - A flag set again is echoed](task-02-a-flag-set-again-is-echoed.md) | todo | - |
+| [01 - An unknown removal is refused](task-01-an-unknown-removal-is-refused.md) | implemented | - |
+| [02 - A flag set again is echoed](task-02-a-flag-set-again-is-echoed.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -101,16 +101,16 @@ dispatchAction chat/isReadChanged -> chatFlag -> dispatch to every client, or re
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-31.
-- **Next action:** [task-01-an-unknown-removal-is-refused.md](task-01-an-unknown-removal-is-refused.md).
+- **Done so far:** both tasks built, see [implemented.md](implemented.md).
+- **Next action:** review.
 - **Open questions:** none.
 - **Watch out for:** both tasks edit `chatactions.ts` and `AHP.md`, so build them in one branch, one after the other.
 
 ## Final verification checklist
 
-- [ ] A removal of an id the chat does not hold is refused to its sender, with the id and the kind in the reason.
-- [ ] A removal whose kind does not match the entry is refused.
-- [ ] A removal of a queued message still removes it, and its turn never starts.
-- [ ] A session flag set again is echoed to its sender, and no other client hears it.
-- [ ] A chat flag set again is echoed to its sender, and no other client hears it.
-- [ ] `pnpm typecheck` and the sdk suite pass, and Windows CI is green.
+- [x] A removal of an id the chat does not hold is refused to its sender, with the id and the kind in the reason.
+- [x] A removal whose kind does not match the entry is refused.
+- [x] A removal of a queued message still removes it, and its turn never starts.
+- [x] A session flag set again is echoed to its sender, and no other client hears it.
+- [x] A chat flag set again is echoed to its sender, and no other client hears it.
+- [x] `pnpm typecheck` and the sdk suite pass, and Windows CI is green.

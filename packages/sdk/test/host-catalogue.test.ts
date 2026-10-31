@@ -590,10 +590,12 @@ describe('a session and its chats, read together', () => {
     const updated = actions(p, uri).filter((e) => e.action.type === 'session/chatUpdated').map((e) => e.action.chat);
     expect(updated.sort()).toEqual([chatUri, second].sort());
 
-    // Said again, nothing moved, so nothing is sent.
+    // Said again, nothing moved: the sender is answered, and no chat or row
+    // is said again.
     const said = p.notes.length;
     await send(client, uri, sessionRead(true));
-    expect(p.notes.length).toBe(said);
+    expect(p.notes.slice(said).map((one) => one.method)).toEqual(['action']);
+    expect(actions(p, uri).at(-1)?.action.type).toBe('session/isReadChanged');
   });
 
   it('marks a chat and its session unread when a turn starts, as a client reduces it', async () => {

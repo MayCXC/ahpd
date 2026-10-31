@@ -1,6 +1,6 @@
 ---
 title: An unknown removal is refused
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:

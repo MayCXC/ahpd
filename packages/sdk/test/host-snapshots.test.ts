@@ -689,23 +689,25 @@ describe('the fields a client reads by name', () => {
     expect(state.status).toBe(Status.Idle | Status.IsRead);
   });
 
-  it('says nothing the second time a chat is marked read', async () => {
+  it('only answers its sender the second time a chat is marked read', async () => {
     const { client, peer: p, uri } = await running();
     const second = 'ahp-chat:/second';
     await client.handle({ method: 'createChat', params: { channel: uri, chat: second } });
-    const read = {
+    const read = (clientSeq: number) => ({
       method: 'dispatchAction',
-      params: { channel: second, action: { type: 'chat/isReadChanged', isRead: true } },
-    };
-    client.handle(read);
+      params: { channel: second, clientSeq, action: { type: 'chat/isReadChanged', isRead: true } },
+    });
+    client.handle(read(1));
     await settle();
     const said = p.notes.length;
-    client.handle(read);
+    client.handle(read(2));
     await settle();
-    // Nothing at all: not the chat action, not the row. A client applies what
-    // it is sent, so sending the bit it already holds is a notification per
-    // click for a state that did not move.
-    expect(p.notes.length).toBe(said);
+    // One echo, with the sender's own `clientSeq`, so it can let go of what it
+    // applied. Not the row: the catalogue did not move, and a state that did
+    // not move is no reason to wake anybody.
+    const after = p.notes.slice(said);
+    expect(after.map((one) => one.method)).toEqual(['action']);
+    expect((after[0]?.params as { origin?: { clientSeq?: number } }).origin?.clientSeq).toBe(2);
   });
 
   it('marks a worker chat read, which the row lists like any other', async () => {

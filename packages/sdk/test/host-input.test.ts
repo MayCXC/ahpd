@@ -480,6 +480,33 @@ describe('a message typed while a turn is running', () => {
     expect(sdk.said).toEqual(['first']);
   });
 
+  it('refuses to take back a message the chat never queued', async () => {
+    const { client, peer: p, chatUri } = await busy();
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: chatUri, action: { type: 'chat/pendingMessageRemoved', kind: 'queued', id: 'nobody' } },
+    });
+    await settle();
+    const refused = actions(p).filter((e) => e.rejectionReason !== undefined).at(-1);
+    expect(refused?.rejectionReason).toContain('nobody');
+  });
+
+  it('refuses to take back a queued message as a steering one', async () => {
+    const { client, peer: p, chatUri } = await busy();
+    queue(client, chatUri, 'q1', 'second');
+    await settle();
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: chatUri, action: { type: 'chat/pendingMessageRemoved', kind: 'steering', id: 'q1' } },
+    });
+    await settle();
+    const refused = actions(p).filter((e) => e.rejectionReason !== undefined).at(-1);
+    expect(refused?.rejectionReason).toContain('q1 is not a steering message');
+    // Still queued, so it still becomes the next turn.
+    await emit({ type: 'result', subtype: 'success', duration_ms: 5 });
+    expect(sdk.said).toEqual(['first', 'second']);
+  });
+
   it('keeps the order it was given, and what was not named behind it', async () => {
     const { client, chatUri } = await busy();
     queue(client, chatUri, 'a', 'A');

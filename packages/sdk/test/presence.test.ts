@@ -165,6 +165,38 @@ it('echoes an unchanged announcement to its sender, and to nobody else', async (
   expect(heard).toHaveLength(1);
 });
 
+/*
+ * A read or archived bit set to what it already is changes nothing, and is
+ * answered as an unchanged announcement is: to its sender, at the sequence
+ * this host is already at.
+ */
+it('echoes a session flag set again to its sender, and to nobody else', async () => {
+  const held = host();
+  const { client, peer: one } = await joins(held, 'one');
+  const { client: second, peer: two } = await joins(held, 'two');
+  await client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo' } });
+  await client.handle({ method: 'subscribe', params: { channel: URI } });
+  await second.handle({ method: 'subscribe', params: { channel: URI } });
+
+  const read = (clientSeq: number) => client.handle({
+    method: 'dispatchAction',
+    params: { channel: URI, clientSeq, action: { type: 'session/isReadChanged', isRead: false } },
+  });
+  // A session its own client created starts read, so the first moves the bit
+  // and the second says it again.
+  await read(1);
+  await settle();
+  const at = envelopes(one, URI).at(-1)?.serverSeq;
+  await read(2);
+  await settle();
+
+  const said = envelopes(one, URI).filter((e) => e.action.type === 'session/isReadChanged');
+  expect(said.map((e) => e.origin?.clientSeq)).toEqual([1, 2]);
+  expect(said.at(-1)?.serverSeq).toBe(at);
+  const heard = envelopes(two, URI).filter((e) => e.action.type === 'session/isReadChanged');
+  expect(heard).toHaveLength(1);
+});
+
 it('says so again when what a client contributes has changed', async () => {
   const held = host();
   const { client, peer: p } = await joins(held, 'one');

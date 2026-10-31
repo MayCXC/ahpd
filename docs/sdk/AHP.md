@@ -277,14 +277,14 @@ A client older than 1.140 that still pushes one of the three has that key refuse
 | `chat/error` | host | ✅ | The ending, not a message beside one: it carries the `turnId` and the duration the completion would have. |
 | `chat/turnResume` | client | ✅ | The protocol's conditions - latest, errored, message and parts intact - are the backend's to check, because only it knows what its last turn was. A backend that cannot re-run one says so rather than being asked to. |
 | `chat/activityChanged` | host | ✅ | What this chat is doing, in the tool's own words while one runs. Sent with no `activity` to clear it. |
-| `chat/isReadChanged` | client | ✅ | Marks one chat read or unread, and only that chat: the session's own read state is `session/isReadChanged`, and a sibling chat's is its own. The bit is kept per chat, so a chat comes back read when a client opens it again, and it survives a restart. It is projected into the chat's `ChatSummary.status` and into its `SessionChatSummary.status`, which is what the protocol asks a host to synchronize. Setting what is already set sends nothing. |
+| `chat/isReadChanged` | client | ✅ | Marks one chat read or unread, and only that chat: the session's own read state is `session/isReadChanged`, and a sibling chat's is its own. The bit is kept per chat, so a chat comes back read when a client opens it again, and it survives a restart. It is projected into the chat's `ChatSummary.status` and into its `SessionChatSummary.status`, which is what the protocol asks a host to synchronize. Setting what is already set is answered to its sender only. |
 | `chat/isArchivedChanged` | client | ✅ | Archives one chat, or restores it. On the session's default chat this is the session being archived, which the protocol says to send as `session/isArchivedChanged` - so that is what goes out, on the session channel, and nothing on the chat channel, whose reducer would set the chat's own bit. On any other chat it is that chat's bit, kept beside its title. |
 | `chat/workingDirectorySet` | client | ✅ | A chat may hold any subset of its session's directories and never more; anything outside is refused rather than quietly widening the session. The change starts that one chat again, resumed. |
 | `chat/workingDirectoryRemoved` | client | ✅ | The primary cannot be removed, for the reason the session's cannot: it is where the process is rooted. |
 | `chat/usage` | host | ✅ | Tokens and the model that spent them, at the end of the turn. What the protocol names no field for rides `_meta` where a backend reports it: `ahpd.cacheWriteTokens`, `ahpd.reasoningTokens`, `ahpd.context` (`{ used, size }`) and `ahpd.cost` (`{ amount, currency }`, never the reference host's bare number). |
 | `chat/reasoning` | host | ✅ | Appends to a `reasoning` part. Defined against that kind specifically - the canonical reducer returns the state unchanged for a `chat/delta` naming one, which draws a thinking header with nothing under it. |
 | `chat/pendingMessageSet` | both | ✅ | Both kinds: a `queued` message waits for the running turn, a `steering` one goes into it - the prompt handed to the CLI is a generator that stays open for the life of the session. A steering message Claude's CLI answers after the turn's last answer is answered in that turn, which stays open for it, and reads back there after a restart - [CHATS.md](CHATS.md#turns). |
-| `chat/pendingMessageRemoved` | both | ✅ | When the client withdraws one, and when this host takes one up into a turn. |
+| `chat/pendingMessageRemoved` | both | ✅ | When the client withdraws one, and when this host takes one up into a turn. A removal of a message the chat does not hold, matched on its id and its kind, is refused. |
 | `chat/queuedMessagesReordered` | both | ✅ | Anything the order did not name keeps its place behind what did, rather than being dropped for not having been mentioned. |
 | `chat/draftChanged` | both | ✅ | A `Message`, not a string. Held by the session so two people on one chat see each other's, which is the only reason a draft is on the wire at all. Taken for a session nothing is running for too - kept by this host until one starts and handed over when it does, because typing into a row from the catalogue is what somebody does *before* there is any reason to start an agent, and refusing it is a composer that empties itself as it is typed into. |
 | `chat/inputRequested` | host | ✅ | From the CLI's own elicitation. Mirrored to `session/inputNeeded` so a client watching the catalogue sees the session is blocked. |
@@ -728,10 +728,10 @@ restarts is a rebuilt one.
 
 `serverSeq` advances with **state** and never with messages, so a dispatch
 saying what this host already held is answered with silence rather than an
-echo. `session/isReadChanged` always did this; `session/activeClientSet` did
-not, and the omission was a loop: a client reconciles what it contributes
-whenever the session state moves, this host's echo *is* the state moving, and
-so the echo was the change that prompted the next announcement. Three hundred
+echo. `session/activeClientSet` once did not do this, and the omission was a
+loop: a client reconciles what it contributes whenever the session state moves,
+this host's echo *is* the state moving, and so the echo was the change that
+prompted the next announcement. Three hundred
 round trips in a few seconds, a sequence number apiece.
 
 Silence is for the other clients; the sender is answered. A client applies its
@@ -748,6 +748,11 @@ A cancel is the same case. `chat/turnCancelled` naming a turn that chat is not
 running stops nothing, so it changes nothing, and its sender is answered as an
 unchanged set is. A cancel that does name the running turn stops it, which is a
 change, and goes out to every client as one.
+
+A flag is the same case too. `session/isReadChanged`,
+`session/isArchivedChanged`, `chat/isReadChanged` and `chat/isArchivedChanged`
+setting a bit to what it already is move nothing, so the catalogue does not
+move and the sender alone is answered.
 
 ### The snapshot and the actions have to agree
 

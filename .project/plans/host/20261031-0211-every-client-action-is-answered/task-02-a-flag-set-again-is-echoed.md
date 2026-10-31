@@ -1,6 +1,6 @@
 ---
 title: A flag set again is echoed
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
