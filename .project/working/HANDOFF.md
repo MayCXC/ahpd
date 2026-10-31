@@ -81,7 +81,7 @@ Current progress and pending items only, as of 2026-10-31.
 
 ## Next builds
 
-- plugin/20261031-0804, a browser gets a push, is built and reviewed in `build-agents-1d669ecf`, branch `build/agents/1d669ecf`, four commits on `55ad0b27`. The review fixed one defect: a `p256dh` of 65 octets off the curve passed the check, and its seal threw out of `send` and stopped the pushes after it. `keysOf` now checks the point, `sendOne` logs a seal that fails, and a fetch does not follow a redirect. Push tests pass 45 of 45, and each commit typechecks. Next: Softov approves the PR body, then rename the branch to `plugin/20261031-0804-a-browser-gets-a-push`, push, and wait for Windows CI.
+- plugin/20261031-0804, a browser gets a push, is built and reviewed in `build-agents-1d669ecf`, branch `build/agents/1d669ecf`, four commits on `55ad0b27`. The review fixed one defect. A `p256dh` of 65 octets off the curve passed the check. Its seal then threw out of `send`, and stopped the pushes after it. `keysOf` now checks the point, `sendOne` logs a seal that fails, and a fetch does not follow a redirect. Push tests pass 45 of 45, and each commit typechecks. Next: Softov approves the PR body, then rename the branch to `plugin/20261031-0804-a-browser-gets-a-push`, push, and wait for Windows CI.
 - The VM plan `20261030-1141-a-vm-is-made-on-a-server` has its code merged. It waits on the checks by hand above.
 - container/05 p10 (task 03 next).
 - The ahpw Connect button for plugin/71 is ahpw plan plugins/09, planned.
