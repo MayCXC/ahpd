@@ -94,6 +94,7 @@ const node = (configDir: string, hostName: string): Node => {
       else held.push(handler);
     },
     registerResourceProvider: () => {},
+    sessionOwner: async () => undefined,
   } as unknown as PluginHost;
   return {
     host,

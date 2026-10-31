@@ -80,6 +80,30 @@ it.skipIf(!posix)('writes the devices at a mode only their owner may read', asyn
   expect(statSync(join(where, 'push-devices.json')).mode & 0o777).toBe(0o600);
 });
 
+it('keeps the person a device was written for, and the sessions it hears', async () => {
+  const provider = over();
+  await provider.write('push://devices/phone-1', body({ token: TOKEN, platform: 'ios', audience: 'device' }), 'user:ana', 'phone');
+  expect(JSON.parse((await provider.read('push://devices/phone-1')).data)).toEqual({
+    platform: 'ios',
+    audience: 'device',
+    client: 'phone',
+    owner: 'user:ana',
+  });
+});
+
+it('reads a person and an audience back from a device already on disk', async () => {
+  const where = dir();
+  writeFileSync(join(where, 'push-devices.json'), JSON.stringify({
+    'phone-1': { token: TOKEN, platform: 'ios', owner: 'user:ana', audience: 'person' },
+  }));
+  const provider = pushProvider({ store: deviceStore(where, () => {}) });
+  expect(JSON.parse((await provider.read('push://devices/phone-1')).data)).toEqual({
+    platform: 'ios',
+    owner: 'user:ana',
+    audience: 'person',
+  });
+});
+
 it('re-registers a device, and a rotated token is the one kept', async () => {
   const where = dir();
   const provider = pushProvider({ store: deviceStore(where, () => {}) });
@@ -102,6 +126,8 @@ it('refuses a body that is not a device', async () => {
     { token: TOKEN, platform: 'web' },
     { token: TOKEN, platform: 'ios', lang: 3 },
     { token: TOKEN, platform: 'ios', lang: '' },
+    { token: TOKEN, platform: 'ios', audience: 'everyone' },
+    { token: TOKEN, platform: 'ios', audience: 3 },
   ];
   for (const said of refused) {
     await expect(provider.write('push://devices/phone-1', body(said), undefined, 'phone')).rejects.toMatchObject({ code: -32602 });

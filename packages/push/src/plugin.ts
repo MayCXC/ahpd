@@ -10,8 +10,8 @@ import type { InputNeededSetEvent, Plugin, TurnEndEvent } from '@ahpd/sdk';
  *
  * One provider for the `push:` scheme, keeping its devices beside the daemon's
  * own configuration, and one subscription to the host's own moments: a device
- * hears about a session that the client which registered it created or opened,
- * and about nothing else.
+ * hears about a session its person owns, or one that the client which
+ * registered it created or opened, and about nothing else by default.
  *
  * Which clients those are is what `session_start` and `session_opened` say, and
  * they are the reason this plugin needs no view of a session at all: the host
@@ -81,15 +81,25 @@ export const apply: Plugin['apply'] = (host, options) => {
     else held.add(client);
   };
 
-  /** Every device whose client created or opened this session. */
-  const audience = (session: string): Reachable[] => {
+  /**
+   * Every device that should hear about this session.
+   *
+   * A device hears it when its client created or opened the session, which is
+   * the rule it had before a device could choose. A device set to `person`, or
+   * left without a setting, also hears every session whose owner the host
+   * names as the device's own person. A device with no person has no owner to
+   * match, so it keeps the rule of its client alone.
+   */
+  const audience = async (session: string): Promise<Reachable[]> => {
     const clients = opened.get(session);
-    if (clients === undefined || clients.size === 0) return [];
+    const owner = await host.sessionOwner(session);
     const reachable: Reachable[] = [];
     for (const id of store.ids()) {
       const device = store.get(id);
-      if (device === undefined || device.client === undefined) continue;
-      if (clients.has(device.client)) reachable.push({ id, token: device.token });
+      if (device === undefined) continue;
+      const byClient = device.client !== undefined && clients?.has(device.client) === true;
+      const byOwner = device.audience !== 'device' && device.owner !== undefined && owner !== undefined && device.owner === owner;
+      if (byClient || byOwner) reachable.push({ id, token: device.token });
     }
     return reachable;
   };
@@ -112,7 +122,7 @@ export const apply: Plugin['apply'] = (host, options) => {
 
   /** Send `body` to every device in the session, naming the session and why in `data`. */
   const notify = async (session: string, body: string, kind: string): Promise<void> => {
-    const reachable = audience(session);
+    const reachable = await audience(session);
     if (reachable.length === 0) return;
 
     let token: string | undefined;
