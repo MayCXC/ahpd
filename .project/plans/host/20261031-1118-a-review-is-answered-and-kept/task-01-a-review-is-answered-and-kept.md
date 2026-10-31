@@ -1,6 +1,6 @@
 ---
 title: A review is answered, and kept as the protocol's reducer applies it
-status: todo
+status: done
 depends: []
 layer: host
 refs:
@@ -36,3 +36,6 @@ Every review a client sends is answered, and what it ticks is kept as the protoc
 - `pnpm run typecheck` and `pnpm run boundary` report no errors.
 
 ## Resume
+
+Done 2026-10-31.
+Every step is built, and the touched suites, the type check and the boundary check pass.
