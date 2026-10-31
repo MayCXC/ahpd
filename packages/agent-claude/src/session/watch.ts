@@ -24,6 +24,13 @@ const FOLDERS = ['agents', 'skills', 'commands', 'rules'];
  */
 const PLUGINS = 'plugins';
 
+/**
+ * The files in `PLUGINS` that list the installed plugins, and the only ones
+ * there that are called for. The CLI writes `known_marketplaces.json` each
+ * time it starts, and a call for it starts a probe, whose CLI writes it again.
+ */
+const INSTALLED = new Set(['installed_plugins.json', 'installed_plugins_v2.json']);
+
 /** The files of a scope a customization is read from. */
 const FILES = new Set(['CLAUDE.md', 'CLAUDE.local.md', 'settings.json', 'settings.local.json']);
 
@@ -89,7 +96,10 @@ export function watchFolders(roots: WatchRoots, onChange: () => void): () => voi
       const was = held.get(name);
       if (was !== undefined) { was.close(); handles.delete(was); }
       const at = join(dir, name);
-      held.set(name, existsSync(at) ? opened(at, name !== PLUGINS, fire) : undefined);
+      const onName = name === PLUGINS
+        ? (file: string | null): void => { if (file === null || INSTALLED.has(file)) fire(); }
+        : fire;
+      held.set(name, existsSync(at) ? opened(at, name !== PLUGINS, onName) : undefined);
     };
     const open = (): void => {
       opened(dir, false, (name) => {

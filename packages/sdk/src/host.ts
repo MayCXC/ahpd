@@ -1310,8 +1310,13 @@ export function createHost(options: HostOptions): Host {
    * nothing waits for it, and until it answers the models are empty - which is
    * the same real answer this host gives for a harness nobody has signed into.
    */
-  /** The number of the last probe asked of each backend, so an older answer is dropped. */
-  const probeRuns = new Map<string, number>();
+  /**
+   * The backends with a probe running, each with whether another was asked
+   * for meanwhile. A probe starts the backend's CLI, so they run one at a
+   * time: a probe asked during one is one more probe after it, of whichever
+   * object the provider has then.
+   */
+  const probing = new Map<string, boolean>();
   /** The stop of each backend's `probeChanged`, by provider. */
   const probeWatches = new Map<string, () => void>();
   /**
@@ -1343,11 +1348,12 @@ export function createHost(options: HostOptions): Host {
   const probeAgent = (agent: Agent): void => {
     if (!agent.probe)
       return;
-    const run = (probeRuns.get(agent.provider) ?? 0) + 1;
-    probeRuns.set(agent.provider, run);
+    if (probing.has(agent.provider)) {
+      probing.set(agent.provider, true);
+      return;
+    }
+    probing.set(agent.provider, false);
     void agent.probe().then((offered) => {
-      // A probe asked after this one answers for what is there now.
-      if (probeRuns.get(agent.provider) !== run) return;
       const held = about(agent.provider);
       held.commands = offered.commands;
       held.seeds = offered.customizations;
@@ -1371,7 +1377,12 @@ export function createHost(options: HostOptions): Host {
       log(`${agent.provider}: ${held.models.length} model(s), ${held.commands.length} command(s), ${held.seeds.length} customization(s)`);
       dispatch(ROOT, { type: 'root/agentsChanged', agents: descriptors() });
       watchProbe(agent);
-    }).catch(() => { });
+    }).catch(() => { }).finally(() => {
+      const again = probing.get(agent.provider) === true;
+      probing.delete(agent.provider);
+      const now = agents.get(agent.provider);
+      if (again && now !== undefined && !ctx.closed) probeAgent(now);
+    });
   };
 
   for (const agent of agents.values()) probeAgent(agent);
