@@ -703,7 +703,7 @@ describe('more than one directory', () => {
         workingDirectories: [uriOf(ONE), uriOf(TWO), uriOf(THREE)],
       },
     });
-    return { client, peer: p, uri };
+    return { host, client, peer: p, uri };
   };
 
   it('opens a chat in the subset it was asked for, and says so on the chat', async () => {
@@ -767,6 +767,130 @@ describe('more than one directory', () => {
       .map((one) => (one.params as { rejectionReason?: string }).rejectionReason)
       .filter((one): one is string => typeof one === 'string');
     expect(refused.some((one) => one.includes('is not a working directory of'))).toBe(true);
+  });
+
+  /*
+   * Each action as the protocol's reducers apply it: a set adds a folder the
+   * set lacks, a removal takes out one it holds, and a replacement swaps the
+   * entry `directory` names for the folder `replacement` carries. An action
+   * that would change nothing is answered to the client that sent it, and to
+   * nobody else.
+   * https://github.com/microsoft/agent-host-protocol/blob/v1.0.0/types/channels-session/actions.ts
+   * https://github.com/microsoft/agent-host-protocol/blob/v1.0.0/types/channels-chat/actions.ts
+   */
+  const watched = async () => {
+    const opened = await wide();
+    opened.peer.request = async () => ({ trusted: true });
+    return opened;
+  };
+
+  /** One client action on `channel`, under `clientSeq`. */
+  const send = (client: { handle(r: { method: string; params: unknown }): unknown }, channel: string, clientSeq: number, action: Record<string, unknown>) =>
+    client.handle({ method: 'dispatchAction', params: { channel, clientSeq, action } });
+
+  /** The session's folders, as a client reading its state sees them. */
+  const foldersOf = async (client: { handle(r: { method: string; params: unknown }): unknown }, uri: string): Promise<string[]> =>
+    (await client.handle({ method: 'subscribe', params: { channel: uri } }) as { snapshot: { state: { workingDirectories: string[] } } })
+      .snapshot.state.workingDirectories;
+
+  it('answers a folder set again, one removed that is not there, and a replacement of one that is not there, to the sender alone', async () => {
+    const { host, client, peer: p, uri } = await watched();
+    await client.handle({ method: 'subscribe', params: { channel: uri } });
+    const other = peer();
+    const watching = host.accept(other);
+    await watching.handle(hello(['0.9.0']));
+    await watching.handle({ method: 'subscribe', params: { channel: uri } });
+    const before = sessionQueries().length;
+    await send(client, uri, 4, { type: 'session/workingDirectorySet', directory: uriOf(TWO) });
+    await send(client, uri, 5, { type: 'session/workingDirectoryRemoved', directory: uriOf(ELSEWHERE) });
+    await send(client, uri, 6, { type: 'session/workingDirectoryReplaced', directory: uriOf(ELSEWHERE), replacement: uriOf(EXTRA) });
+    await settle(8);
+
+    const answered = actions(p, uri).filter((one) => String(one.action.type).startsWith('session/workingDirectory'));
+    expect(answered.map((one) => [one.action.type, one.origin?.clientSeq, one.rejectionReason])).toEqual([
+      ['session/workingDirectorySet', 4, undefined],
+      ['session/workingDirectoryRemoved', 5, undefined],
+      ['session/workingDirectoryReplaced', 6, undefined],
+    ]);
+    // Nothing changed for anybody else, so nobody else is told.
+    expect(actions(other, uri).filter((one) => String(one.action.type).startsWith('session/workingDirectory'))).toEqual([]);
+    expect(sessionQueries().length).toBe(before);
+    expect(await foldersOf(client, uri)).toEqual([uriOf(ONE), uriOf(TWO), uriOf(THREE)]);
+  });
+
+  it('replaces the first folder with the one a replacement carries, and keeps the rest', async () => {
+    const { client, peer: p, uri } = await watched();
+    await client.handle({ method: 'subscribe', params: { channel: uri } });
+    await send(client, uri, 7, { type: 'session/workingDirectoryReplaced', directory: uriOf(ONE), replacement: uriOf(EXTRA) });
+    await settle(8);
+
+    expect(sessionQueries().at(-1)?.options.cwd).toBe(EXTRA);
+    expect(sessionQueries().at(-1)?.options.additionalDirectories).toEqual([TWO, THREE]);
+    expect(await foldersOf(client, uri)).toEqual([uriOf(EXTRA), uriOf(TWO), uriOf(THREE)]);
+    // The move as the host made it, then the client's own action as its answer.
+    const said = actions(p, uri).filter((one) => one.action.type === 'session/workingDirectoryReplaced');
+    expect(said.map((one) => [one.action.directory, one.action.replacement, one.origin?.clientSeq])).toEqual([
+      [uriOf(ONE), uriOf(EXTRA), undefined],
+      [uriOf(ONE), uriOf(EXTRA), 7],
+    ]);
+  });
+
+  it('replaces a folder after the first in its place', async () => {
+    const { client, uri } = await watched();
+    await send(client, uri, 8, { type: 'session/workingDirectoryReplaced', directory: uriOf(TWO), replacement: uriOf(EXTRA) });
+    await settle(8);
+
+    expect(sessionQueries().at(-1)?.options.cwd).toBe(ONE);
+    expect(sessionQueries().at(-1)?.options.additionalDirectories).toEqual([EXTRA, THREE]);
+    expect(await foldersOf(client, uri)).toEqual([uriOf(ONE), uriOf(EXTRA), uriOf(THREE)]);
+  });
+
+  it('moves a replacement the set already holds into the place it replaces, as the reducer does', async () => {
+    const { client, peer: p, uri } = await watched();
+    const asked: string[] = [];
+    p.request = async (method) => { asked.push(method); return { trusted: true }; };
+    await send(client, uri, 9, { type: 'session/workingDirectoryReplaced', directory: uriOf(ONE), replacement: uriOf(THREE) });
+    await settle(8);
+
+    // The protocol's own example: [A, B, C] with A -> C becomes [C, B].
+    expect(await foldersOf(client, uri)).toEqual([uriOf(THREE), uriOf(TWO)]);
+    expect(sessionQueries().at(-1)?.options.cwd).toBe(THREE);
+    // A folder the session already holds is no folder entered.
+    expect(asked).toEqual([]);
+  });
+
+  it('refuses an action that names no folder', async () => {
+    const { client, peer: p, uri } = await watched();
+    await send(client, uri, 10, { type: 'session/workingDirectorySet' });
+    await send(client, uri, 11, { type: 'session/workingDirectoryReplaced', directory: uriOf(TWO) });
+    await settle(8);
+
+    const refused = actions(p, uri).filter((one) => one.rejectionReason !== undefined);
+    expect(refused.map((one) => [one.action.type, one.origin?.clientSeq])).toEqual([
+      ['session/workingDirectorySet', 10],
+      ['session/workingDirectoryReplaced', 11],
+    ]);
+  });
+
+  it('answers a chat adding a folder it holds, or removing one it does not, to the sender alone', async () => {
+    const { client, peer: p, uri } = await wide();
+    const chat = 'ahp-chat:/narrow';
+    await client.handle({
+      method: 'createChat',
+      params: { channel: uri, chat, workingDirectories: [uriOf(ONE), uriOf(THREE)] },
+    });
+    await client.handle({ method: 'subscribe', params: { channel: chat } });
+    const before = sessionQueries().length;
+    await send(client, chat, 12, { type: 'chat/workingDirectorySet', directory: uriOf(THREE) });
+    await send(client, chat, 13, { type: 'chat/workingDirectoryRemoved', directory: uriOf(TWO) });
+    await settle(8);
+
+    const answered = actions(p, chat).filter((one) => String(one.action.type).startsWith('chat/workingDirectory'));
+    expect(answered.map((one) => [one.action.type, one.origin?.clientSeq, one.rejectionReason])).toEqual([
+      ['chat/workingDirectorySet', 12, undefined],
+      ['chat/workingDirectoryRemoved', 13, undefined],
+    ]);
+    expect(sessionQueries().length).toBe(before);
   });
 });
 
@@ -981,11 +1105,11 @@ describe('a session entering a folder nobody vouched for', () => {
     return { client, peer: p, asked, lines, uri, chatUri, move, cwd };
   };
 
-  /** Whether the session was announced as having moved, and to where. */
+  /** Whether the session was announced as having moved, from where and to where. */
   const moved = (p: ReturnType<typeof peer>, uri: string): unknown[] =>
     actions(p, uri)
       .filter((one) => one.action.type === 'session/workingDirectoryReplaced')
-      .map((one) => one.action.directory);
+      .map((one) => [one.action.directory, one.action.replacement]);
 
   it('asks the window, and stays where it is when the window says no', async () => {
     const { here, there } = folders();
@@ -1010,7 +1134,7 @@ describe('a session entering a folder nobody vouched for', () => {
     const { peer: p, uri, move, cwd } = await hosted(here, { trusts: [here] });
     await move(there);
 
-    expect(moved(p, uri)).toEqual([uriOf(there)]);
+    expect(moved(p, uri)).toEqual([[uriOf(here), uriOf(there)]]);
     expect(cwd()).toBe(there);
   });
 
@@ -1038,7 +1162,7 @@ describe('a session entering a folder nobody vouched for', () => {
     await move(there);
 
     expect(asked).toEqual([]);
-    expect(moved(p, uri)).toEqual([uriOf(there)]);
+    expect(moved(p, uri)).toEqual([[uriOf(here), uriOf(there)]]);
     expect(cwd()).toBe(there);
   });
 

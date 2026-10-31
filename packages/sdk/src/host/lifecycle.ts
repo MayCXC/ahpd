@@ -731,6 +731,8 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     }
     const to = await isolated(uri, mine, from, before);
     const wasAt = held.workingDirectory;
+    // The first folder every client holds the session at, as its backend reports it.
+    const shown = leadOf(held)?.workingDirectories()[0];
     /*
      * Their names stay the session's while it starts again, and so does the
      * conversation: the backend is stopped without disposing the session it
@@ -893,14 +895,17 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      */
     if (wasAt === to) return;
     /*
-     * Replaced, not removed and re-added.
-     *
-     * Index 0 is the process root, and the protocol has one action for a root
-     * that moves: `workingDirectoryReplaced`. Saying it as a removal followed
-     * by an addition would be a client briefly holding a session with no
-     * directory at all.
+     * The first folder moved, said with the protocol's one action for a root
+     * that moves: `workingDirectoryReplaced`, from the folder it was to the
+     * folder it is, so no client holds the session with no folder at all. A
+     * session that had no first folder is given one by a set.
+     * https://github.com/microsoft/agent-host-protocol/blob/v1.0.0/types/channels-session/actions.ts
      */
-    if (to !== undefined) dispatch(uri, { type: 'session/workingDirectoryReplaced', directory: uriOf(to) });
+    if (to !== undefined) {
+      dispatch(uri, shown === undefined
+        ? { type: 'session/workingDirectorySet', directory: uriOf(to) }
+        : { type: 'session/workingDirectoryReplaced', directory: shown, replacement: uriOf(to) });
+    }
   };
 
   /**
