@@ -1,7 +1,7 @@
 ---
 title: A browser gets a push
 domain: plugin
-status: draft
+status: planned
 priority: medium
 created: 2026-10-31
 revalidated: 2026-10-31
@@ -112,8 +112,8 @@ backend input_needed_set or turn_end -> push plugin -> audience by person or by 
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-31.
-- **Next action:** Softov reviews the plan; then [task-01-a-device-hears-its-persons-sessions.md](task-01-a-device-hears-its-persons-sessions.md).
+- **Done so far:** drafted 2026-10-31; Softov sent it to build the same day.
+- **Next action:** [task-01-a-device-hears-its-persons-sessions.md](task-01-a-device-hears-its-persons-sessions.md).
 - **Open questions:** none.
 - **Watch out for:** Not checked: whether Apple's push service refuses a VAPID JWT with no `sub`. If it does, `contact` needs a default.
 
