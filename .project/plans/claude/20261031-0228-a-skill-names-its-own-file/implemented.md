@@ -21,8 +21,9 @@ An entry with no file goes in a read-only `builtin` directory with a `claude-int
 ## Verified
 
 - `disk.test.ts` has one case per scope, and one case for steps 6, 8, 13, 14 and 15 of task 01, and for `managedDirOf`.
-- `customizations.test.ts` has nine new cases for task 02 and task 03, and three changed cases.
-- `pnpm typecheck` is clean, and the agent-claude suite passes with 496 tests.
+- `customizations.test.ts` has ten new cases for task 02 and task 03, and three changed cases.
+- Seven sdk tests changed, because each session now opens with its writable directories.
+- `pnpm typecheck` is clean, and the whole suite passes with 7921 tests.
 - The checks in VS Code wait in [claude-skill-file-checks.md](../../../pending/claude-skill-file-checks.md).
 
 ## Departures from the plan
@@ -33,3 +34,5 @@ An entry with no file goes in a read-only `builtin` directory with a `claude-int
 - `agentNameOf` reads the first 64 KB of a large agent file, and no longer skips it. The test in `agent-claude-agent-pick.test.ts` now expects the frontmatter name.
 - A plugin skill whose `SKILL.md` is not there gets `claude-internal:/skill/<name>`, not a path under the plugin.
 - No test checks the list of a session with `spawn`. The tests that set `spawn` do not read the list, and a new one needs a session in a machine. The README says what such a session lists.
+- A session in the home folder has no project scope, because its `.claude` is the personal folder. The memory files of the home folder go in the personal scope.
+- The test setup sets `CLAUDE_CONFIG_DIR` to an empty folder of the run, so no test reads the person's own `~/.claude`.

@@ -1,6 +1,6 @@
 import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 
 /** What a customization file is, in the protocol's words for it. */
 export type DiskKind = 'skill' | 'prompt' | 'agent' | 'rule';
@@ -62,6 +62,17 @@ export const managedDirOf = (platform: NodeJS.Platform = process.platform): stri
   platform === 'darwin' ? '/Library/Application Support/ClaudeCode'
     : platform === 'win32' ? 'C:\\Program Files\\ClaudeCode'
       : '/etc/claude-code';
+
+/**
+ * The project scope's folder, `<cwd>/.claude`, or none. A session started in
+ * the home folder has the personal folder as that, and one folder is one scope:
+ * the personal one.
+ */
+export const projectDirOf = (roots: DiskRoots): string | undefined => {
+  if (roots.cwd === undefined) return undefined;
+  const project = join(roots.cwd, '.claude');
+  return resolve(project) === resolve(roots.configDir) ? undefined : project;
+};
 
 const unquote = (raw: string): string => {
   const value = raw.trim();
@@ -236,7 +247,7 @@ function rulesIn(dir: string, scope: DiskScope): DiskFile[] {
  */
 export function filesOf(roots: DiskRoots): DiskFile[] {
   const { configDir, cwd, managedDir } = roots;
-  const project = cwd === undefined ? undefined : join(cwd, '.claude');
+  const project = projectDirOf(roots);
   const out: DiskFile[] = [];
   if (managedDir !== undefined) out.push(...skillsIn(join(managedDir, '.claude', 'skills'), 'managed'));
   out.push(...skillsIn(join(configDir, 'skills'), 'user'));
@@ -247,12 +258,14 @@ export function filesOf(roots: DiskRoots): DiskFile[] {
     out.push(...markdownIn(join(root, 'agents'), 'agent', scope));
   }
   out.push(...memory(join(configDir, 'CLAUDE.md'), 'user'), ...rulesIn(join(configDir, 'rules'), 'user'));
-  if (cwd !== undefined && project !== undefined) {
+  if (cwd !== undefined) {
+    // The home folder's own memory files are the personal scope's, as its `.claude` is.
+    const own: DiskScope = project === undefined ? 'user' : 'project';
     out.push(
-      ...memory(join(cwd, 'CLAUDE.md'), 'project'),
-      ...memory(join(project, 'CLAUDE.md'), 'project'),
-      ...memory(join(cwd, 'CLAUDE.local.md'), 'project'),
-      ...rulesIn(join(project, 'rules'), 'project'),
+      ...memory(join(cwd, 'CLAUDE.md'), own),
+      ...(project === undefined ? [] : memory(join(project, 'CLAUDE.md'), own)),
+      ...memory(join(cwd, 'CLAUDE.local.md'), own),
+      ...(project === undefined ? [] : rulesIn(join(project, 'rules'), own)),
     );
   }
   return out;

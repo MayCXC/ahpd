@@ -350,6 +350,14 @@ describe('where each entry\'s file is', () => {
     expect(out.map((one) => one.id)).toEqual(['directory:user:agents', 'directory:user:skills', 'directory:user:commands', 'directory:user:rules']);
   });
 
+  it('sends the personal directories once for a session in the home folder', () => {
+    const { work } = roots({ 'work/CLAUDE.md': '# Home\n' });
+    // The home folder's `.claude` is the personal folder.
+    const out = customizationsOf({}, [], [], undefined, [], undefined, [], diskOf({ configDir: join(work, '.claude'), cwd: work }));
+    expect(out.map((one) => one.id)).toEqual(['directory:user:agents', 'directory:user:skills', 'directory:user:commands', 'directory:user:rules']);
+    expect(children(dir(out, 'directory:user:rules')).map((one) => one.uri)).toEqual([uriOf(join(work, 'CLAUDE.md'))]);
+  });
+
   it('lists the memory files and the rules of each scope', () => {
     const { config, work } = roots({
       'config/CLAUDE.md': '# Me\n',

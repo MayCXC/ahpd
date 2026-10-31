@@ -5,7 +5,7 @@ import type { McpServerState } from '@microsoft/agent-host-protocol';
 import { uriOf } from '@ahpd/sdk';
 import type { Bag, OnWire } from '@ahpd/sdk';
 import { bag, list, str } from './common.js';
-import { frontmatterOf } from './disk.js';
+import { frontmatterOf, projectDirOf } from './disk.js';
 import type { Disk, DiskFile, DiskKind, DiskScope } from './disk.js';
 
 /**
@@ -85,7 +85,10 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
     if (scope === 'builtin') return { uri: `claude-internal:/${folder}`, name: 'builtin', writable: false };
     if (disk === undefined) return undefined;
     if (scope === 'user') return { uri: uriOf(join(disk.configDir, folder)), name: folder, writable: true };
-    if (scope === 'project') return disk.cwd === undefined ? undefined : { uri: uriOf(join(disk.cwd, '.claude', folder)), name: folder, writable: true };
+    if (scope === 'project') {
+      const project = projectDirOf(disk);
+      return project === undefined ? undefined : { uri: uriOf(join(project, folder)), name: folder, writable: true };
+    }
     if (scope === 'synced') return { uri: uriOf(join(disk.configDir, 'skills', 'synced')), name: 'synced', writable: false };
     return disk.managedDir === undefined ? undefined : { uri: uriOf(join(disk.managedDir, '.claude', 'skills')), name: 'managed', writable: false };
   };
@@ -106,7 +109,7 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
     (directoryOf(scope, kind)?.children as Bag[] | undefined)?.push(leaf);
   };
   /** The writable directories, in the order they are sent, made before anything is put in them. */
-  const writable: Placed[] = disk?.cwd !== undefined ? ['project', 'user'] : disk !== undefined ? ['user'] : [];
+  const writable: Placed[] = disk === undefined ? [] : projectDirOf(disk) !== undefined ? ['project', 'user'] : ['user'];
   const sent: [Placed, DiskKind][] = [
     ...writable.flatMap((scope) => (['agent', 'skill', 'prompt', 'rule'] as DiskKind[]).map((kind) => [scope, kind] as [Placed, DiskKind])),
     ['managed', 'skill'], ['synced', 'skill'], ['builtin', 'skill'], ['builtin', 'prompt'], ['builtin', 'agent'],

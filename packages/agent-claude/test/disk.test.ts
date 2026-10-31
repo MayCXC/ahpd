@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { configDirOf, filesOf, managedDirOf } from '../src/session/disk.js';
+import { configDirOf, filesOf, managedDirOf, projectDirOf } from '../src/session/disk.js';
 
 /*
  * The disk read the customizations are laid out from.
@@ -71,6 +71,20 @@ describe('the files of each scope', () => {
       { kind: 'rule', name: 'CLAUDE.md', scope: 'project', path: join(work, '.claude', 'CLAUDE.md') },
       { kind: 'rule', name: 'CLAUDE.local.md', scope: 'project', path: join(work, 'CLAUDE.local.md') },
       { kind: 'rule', name: 'api.md', scope: 'project', path: join(work, '.claude', 'rules', 'deep', 'api.md') },
+    ]);
+  });
+
+  it('reads a session in the home folder as the personal scope alone', () => {
+    const root = tree({
+      '.claude/skills/writing/SKILL.md': named('writing'),
+      '.claude/CLAUDE.md': '# Me\n',
+      'CLAUDE.md': '# Home\n',
+    });
+    expect(projectDirOf({ configDir: join(root, '.claude'), cwd: root })).toBeUndefined();
+    expect(filesOf({ configDir: join(root, '.claude'), cwd: root })).toEqual([
+      { kind: 'skill', name: 'writing', scope: 'user', path: join(root, '.claude', 'skills', 'writing', 'SKILL.md') },
+      { kind: 'rule', name: 'CLAUDE.md', scope: 'user', path: join(root, '.claude', 'CLAUDE.md') },
+      { kind: 'rule', name: 'CLAUDE.md', scope: 'user', path: join(root, 'CLAUDE.md') },
     ]);
   });
 
