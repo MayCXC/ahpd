@@ -1,6 +1,6 @@
 ---
 title: The plugin is documented
-status: implemented
+status: done
 depends: [task-03-a-browser-is-sent-a-push.md]
 layer: docs
 refs:

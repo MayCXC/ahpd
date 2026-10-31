@@ -1,6 +1,6 @@
 ---
 title: A browser registers under push
-status: implemented
+status: done
 depends: [task-01-a-device-hears-its-persons-sessions.md]
 layer: push
 refs:

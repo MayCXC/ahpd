@@ -38,7 +38,7 @@ Current progress and pending items only, as of 2026-10-31.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by every test run. Restore it with `git checkout --` and never print it.
 - On Windows CI, `agent-acp-ports` (the pseudoterminal test) fails at times, also before #169. Rerun the failed jobs once; a second failure needs a look.
 - On this machine, two Docker tests time out: `computer-devcontainer` and `computer-disposable`. They time out on main too, and CI passes them.
-- The worktrees in `/github/ahpd.worktrees/` are `briefs-commit` (detached, for plan-only commits), `build-agents-1d669ecf` (the push build), `release-prerelease`, `review-maycxc-union` and `vm`. The last two are merged, and they wait for Softov's word to remove. The old container/05 p8 build `build-agents-fda88f4a` is removed: main does all that it did. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
+- The worktrees in `/github/ahpd.worktrees/` are `briefs-commit` (detached, for plan-only commits), `release-prerelease`, `review-maycxc-union` and `vm`. The last two are merged, and they wait for Softov's word to remove. The old container/05 p8 build `build-agents-fda88f4a` is removed: main does all that it did. Check `ss -ltnp` before you start a test daemon, and stop it by pid.
 - The local branch `fork/maycxc-1248-1303-1334` is merged.
 
 ## Waiting for Softov
@@ -81,7 +81,6 @@ Current progress and pending items only, as of 2026-10-31.
 
 ## Next builds
 
-- plugin/20261031-0804, a browser gets a push, is PR #171 on branch `plugin/20261031-0804-a-browser-gets-a-push`, from worktree `build-agents-1d669ecf`. CI is green, with Windows. It waits for Softov's word to merge. After the merge, add a note to `ahpd-merge-notes.md`, remove the worktree and the branch, and keep the build session.
 - The VM plan `20261030-1141-a-vm-is-made-on-a-server` has its code merged. It waits on the checks by hand above.
 - container/05 p10 (task 03 next).
 - The ahpw Connect button for plugin/71 is ahpw plan plugins/09, planned.

@@ -1,6 +1,6 @@
 ---
 title: A device hears its person's sessions
-status: implemented
+status: done
 depends: []
 layer: push
 refs:
