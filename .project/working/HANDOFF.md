@@ -49,7 +49,9 @@ Current progress and pending items only, as of 2026-10-31.
 - daemon/20261031-0555: [pending/install-path-checks.md](../pending/install-path-checks.md).
 - pi/20261031-0736: [pending/pi-resume-checks.md](../pending/pi-resume-checks.md).
 - host/20261031-0211, claude/20261031-0228, claude/20261031-0258, daemon/20261031-0555 and pi/20261031-0736: review. Each is `implemented`.
-- host/114, host/116 and x-ahpd/me: review. x-ahpd/me gives `kind` a third value, `plugin`, which the plan did not name.
+- host/114 and host/116: review.
+- x-ahpd/me: Softov chose to answer a plugin, fixed. The fix gives a plugin its entry's `grants` and the pool `plugin:<name>`. It is in the worktree `/github/ahpd.worktrees/me-plugin`, branch `host/20261028-0947-me-for-a-plugin`, not committed. It waits for Softov's go on the PR.
+- ahpw idea `a-plugin-page-draws-its-view` is on ahpw main, for the views of plan D.
 - After the daemon restart for #156 to #161 and #151, open a terminal in ahpw and in ahpc. `supportsCommandDetection` is now false until the shell prints its first mark.
 - host/126: review. ahpc and ahpw must create `ahp-session:` sessions.
 - daemon/29: the final checklist in its plan.
