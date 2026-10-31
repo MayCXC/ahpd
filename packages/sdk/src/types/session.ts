@@ -15,8 +15,29 @@ export type { MessageAttachment };
  * `session` addresses the session channel, `chat` the chat channel beneath it,
  * and `terminal` a terminal's own - the emitter knows which of its channels it
  * is talking about and the host knows what each is called.
+ *
+ * `handed` says the action answers a client's action the host handed this
+ * backend earlier (`Start.handed`), and it goes out as that client's echo,
+ * carrying the client's origin.
  */
-export type Emit = (channel: 'session' | 'chat' | 'terminal', action: Bag) => void;
+export type Emit = (channel: 'session' | 'chat' | 'terminal', action: Bag, handed?: Handed) => void;
+
+/**
+ * A client's action, held by the backend the host handed it to.
+ *
+ * The protocol has the client that sent an action hold it as pending until
+ * the host answers it, with the action carrying its origin or with a rejection
+ * (https://github.com/microsoft/agent-host-protocol/blob/v1.0.0/docs/guide/reconciliation.md).
+ * A backend answers most actions while the host is handing them over, and the
+ * host gives that answer the origin itself. A backend that answers later, once
+ * something else has answered it (the proxy, once the host inside a machine
+ * has), keeps this from `Start.handed` and answers through it: an action
+ * emitted with it is the echo, and `refuse` is the rejection.
+ */
+export interface Handed {
+  /** Refuse the action to the client that sent it, with `reason`. */
+  refuse: (reason: string) => void;
+}
 
 /**
  * What a backend knows about the worker chat it wants for one of its calls.
