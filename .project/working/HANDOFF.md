@@ -61,6 +61,9 @@ Current progress and pending items only, as of 2026-10-30.
 - The VM plan `20261030-1141-a-vm-is-made-on-a-server` has its code merged. It waits on the checks by hand above.
 - container/05 p10 (task 03 next).
 - The ahpw Connect button for plugin/71 is ahpw plan plugins/09, planned.
+- host/20261031-0211-every-client-action-is-answered, planned. It does not touch the Claude files, so it can build beside them.
+- claude/20261031-0228-a-skill-names-its-own-file, planned.
+- claude/20261031-0258-a-written-agent-shows-at-once, planned. It starts after the skills plan merges, because both change `servers.ts`.
 
 ## Outside this repository
 
