@@ -191,6 +191,15 @@ export function replayEntries(entries: readonly SessionEntry[]): Replayed {
     }
   }
   seal();
+  /*
+   * The last turn, when it failed, is the one a client may resume: its failed
+   * reply is the file's last word, which a resume takes out of the model's
+   * context. An earlier failed turn has turns after it, and the protocol
+   * resumes only the latest.
+   */
+  const last = turns.at(-1);
+  const part = last?.state === 'error' ? last.parts.at(-1) : undefined;
+  if (part?.kind === 'error') part.resumable = true;
   return { turns, ends };
 }
 

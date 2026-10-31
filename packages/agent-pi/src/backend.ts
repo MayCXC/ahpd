@@ -97,6 +97,20 @@ export interface PiBackend {
    * means by a truncation.
    */
   rewind(entryId: string): Promise<boolean>;
+  /**
+   * Continue from a failed reply, without a new message. The promise spans the
+   * whole run.
+   *
+   * The failed reply stays in pi's file and leaves the model's context, the
+   * way pi's own retry leaves it: a context edit with `null` on its entry. pi
+   * then continues from the message before it, so the calls the turn already
+   * ran are not run again. Answers `false`, and runs nothing, when the
+   * conversation does not end at a failed reply.
+   *
+   * The run is outside pi's own loop, so pi raises no `agent_settled` for it
+   * and retries nothing itself: what ends the turn is this promise settling.
+   */
+  resume(): Promise<boolean>;
   /** Stop, and let go of what the session was holding. */
   close(): void;
 }
@@ -433,6 +447,15 @@ function wrap(sdk: Pi, session: AgentSession): PiBackend {
     rewind: async (entryId) => {
       const moved = await session.navigateTree(entryId);
       return !moved.cancelled;
+    },
+    resume: async () => {
+      const entry = session.sessionManager.getLeafEntry();
+      const message = entry?.type === 'message' ? entry.message as { role?: string; stopReason?: string } : undefined;
+      if (entry === undefined || message?.role !== 'assistant' || message.stopReason !== 'error') return false;
+      session.sessionManager.appendContextEdit(entry.id, null);
+      session.refreshContext();
+      await session.agent.continue();
+      return true;
     },
     close: () => { session.dispose(); },
   };

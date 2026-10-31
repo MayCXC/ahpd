@@ -1,7 +1,7 @@
 ---
 title: A failed pi turn is resumed
 domain: pi
-status: planned
+status: implemented
 priority: medium
 created: 2026-10-31
 revalidated: 2026-10-31
@@ -85,9 +85,9 @@ chat/turnResume -> chatactions.ts -> pi session resume -> chat/turnResume echoed
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A failed model call is resumable](task-01-a-failed-model-call-is-resumable.md) | todo | - |
-| [02 - pi continues from the failed call](task-02-pi-continues-from-the-failed-call.md) | todo | - |
-| [03 - The pi session resumes the turn](task-03-the-pi-session-resumes-the-turn.md) | todo | 01, 02 |
+| [01 - A failed model call is resumable](task-01-a-failed-model-call-is-resumable.md) | implemented | - |
+| [02 - pi continues from the failed call](task-02-pi-continues-from-the-failed-call.md) | implemented | - |
+| [03 - The pi session resumes the turn](task-03-the-pi-session-resumes-the-turn.md) | implemented | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -98,8 +98,8 @@ chat/turnResume -> chatactions.ts -> pi session resume -> chat/turnResume echoed
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-31.
-- **Next action:** build tasks 01 to 03 on the branch `pi/20261031-0736-a-failed-pi-turn-is-resumed`.
+- **Done so far:** built 2026-10-31. See [implemented.md](implemented.md).
+- **Next action:** Softov reviews the build and does `.project/pending/pi-resume-checks.md`.
 - **Open questions:** none.
 - **Watch out for:** `maycxc/host/20261030-0559-a-late-answer-is-refused` changes `confirm` in `packages/agent-pi/src/session.ts`. The second branch to merge rebases.
 

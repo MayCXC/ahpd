@@ -845,3 +845,146 @@ it('seeds from PI_CODING_AGENT_DIR when the daemon has it', () => {
   expect(needs.piAgentDirectory).toMatchObject({ directory: '/srv/pi' });
 });
 
+
+// A failed turn resumed ------------------------------------------------------
+
+/** A session whose turn `t1` wrote some text and then failed on a model call. */
+const failedTurn = async () => {
+  const one = opened();
+  one.pi.hold();
+  one.session.begin('t1', 'hello');
+  await settled();
+  for (const event of streamed([{ type: 'text', text: 'Reading.' }])) one.pi.raise(event);
+  one.pi.raise({
+    type: 'message_end',
+    message: { role: 'assistant', stopReason: 'error', errorMessage: '429 rate limited' },
+  } as never);
+  one.pi.raise({ type: 'agent_settled', aborted: false });
+  await settled();
+  return one;
+};
+
+it('marks a failed model call resumable, on chat/error and on the turn', async () => {
+  const { session, last } = await failedTurn();
+  const part = last('chat/error')?.part as Bag;
+  expect(part).toEqual({ kind: 'error', error: { errorType: 'turnFailed', message: '429 rate limited' }, resumable: true });
+  const turn = (session.chatState().turns as Bag[])[0]!;
+  expect((turn.responseParts as Bag[]).at(-1)).toEqual(part);
+});
+
+it('does not mark a turn resumable when pi failed before it had the prompt', async () => {
+  const sent: { channel: string; action: Bag }[] = [];
+  const session = piSession({}, {
+    uri: 'ahp-session:/s1',
+    chatUri: 'ahp-chat:/s1',
+    settings: {},
+    workingDirectory: root,
+    schema: () => ({}),
+    emit: (channel, action) => { sent.push({ channel, action }); },
+  } as Start, (async () => { throw new Error('no model provider is configured'); }) as OpenPi);
+  session.begin('t1', 'hello');
+  await settled();
+  const part = sent.find((one) => one.action.type === 'chat/error')?.action.part as Bag;
+  expect(part.resumable).toBeUndefined();
+  expect(((session.chatState().turns as Bag[])[0]!.responseParts as Bag[]).at(-1)).toEqual(part);
+  expect(session.resume?.('t1')).toBe(false);
+});
+
+it('reopens a failed turn on resume, with its parts, and says so first', async () => {
+  const { session, pi, sent } = await failedTurn();
+  const before = sent.length;
+  const parts = ((session.chatState().turns as Bag[])[0]!.responseParts as Bag[]).slice();
+  pi.resumeWith(new Promise(() => {}));
+  expect(session.resume?.('t1')).toBe(true);
+  expect(sent[before]?.action).toEqual({ type: 'chat/turnResume', turnId: 't1' });
+  const state = session.chatState();
+  expect(state.turns).toEqual([]);
+  const active = state.activeTurn as Bag;
+  expect(active.id).toBe('t1');
+  expect(active.state).toBeUndefined();
+  expect(active.responseParts).toEqual(parts);
+  await settled();
+  expect(pi.asked.at(-1)).toEqual({ kind: 'resume' });
+  expect(session.status()).not.toBe(2);
+});
+
+it('ends a resumed run that answers as complete, with the turn once in turns', async () => {
+  const { session, pi, types } = await failedTurn();
+  expect(session.resume?.('t1')).toBe(true);
+  // What the resumed run writes, raised before the fake's `resume` returns.
+  for (const event of streamed([{ type: 'text', text: 'Done.' }])) pi.raise(event);
+  await settled();
+  expect(types('chat').slice(-1)).toEqual(['chat/turnComplete']);
+  const turns = session.chatState().turns as Bag[];
+  expect(turns.map((one) => [one.id, one.state])).toEqual([['t1', 'complete']]);
+  const kinds = (turns[0]!.responseParts as Bag[]).map((part) => part.kind);
+  expect(kinds).toEqual(['markdown', 'error', 'markdown']);
+  // The prompt was named when the turn first ended, and is not named again.
+  expect(pi.asked.filter((one) => one.kind === 'promptAfter')).toHaveLength(1);
+});
+
+it('ends a resumed run that fails again with a second error, which is resumable', async () => {
+  const { session, pi, last } = await failedTurn();
+  expect(session.resume?.('t1')).toBe(true);
+  pi.raise({
+    type: 'message_end',
+    message: { role: 'assistant', stopReason: 'error', errorMessage: '500 overloaded' },
+  } as never);
+  await settled();
+  expect((last('chat/error')?.part as Bag).resumable).toBe(true);
+  const turn = (session.chatState().turns as Bag[])[0]!;
+  expect(turn.state).toBe('error');
+  const errors = (turn.responseParts as Bag[]).filter((part) => part.kind === 'error');
+  expect(errors.map((part) => (part.error as Bag).message)).toEqual(['429 rate limited', '500 overloaded']);
+  expect(session.resume?.('t1')).toBe(true);
+});
+
+it('fails a resumed turn, not resumable, when pi has no failed reply to continue from', async () => {
+  const { session, pi, last } = await failedTurn();
+  pi.resumeWith(false);
+  expect(session.resume?.('t1')).toBe(true);
+  await settled();
+  const part = last('chat/error')?.part as Bag;
+  expect(part.resumable).toBeUndefined();
+  expect(session.resume?.('t1')).toBe(false);
+});
+
+it('keeps a resumed turn resumable when pi throws as it continues', async () => {
+  const { session, pi, last } = await failedTurn();
+  pi.resumeWith(new Error('connection reset'));
+  expect(session.resume?.('t1')).toBe(true);
+  await settled();
+  expect(last('chat/error')?.part).toMatchObject({ error: { message: 'connection reset' }, resumable: true });
+});
+
+it('refuses a resume that names no failed, resumable latest turn', async () => {
+  const { session, pi } = await failedTurn();
+  // Not the latest turn's id.
+  expect(session.resume?.('t0')).toBe(false);
+  // A turn is running.
+  pi.hold();
+  session.begin('t2', 'again');
+  await settled();
+  expect(session.resume?.('t1')).toBe(false);
+  pi.raise({ type: 'agent_settled', aborted: false });
+  await settled();
+  // The latest turn completed.
+  expect(session.resume?.('t2')).toBe(false);
+  expect(session.resume?.('t1')).toBe(false);
+  // A closed session.
+  const closed = await failedTurn();
+  closed.session.close();
+  expect(closed.session.resume?.('t1')).toBe(false);
+  expect(pi.asked.some((one) => one.kind === 'resume')).toBe(false);
+});
+
+it('ends a resumed run cancelled when it is stopped', async () => {
+  const { session, pi, types } = await failedTurn();
+  pi.resumeWith(new Promise(() => {}));
+  expect(session.resume?.('t1')).toBe(true);
+  await settled();
+  session.cancel('t1');
+  await settled();
+  expect(types('chat').slice(-1)).toEqual(['chat/turnCancelled']);
+  expect((session.chatState().turns as Bag[])[0]?.state).toBe('cancelled');
+});
