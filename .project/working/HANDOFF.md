@@ -18,7 +18,7 @@ Current progress and pending items only, as of 2026-10-31.
   - #161: only the echo carries the origin.
   - #151: container/05 p8, a profile's machines on another server's Docker.
   - #162: the VM plan, a VM made by libvirt or Proxmox. Nothing has run on a real hypervisor yet.
-- On 2026-10-31, seven PRs merged on green CI, Windows included:
+- On 2026-10-31, eight PRs merged on green CI, Windows included:
   - #163: CI stages a pre-release under the `next` dist-tag.
   - #164: host/20261031-0211, every client action is answered.
   - #165: claude/20261031-0228, a skill names its own file.
@@ -26,11 +26,12 @@ Current progress and pending items only, as of 2026-10-31.
   - #167: daemon/20261031-0555, an installed ahpd is found outside bash. The install script reaches people at the next release, because ahpio-site copies it from the newest `v*` tag.
   - #168: pi/20261031-0736, a failed pi turn is resumed.
   - #169: a fix with no plan. The #166 watch started a Claude probe for each write to `~/.claude/plugins/known_marketplaces.json`, which each probe's CLI writes, so CLIs piled up and `listSessions` hung. Now only `installed_plugins.json` calls, and the host runs one probe per backend at a time.
-- The last code merge on main is #169 (`30c493ca`).
+  - #170: the second cause of the same loop. Each CLI start rewrites `skills/synced/<bucket>/manifest.json` and `.last-complete-round`. The skills watch now skips them, and skips a `change` for a folder.
+- The last code merge on main is #170 (`c9b5917a`).
 - #158 was based on the #157 branch, so its merge went into that branch and never reached main. #159 took the same head into main. Check `baseRefName` before you merge a stacked fork PR.
 - Disposing a session that this process does not hold leaves its disposable machine behind. The `held === undefined` branch in `lifecycle.ts` never calls `leaveForgotten`. It is on main from before p8: [problems/a-disposed-session-not-held-leaves-its-machine.md](../problems/a-disposed-session-not-held-leaves-its-machine.md).
 - The README is rewritten for people who run ahpd (`a22c1934`). The brief it came from is `ahp-review/ahpd-review/ahpd-readme-2026-10-27/`.
-- `/github/ahpd` is level with origin/main at `30c493ca`. `abdecb49` merges Softov's `1965724e` and keeps the two briefs deleted.
+- `/github/ahpd` is level with origin/main at `c9b5917a`. `abdecb49` merges Softov's `1965724e` and keeps the two briefs deleted.
 - Fetch, and check the base before you cut a build worktree.
 - Softov's dev daemon runs from source on port 37537. He restarted it after #114.
 - Code goes through a PR on `softov/ahpd`. Plan-only commits go to main. Run `gh pr checks` with `-R softov/ahpd` outside a repo.
@@ -42,7 +43,7 @@ Current progress and pending items only, as of 2026-10-31.
 
 ## Waiting for Softov
 
-- Restart the daemon for #164 to #169. One restart covers all six. Without #169, a daemon on #166 or later starts Claude CLIs until the memory is full. A stale removal is refused, and Claude sessions list their real files. A written customization shows without a restart, npm runs beside the daemon's Node, and a failed pi turn can be resumed.
+- Restart the daemon for #164 to #170. One restart covers all seven. A daemon on #166 to #169 probes each Claude variant without end. A stale removal is refused, and Claude sessions list their real files. A written customization shows without a restart, npm runs beside the daemon's Node, and a failed pi turn can be resumed.
 - claude/20261031-0228: [pending/claude-skill-file-checks.md](../pending/claude-skill-file-checks.md).
 - claude/20261031-0258: [pending/claude-reload-checks.md](../pending/claude-reload-checks.md).
 - daemon/20261031-0555: [pending/install-path-checks.md](../pending/install-path-checks.md).
