@@ -668,7 +668,7 @@ export function createTerminal(
 
     write: (data) => {
       if (exitCode !== undefined)
-        return;
+        return `${uri} has exited, and has no process to send input to`;
       /*
        * `^C` is a signal, and there is nothing here to turn it into one.
        *
@@ -692,7 +692,7 @@ export function createTerminal(
         // shell echoes what was typed, but the echo arrives as output and
         // this is the only place the input itself is seen.
         typed += data;
-        return;
+        return true;
       }
       const at = data.indexOf('\u0003');
       if (at !== -1) {
@@ -707,7 +707,7 @@ export function createTerminal(
          * whatever started the host.
          */
         const group = child?.pid;
-        if (group === undefined) return;
+        if (group === undefined) return `${uri} has no process to send input to`;
         /*
          * Windows: the tree, by pid, because there is no group to name and no
          * signal a shell there acts on.
@@ -718,13 +718,15 @@ export function createTerminal(
          * interrupt and a kill; Windows has nothing here to draw it with, so
          * both are the same tree-ending call.
          */
-        if (windows) { endTree(group); return; }
+        if (windows) { endTree(group); return true; }
         try { process.kill(-group, 'SIGINT'); }
         // The group is gone, which is the outcome asked for.
         catch { /* nothing left to interrupt */ }
-        return;
+        return true;
       }
-      if (child?.stdin.writable) child.stdin.write(data);
+      if (!child?.stdin.writable) return `${uri} has no process to send input to`;
+      child.stdin.write(data);
+      return true;
     },
 
     // Told, when there is something to tell: a pseudoterminal gets the new
@@ -744,9 +746,10 @@ export function createTerminal(
     },
 
     setTitle: (next) => {
-      if (next === title) return;
+      if (next === title) return false;
       title = next;
       tell({ type: 'terminal/titleChanged', title });
+      return true;
     },
 
     setClaim: (next) => {
