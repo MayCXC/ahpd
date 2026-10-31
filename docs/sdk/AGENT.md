@@ -81,6 +81,7 @@ const host = createHost({ path, agents: [shout()] });
 | `create(start)` | Start one. Returns a `Session` | required |
 | `description` | One line about what this backend is | optional |
 | `probe()` | What you offer, asked once at startup: the models, the commands, and the account your harness bills to | optional |
+| `probeChanged(onChange)` | Call `onChange` when what `probe()` answers may have changed. The host probes again, and stops the calls when it closes or a fold removes you | optional |
 | `directories()` | The directories you will work in | optional |
 | `list()` | Sessions somebody can browse | optional |
 | `find(id, at?)` | One of those, on its own, for an id the host has not got | optional |

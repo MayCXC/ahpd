@@ -1,7 +1,7 @@
 ---
 title: A written agent shows at once
 domain: claude
-status: planned
+status: implemented
 priority: medium
 created: 2026-10-31
 revalidated: 2026-10-31
@@ -86,9 +86,9 @@ a file written under the personal .claude -> the backend's watcher -> probeAgent
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The Claude folders are watched](task-01-the-claude-folders-are-watched.md) | todo | - |
-| [02 - A session reads its list again](task-02-a-session-reads-its-list-again.md) | todo | 01 |
-| [03 - The probe is read again](task-03-the-probe-is-read-again.md) | todo | 01 |
+| [01 - The Claude folders are watched](task-01-the-claude-folders-are-watched.md) | implemented | - |
+| [02 - A session reads its list again](task-02-a-session-reads-its-list-again.md) | implemented | 01 |
+| [03 - The probe is read again](task-03-the-probe-is-read-again.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -98,10 +98,10 @@ a file written under the personal .claude -> the backend's watcher -> probeAgent
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-31.
-- **Next action:** build [the skills plan](../20261031-0228-a-skill-names-its-own-file/plan.md) first, then [task-01-the-claude-folders-are-watched.md](task-01-the-claude-folders-are-watched.md).
+- **Done so far:** planned 2026-10-31, and tasks 01 to 03 implemented on 2026-10-31. See [implemented.md](implemented.md).
+- **Next action:** review, and the checks by hand in [claude-reload-checks.md](../../../pending/claude-reload-checks.md).
 - **Open questions:** none.
-- **Watch out for:** `servers.ts` and `customizations.ts` change in the skills plan, so the line numbers here move after it merges.
+- **Watch out for:** the line numbers in the refs are from before the skills plan merged.
 
 ## Final verification checklist
 

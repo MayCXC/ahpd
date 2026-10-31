@@ -36,8 +36,9 @@ export default function setup(): () => void {
   process.env.GIT_CONFIG_COUNT = String(count + 1);
   /*
    * And a Claude config folder of the run's own, empty. A Claude session reads
-   * its config folder, and the person's own `~/.claude` is not a thing a test
-   * should list. A test that names one still sets its own.
+   * and watches its config folder, and the person's own `~/.claude` is not a
+   * thing a test should list, or be told of a change in. A test that names one
+   * still sets its own.
    */
   process.env.CLAUDE_CONFIG_DIR = join(run, 'claude-config');
   return () => {

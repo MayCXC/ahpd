@@ -5,6 +5,7 @@ import { protectedResource, urlOf } from '../mcp.js';
 import { flagSettingsOf } from '../options.js';
 import { customizationsOf, rootOf } from './customizations.js';
 import { configDirOf, diskOf, managedDirOf } from './disk.js';
+import { watchFolders } from './watch.js';
 import type { Published } from './customizations.js';
 
 /** What this area offers the rest of the session. */
@@ -17,6 +18,10 @@ export interface Servers {
   refreshMcp: () => Promise<void>;
   /** Say what the CLI's servers are, in chat. */
   describe: () => Promise<void>;
+  /** Ask the CLI for its agents, commands and skills again, and say the list. */
+  reread: () => Promise<void>;
+  /** Stop the watch of the Claude folders, which `describe` starts. */
+  unwatch: () => void;
   methods: {
     setCustomizationEnabled: (id: string, enabled: boolean) => Promise<boolean>;
     startMcpServer: (id: string) => Promise<boolean>;
@@ -281,6 +286,51 @@ export function createServers(ctx: SessionContext): Servers {
     return true;
   };
 
+  /** Whether a read again is running, and whether a change came during it. */
+  let rereading = false;
+  let again = false;
+
+  /**
+   * Ask the CLI again for what a file on disk can change: its agents and
+   * commands, its skills and its plugins.
+   *
+   * `initializationResult()` is the answer of the first connect and never
+   * changes, so the two reloads are what the CLI reads from disk again. Their
+   * answers replace what `describe` kept, and the list is laid out again. A
+   * reload that fails keeps the lists that were there, and says nothing.
+   *
+   * One at a time: a change during a read is one more read after it, because
+   * the read that runs may have read the folder before that change.
+   */
+  const reread = async (): Promise<void> => {
+    if (rereading) {
+      again = true;
+      return;
+    }
+    rereading = true;
+    try {
+      do {
+        again = false;
+        if (ctx.closed) return;
+        const answered = await Promise.all([
+          ctx.handle.reloadPlugins().then((r) => bag(r as unknown)),
+          ctx.handle.reloadSkills().then((r) => list(bag(r as unknown).skills)),
+        ]).catch(() => undefined);
+        if (answered === undefined || ctx.closed) continue;
+        const [plugins, skills] = answered;
+        reported.init = { ...reported.init, agents: list(plugins.agents), commands: list(plugins.commands) };
+        reported.skills = skills;
+        laid(list(plugins.plugins));
+      } while (again && !ctx.closed);
+    }
+    finally {
+      rereading = false;
+    }
+  };
+
+  /** Stops the watch of the Claude folders, once `describe` started one. */
+  let unwatch: (() => void) | undefined;
+
   /**
    * Ask the CLI what it can do, without asking it to do anything.
    *
@@ -331,6 +381,17 @@ export function createServers(ctx: SessionContext): Servers {
     reported.skills = skills;
     await discover(mcp);
     laid(plugins);
+    /*
+     * The Claude folders, watched from here so a file written into one is
+     * listed without a restart. Not for a session in a machine, whose CLI
+     * reads its own config volume, and not for one closed while it waited.
+     */
+    if (ctx.options.spawn === undefined && !ctx.closed && unwatch === undefined) {
+      unwatch = watchFolders({
+        configDir: configDirOf(ctx.options.env),
+        ...(ctx.options.cwd !== undefined ? { cwd: ctx.options.cwd } : {}),
+      }, () => { void reread(); });
+    }
     ctx.options.onHandshake?.();
   };
 
@@ -462,5 +523,16 @@ export function createServers(ctx: SessionContext): Servers {
     },
   };
 
-  return { onServer, declared, refreshMcp, describe, methods };
+  return {
+    onServer,
+    declared,
+    refreshMcp,
+    describe,
+    reread,
+    unwatch: () => {
+      unwatch?.();
+      unwatch = undefined;
+    },
+    methods,
+  };
 }

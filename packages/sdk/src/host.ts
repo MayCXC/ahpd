@@ -1310,10 +1310,44 @@ export function createHost(options: HostOptions): Host {
    * nothing waits for it, and until it answers the models are empty - which is
    * the same real answer this host gives for a harness nobody has signed into.
    */
+  /** The number of the last probe asked of each backend, so an older answer is dropped. */
+  const probeRuns = new Map<string, number>();
+  /** The stop of each backend's `probeChanged`, by provider. */
+  const probeWatches = new Map<string, () => void>();
+  /**
+   * Hear when a backend's answer may have changed, once, after its first one.
+   *
+   * By provider and not by object: a fold that hands a provider a new object
+   * keeps the watch, and the watch probes whichever object the provider has.
+   */
+  const watchProbe = (agent: Agent): void => {
+    if (agent.probeChanged === undefined || probeWatches.has(agent.provider) || ctx.closed) return;
+    const provider = agent.provider;
+    try {
+      probeWatches.set(provider, agent.probeChanged(() => {
+        const now = agents.get(provider);
+        if (now !== undefined && !ctx.closed) probeAgent(now);
+      }));
+    }
+    catch (error) { log(`${provider}: no watch of what it offers: ${reason(error)}`); }
+  };
+  /** Stop the watch of each backend no longer in `agents`, or of every one. */
+  const unwatchProbes = (all: boolean): void => {
+    for (const [provider, stop] of probeWatches) {
+      if (!all && agents.has(provider)) continue;
+      probeWatches.delete(provider);
+      try { stop(); }
+      catch { /* already stopped */ }
+    }
+  };
   const probeAgent = (agent: Agent): void => {
     if (!agent.probe)
       return;
+    const run = (probeRuns.get(agent.provider) ?? 0) + 1;
+    probeRuns.set(agent.provider, run);
     void agent.probe().then((offered) => {
+      // A probe asked after this one answers for what is there now.
+      if (probeRuns.get(agent.provider) !== run) return;
       const held = about(agent.provider);
       held.commands = offered.commands;
       held.seeds = offered.customizations;
@@ -1336,6 +1370,7 @@ export function createHost(options: HostOptions): Host {
       if (offered.account !== undefined) learnAccount(agent.provider, offered.account);
       log(`${agent.provider}: ${held.models.length} model(s), ${held.commands.length} command(s), ${held.seeds.length} customization(s)`);
       dispatch(ROOT, { type: 'root/agentsChanged', agents: descriptors() });
+      watchProbe(agent);
     }).catch(() => { });
   };
 
@@ -1530,6 +1565,7 @@ export function createHost(options: HostOptions): Host {
       wirePlugins();
       if (watchingUsers() && usersWatch === undefined) usersWatch = openUsersWatch();
       else if (!watchingUsers() && usersWatch !== undefined) { usersWatch.close(); usersWatch = undefined; }
+      unwatchProbes(false);
       for (const provider of fresh) {
         const agent = agents.get(provider);
         if (agent !== undefined) probeAgent(agent);
@@ -1575,6 +1611,7 @@ export function createHost(options: HostOptions): Host {
         ctx.stopWakes();
         ctx.stopMerged();
         ctx.closed = true;
+        unwatchProbes(true);
         /*
          * And no wait outlives the host it was begun in. What a client that
          * dropped would have been removed by thirty seconds from now is the

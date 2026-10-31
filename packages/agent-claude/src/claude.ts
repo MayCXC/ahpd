@@ -2,6 +2,8 @@ import { probe } from './probe.js';
 import { offeredServers, serversFor } from './mcp.js';
 import { createSession, EFFORT_LABELS, EFFORTS } from './session.js';
 import { restoreSavedOutputs } from './session/savedoutput.js';
+import { configDirOf } from './session/disk.js';
+import { watchFolders } from './session/watch.js';
 import { turnsOf, subagentsOf } from './transcript.js';
 import { catalogue, findSession, forgetSession, transcriptOf, written } from './catalog.js';
 import type { AgentLogins } from './logins.js';
@@ -517,6 +519,9 @@ export function claude(options: ClaudeOptions): Agent {
       perModelEffort = offered.models.some((model) => model.configSchema !== undefined);
       return offered;
     },
+
+    // The personal folder only, which is the one the probe reads.
+    probeChanged: (onChange) => watchFolders({ configDir: configDirOf() }, onChange),
 
     // Every directory it serves, as one list. A session is listed by the
     // catalogue of the directory it ran in, and a host serving several has

@@ -214,6 +214,8 @@ The rules are the `CLAUDE.md` files and every `*.md` under a `rules` folder: `<c
 
 A session in a machine has its CLI read the machine's own config, and not this host's folders. Its entries are listed with no file, all in the `builtin` directories, and no writable directory is sent.
 
+A file written, edited or deleted in these folders shows without a restart. Each session watches its personal and project folders and asks the CLI for its lists again, and the host does the same for the personal folder before any session exists. A session in a machine is not watched.
+
 ## The agent a message picks
 
 A client sends the agent on every message, as `message.agent`, and the turn runs on it. A message naming none runs on the SDK's default agent.

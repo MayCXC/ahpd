@@ -765,6 +765,16 @@ export interface Agent {
   probe?(): Promise<Offered>;
 
   /**
+   * Call `onChange` when what `probe` answers may have changed, such as a file
+   * written into a folder the backend reads.
+   *
+   * Asked once, after the first answer. The host probes again on each call and
+   * keeps the last answer. The function it returns stops the calls, and the
+   * host calls it when it closes and when a fold removes the backend.
+   */
+  probeChanged?(onChange: () => void): () => void;
+
+  /**
    * The directories this backend will work in.
    *
    * The host's answer to "may this client read that file": a resource outside
