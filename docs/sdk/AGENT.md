@@ -245,6 +245,25 @@ person pressing Approve and nothing at all happening.
 a question standing is a session reporting `InputNeeded` for the rest of its
 life over a promise nothing will ever settle.
 
+### Answering later
+
+A client's action reaches a session through one of the methods above, and what
+the session says back goes out as that client's echo, carrying its origin: what
+it emits while the host applies the action, and a turn begun or stopped or a
+message queued that it says once it is ready. The client holds its action as
+pending until it hears that echo or a rejection.
+
+A session that can answer only later, such as the proxy for a session in a
+machine, whose answers come from the host inside, takes
+`start.handed(action)` inside the method, with the action it will say back,
+and answers through it once it knows: `start.emit(channel, action, handed)` is
+the echo, with the client's origin, and `handed.refuse(reason)` refuses the
+action to that client alone. The host finds the client's action the way it
+finds the one an echo answers: the action it is applying, when `action` is of
+its kind and about its turn, or a turn or a queued message it handed over after
+waiting on a machine or a policy check, by the id `action` names. It is
+undefined for an action that answers no client.
+
 ## The rules that fail silently
 
 These are the ones that produce a wrong screen rather than an error. Each cost

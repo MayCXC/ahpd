@@ -10,7 +10,7 @@ import type { Terminal } from '../types/terminals.js';
 import type { StoredWorktree } from '../types/sessions.js';
 import type { DebugLogs } from '../sessions/debuglogs.js';
 import type { CallLinks } from '../automations/calllinks.js';
-import type { Claiming, Claimed, Held, Learned, LiveSubagent, Origin } from './state.js';
+import type { Claiming, Claimed, Dispatched, Held, Learned, LiveSubagent, Origin } from './state.js';
 import type { Admission } from './admission.js';
 import type { Relay } from './relay.js';
 import type { ChatRecord } from './chatrecord.js';
@@ -323,19 +323,29 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
    * Say one thing on one channel, as though this host did it.
    *
    * With no `origin` it is this host's own action, unless it is the echo of
-   * the dispatch being applied right now - the client's own action, said back
-   * - or the turn a backend owes a client through `owe`: those carry the
+   * the dispatch being applied right now (the client's own action, said back)
+   * or the echo a backend owes a client through `owe`: those carry the
    * client's origin. The few sites that say an echo in a later turn of the
    * event loop pass the origin themselves.
    */
   dispatch: (channel: string, given: Record<string, unknown>, origin?: Origin | undefined) => void;
   /**
-   * A client's turn handed to a backend, which says it back when it is ready.
+   * The dispatch being applied, handed to a backend that says it back when it
+   * is ready.
    *
-   * `chat/turnStarted` and `chat/turnCancelled` under `turnId` go out carrying
-   * `origin`, however long the backend takes; nothing else does.
+   * `chat/turnStarted` and `chat/turnCancelled` under the turn they name, and
+   * `chat/pendingMessageSet` under the queued message's id, go out carrying
+   * the client's origin, however long the backend takes; nothing else does.
    */
-  owe: (type: 'chat/turnStarted' | 'chat/turnCancelled', turnId: string, origin: Origin) => void;
+  owe: (type: 'chat/turnStarted' | 'chat/turnCancelled' | 'chat/pendingMessageSet', name: string) => void;
+  /**
+   * The client's dispatch `action` says back: the one being applied, when
+   * `action` is of its kind and about its turn, or one owed under the turn or
+   * the queued message `action` names. Matched as an echo's origin is, and let
+   * go of only by the answer. A backend that answers later holds it through
+   * `Start.handed`.
+   */
+  answering: (action: Record<string, unknown>) => Dispatched | undefined;
   /**
    * Send every streamed delta still held in the window, oldest first.
    *

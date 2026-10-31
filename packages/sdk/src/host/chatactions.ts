@@ -532,7 +532,7 @@ export function chatAction(
         break;
       }
       // Said back by the backend, now or once it is ready to begin.
-      ctx.owe('chat/turnStarted', turnId, origin);
+      ctx.owe('chat/turnStarted', turnId);
       beginTurn(
         beginOrRun(live, provider, turnId, text, modelIn(message.model), messageFrom(message), connection, undefined, attached.attachments),
         (why) => refuse(connection.peer, channel, action, origin, why),
@@ -1120,7 +1120,7 @@ export function chatAction(
         }
         // Said back by the backend once the turn has let go, under the turn
         // it stopped whether or not the client named it.
-        ctx.owe('chat/turnCancelled', String(current.id ?? ''), origin);
+        ctx.owe('chat/turnCancelled', String(current.id ?? ''));
         session.cancel(named);
         break;
       }
@@ -1134,7 +1134,7 @@ export function chatAction(
         no(`Nothing is running on ${session.chatUri} to stop`);
         break;
       }
-      ctx.owe('chat/turnCancelled', String(current.id ?? ''), origin);
+      ctx.owe('chat/turnCancelled', String(current.id ?? ''));
       session.cancel(String(current.id ?? ''));
       break;
     }
@@ -1192,6 +1192,8 @@ export function chatAction(
         refuse(connection.peer, channel, action, origin, queued.refusal);
         break;
       }
+      // Said back by the backend, now or once the turn's check has answered.
+      ctx.owe('chat/pendingMessageSet', String(action.id ?? ''));
       beginTurn(
         beginOrRun(
           session,

@@ -54,7 +54,7 @@ import {
 import type { Space } from './host/channels.js';
 import { DELTA_WINDOW_MS, merger } from './host/deltas.js';
 import { Claiming } from './host/state.js';
-import type { Claimed, Held, Learned, LiveSubagent, NameKind, Origin } from './host/state.js';
+import type { Claimed, Dispatched, Held, Learned, LiveSubagent, NameKind, Origin } from './host/state.js';
 import { GREETINGS, UNGATED, PER_CONNECTION, seesAccount, seesConfig, DECLARED, REVERSE, ownIn } from './host/gate.js';
 import type { Home } from './host/gate.js';
 import { createChatRecord } from './host/chatrecord.js';
@@ -742,45 +742,60 @@ export function createHost(options: HostOptions): Host {
    * nothing else can run while it is set. An echo said in a later turn of the
    * event loop is found another way: a dispatch that waits goes back through
    * `applyNow` once it is done waiting, a site that answers later passes the
-   * origin it was given, and a turn handed to a backend is in `owed`.
+   * origin it was given, a turn or a queued message handed to a backend is in
+   * `owed`, and a backend that answers later holds the dispatch itself
+   * (`Start.handed`), which is why the sender, the channel and the action are
+   * held beside the origin, here and in `owed`.
    */
-  let applying: { origin: Origin; type: string; turnId: string; answered: boolean } | undefined;
+  let applying: (Dispatched & { type: string; turnId: string; answered: boolean }) | undefined;
   /**
-   * The echoes a backend still owes, by the action and the turn it names.
+   * The echoes a backend still owes, by the action and what it names.
    *
-   * A turn begun or stopped is said back by the backend, and a backend says it
-   * when it is ready: once a policy check or a machine has answered, once
-   * Claude has switched models, once pi, cofold or ACP has let the cancelled
-   * prompt go, once the host inside a machine has answered the proxy. The turn
-   * id is the one thing that action carries that names the client's dispatch,
-   * the way `senders` follows a turn by its id. Let go of once said, once
-   * refused, and once the turn has ended.
+   * A turn begun or stopped, and a message queued, are said back by the
+   * backend, and a backend says it when it is ready: once a policy check or a
+   * machine has answered, once Claude has switched models, once pi, cofold or
+   * ACP has let the cancelled prompt go, once the host inside a machine has
+   * answered the proxy. The turn id, or the queued message's own id, is the
+   * one thing that action carries that names the client's dispatch, the way
+   * `senders` follows a turn by its id. Let go of once said, once refused, and
+   * once the turn has ended.
    */
-  const owed = new Map<string, Origin>();
-  const owedKey = (type: string, turnId: string): string => `${type}\n${turnId}`;
+  const owed = new Map<string, Dispatched>();
+  const owedKey = (type: string, name: string): string => `${type}\n${name}`;
+  /** What an action is owed under: the queued message it is, or the turn it names. */
+  const owedName = (action: Record<string, unknown>): string => {
+    const named = action.type === 'chat/pendingMessageSet' ? action.id : action.turnId;
+    return typeof named === 'string' ? named : '';
+  };
+  /**
+   * The client's dispatch an action says back: the dispatch being applied,
+   * when the action is of its kind and about its turn, or one a backend owes
+   * under what the action names.
+   */
+  const answering = (action: Record<string, unknown>): Dispatched | undefined => {
+    const type = String(action.type ?? '');
+    const turnId = typeof action.turnId === 'string' ? action.turnId : '';
+    if (applying !== undefined && !applying.answered && applying.type === type
+      && (applying.turnId === '' || applying.turnId === turnId)) return applying;
+    const name = owedName(action);
+    return name === '' ? undefined : owed.get(owedKey(type, name));
+  };
   /**
    * The origin an action goes out with when its caller named none: the
    * dispatch's own, if this is its echo, or the one a backend owes for it.
    */
   const originOf = (action: Record<string, unknown>): Origin | undefined => {
-    const type = String(action.type ?? '');
-    const turnId = typeof action.turnId === 'string' ? action.turnId : '';
-    const key = owedKey(type, turnId);
-    if (applying !== undefined && !applying.answered && applying.type === type
-      && (applying.turnId === '' || applying.turnId === turnId)) {
-      applying.answered = true;
-      owed.delete(key);
-      return applying.origin;
-    }
-    const due = turnId === '' ? undefined : owed.get(key);
-    if (due !== undefined) owed.delete(key);
-    return due;
+    const answered = answering(action);
+    if (answered === undefined) return undefined;
+    if (answered === applying) applying.answered = true;
+    owed.delete(owedKey(String(action.type ?? ''), owedName(action)));
+    return answered.origin;
   };
   /** The dispatch being applied, answered by `origin` on a road that says so itself. */
   const answeredBy = (origin: Origin | undefined, action: Record<string, unknown>): void => {
     if (origin === undefined) return;
     if (applying?.origin === origin) applying.answered = true;
-    if (typeof action.turnId === 'string') owed.delete(owedKey(String(action.type ?? ''), action.turnId));
+    owed.delete(owedKey(String(action.type ?? ''), owedName(action)));
   };
   /**
    * One state action, to everyone watching that channel.
@@ -1177,7 +1192,8 @@ export function createHost(options: HostOptions): Host {
       broadcast(ROOT, RESTART_NEEDED, { channel: ROOT });
     },
     dispatch,
-    owe: (type: string, turnId: string, origin: Origin) => { owed.set(owedKey(type, turnId), origin); },
+    owe: (type: string, name: string) => { if (applying !== undefined) owed.set(owedKey(type, name), applying); },
+    answering,
     flushDeltas: deltas.flush,
   } as HostContext;
   // Before any area is built, because everything a person or a backend does
@@ -1805,6 +1821,9 @@ export function createHost(options: HostOptions): Host {
           type: String(action.type ?? ''),
           turnId: typeof action.turnId === 'string' ? action.turnId : '',
           answered: false,
+          peer: connection.peer,
+          channel: meantBy(String(params.channel ?? '')),
+          action,
         };
         try { return applyDispatch(params, origin); }
         finally { applying = undefined; }
