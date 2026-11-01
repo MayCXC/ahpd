@@ -1,6 +1,6 @@
 ---
 title: A stop with no turn running is refused
-status: todo
+status: done
 depends: []
 layer: host
 refs:
@@ -46,3 +46,11 @@ A stop naming another turn than a lead chat's running turn stays an echo to its 
 - `ahp-test-cases.test.ts`: every protocol case passes.
 
 ## Resume
+
+Built 2026-11-01 in `d5674ef7`.
+
+- The stop reads `subagents` for a worker chat's turn, and the backend's `chatState` for any other chat's.
+- A refusal names the chat the stop was sent on, so a stop sent on a session channel names the session.
+- A worker chat's stop still takes the worker by its call, whatever turn the stop names, as the plan keeps it.
+- A worker that runs after its lead turn, on a backend with no `stopWorker`, is still refused with the lead chat's words.
+- The busy fake in `subagent-chat.test.ts` gained an optional `stopWorker`, the asking fake's pattern.
