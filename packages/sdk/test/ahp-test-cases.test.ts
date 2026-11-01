@@ -477,6 +477,10 @@ const REFUSALS: Record<string, { said: (action: Record<string, unknown>, where: 
     said: (action) => `${String(action.toolCallId)} is not a call this chat is waiting to have confirmed`,
     source: 'chat-channel.md: "chat/toolCallConfirmed | Tool call not in pending-confirmation state | Server MUST reject the action"',
   }],
+  'chat/turnCancelled': [{
+    said: (_action, where) => `Nothing is running on ${where.channel} to stop`,
+    source: 'chat-channel.md: "chat/turnCancelled | No active turn | Server MUST reject the action"',
+  }],
   'chat/turnResume': [{
     said: (action) => `${String(action.turnId)} is not the latest turn`,
     source: 'chat-channel.md: "chat/turnResume | An active turn exists, turnId is not the latest errored turn, or its final error part is not resumable | Server MUST reject the action"',
