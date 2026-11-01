@@ -250,11 +250,6 @@ const BROKEN = {
     row: 'C12',
     by: '3, the answer',
   },
-  readCoupled: {
-    breaks: 'chat-channel.md: "session/isReadChanged independently changes the owning session\'s read state; neither action implies the other"',
-    row: 'A1',
-    by: '6, read bits independent',
-  },
   chatTitleUntold: {
     breaks: `${SOLE_MUTATION}; the chat's title moves to its first message with no action on the chat channel`,
     row: 'E4',
@@ -413,7 +408,6 @@ const DIVERGES: Record<string, (Differs & Broken)[]> = {
   '066-session-truncated-clears-all-when-turnid-omitted': modifiedUntold,
   '068-session-truncated-drops-active-turn-even-when-clearing-all': modifiedUntold,
   '070-full-turn-flow-with-tool-calls-and-re-confirmation': turnStartRewritten,
-  '072-session-isreadchanged-marks-session-as-unread': [{ reduced: ['chats'], ...BROKEN.readCoupled }],
   '075-turnstarted-clears-isread': turnStartRewritten,
   '105-session-input-full-draft-and-complete-flow': turnStartRewritten,
   '161-chat-turn-lifecycle-on-chat': turnStartRewritten,

@@ -437,11 +437,12 @@ describe('driving a turn', () => {
    */
   it('stops calling a session failed once it is working again', async () => {
     const { client, uri } = await running();
+    // Without the read bit, which is the person's and not the turn's.
     const statusOf = async (): Promise<number> => {
       const seen = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
         snapshot: { state: { status: number; error?: string } };
       };
-      return seen.snapshot.state.status;
+      return seen.snapshot.state.status & ~Status.IsRead;
     };
     const errorOf = async (): Promise<string | undefined> => {
       const seen = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {

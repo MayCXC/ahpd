@@ -781,7 +781,8 @@ it('shows the call it is waiting on in its state, and the turn stays in progress
   });
   // A superset of in progress rather than a status of its own: the turn this
   // call belongs to is still running, and that is what the session says it is.
-  expect(snapshot.snapshot.state.status).toBe(Status.InProgress);
+  // Without the read bit, which is the person's and not the turn's.
+  expect(snapshot.snapshot.state.status & ~Status.IsRead).toBe(Status.InProgress);
 
   await complete(a.client, chatUri, 'call-1', OK('opened /a.txt'));
   // And it is off the state once it has been answered.

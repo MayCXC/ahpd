@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { chatReducer, sessionReducer } from '@microsoft/agent-host-protocol';
 import { createHost } from '../src/host.js';
+import { Status } from '../src/sessions/catalog.js';
 import { notes } from '../../../examples/notes/agent.js';
 import type { Peer } from '../src/types/rpc.js';
 
@@ -287,7 +288,8 @@ it('lets a cancelled turn go rather than leaving it waiting for an answer', asyn
     snapshot: { state: { status: number; inputNeeded?: unknown[] } };
   };
   expect(opened.snapshot.state.inputNeeded).toBeUndefined();
-  expect(opened.snapshot.state.status).toBe(1);
+  // Without the read bit, which is the person's and not the turn's.
+  expect(opened.snapshot.state.status & ~Status.IsRead).toBe(Status.Idle);
 });
 
 /*

@@ -16,7 +16,7 @@ import { DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../tools/clientcalls.js';
 import { asSentAttachment } from './chatattachment.js';
 import { chatUriFor, subagentChatUri } from './channels.js';
 import { CLOSING } from './common.js';
-import { chatFlag, sessionFollows, startsRead } from './chatactions.js';
+import { chatFlag, startsRead } from './chatactions.js';
 import { sameFolder, trusted } from './trust.js';
 import { BASELINE_TURN } from '../types/changes.js';
 import type { Bag } from '../types/common.js';
@@ -379,8 +379,7 @@ export function createSpawn(ctx: HostContext): Spawn {
     const was = { status: ref.state.status };
     absorb(ref, action);
     dispatch(uri, action);
-    // Unread where the protocol's chat reducer makes it so. A worker is not
-    // counted toward its session, so the session's bit stays where it is.
+    // Unread where the protocol's chat reducer makes it so.
     if (clearsRead(String(action.type)) && sessions.has(ref.session)) chatFlag(ctx, ref.session, uri, Status.IsRead, false);
     const summary = subagentSummary(uri, ref);
     const now = JSON.stringify(summary);
@@ -510,8 +509,9 @@ export function createSpawn(ctx: HostContext): Spawn {
             part: { kind: 'error', error: { errorType: 'turnFailed', message: why ?? 'The subagent failed' } },
           });
         }
-        // Something new to read in the worker's chat. A worker is not counted
-        // toward its session, so the session's bit stays where it is.
+        // Something new to read in the worker's chat, which a turn's end marks
+        // unread as the reference host marks every chat's.
+        // https://github.com/microsoft/vscode/blob/1306698e328e5e531f5e632301d30020aa994eff/src/vs/platform/agentHost/node/chatContributions/markUnread/markUnreadContribution.ts#L27-L39
         if (sessions.has(held.session)) chatFlag(ctx, held.session, uri, Status.IsRead, false);
       },
     };
@@ -1467,24 +1467,32 @@ export function createSpawn(ctx: HostContext): Spawn {
           }
         }
         /*
-         * The chat's read bit, and its session's when the chat is one the
-         * session counts.
+         * The chat's read bit.
          *
          * Cleared where the protocol's chat reducer clears it, so the bit kept
-         * here is the one a client reduces. Cleared again when a turn ends,
-         * because a client may have marked the chat read while it ran. After
-         * the action and the chat's row, so a client applies those first.
+         * here is the one a client reduces.
+         * https://github.com/microsoft/agent-host-protocol/blob/5f16d81bb7045b66d7bc768d244feab75002d943/types/channels-chat/reducer.ts#L358-L372
+         *
+         * Marked unread again when a turn ends, as the reference host marks a
+         * chat whose turn has ended, because a client may have marked the chat
+         * read while it ran. After the action and the chat's row, so a client
+         * applies those first.
+         * https://github.com/microsoft/vscode/blob/1306698e328e5e531f5e632301d30020aa994eff/src/vs/platform/agentHost/node/chatContributions/markUnread/markUnreadContribution.ts#L27-L39
          *
          * A `!` command turn ran what the person typed, which is nothing new
          * to them, so its end puts back the bit its chat had when it started.
-         * A chat its session no longer holds is left as it is: there is no
-         * row left to mark.
+         * The bit moves while the session holds the chat, whose row it marks.
+         *
+         * The session's own bit moves with `session/isReadChanged` alone:
+         * "The orthogonal IsRead / IsArchived flags remain session-scoped and
+         * pass through unchanged".
+         * https://github.com/microsoft/agent-host-protocol/blob/5f16d81bb7045b66d7bc768d244feab75002d943/docs/specification/session-channel.md#L95
          */
         if (moved !== undefined && clearsRead(action.type)) {
           if (action.type === 'chat/turnStarted' && ctx.commandTurns.has(turn)) {
             ctx.commandTurns.set(turn, (ctx.kept.chatFlags(idOf(uri), chatUri) & Status.IsRead) !== 0);
           }
-          if (chatFlag(ctx, uri, chatUri, Status.IsRead, false)) sessionFollows(ctx, uri, chatUri);
+          chatFlag(ctx, uri, chatUri, Status.IsRead, false);
         }
         if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled' || action.type === 'chat/error') {
           const wasRead = ctx.commandTurns.get(turn) === true;
@@ -1496,7 +1504,7 @@ export function createSpawn(ctx: HostContext): Spawn {
            */
           if (moved !== undefined && ctx.commandTurns.has(turn)) ctx.keepLocalTurn(uri, chatUri, moved.allTurns(), turn);
           ctx.commandTurns.delete(turn);
-          if (moved !== undefined && chatFlag(ctx, uri, chatUri, Status.IsRead, wasRead)) sessionFollows(ctx, uri, chatUri);
+          if (moved !== undefined) chatFlag(ctx, uri, chatUri, Status.IsRead, wasRead);
         }
         // A turn starting or finishing moves the catalogue too, and a client
         // watching only the list is the one that most needs telling.

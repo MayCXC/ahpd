@@ -318,8 +318,9 @@ describe('the fields a client reads by name', () => {
     expect(moved?.params.session).toBe('ahp-session:/live');
     const changes = moved?.params.changes as Record<string, unknown>;
     expect(changes).toBeDefined();
-    // What moved is in there under its own name.
-    expect(changes.status).toBe(Status.InProgress);
+    // What moved is in there under its own name, the read bit beside it the
+    // person's and not the turn's.
+    expect(Number(changes.status) & ~Status.IsRead).toBe(Status.InProgress);
     expect(changes.title).toEqual(expect.any(String));
     // And the three the protocol says never change are left out, because a
     // *change* carrying them is a change claiming they did.
@@ -712,7 +713,7 @@ describe('the fields a client reads by name', () => {
     expect(statusOf(p, 'ahp-session:/live', second)).toBe(Status.Idle | Status.IsRead);
     const others = chatsOf(p, 'ahp-session:/live').filter((one) => one.resource !== second);
     expect(others.map((one) => one.status)).toEqual(others.map(() => Status.Idle | Status.IsRead));
-    // Every chat is read again, so the session is read with them.
+    // The session's bit is the session's own, read from its start.
     expect(sessionStatus(p, 'ahp-session:/live')).toBe(Status.Idle | Status.IsRead);
     // A client opening the chat afterwards gets the bit in its state, so a
     // restart of the client is not a chat that forgot it was read.
