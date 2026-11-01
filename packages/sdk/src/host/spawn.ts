@@ -16,7 +16,7 @@ import { DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../tools/clientcalls.js';
 import { asSentAttachment } from './chatattachment.js';
 import { chatUriFor, subagentChatUri } from './channels.js';
 import { CLOSING } from './common.js';
-import { chatFlag, startsRead } from './chatactions.js';
+import { chatFlag, sessionFlag, startsRead } from './chatactions.js';
 import { sameFolder, trusted } from './trust.js';
 import { BASELINE_TURN } from '../types/changes.js';
 import type { Bag } from '../types/common.js';
@@ -510,8 +510,10 @@ export function createSpawn(ctx: HostContext): Spawn {
           });
         }
         // Something new to read in the worker's chat, which a turn's end marks
-        // unread as the reference host marks every chat's.
-        // https://github.com/microsoft/vscode/blob/1306698e328e5e531f5e632301d30020aa994eff/src/vs/platform/agentHost/node/chatContributions/markUnread/markUnreadContribution.ts#L27-L39
+        // unread as the reference host marks every chat's. A worker's chat is
+        // a tool's, so its end leaves the session's bit as it is.
+        // https://github.com/microsoft/vscode/blob/1306698e328e5e531f5e632301d30020aa994eff/src/vs/platform/agentHost/node/chatContributions/markUnread/markUnreadContribution.ts#L27-L48
+        // https://github.com/microsoft/vscode/blob/1306698e328e5e531f5e632301d30020aa994eff/src/vs/platform/agentHost/common/state/sessionState.ts#L2063-L2070
         if (sessions.has(held.session)) chatFlag(ctx, held.session, uri, Status.IsRead, false);
       },
     };
@@ -1467,26 +1469,27 @@ export function createSpawn(ctx: HostContext): Spawn {
           }
         }
         /*
-         * The chat's read bit.
+         * The chat's read bit, and the session's at a turn's end, each moved by
+         * its own action on its own channel.
          *
          * Cleared where the protocol's chat reducer clears it, so the bit kept
          * here is the one a client reduces.
          * https://github.com/microsoft/agent-host-protocol/blob/5f16d81bb7045b66d7bc768d244feab75002d943/types/channels-chat/reducer.ts#L358-L372
          *
-         * Marked unread again when a turn ends, as the reference host marks a
-         * chat whose turn has ended, because a client may have marked the chat
-         * read while it ran. After the action and the chat's row, so a client
-         * applies those first.
-         * https://github.com/microsoft/vscode/blob/1306698e328e5e531f5e632301d30020aa994eff/src/vs/platform/agentHost/node/chatContributions/markUnread/markUnreadContribution.ts#L27-L39
+         * At a turn's end the chat is marked unread again, because a client may
+         * have marked it read while it ran, and then a read session is marked
+         * unread with this host's own `session/isReadChanged`, as the reference
+         * host does at a turn's end. A chat a tool opened, or a hidden one,
+         * keeps its own bit and leaves the session's as it is, which is the
+         * reference's `isChatInSessionReadAggregate`. After the action and the
+         * chat's row, so a client applies those first.
+         * https://github.com/microsoft/vscode/blob/1306698e328e5e531f5e632301d30020aa994eff/src/vs/platform/agentHost/node/chatContributions/markUnread/markUnreadContribution.ts#L27-L48
+         * https://github.com/microsoft/vscode/blob/1306698e328e5e531f5e632301d30020aa994eff/src/vs/platform/agentHost/common/state/sessionState.ts#L2063-L2070
          *
          * A `!` command turn ran what the person typed, which is nothing new
-         * to them, so its end puts back the bit its chat had when it started.
-         * The bit moves while the session holds the chat, whose row it marks.
-         *
-         * The session's own bit moves with `session/isReadChanged` alone:
-         * "The orthogonal IsRead / IsArchived flags remain session-scoped and
-         * pass through unchanged".
-         * https://github.com/microsoft/agent-host-protocol/blob/5f16d81bb7045b66d7bc768d244feab75002d943/docs/specification/session-channel.md#L95
+         * to them, so its end puts back the bit its chat had when it started
+         * and leaves the session's as it is. The bits move while the session
+         * holds the chat, whose row they mark.
          */
         if (moved !== undefined && clearsRead(action.type)) {
           if (action.type === 'chat/turnStarted' && ctx.commandTurns.has(turn)) {
@@ -1495,6 +1498,7 @@ export function createSpawn(ctx: HostContext): Spawn {
           chatFlag(ctx, uri, chatUri, Status.IsRead, false);
         }
         if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled' || action.type === 'chat/error') {
+          const command = ctx.commandTurns.has(turn);
           const wasRead = ctx.commandTurns.get(turn) === true;
           /*
            * A `!` command's turn is the host's, so no transcript holds it: the
@@ -1502,9 +1506,15 @@ export function createSpawn(ctx: HostContext): Spawn {
            * once the turn has completed.
            * https://github.com/microsoft/vscode/blob/41c37d126aa93bece57534a18f0750e4dcb6b38c/src/vs/platform/agentHost/node/localCommands/localChatCommand.ts#L201-L224
            */
-          if (moved !== undefined && ctx.commandTurns.has(turn)) ctx.keepLocalTurn(uri, chatUri, moved.allTurns(), turn);
+          if (moved !== undefined && command) ctx.keepLocalTurn(uri, chatUri, moved.allTurns(), turn);
           ctx.commandTurns.delete(turn);
-          if (moved !== undefined) chatFlag(ctx, uri, chatUri, Status.IsRead, wasRead);
+          if (moved !== undefined) {
+            chatFlag(ctx, uri, chatUri, Status.IsRead, wasRead);
+            const row = chatSummary(uri, chatUri, moved);
+            if (!command && (row.origin as Bag | undefined)?.['kind'] !== 'tool' && row.interactivity !== 'hidden') {
+              sessionFlag(ctx, uri, Status.IsRead, false, { type: 'session/isReadChanged', isRead: false });
+            }
+          }
         }
         // A turn starting or finishing moves the catalogue too, and a client
         // watching only the list is the one that most needs telling.
